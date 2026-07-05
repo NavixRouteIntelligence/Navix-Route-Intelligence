@@ -1,0 +1,48 @@
+import { Module } from '@nestjs/common';
+import { JwtModule } from '@nestjs/jwt';
+import { PassportModule } from '@nestjs/passport';
+import { TypeOrmModule } from '@nestjs/typeorm';
+
+// Application
+import { LoginUseCase } from './application/login.use-case';
+import { LogoutUseCase } from './application/logout.use-case';
+import { RefreshTokenUseCase } from './application/refresh-token.use-case';
+import { PASSWORD_HASHER } from './application/ports/password-hasher.port';
+import { TOKEN_SERVICE } from './application/ports/token-service.port';
+// Domain ports
+import { REFRESH_TOKEN_REPOSITORY } from './domain/ports/refresh-token-repository.port';
+import { USER_REPOSITORY } from './domain/ports/user-repository.port';
+// Infrastructure
+import { RefreshTokenOrmEntity } from './infrastructure/persistence/refresh-token.orm-entity';
+import { RefreshTokenRepository } from './infrastructure/persistence/refresh-token.repository';
+import { UserOrmEntity } from './infrastructure/persistence/user.orm-entity';
+import { UserRepository } from './infrastructure/persistence/user.repository';
+import { Argon2PasswordHasher } from './infrastructure/security/argon2-password-hasher';
+import { JwtTokenService } from './infrastructure/security/jwt-token.service';
+// Interface
+import { AuthController } from './interface/auth.controller';
+import { JwtStrategy } from './interface/jwt.strategy';
+
+/**
+ * Módulo Identity & Access. Fia as portas do domínio às implementações da
+ * infraestrutura via injeção de dependência (ver docs/architecture.md §3-4).
+ */
+@Module({
+  imports: [
+    TypeOrmModule.forFeature([UserOrmEntity, RefreshTokenOrmEntity]),
+    PassportModule,
+    JwtModule.register({}),
+  ],
+  controllers: [AuthController],
+  providers: [
+    LoginUseCase,
+    RefreshTokenUseCase,
+    LogoutUseCase,
+    JwtStrategy,
+    { provide: USER_REPOSITORY, useClass: UserRepository },
+    { provide: REFRESH_TOKEN_REPOSITORY, useClass: RefreshTokenRepository },
+    { provide: PASSWORD_HASHER, useClass: Argon2PasswordHasher },
+    { provide: TOKEN_SERVICE, useClass: JwtTokenService },
+  ],
+})
+export class IdentityModule {}

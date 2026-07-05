@@ -1,0 +1,15 @@
+{
+  "name": "@navix/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Tipos e contratos de API compartilhados entre backend e frontend.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  }
+}

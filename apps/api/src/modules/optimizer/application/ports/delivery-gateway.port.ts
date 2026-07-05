@@ -1,0 +1,19 @@
+import type { DeliveryPriority, TimeWindow } from '@navix/contracts';
+
+export interface OptimizerDeliveryStop {
+  id: string;
+  latitude: number;
+  longitude: number;
+  priority: DeliveryPriority;
+  timeWindow: TimeWindow | null;
+}
+
+/**
+ * Porta anti-corrupção do Optimizer para o contexto Delivery. O adaptador na
+ * infraestrutura delega para a API pública do Delivery (DeliveryLookup).
+ */
+export interface DeliveryGatewayPort {
+  getStops(tenantId: string, ids: string[]): Promise<OptimizerDeliveryStop[]>;
+}
+
+export const DELIVERY_GATEWAY = Symbol('DELIVERY_GATEWAY');

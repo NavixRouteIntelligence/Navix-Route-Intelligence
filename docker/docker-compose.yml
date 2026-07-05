@@ -1,0 +1,59 @@
+name: navix
+
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: navix-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-navix}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-navix_dev_password}
+      POSTGRES_DB: ${DB_NAME:-navix}
+    ports:
+      - '${DB_DIRECT_PORT:-5432}:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USER:-navix} -d ${DB_NAME:-navix}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    container_name: navix-pgbouncer
+    restart: unless-stopped
+    environment:
+      DB_HOST: postgres
+      DB_USER: ${DB_USER:-navix}
+      DB_PASSWORD: ${DB_PASSWORD:-navix_dev_password}
+      DB_NAME: ${DB_NAME:-navix}
+      POOL_MODE: transaction
+      MAX_CLIENT_CONN: '1000'
+      DEFAULT_POOL_SIZE: '25'
+      AUTH_TYPE: scram-sha-256
+    ports:
+      - '${DB_PORT:-6432}:6432'
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  redis:
+    image: redis:7-alpine
+    container_name: navix-redis
+    restart: unless-stopped
+    command: ['redis-server', '--appendonly', 'yes']
+    ports:
+      - '${REDIS_PORT:-6379}:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  redis_data:
