@@ -3,7 +3,7 @@
  * Grava na tabela imutável `audit_log` (ver docs/security.md §7.1).
  */
 export interface AuditEntry {
-  tenantId: string;
+  tenantId: string | null;
   actorId: string | null;
   action: string;
   resource?: string;

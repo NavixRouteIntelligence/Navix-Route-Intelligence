@@ -1,4 +1,5 @@
 import { Body, Controller, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import type { AuthTokens, LoginResponse } from '@navix/contracts';
 
 import { JwtAuthGuard } from '../../../shared/security/jwt-auth.guard';
@@ -20,13 +21,16 @@ export class AuthController {
     private readonly logout: LogoutUseCase,
   ) {}
 
+  // Limites estritos contra força bruta/abuso (ver docs/security.md §7).
   @Post('login')
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @HttpCode(HttpStatus.OK)
   loginHandler(@Body() dto: LoginDto): Promise<LoginResponse> {
     return this.login.execute(dto);
   }
 
   @Post('refresh')
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
   @HttpCode(HttpStatus.OK)
   refreshHandler(@Body() dto: RefreshDto): Promise<AuthTokens> {
     return this.refresh.execute(dto.refreshToken);

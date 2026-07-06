@@ -3,17 +3,22 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 import type { PageParams, PagedResult } from '../../../../shared/kernel/pagination';
+import { scopedRepository } from '../../../../shared/database/transaction-context';
 import type { RoutePlanRepositoryPort } from '../../domain/ports/route-plan-repository.port';
 import { RoutePlan } from '../../domain/route-plan';
 import { RoutePlanOrmEntity } from './route-plan.orm-entity';
 
-/** Repositório TypeORM de route plans. Escopado por tenant. */
+/** Repositório TypeORM de route plans. Escopo via transação (RLS) + tenant. */
 @Injectable()
 export class RoutePlanRepository implements RoutePlanRepositoryPort {
   constructor(
     @InjectRepository(RoutePlanOrmEntity)
-    private readonly repo: Repository<RoutePlanOrmEntity>,
+    private readonly base: Repository<RoutePlanOrmEntity>,
   ) {}
+
+  private get repo(): Repository<RoutePlanOrmEntity> {
+    return scopedRepository(this.base);
+  }
 
   async save(plan: RoutePlan): Promise<void> {
     const s = plan.snapshot();

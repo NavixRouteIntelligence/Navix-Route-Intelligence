@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, SelectQueryBuilder } from 'typeorm';
 
 import type { PagedResult } from '../../../../shared/kernel/pagination';
+import { scopedRepository } from '../../../../shared/database/transaction-context';
 import type { ListDeliveriesQuery } from '../../application/queries/list-deliveries.query';
 import { Delivery } from '../../domain/delivery';
 import type { DeliveryRepositoryPort } from '../../domain/ports/delivery-repository.port';
@@ -22,8 +23,12 @@ const PRIORITY_ORDER = `CASE delivery.priority WHEN 'urgent' THEN 4 WHEN 'high' 
 export class DeliveryRepository implements DeliveryRepositoryPort {
   constructor(
     @InjectRepository(DeliveryOrmEntity)
-    private readonly repo: Repository<DeliveryOrmEntity>,
+    private readonly base: Repository<DeliveryOrmEntity>,
   ) {}
+
+  private get repo(): Repository<DeliveryOrmEntity> {
+    return scopedRepository(this.base);
+  }
 
   async save(delivery: Delivery): Promise<void> {
     const s = delivery.snapshot();

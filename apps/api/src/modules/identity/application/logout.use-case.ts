@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 
+import { AUDIT_LOG, type AuditLogPort } from '../../../shared/audit/audit-log.port';
 import {
   REFRESH_TOKEN_REPOSITORY,
   type RefreshTokenRepositoryPort,
@@ -16,6 +17,7 @@ export class LogoutUseCase {
     @Inject(REFRESH_TOKEN_REPOSITORY)
     private readonly refreshTokens: RefreshTokenRepositoryPort,
     @Inject(TOKEN_SERVICE) private readonly tokens: TokenServicePort,
+    @Inject(AUDIT_LOG) private readonly audit: AuditLogPort,
   ) {}
 
   async execute(presentedToken: string): Promise<void> {
@@ -23,6 +25,12 @@ export class LogoutUseCase {
     const stored = await this.refreshTokens.findByHash(hash);
     if (stored && !stored.revokedAt) {
       await this.refreshTokens.revoke(stored.id);
+      await this.audit.record({
+        tenantId: null,
+        actorId: stored.userId,
+        action: 'auth.logout',
+        resource: `user:${stored.userId}`,
+      });
     }
   }
 }

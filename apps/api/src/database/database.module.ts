@@ -17,8 +17,10 @@ import { AppConfigService } from '../shared/config/app-config.service';
           type: 'postgres',
           host: db.host,
           port: db.port,
-          username: db.user,
-          password: db.password,
+          // Runtime conecta como role NÃO-owner para que a RLS seja aplicada
+          // (superusuário/owner ignoram RLS). Migrações/seed usam o owner.
+          username: db.appUser,
+          password: db.appPassword,
           database: db.name,
           ssl: db.ssl ? { rejectUnauthorized: false } : false,
           autoLoadEntities: true,

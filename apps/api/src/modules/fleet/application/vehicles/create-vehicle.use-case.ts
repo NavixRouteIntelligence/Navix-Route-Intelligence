@@ -1,7 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { CreateVehicleRequest, Vehicle as VehicleView } from '@navix/contracts';
 
+import { AUDIT_LOG, type AuditLogPort } from '../../../../shared/audit/audit-log.port';
 import { ConflictError } from '../../../../shared/kernel/domain-error';
+import { TenantContextStore } from '../../../../shared/tenancy/tenant-context';
 import {
   VEHICLE_REPOSITORY,
   type VehicleRepositoryPort,
@@ -15,6 +17,7 @@ export type CreateVehicleCommand = CreateVehicleRequest & { tenantId: string };
 export class CreateVehicleUseCase {
   constructor(
     @Inject(VEHICLE_REPOSITORY) private readonly vehicles: VehicleRepositoryPort,
+    @Inject(AUDIT_LOG) private readonly audit: AuditLogPort,
   ) {}
 
   async execute(command: CreateVehicleCommand): Promise<VehicleView> {
@@ -25,6 +28,13 @@ export class CreateVehicleUseCase {
     }
 
     await this.vehicles.save(vehicle);
-    return toVehicleView(vehicle);
+    const view = toVehicleView(vehicle);
+    await this.audit.record({
+      tenantId: command.tenantId,
+      actorId: TenantContextStore.get()?.userId ?? null,
+      action: 'fleet.vehicle.created',
+      resource: `vehicle:${view.id}`,
+    });
+    return view;
   }
 }

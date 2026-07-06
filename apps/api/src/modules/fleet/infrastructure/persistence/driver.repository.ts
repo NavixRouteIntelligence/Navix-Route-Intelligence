@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Not, Repository } from 'typeorm';
 
 import type { PageParams } from '../../../../shared/kernel/pagination';
+import { scopedRepository } from '../../../../shared/database/transaction-context';
 import type {
   DriverRepositoryPort,
 } from '../../domain/ports/driver-repository.port';
@@ -10,13 +11,17 @@ import type { PagedResult } from '../../domain/ports/vehicle-repository.port';
 import { Driver } from '../../domain/driver';
 import { DriverOrmEntity } from './driver.orm-entity';
 
-/** Repositório TypeORM de motoristas. Filtra por `tenant_id` em toda query. */
+/** Repositório TypeORM de motoristas. Escopo via transação (RLS) + filtro por tenant. */
 @Injectable()
 export class DriverRepository implements DriverRepositoryPort {
   constructor(
     @InjectRepository(DriverOrmEntity)
-    private readonly repo: Repository<DriverOrmEntity>,
+    private readonly base: Repository<DriverOrmEntity>,
   ) {}
+
+  private get repo(): Repository<DriverOrmEntity> {
+    return scopedRepository(this.base);
+  }
 
   async save(driver: Driver): Promise<void> {
     await this.repo.save(this.repo.create(driver.snapshot()));

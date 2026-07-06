@@ -3,6 +3,11 @@ import { ConfigService } from '@nestjs/config';
 
 import type { Env } from './env.schema';
 
+/** Converte "\n" literais (comuns em env) em quebras de linha reais do PEM. */
+function normalizePem(value: string | undefined): string | undefined {
+  return value ? value.replace(/\\n/g, '\n') : undefined;
+}
+
 /**
  * Acesso tipado à configuração. Encapsula o ConfigService do Nest para que o
  * resto da aplicação não dependa de strings de chave nem de `process.env`.
@@ -41,6 +46,9 @@ export class AppConfigService {
       directPort: this.get('DB_DIRECT_PORT'),
       user: this.get('DB_USER'),
       password: this.get('DB_PASSWORD'),
+      // Runtime da aplicação (não-owner, sujeito à RLS).
+      appUser: this.get('DB_APP_USER'),
+      appPassword: this.get('DB_APP_PASSWORD'),
       name: this.get('DB_NAME'),
       ssl: this.get('DB_SSL'),
     };
@@ -56,10 +64,14 @@ export class AppConfigService {
 
   get jwt() {
     return {
-      accessSecret: this.get('JWT_ACCESS_SECRET'),
       accessTtl: this.get('JWT_ACCESS_TTL'),
-      refreshSecret: this.get('JWT_REFRESH_SECRET'),
       refreshTtl: this.get('JWT_REFRESH_TTL'),
+      // Chaves RS256. Newlines em env costumam vir escapados como "\n".
+      privateKey: normalizePem(this.get('JWT_PRIVATE_KEY')),
+      publicKey: normalizePem(this.get('JWT_PUBLIC_KEY')),
+      keyId: this.get('JWT_KEY_ID'),
+      previousPublicKey: normalizePem(this.get('JWT_PREVIOUS_PUBLIC_KEY')),
+      previousKeyId: this.get('JWT_PREVIOUS_KEY_ID'),
     };
   }
 

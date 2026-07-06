@@ -1,6 +1,9 @@
+import type { AuditLogPort } from '../../../../shared/audit/audit-log.port';
 import { ConflictError } from '../../../../shared/kernel/domain-error';
 import type { VehicleRepositoryPort } from '../../domain/ports/vehicle-repository.port';
 import { CreateVehicleUseCase } from './create-vehicle.use-case';
+
+const audit: AuditLogPort = { record: jest.fn().mockResolvedValue(undefined) };
 
 describe('CreateVehicleUseCase', () => {
   function buildRepo(overrides: Partial<VehicleRepositoryPort> = {}): VehicleRepositoryPort {
@@ -23,7 +26,7 @@ describe('CreateVehicleUseCase', () => {
 
   it('cria e persiste o veículo, retornando a view pública', async () => {
     const repo = buildRepo();
-    const useCase = new CreateVehicleUseCase(repo);
+    const useCase = new CreateVehicleUseCase(repo, audit);
 
     const result = await useCase.execute(command);
 
@@ -35,7 +38,7 @@ describe('CreateVehicleUseCase', () => {
 
   it('bloqueia placa duplicada no tenant', async () => {
     const repo = buildRepo({ existsByPlate: jest.fn().mockResolvedValue(true) });
-    const useCase = new CreateVehicleUseCase(repo);
+    const useCase = new CreateVehicleUseCase(repo, audit);
 
     await expect(useCase.execute(command)).rejects.toBeInstanceOf(ConflictError);
     expect(repo.save).not.toHaveBeenCalled();

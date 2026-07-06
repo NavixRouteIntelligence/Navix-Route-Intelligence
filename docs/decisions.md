@@ -27,6 +27,9 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 | ADR-0009 | Telemetria de posições em série temporal | Aceito | 2026-07-05 |
 | ADR-0010 | Envelope encryption com chave por tenant | Aceito | 2026-07-05 |
 | ADR-0011 | CQRS leve com read models para relatórios | Aceito | 2026-07-05 |
+| ADR-0012 | RLS forçada + interceptor de tenant por transação | Aceito | 2026-07-06 |
+| ADR-0013 | Access token JWT RS256 com key ring e rotação | Aceito | 2026-07-06 |
+| ADR-0014 | Rate limiting com @nestjs/throttler | Aceito | 2026-07-06 |
 
 ---
 
@@ -125,6 +128,30 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 - **Alternativas consideradas:** Consultar direto o OLTP (não escala); data warehouse completo (over-engineering para o estágio atual).
 - **Consequências:** Leitura escalável e barata; custo de manter projeções consistentes. Evolui para warehouse dedicado quando a Fase 3 (Intelligence) exigir.
 
+## ADR-0012 — RLS forçada + interceptor de tenant por transação
+
+- **Status:** Aceito · **Data:** 2026-07-06
+- **Contexto:** A RLS existia (ENABLE) mas o app conectava como owner das tabelas, que contorna RLS — o isolamento era só de aplicação (ADR-0003 pendente de enforcement).
+- **Decisão:** Três partes: (1) RLS + `FORCE` nas tabelas de **negócio** (vehicles, drivers, deliveries, route_plans); (2) a aplicação conecta com um **role de runtime não-superusuário** (`navix_app`) — **essencial**, pois superusuários/owners IGNORAM a RLS mesmo com FORCE (migrações/seed continuam com o owner); (3) um `TenantTransactionInterceptor` abre uma transação por request autenticado e faz `set_config('app.current_tenant', <tenant>, true)`; os repositórios resolvem o EntityManager da transação, então toda query passa pela RLS. As tabelas de **auth** (users, refresh_tokens) ficam **sem RLS** (login/refresh consultam usuários antes de haver tenant) — isolamento no nível de aplicação.
+- **Alternativas consideradas:** Só FORCE conectando como owner (FALHA — o owner era superusuário e ignorava a RLS; corrigido com o role de runtime). Enforcement só na aplicação (não protege contra bugs de código).
+- **Consequências:** Isolamento de negócio garantido pelo banco, mesmo com bug de aplicação. Exige um role de runtime (criado pela migração `CreateAppRole`) e separação owner/app. Overhead de uma transação por request autenticado; repositórios ficaram "transaction-aware".
+
+## ADR-0013 — Access token JWT RS256 com key ring e rotação
+
+- **Status:** Aceito · **Data:** 2026-07-06
+- **Contexto:** O access token usava HS256 (segredo simétrico), inadequado para produção e para futura verificação por terceiros.
+- **Decisão:** Migrar para **RS256** (assimétrico). Assinatura com chave privada e `kid` no cabeçalho; verificação seleciona a chave pública pelo `kid` (permite **rotação** sem invalidar tokens em voo). Tudo atrás de uma porta `KeyRing` — a implementação local (chaves em env, ou par efêmero em dev) troca por **KMS/HSM** no futuro sem alterar o serviço de tokens. Refresh tokens continuam opacos (inalterados).
+- **Alternativas consideradas:** Manter HS256 (inseguro para escala/externos); JWKS remoto já agora (over-engineering para o estágio).
+- **Consequências:** Base pronta para KMS e para expor verificação. Requer gestão de chaves (env/secret manager) em produção.
+
+## ADR-0014 — Rate limiting com @nestjs/throttler
+
+- **Status:** Aceito · **Data:** 2026-07-06
+- **Contexto:** A API não tinha proteção contra força bruta/abuso.
+- **Decisão:** `@nestjs/throttler` global (limite amplo) + limites **estritos** no `login` (5/min) e `refresh` (20/min). Armazenamento em memória no MVP.
+- **Alternativas consideradas:** Rate limit em proxy/gateway (válido, mas não protege por rota/tenant no app).
+- **Consequências:** Proteção imediata contra força bruta. Em produção, migrar o storage para **Redis** (já disponível) para funcionar com múltiplas instâncias.
+
 ---
 
 ## Template
@@ -148,3 +175,4 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 |------|--------|-------|---------|
 | 2026-07-05 | 0.1 | Engenharia | Estrutura inicial + ADRs 0000–0004 |
 | 2026-07-05 | 0.2 | CTO | Revisão: ADRs 0005–0011 (ORM, outbox, otimizador, UUIDv7, série temporal, envelope encryption, CQRS) |
+| 2026-07-06 | 0.3 | Engenharia | Hardening: ADRs 0012–0014 (RLS forçada, RS256, rate limiting) |

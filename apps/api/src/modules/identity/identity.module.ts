@@ -19,6 +19,8 @@ import { UserOrmEntity } from './infrastructure/persistence/user.orm-entity';
 import { UserRepository } from './infrastructure/persistence/user.repository';
 import { Argon2PasswordHasher } from './infrastructure/security/argon2-password-hasher';
 import { JwtTokenService } from './infrastructure/security/jwt-token.service';
+import { KEY_RING } from '../../shared/security/keys/key-ring.port';
+import { LocalKeyRing } from '../../shared/security/keys/local-key-ring';
 // Interface
 import { AuthController } from './interface/auth.controller';
 import { JwtStrategy } from './interface/jwt.strategy';
@@ -43,6 +45,7 @@ import { JwtStrategy } from './interface/jwt.strategy';
     { provide: REFRESH_TOKEN_REPOSITORY, useClass: RefreshTokenRepository },
     { provide: PASSWORD_HASHER, useClass: Argon2PasswordHasher },
     { provide: TOKEN_SERVICE, useClass: JwtTokenService },
+    { provide: KEY_RING, useClass: LocalKeyRing },
   ],
 })
 export class IdentityModule {}

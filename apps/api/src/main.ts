@@ -22,7 +22,14 @@ async function bootstrap(): Promise<void> {
   // desativado para permitir o Swagger UI (scripts inline); em produção o CSP
   // padrão do helmet fica ativo (o Swagger não é exposto lá).
   app.use(helmet({ contentSecurityPolicy: config.isProduction ? undefined : false }));
-  app.enableCors({ origin: corsOrigins, credentials: true });
+  app.enableCors({
+    origin: corsOrigins,
+    credentials: true,
+    methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Authorization', 'Content-Type', 'X-Api-Key', 'Idempotency-Key'],
+    exposedHeaders: ['X-Request-Id', 'RateLimit-Limit', 'RateLimit-Remaining', 'RateLimit-Reset'],
+    maxAge: 86_400,
+  });
 
   // Prefixo e versionamento de URL: /api/v1/... (ver docs/api.md §2).
   app.setGlobalPrefix(globalPrefix);

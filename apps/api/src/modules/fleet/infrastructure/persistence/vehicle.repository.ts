@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Not, Repository } from 'typeorm';
 
 import type { PageParams } from '../../../../shared/kernel/pagination';
+import { scopedRepository } from '../../../../shared/database/transaction-context';
 import type {
   PagedResult,
   VehicleRepositoryPort,
@@ -11,15 +12,20 @@ import { Vehicle } from '../../domain/vehicle';
 import { VehicleOrmEntity } from './vehicle.orm-entity';
 
 /**
- * Repositório TypeORM de veículos. Toda query filtra por `tenant_id`
- * explicitamente (defesa em profundidade, além da RLS — docs/security.md §3).
+ * Repositório TypeORM de veículos. Usa o repositório ligado à transação do
+ * request (com `app.current_tenant` definido → RLS) e ainda filtra por
+ * `tenant_id` explicitamente (defesa em profundidade — docs/security.md §3).
  */
 @Injectable()
 export class VehicleRepository implements VehicleRepositoryPort {
   constructor(
     @InjectRepository(VehicleOrmEntity)
-    private readonly repo: Repository<VehicleOrmEntity>,
+    private readonly base: Repository<VehicleOrmEntity>,
   ) {}
+
+  private get repo(): Repository<VehicleOrmEntity> {
+    return scopedRepository(this.base);
+  }
 
   async save(vehicle: Vehicle): Promise<void> {
     await this.repo.save(this.repo.create(vehicle.snapshot()));

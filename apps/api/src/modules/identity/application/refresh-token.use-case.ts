@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { AuthTokens } from '@navix/contracts';
 
+import { AUDIT_LOG, type AuditLogPort } from '../../../shared/audit/audit-log.port';
 import { UnauthorizedError } from '../../../shared/kernel/domain-error';
 import { newId } from '../../../shared/kernel/id';
 import {
@@ -26,6 +27,7 @@ export class RefreshTokenUseCase {
     @Inject(REFRESH_TOKEN_REPOSITORY)
     private readonly refreshTokens: RefreshTokenRepositoryPort,
     @Inject(TOKEN_SERVICE) private readonly tokens: TokenServicePort,
+    @Inject(AUDIT_LOG) private readonly audit: AuditLogPort,
   ) {}
 
   async execute(presentedToken: string): Promise<AuthTokens> {
@@ -39,6 +41,12 @@ export class RefreshTokenUseCase {
     // Reuso de token já revogado: comprometido -> derruba a família toda.
     if (stored.revokedAt) {
       await this.refreshTokens.revokeFamily(stored.familyId);
+      await this.audit.record({
+        tenantId: null,
+        actorId: stored.userId,
+        action: 'auth.refresh.reuse_detected',
+        metadata: { familyId: stored.familyId },
+      });
       throw new UnauthorizedError('Sessão inválida.');
     }
 
@@ -63,6 +71,13 @@ export class RefreshTokenUseCase {
       sub: user.id,
       tenantId: user.tenantId,
       roles: user.roles,
+    });
+
+    await this.audit.record({
+      tenantId: user.tenantId,
+      actorId: user.id,
+      action: 'auth.refresh.succeeded',
+      resource: `user:${user.id}`,
     });
 
     return {

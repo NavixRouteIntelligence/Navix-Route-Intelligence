@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { LoginResponse } from '@navix/contracts';
 
+import { AUDIT_LOG, type AuditLogPort } from '../../../shared/audit/audit-log.port';
 import { UnauthorizedError } from '../../../shared/kernel/domain-error';
 import {
   USER_REPOSITORY,
@@ -32,16 +33,19 @@ export class LoginUseCase {
     private readonly refreshTokens: RefreshTokenRepositoryPort,
     @Inject(PASSWORD_HASHER) private readonly hasher: PasswordHasherPort,
     @Inject(TOKEN_SERVICE) private readonly tokens: TokenServicePort,
+    @Inject(AUDIT_LOG) private readonly audit: AuditLogPort,
   ) {}
 
   async execute(command: LoginCommand): Promise<LoginResponse> {
     const user = await this.users.findByEmail(command.tenantId, command.email);
     if (!user || user.status !== 'active') {
+      await this.auditFailure(command, 'user_not_found_or_inactive');
       throw new UnauthorizedError('Credenciais inválidas.');
     }
 
     const valid = await this.hasher.verify(user.passwordHash, command.password);
     if (!valid) {
+      await this.auditFailure(command, 'invalid_password');
       throw new UnauthorizedError('Credenciais inválidas.');
     }
 
@@ -61,6 +65,13 @@ export class LoginUseCase {
       revokedAt: null,
     });
 
+    await this.audit.record({
+      tenantId: user.tenantId,
+      actorId: user.id,
+      action: 'auth.login.succeeded',
+      resource: `user:${user.id}`,
+    });
+
     return {
       user: {
         id: user.id,
@@ -74,5 +85,14 @@ export class LoginUseCase {
         refreshToken: refresh.token,
       },
     };
+  }
+
+  private auditFailure(command: LoginCommand, reason: string): Promise<void> {
+    return this.audit.record({
+      tenantId: command.tenantId,
+      actorId: null,
+      action: 'auth.login.failed',
+      metadata: { email: command.email, reason },
+    });
   }
 }

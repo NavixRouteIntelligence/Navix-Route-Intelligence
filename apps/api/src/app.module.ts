@@ -4,6 +4,8 @@ import { AppConfigModule } from './shared/config/config.module';
 import { AuditModule } from './shared/audit/audit.module';
 import { DatabaseModule } from './database/database.module';
 import { LoggerModule } from './shared/observability/logger.module';
+import { TenancyModule } from './shared/tenancy/tenancy.module';
+import { ThrottlingModule } from './shared/security/throttling.module';
 import { DeliveryModule } from './modules/delivery/delivery.module';
 import { FleetModule } from './modules/fleet/fleet.module';
 import { OptimizerModule } from './modules/optimizer/optimizer.module';
@@ -21,6 +23,8 @@ import { IdentityModule } from './modules/identity/identity.module';
     LoggerModule,
     DatabaseModule,
     AuditModule,
+    TenancyModule,
+    ThrottlingModule,
     HealthModule,
     IdentityModule,
     FleetModule,

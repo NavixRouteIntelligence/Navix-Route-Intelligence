@@ -1,6 +1,12 @@
 # Segurança — Navix Route Intelligence
 
-> **Status:** Em revisão · **Versão:** 0.2 · **Atualizado:** 2026-07-05
+> **Status:** Em revisão · **Versão:** 0.3 · **Atualizado:** 2026-07-06
+
+> **Estado de implementação (hardening Fase 1):** RLS forçada nas tabelas de
+> negócio + interceptor de tenant por transação (ADR-0012); access token
+> **RS256** com key ring e rotação (ADR-0013); **rate limiting** global + login
+> estrito (ADR-0014); auditoria de auth/authz e de alterações críticas. Ver
+> [reviews/hardening-report.md](./reviews/hardening-report.md).
 
 Segurança é requisito de primeira classe, não uma etapa final. Nenhuma feature é considerada pronta sem atender a este documento. Novas ameaças ou decisões de segurança relevantes viram ADR em [decisions.md](./decisions.md).
 
@@ -16,7 +22,7 @@ Segurança é requisito de primeira classe, não uma etapa final. Nenhuma featur
 ## 2. Autenticação
 
 - **JWT (access token)** de curta duração + **Refresh Token** de longa duração.
-- Access token: expiração curta (ex.: 15 min), assinado (RS256/ES256 preferível a HS256).
+- Access token: expiração curta (15 min), assinado com **RS256** (chave assimétrica do KeyRing, `kid` no cabeçalho para rotação — ADR-0013). Em dev, par efêmero é gerado no boot; em produção, chaves via secret manager/KMS.
 - Refresh token: armazenado com **hash** no banco, rotacionado a cada uso (*refresh token rotation*) e revogável.
 - Detecção de reuso de refresh token → revogar toda a família de tokens.
 - Logout revoga o refresh token; blacklist de tokens no Redis quando necessário.
@@ -34,9 +40,9 @@ Usuários finais (app do motorista) e integrações não devem depender do fluxo
 ## 3. Autorização
 
 - **RBAC** por tenant (papéis: owner, admin, dispatcher, driver, viewer…).
-- Autorização checada na camada de aplicação (guards NestJS) **e** reforçada por RLS no banco.
-- Toda requisição carrega `tenant_id` + `user_id` + papéis validados a partir do JWT.
-- **Isolamento de tenant é inviolável:** nenhum recurso de um tenant é acessível por outro. Testado explicitamente.
+- Autorização checada na camada de aplicação (guards NestJS) **e** reforçada por **RLS forçada** no banco.
+- Toda requisição carrega `tenant_id` + `user_id` + papéis validados a partir do JWT; o `TenantTransactionInterceptor` define `app.current_tenant` por transação (ADR-0012).
+- **Isolamento de tenant é inviolável:** `FORCE ROW LEVEL SECURITY` nas tabelas de negócio garante que nenhum recurso de um tenant seja acessível por outro, mesmo com bug de aplicação. Provado por teste de integração (`test/tenant-isolation.e2e-spec.ts`).
 
 ## 4. Criptografia
 
@@ -141,3 +147,4 @@ Cada tenant possui uma **DEK** (Data Encryption Key) própria, protegida por uma
 |------|--------|-------|---------|
 | 2026-07-05 | 0.1 | Engenharia | Estrutura inicial |
 | 2026-07-05 | 0.2 | CTO | Envelope encryption por tenant, M2M/API keys, audit log imutável, controle de abuso, break-glass |
+| 2026-07-06 | 0.3 | Engenharia | Hardening implementado: RLS forçada + interceptor de tenant, RS256/key ring, throttler, CORS reforçado, auditoria de auth/authz e alterações críticas |

@@ -1,3 +1,4 @@
+import type { AuditLogPort } from '../../../shared/audit/audit-log.port';
 import { UnauthorizedError } from '../../../shared/kernel/domain-error';
 import type { PasswordHasherPort } from './ports/password-hasher.port';
 import type { TokenServicePort } from './ports/token-service.port';
@@ -38,6 +39,8 @@ describe('LoginUseCase', () => {
     revokeFamily: jest.fn(),
   };
 
+  const audit: AuditLogPort = { record: jest.fn().mockResolvedValue(undefined) };
+
   function buildUseCase(overrides: {
     user: User | null;
     passwordValid: boolean;
@@ -50,7 +53,7 @@ describe('LoginUseCase', () => {
       hash: jest.fn(),
       verify: jest.fn().mockResolvedValue(overrides.passwordValid),
     };
-    return new LoginUseCase(users, refreshRepo, hasher, tokenService);
+    return new LoginUseCase(users, refreshRepo, hasher, tokenService, audit);
   }
 
   it('emite tokens quando as credenciais são válidas', async () => {
