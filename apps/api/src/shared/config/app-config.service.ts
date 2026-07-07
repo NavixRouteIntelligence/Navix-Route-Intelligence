@@ -80,4 +80,8 @@ export class AppConfigService {
       kek: this.get('ENCRYPTION_KEK'),
     };
   }
+
+  get mapboxToken(): string | undefined {
+    return this.get('MAPBOX_TOKEN');
+  }
 }

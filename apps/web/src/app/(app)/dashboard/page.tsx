@@ -13,6 +13,7 @@ import {
   Package,
   Route,
   Truck,
+  Upload,
   Users,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -79,12 +80,20 @@ export default function DashboardPage() {
         title="Dashboard"
         description="Visão geral da sua operação logística."
         action={
-          <Button asChild variant="accent">
-            <Link href="/optimizer">
-              <Route className="h-4 w-4" />
-              Otimizar rotas
-            </Link>
-          </Button>
+          <>
+            <Button asChild variant="outline">
+              <Link href="/imports">
+                <Upload className="h-4 w-4" />
+                Importar
+              </Link>
+            </Button>
+            <Button asChild variant="accent">
+              <Link href="/optimizer">
+                <Route className="h-4 w-4" />
+                Otimizar rotas
+              </Link>
+            </Button>
+          </>
         }
       />
 

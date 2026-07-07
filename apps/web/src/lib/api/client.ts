@@ -85,3 +85,27 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   }
   return (await response.json()) as T;
 }
+
+/**
+ * Envio multipart (upload de arquivo). Não define Content-Type — o browser
+ * monta o boundary. Reaproveita o bridge de token e o refresh em 401.
+ */
+export async function apiUpload<T>(path: string, form: FormData, _retry = false): Promise<T> {
+  const headers: Record<string, string> = {};
+  if (bridge) {
+    const token = bridge.getAccessToken();
+    if (token) headers.Authorization = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${BASE_URL}/v1${path}`, { method: 'POST', headers, body: form });
+
+  if (response.status === 401 && bridge && !_retry) {
+    const newToken = await bridge.refresh();
+    if (newToken) return apiUpload<T>(path, form, true);
+    bridge.onUnauthenticated();
+    throw await parseError(response);
+  }
+
+  if (!response.ok) throw await parseError(response);
+  return (await response.json()) as T;
+}

@@ -6,6 +6,7 @@ import {
   Package,
   Route,
   Truck,
+  Upload,
   UserCircle,
   Users,
   type LucideIcon,
@@ -26,6 +27,7 @@ interface NavItem {
 const NAV: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/deliveries', label: 'Entregas', icon: Package },
+  { href: '/imports', label: 'Importar', icon: Upload },
   { href: '/fleet/drivers', label: 'Motoristas', icon: Users },
   { href: '/fleet/vehicles', label: 'Veículos', icon: Truck },
   { href: '/optimizer', label: 'Otimizador', icon: Route },

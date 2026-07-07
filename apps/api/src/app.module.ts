@@ -8,6 +8,7 @@ import { TenancyModule } from './shared/tenancy/tenancy.module';
 import { ThrottlingModule } from './shared/security/throttling.module';
 import { DeliveryModule } from './modules/delivery/delivery.module';
 import { FleetModule } from './modules/fleet/fleet.module';
+import { ImportModule } from './modules/import/import.module';
 import { OptimizerModule } from './modules/optimizer/optimizer.module';
 import { HealthModule } from './modules/health/health.module';
 import { IdentityModule } from './modules/identity/identity.module';
@@ -30,6 +31,7 @@ import { IdentityModule } from './modules/identity/identity.module';
     FleetModule,
     DeliveryModule,
     OptimizerModule,
+    ImportModule,
   ],
 })
 export class AppModule {}

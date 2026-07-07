@@ -9,6 +9,7 @@ import { GetDeliveryUseCase } from './application/get-delivery.use-case';
 import { ListDeliveriesUseCase } from './application/list-deliveries.use-case';
 import { UpdateDeliveryUseCase } from './application/update-delivery.use-case';
 import { DELIVERY_LOOKUP, DeliveryLookupService } from './application/delivery-lookup.service';
+import { DELIVERY_WRITER, DeliveryWriterService } from './application/delivery-writer.service';
 import { FLEET_GATEWAY } from './application/ports/fleet-gateway.port';
 import { DELIVERY_REPOSITORY } from './domain/ports/delivery-repository.port';
 import { FleetGateway } from './infrastructure/gateways/fleet.gateway';
@@ -33,7 +34,8 @@ import { DeliveryController } from './interface/delivery.controller';
     { provide: DELIVERY_REPOSITORY, useClass: DeliveryRepository },
     { provide: FLEET_GATEWAY, useClass: FleetGateway },
     { provide: DELIVERY_LOOKUP, useClass: DeliveryLookupService },
+    { provide: DELIVERY_WRITER, useClass: DeliveryWriterService },
   ],
-  exports: [DELIVERY_LOOKUP],
+  exports: [DELIVERY_LOOKUP, DELIVERY_WRITER],
 })
 export class DeliveryModule {}

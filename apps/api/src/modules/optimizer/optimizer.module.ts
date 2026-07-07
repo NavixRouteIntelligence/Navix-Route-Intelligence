@@ -5,6 +5,7 @@ import { DeliveryModule } from '../delivery/delivery.module';
 import { GetRoutePlanUseCase } from './application/get-route-plan.use-case';
 import { ListRoutePlansUseCase } from './application/list-route-plans.use-case';
 import { OptimizeRouteUseCase } from './application/optimize-route.use-case';
+import { OPTIMIZER_SERVICE, OptimizerService } from './application/optimizer.service';
 import { StrategyRegistry } from './application/strategy-registry';
 import { DELIVERY_GATEWAY } from './application/ports/delivery-gateway.port';
 import { DISTANCE_PROVIDER } from './domain/ports/distance-provider.port';
@@ -38,6 +39,8 @@ import { OptimizerController } from './interface/optimizer.controller';
     { provide: DISTANCE_PROVIDER, useClass: HaversineDistanceProvider },
     { provide: ROUTE_PLAN_REPOSITORY, useClass: RoutePlanRepository },
     { provide: DELIVERY_GATEWAY, useClass: DeliveryGateway },
+    { provide: OPTIMIZER_SERVICE, useClass: OptimizerService },
   ],
+  exports: [OPTIMIZER_SERVICE],
 })
 export class OptimizerModule {}

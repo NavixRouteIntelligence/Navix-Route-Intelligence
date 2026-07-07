@@ -44,6 +44,10 @@ export const envSchema = z.object({
   JWT_PREVIOUS_KEY_ID: z.string().optional(),
 
   ENCRYPTION_KEK: z.string().min(16),
+
+  // Geocodificação do Import Center (Mapbox). Opcional: sem token, o geocoder
+  // retorna nulo e linhas sem lat/lng ficam inválidas.
+  MAPBOX_TOKEN: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

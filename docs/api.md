@@ -225,6 +225,26 @@ Corpo do POST: `origin?` (depósito), **uma** das fontes `deliveryIds[]` (busca 
 
 Resposta (Route Plan): `stops` (ordem ideal), `metrics` (distância/tempo/nº paradas), `baseline`, `savings` (km, min, %), `score` (0–100), `explanation`, `params`, `createdAt`. Algoritmo MVP: **Nearest Neighbor + 2-opt** com distância Haversine (Strategy Pattern — extensível para OR-Tools/IA sem alterar a API).
 
+### 14.4 Import Center — implementado (Fase 2)
+
+Autenticado; exige `admin`/`dispatcher`. Escopado ao tenant. Ingestão de entregas a partir de arquivos, em duas etapas (pré-visualização → confirmação).
+
+```
+POST   /api/v1/imports/preview      # upload multipart (campo "file") → lote em preview (201)
+POST   /api/v1/imports/{id}/confirm # cria entregas e (opcional) otimiza a rota
+GET    /api/v1/imports              # histórico (paginado)
+GET    /api/v1/imports/{id}         # detalhe: linhas processadas + erros
+```
+
+- **Upload**: `multipart/form-data`, campo `file`. Formatos: **CSV**, **XLS/XLSX**, **PDF**. Limite 5 MB; até 1000 linhas por arquivo. O tipo é detectado pela extensão.
+- **Detecção de colunas**: mapeamento automático por sinônimos (pt/en) para Destinatário, Endereço, Telefone, Nº da encomenda, Observações e Prioridade; aceita `latitude`/`longitude` quando presentes.
+- **Processamento por linha**: geocodificação (Mapbox, server-side) quando faltam coordenadas; classificação do endereço (Residência, Comércio, Condomínio, Empresa, Indefinido); validação de obrigatórios; detecção de duplicados (por nº da encomenda ou por endereço+coordenadas).
+- **Resposta do preview**: `batch` (com `summary`: total, válidas, inválidas, duplicados, economia estimada em km/%) e `rows[]` (status `valid|invalid|duplicate`, categoria, flags `geocoded`/`lowConfidence`, `errors[]`).
+- **Confirmação** (`{ optimize?: boolean }`): cria as entregas válidas no módulo Delivery e, se `optimize=true` e houver ≥ 2 entregas, dispara o Route Optimizer; retorna `createdDeliveries` e `routePlanId`.
+- **PDF**: extração best-effort — linhas marcadas com `lowConfidence`.
+- **Segurança/isolamento**: RLS por tenant na tabela `import_batches`; auditoria em `import.previewed` e `import.confirmed`.
+- **Extensibilidade**: parsers registrados como multi-provider (Strategy). Novas fontes (Shopee, Amazon, Shopify, WooCommerce, APIs externas, OCR) entram adicionando um parser/adaptador, sem alterar o contrato.
+
 ## 15. Documentação viva
 
 - OpenAPI/Swagger exposto em ambiente não-produtivo.
@@ -239,3 +259,4 @@ Resposta (Route Plan): `stops` (ordem ideal), `metrics` (distância/tempo/nº pa
 | 2026-07-05 | 0.1 | Engenharia | Estrutura inicial |
 | 2026-07-05 | 0.2 | CTO | Jobs assíncronos (202), bulk import, API keys M2M, quotas por plano |
 | 2026-07-05 | 0.3 | Engenharia | Fase 1: endpoints do Fleet (vehicles, drivers) implementados |
+| 2026-07-07 | 0.4 | Engenharia | Fase 2: Import Center (preview/confirm/histórico) implementado |
