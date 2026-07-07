@@ -5,6 +5,7 @@ import { useEffect, type ReactNode } from 'react';
 
 import { Sidebar } from '@/components/layout/sidebar';
 import { Topbar } from '@/components/layout/topbar';
+import { UiStoreProvider } from '@/components/layout/ui-store';
 import { Spinner } from '@/components/ui/spinner';
 import { useAuth } from '@/lib/auth/auth-provider';
 
@@ -25,12 +26,16 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="flex min-h-screen">
-      <Sidebar />
-      <div className="flex min-w-0 flex-1 flex-col">
-        <Topbar />
-        <main className="flex-1 overflow-y-auto p-6">{children}</main>
+    <UiStoreProvider>
+      <div className="flex min-h-screen">
+        <Sidebar />
+        <div className="flex min-w-0 flex-1 flex-col">
+          <Topbar />
+          <main className="flex-1 overflow-y-auto p-4 md:p-6">
+            <div className="mx-auto max-w-7xl animate-fade-in">{children}</div>
+          </main>
+        </div>
       </div>
-    </div>
+    </UiStoreProvider>
   );
 }
