@@ -4,15 +4,22 @@ import { PassportModule } from '@nestjs/passport';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 // Application
+import { ChangePasswordUseCase } from './application/change-password.use-case';
+import { GetProfileUseCase } from './application/get-profile.use-case';
 import { LoginUseCase } from './application/login.use-case';
 import { LogoutUseCase } from './application/logout.use-case';
 import { RefreshTokenUseCase } from './application/refresh-token.use-case';
+import { RequestPasswordResetUseCase } from './application/request-password-reset.use-case';
+import { ResetPasswordUseCase } from './application/reset-password.use-case';
 import { PASSWORD_HASHER } from './application/ports/password-hasher.port';
 import { TOKEN_SERVICE } from './application/ports/token-service.port';
 // Domain ports
+import { PASSWORD_RESET_TOKEN_REPOSITORY } from './domain/ports/password-reset-token-repository.port';
 import { REFRESH_TOKEN_REPOSITORY } from './domain/ports/refresh-token-repository.port';
 import { USER_REPOSITORY } from './domain/ports/user-repository.port';
 // Infrastructure
+import { PasswordResetTokenOrmEntity } from './infrastructure/persistence/password-reset-token.orm-entity';
+import { PasswordResetTokenRepository } from './infrastructure/persistence/password-reset-token.repository';
 import { RefreshTokenOrmEntity } from './infrastructure/persistence/refresh-token.orm-entity';
 import { RefreshTokenRepository } from './infrastructure/persistence/refresh-token.repository';
 import { UserOrmEntity } from './infrastructure/persistence/user.orm-entity';
@@ -31,7 +38,11 @@ import { JwtStrategy } from './interface/jwt.strategy';
  */
 @Module({
   imports: [
-    TypeOrmModule.forFeature([UserOrmEntity, RefreshTokenOrmEntity]),
+    TypeOrmModule.forFeature([
+      UserOrmEntity,
+      RefreshTokenOrmEntity,
+      PasswordResetTokenOrmEntity,
+    ]),
     PassportModule,
     JwtModule.register({}),
   ],
@@ -40,9 +51,14 @@ import { JwtStrategy } from './interface/jwt.strategy';
     LoginUseCase,
     RefreshTokenUseCase,
     LogoutUseCase,
+    GetProfileUseCase,
+    ChangePasswordUseCase,
+    RequestPasswordResetUseCase,
+    ResetPasswordUseCase,
     JwtStrategy,
     { provide: USER_REPOSITORY, useClass: UserRepository },
     { provide: REFRESH_TOKEN_REPOSITORY, useClass: RefreshTokenRepository },
+    { provide: PASSWORD_RESET_TOKEN_REPOSITORY, useClass: PasswordResetTokenRepository },
     { provide: PASSWORD_HASHER, useClass: Argon2PasswordHasher },
     { provide: TOKEN_SERVICE, useClass: JwtTokenService },
     { provide: KEY_RING, useClass: LocalKeyRing },

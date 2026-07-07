@@ -4,6 +4,7 @@ import type { User } from '../user';
 export interface UserRepositoryPort {
   findByEmail(tenantId: string, email: string): Promise<User | null>;
   findById(id: string): Promise<User | null>;
+  updatePassword(userId: string, passwordHash: string): Promise<void>;
 }
 
 /** Token de injeção do Nest para a port. */

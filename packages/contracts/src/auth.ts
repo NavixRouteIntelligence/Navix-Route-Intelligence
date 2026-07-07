@@ -48,3 +48,30 @@ export interface AccessTokenClaims {
   tenantId: string;
   roles: string[];
 }
+
+/** Troca de senha do usuário autenticado. */
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+}
+
+/** Solicitação de recuperação de senha. */
+export interface ForgotPasswordRequest {
+  tenantId: string;
+  email: string;
+}
+
+/**
+ * Resposta do "esqueci a senha". Em desenvolvimento, `resetToken` é retornado
+ * para permitir concluir o fluxo sem e-mail; em produção seria enviado por e-mail.
+ */
+export interface ForgotPasswordResponse {
+  message: string;
+  resetToken?: string;
+}
+
+/** Confirmação de redefinição de senha. */
+export interface ResetPasswordRequest {
+  token: string;
+  newPassword: string;
+}

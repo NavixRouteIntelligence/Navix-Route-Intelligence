@@ -48,6 +48,7 @@ describe('LoginUseCase', () => {
     const users: UserRepositoryPort = {
       findByEmail: jest.fn().mockResolvedValue(overrides.user),
       findById: jest.fn(),
+      updatePassword: jest.fn().mockResolvedValue(undefined),
     };
     const hasher: PasswordHasherPort = {
       hash: jest.fn(),

@@ -24,6 +24,10 @@ export class UserRepository implements UserRepositoryPort {
     return row ? this.toDomain(row) : null;
   }
 
+  async updatePassword(userId: string, passwordHash: string): Promise<void> {
+    await this.repo.update({ id: userId }, { passwordHash, updatedAt: new Date() });
+  }
+
   private toDomain(row: UserOrmEntity): User {
     return {
       id: row.id,

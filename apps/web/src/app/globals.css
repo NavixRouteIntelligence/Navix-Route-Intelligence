@@ -1,31 +1,102 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ==========================================================================
+   Navix Design System — tokens
+   Marca: "Navix Indigo" (250) · Acento de rotas: "Route Teal" (172)
+   ========================================================================== */
 :root {
-  --bg: #0b1020;
-  --panel: #141b2e;
-  --text: #e8ecf5;
-  --muted: #8b97b3;
-  --accent: #4f8cff;
-  --border: #26304a;
-  --error: #ff6b6b;
+  --radius: 0.7rem;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --background: 240 25% 99%;
+  --surface: 240 22% 97%;
+  --foreground: 240 24% 12%;
+  --card: 0 0% 100%;
+  --card-foreground: 240 24% 12%;
+  --muted: 240 18% 95%;
+  --muted-foreground: 240 8% 46%;
+  --border: 240 16% 90%;
+  --input: 240 16% 87%;
+  --ring: 250 84% 60%;
+
+  --primary: 250 84% 60%;
+  --primary-foreground: 0 0% 100%;
+  --accent: 172 68% 38%;
+  --accent-foreground: 0 0% 100%;
+  --success: 152 62% 38%;
+  --success-foreground: 0 0% 100%;
+  --warning: 38 92% 48%;
+  --warning-foreground: 30 45% 14%;
+  --danger: 350 78% 54%;
+  --danger-foreground: 0 0% 100%;
+
+  --chart-1: 250 84% 60%;
+  --chart-2: 172 68% 40%;
+  --chart-3: 38 92% 50%;
+  --chart-4: 152 62% 42%;
+  --chart-5: 300 70% 58%;
+}
+
+.dark {
+  --background: 240 28% 7%;
+  --surface: 240 24% 10%;
+  --foreground: 240 20% 92%;
+  --card: 240 23% 11%;
+  --card-foreground: 240 20% 92%;
+  --muted: 240 18% 17%;
+  --muted-foreground: 240 10% 62%;
+  --border: 240 15% 21%;
+  --input: 240 15% 24%;
+  --ring: 250 84% 68%;
+
+  --primary: 250 84% 68%;
+  --primary-foreground: 240 28% 8%;
+  --accent: 172 60% 48%;
+  --accent-foreground: 240 28% 8%;
+  --success: 152 55% 46%;
+  --success-foreground: 240 28% 8%;
+  --warning: 38 92% 56%;
+  --warning-foreground: 30 45% 12%;
+  --danger: 350 80% 62%;
+  --danger-foreground: 240 28% 8%;
+
+  --chart-1: 250 84% 70%;
+  --chart-2: 172 60% 52%;
+  --chart-3: 38 92% 58%;
+  --chart-4: 152 55% 52%;
+  --chart-5: 300 70% 68%;
 }
 
 * {
-  box-sizing: border-box;
+  border-color: hsl(var(--border));
 }
 
-html,
+html {
+  scroll-behavior: smooth;
+}
+
 body {
-  margin: 0;
-  padding: 0;
-  background: var(--bg);
-  color: var(--text);
-  font-family:
-    system-ui,
-    -apple-system,
-    'Segoe UI',
-    Roboto,
-    sans-serif;
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-a {
-  color: var(--accent);
+/* Foco visível e acessível em toda a app (WCAG). */
+:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
