@@ -58,6 +58,27 @@ export class OptimizerController {
     return { data };
   }
 
+  /**
+   * Otimização com escopo de motorista: mesmo motor das Empresas, restrito ao
+   * papel `driver`. O motorista envia as próprias entregas ativas (a RLS garante
+   * o isolamento por tenant). Endpoint aditivo — não altera o fluxo de Empresa.
+   */
+  @Post('mine')
+  @Roles('driver')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Motorista otimiza a própria rota (mesmo motor de IA)' })
+  async optimizeMine(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: OptimizeRouteDto,
+  ): Promise<ResourceResponse<RoutePlanView>> {
+    const data = await this.optimize.execute({
+      ...dto,
+      tenantId: user.tenantId,
+      actorId: user.id,
+    });
+    return { data };
+  }
+
   @Get()
   @ApiOperation({ summary: 'Lista os Route Plans (histórico)' })
   async list(

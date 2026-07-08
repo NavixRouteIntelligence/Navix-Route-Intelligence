@@ -1,6 +1,6 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   CheckCircle2,
   Clock,
@@ -17,6 +17,7 @@ import {
 import Link from 'next/link';
 import { useState } from 'react';
 
+import { AiRouteOptimizer } from '@/components/driver/ai-route-optimizer';
 import { RouteMap } from '@/components/map/route-map';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -47,6 +48,7 @@ function formatMinutes(min: number): string {
 export default function DriverDashboardPage() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const qc = useQueryClient();
   const [completed, setCompleted] = useState(0);
   const [running, setRunning] = useState(false);
   const share = useShareLocation();
@@ -147,6 +149,14 @@ export default function DriverDashboardPage() {
           </Button>
         </CardContent>
       </Card>
+
+      {/* Otimização inteligente da rota (mesmo motor das Empresas) */}
+      <AiRouteOptimizer
+        onOptimized={() => qc.invalidateQueries({ queryKey: ['driver-route'] })}
+        onStartTracking={() => {
+          if (!share.sharing) share.toggle();
+        }}
+      />
 
       {/* KPIs */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

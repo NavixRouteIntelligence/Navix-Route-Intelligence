@@ -234,12 +234,15 @@ Status: `pending → in_route → {delivered|failed}`; `failed → in_route`; `p
 Autenticado; otimização exige `admin`/`dispatcher`. Escopado ao tenant.
 
 ```
-POST   /api/v1/route-plans          # otimiza e persiste um Route Plan (201)
+POST   /api/v1/route-plans          # otimiza e persiste um Route Plan (201) — admin/dispatcher
+POST   /api/v1/route-plans/mine      # Motorista Autônomo otimiza a própria rota (201) — role driver
 GET    /api/v1/route-plans          # histórico (paginado)
 GET    /api/v1/route-plans/{id}     # consulta um Route Plan
 ```
 
 Corpo do POST: `origin?` (depósito), **uma** das fontes `deliveryIds[]` (busca no Delivery) **ou** `stops[]` (inline: id, lat, lng, priority?, timeWindow?), `strategy?`, `averageSpeedKmh?`, `serviceTimeMinutes?`.
+
+`/route-plans/mine` é **aditivo** (não altera o fluxo de Empresa): usa o **mesmo motor** com o papel `driver`, escopado ao tenant do motorista pela RLS. O painel de rentabilidade (lucro, custos de combustível/energia e portagens, ganho líquido) é calculado no cliente a partir das métricas do plano + parâmetros configuráveis. Fatores de **trânsito em tempo real, acidentes e estradas fechadas** ficam como integração futura (arquitetura de estratégias/distância pronta para recebê-los).
 
 Resposta (Route Plan): `stops` (ordem ideal), `metrics` (distância/tempo/nº paradas), `baseline`, `savings` (km, min, %), `score` (0–100), `explanation`, `params`, `createdAt`. Algoritmo MVP: **Nearest Neighbor + 2-opt** com distância Haversine (Strategy Pattern — extensível para OR-Tools/IA sem alterar a API).
 
@@ -302,3 +305,4 @@ GET  /api/v1/tracking/drivers/{id}/history  # histórico de um motorista (empres
 | 2026-07-08 | 0.5 | Engenharia | Import Center: arquitetura de conectores plugáveis + GET /imports/connectors |
 | 2026-07-08 | 0.6 | Engenharia | Contas por perfil (RBAC): POST /auth/register (Motorista Autônomo × Empresa), tenant.account_type, Dashboard do Motorista |
 | 2026-07-08 | 0.7 | Engenharia | Tracking (MVP): posições do motorista, visão de frota (empresa), driver_positions (TimescaleDB-ready), mapa em tempo real |
+| 2026-07-08 | 0.8 | Engenharia | Otimização IA para Motorista Autônomo: POST /route-plans/mine (aditivo), painel de rentabilidade, integração com tracking |
