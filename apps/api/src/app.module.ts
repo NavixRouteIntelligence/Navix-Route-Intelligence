@@ -10,6 +10,7 @@ import { DeliveryModule } from './modules/delivery/delivery.module';
 import { FleetModule } from './modules/fleet/fleet.module';
 import { ImportModule } from './modules/import/import.module';
 import { OptimizerModule } from './modules/optimizer/optimizer.module';
+import { TrackingModule } from './modules/tracking/tracking.module';
 import { HealthModule } from './modules/health/health.module';
 import { IdentityModule } from './modules/identity/identity.module';
 
@@ -32,6 +33,7 @@ import { IdentityModule } from './modules/identity/identity.module';
     DeliveryModule,
     OptimizerModule,
     ImportModule,
+    TrackingModule,
   ],
 })
 export class AppModule {}

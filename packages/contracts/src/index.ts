@@ -4,3 +4,4 @@ export * from './fleet';
 export * from './delivery';
 export * from './optimizer';
 export * from './import';
+export * from './tracking';

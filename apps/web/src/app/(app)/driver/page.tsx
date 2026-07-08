@@ -30,7 +30,10 @@ import { TD, TH, THead, TR, Table } from '@/components/ui/table';
 import { useToast } from '@/components/ui/toast';
 import { deliveriesApi } from '@/lib/api/deliveries';
 import { optimizerApi } from '@/lib/api/optimizer';
+import { trackingApi } from '@/lib/api/tracking';
 import { useAuth } from '@/lib/auth/auth-provider';
+import { TRACKING_STATUS } from '@/lib/tracking/status';
+import { useShareLocation } from '@/lib/tracking/use-share-location';
 import { formatDateTime, formatNumber } from '@/lib/utils';
 
 const FUEL_L_PER_KM = 0.12; // fator médio de consumo (litros por km) — demo
@@ -46,6 +49,14 @@ export default function DriverDashboardPage() {
   const { toast } = useToast();
   const [completed, setCompleted] = useState(0);
   const [running, setRunning] = useState(false);
+  const share = useShareLocation();
+
+  const myPosition = useQuery({
+    queryKey: ['driver-position'],
+    queryFn: () => trackingApi.myLatest(),
+    refetchInterval: share.sharing ? 8000 : false,
+  });
+  const trackStatus = myPosition.data?.data?.status ?? 'offline';
 
   const plans = useQuery({
     queryKey: ['driver-route'],
@@ -112,6 +123,30 @@ export default function DriverDashboardPage() {
           Verifique sua conexão e tente novamente.
         </Alert>
       )}
+
+      {/* Compartilhamento de localização (tracking) */}
+      <Card>
+        <CardContent className="flex flex-wrap items-center justify-between gap-3 pt-6">
+          <div className="flex items-center gap-3">
+            <span className={`h-2.5 w-2.5 rounded-full ${TRACKING_STATUS[trackStatus].dot}`} aria-hidden />
+            <div>
+              <p className="text-sm font-medium">
+                Rastreamento: {TRACKING_STATUS[trackStatus].label}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {share.sharing
+                  ? 'Enviando sua localização em tempo real.'
+                  : 'Ative para compartilhar sua posição com a central.'}
+              </p>
+              {share.error && <p className="text-xs text-danger">{share.error}</p>}
+            </div>
+          </div>
+          <Button variant={share.sharing ? 'outline' : 'primary'} onClick={share.toggle}>
+            <MapPin className="h-4 w-4" />
+            {share.sharing ? 'Parar de compartilhar' : 'Compartilhar localização'}
+          </Button>
+        </CardContent>
+      </Card>
 
       {/* KPIs */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

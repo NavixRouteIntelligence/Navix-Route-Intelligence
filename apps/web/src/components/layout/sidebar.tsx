@@ -5,6 +5,7 @@ import {
   LayoutDashboard,
   Navigation,
   Package,
+  Radio,
   Route,
   Truck,
   Upload,
@@ -35,6 +36,7 @@ const ADMIN_NAV: NavItem[] = [
   { href: '/fleet/drivers', label: 'Motoristas', icon: Users },
   { href: '/fleet/vehicles', label: 'Veículos', icon: Truck },
   { href: '/optimizer', label: 'Otimizador', icon: Route },
+  { href: '/tracking', label: 'Rastreamento', icon: Radio },
   { href: '/profile', label: 'Perfil', icon: UserCircle },
 ];
 
