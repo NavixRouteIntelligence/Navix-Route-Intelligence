@@ -148,6 +148,7 @@ Formato padronizado (nunca vaza detalhes internos):
 ## 14. Exemplos de endpoints (preliminar)
 
 ```
+POST   /api/v1/auth/register
 POST   /api/v1/auth/login
 POST   /api/v1/auth/refresh
 POST   /api/v1/auth/logout
@@ -168,6 +169,23 @@ GET    /api/v1/jobs/{jobId}
 GET    /api/v1/vehicles
 GET    /api/v1/drivers
 ```
+
+### 14.0 Contas e perfis (RBAC) — implementado
+
+`POST /api/v1/auth/register` (público, rate-limited) cria a conta com escolha de perfil e já autentica (retorna `user` + `tokens` + `accountType`):
+
+```
+POST /api/v1/auth/register
+  body: { accountType: 'driver' | 'company', name, email, password, organizationName? }
+  201:  { user, tokens, accountType }
+```
+
+- **`company`** (Empresa): cria a organização e o usuário como `admin` → Dashboard administrativo.
+- **`driver`** (Motorista Autônomo): cria uma **organização pessoal** (tenant `account_type='driver'`) e o usuário como `driver` (motorista principal) → Dashboard do Motorista. O veículo é cadastrado depois (onboarding).
+
+Tenant + usuário são criados numa única transação. O **RBAC** usa `roles[]` no JWT: a interface (web) é adaptada automaticamente pelo papel (nav, rotas e dashboards). Papéis: `admin`/`dispatcher`/`fleet_manager` (empresa) e `driver` (autônomo).
+
+**Multi-tenant preservado.** Como o motorista autônomo é um tenant com `account_type='driver'` e usuário no mesmo tenant, a futura **migração Autônomo → Empresa** é feita alterando `account_type` + papéis, **sem perda de dados, histórico ou configurações** (sem endpoint nesta fase).
 
 ### 14.1 Fleet — implementado (Fase 1)
 
@@ -264,3 +282,4 @@ GET    /api/v1/imports/{id}         # detalhe: linhas processadas + erros
 | 2026-07-05 | 0.3 | Engenharia | Fase 1: endpoints do Fleet (vehicles, drivers) implementados |
 | 2026-07-07 | 0.4 | Engenharia | Fase 2: Import Center (preview/confirm/histórico) implementado |
 | 2026-07-08 | 0.5 | Engenharia | Import Center: arquitetura de conectores plugáveis + GET /imports/connectors |
+| 2026-07-08 | 0.6 | Engenharia | Contas por perfil (RBAC): POST /auth/register (Motorista Autônomo × Empresa), tenant.account_type, Dashboard do Motorista |

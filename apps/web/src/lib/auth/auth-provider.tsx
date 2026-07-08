@@ -1,6 +1,6 @@
 'use client';
 
-import type { AuthenticatedUser, LoginRequest } from '@navix/contracts';
+import type { AuthenticatedUser, LoginRequest, RegisterRequest } from '@navix/contracts';
 import { useRouter } from 'next/navigation';
 import {
   createContext,
@@ -23,6 +23,7 @@ interface AuthContextValue {
   status: Status;
   user: AuthenticatedUser | null;
   login: (payload: LoginRequest) => Promise<void>;
+  register: (payload: RegisterRequest) => Promise<AuthenticatedUser>;
   logout: () => Promise<void>;
 }
 
@@ -91,14 +92,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })();
   }, [doRefresh, clearSession]);
 
-  const login = useCallback(async (payload: LoginRequest) => {
-    const result = await authApi.login(payload);
+  const applySession = useCallback((result: { user: AuthenticatedUser; tokens: { accessToken: string; refreshToken: string } }) => {
     accessToken.current = result.tokens.accessToken;
     refreshToken.current = result.tokens.refreshToken;
     if (typeof window !== 'undefined') window.localStorage.setItem(REFRESH_KEY, result.tokens.refreshToken);
     setUser(result.user);
     setStatus('authenticated');
   }, []);
+
+  const login = useCallback(
+    async (payload: LoginRequest) => {
+      const result = await authApi.login(payload);
+      applySession(result);
+    },
+    [applySession],
+  );
+
+  const register = useCallback(
+    async (payload: RegisterRequest): Promise<AuthenticatedUser> => {
+      const result = await authApi.register(payload);
+      applySession(result);
+      return result.user;
+    },
+    [applySession],
+  );
 
   const logout = useCallback(async () => {
     const token = refreshToken.current;
@@ -114,7 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [clearSession, router]);
 
   return (
-    <AuthContext.Provider value={{ status, user, login, logout }}>{children}</AuthContext.Provider>
+    <AuthContext.Provider value={{ status, user, login, register, logout }}>{children}</AuthContext.Provider>
   );
 }
 

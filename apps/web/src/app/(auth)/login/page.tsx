@@ -74,9 +74,12 @@ export default function LoginPage() {
             Entrar
           </Button>
 
-          <div className="text-center text-sm text-muted-foreground">
+          <div className="flex items-center justify-between text-sm text-muted-foreground">
             <Link href="/forgot-password" className="hover:text-foreground">
               Esqueci minha senha
+            </Link>
+            <Link href="/register" className="font-medium text-primary hover:opacity-80">
+              Criar conta
             </Link>
           </div>
         </form>

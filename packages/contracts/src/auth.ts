@@ -3,6 +3,16 @@
  * Ver docs/security.md (JWT + Refresh Token).
  */
 
+/**
+ * Tipo de conta escolhido na criação. Determina a organização, os papéis (RBAC)
+ * e o destino pós-cadastro. `driver` (Motorista Autônomo) nasce com organização
+ * pessoal e pode futuramente migrar para `company` sem perda de dados.
+ */
+export type AccountType = 'driver' | 'company';
+
+/** Papéis conhecidos usados para adaptar a interface (RBAC). */
+export type KnownRole = 'admin' | 'dispatcher' | 'fleet_manager' | 'driver';
+
 /** Corpo da requisição de login. */
 export interface LoginRequest {
   /**
@@ -12,6 +22,24 @@ export interface LoginRequest {
   tenantId: string;
   email: string;
   password: string;
+}
+
+/** Criação de conta. Empresa exige `organizationName`; autônomo o deriva do nome. */
+export interface RegisterRequest {
+  accountType: AccountType;
+  /** Nome da pessoa (responsável / motorista principal). */
+  name: string;
+  email: string;
+  password: string;
+  /** Nome da organização — obrigatório para `company`. */
+  organizationName?: string;
+}
+
+/** Resposta do cadastro: já autentica (mesmo shape do login) + tipo de conta. */
+export interface RegisterResponse {
+  user: AuthenticatedUser;
+  tokens: AuthTokens;
+  accountType: AccountType;
 }
 
 /** Corpo da requisição de refresh de token. */

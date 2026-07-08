@@ -9,6 +9,7 @@ import { GetProfileUseCase } from './application/get-profile.use-case';
 import { LoginUseCase } from './application/login.use-case';
 import { LogoutUseCase } from './application/logout.use-case';
 import { RefreshTokenUseCase } from './application/refresh-token.use-case';
+import { RegisterUseCase } from './application/register.use-case';
 import { RequestPasswordResetUseCase } from './application/request-password-reset.use-case';
 import { ResetPasswordUseCase } from './application/reset-password.use-case';
 import { PASSWORD_HASHER } from './application/ports/password-hasher.port';
@@ -49,6 +50,7 @@ import { JwtStrategy } from './interface/jwt.strategy';
   controllers: [AuthController],
   providers: [
     LoginUseCase,
+    RegisterUseCase,
     RefreshTokenUseCase,
     LogoutUseCase,
     GetProfileUseCase,

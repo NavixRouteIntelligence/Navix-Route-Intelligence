@@ -6,6 +6,8 @@ import type {
   ForgotPasswordResponse,
   LoginRequest,
   LoginResponse,
+  RegisterRequest,
+  RegisterResponse,
   ResetPasswordRequest,
   ResourceResponse,
 } from '@navix/contracts';
@@ -15,6 +17,9 @@ import { apiRequest } from './client';
 export const authApi = {
   login: (payload: LoginRequest) =>
     apiRequest<LoginResponse>('/auth/login', { method: 'POST', body: payload, auth: false }),
+
+  register: (payload: RegisterRequest) =>
+    apiRequest<RegisterResponse>('/auth/register', { method: 'POST', body: payload, auth: false }),
 
   refresh: (refreshToken: string) =>
     apiRequest<AuthTokens>('/auth/refresh', {

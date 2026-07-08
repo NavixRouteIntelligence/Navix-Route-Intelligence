@@ -3,6 +3,7 @@
 import {
   ChevronsLeft,
   LayoutDashboard,
+  Navigation,
   Package,
   Route,
   Truck,
@@ -16,6 +17,8 @@ import { usePathname } from 'next/navigation';
 
 import { useUiStore } from '@/components/layout/ui-store';
 import { Logo, LogoMark } from '@/components/ui/logo';
+import { useAuth } from '@/lib/auth/auth-provider';
+import { isDriver } from '@/lib/auth/roles';
 import { cn } from '@/lib/utils';
 
 interface NavItem {
@@ -24,7 +27,8 @@ interface NavItem {
   icon: LucideIcon;
 }
 
-const NAV: NavItem[] = [
+/** Navegação administrativa (empresa). */
+const ADMIN_NAV: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/deliveries', label: 'Entregas', icon: Package },
   { href: '/imports', label: 'Importar', icon: Upload },
@@ -34,12 +38,27 @@ const NAV: NavItem[] = [
   { href: '/profile', label: 'Perfil', icon: UserCircle },
 ];
 
+/** Navegação enxuta do Motorista Autônomo. */
+const DRIVER_NAV: NavItem[] = [
+  { href: '/driver', label: 'Minha rota', icon: Navigation },
+  { href: '/fleet/vehicles', label: 'Meu veículo', icon: Truck },
+  { href: '/profile', label: 'Perfil', icon: UserCircle },
+];
+
 /** Conteúdo compartilhado (usado no rail desktop e no drawer mobile). */
-function NavContent({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
+function NavContent({
+  items,
+  collapsed,
+  onNavigate,
+}: {
+  items: NavItem[];
+  collapsed: boolean;
+  onNavigate?: () => void;
+}) {
   const pathname = usePathname();
   return (
     <nav className="flex-1 space-y-1 px-3 py-4" aria-label="Navegação principal">
-      {NAV.map((item) => {
+      {items.map((item) => {
         const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
         const Icon = item.icon;
         return (
@@ -66,6 +85,8 @@ function NavContent({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?
 
 export function Sidebar() {
   const { collapsed, toggleCollapsed, mobileOpen, setMobileOpen } = useUiStore();
+  const { user } = useAuth();
+  const nav = isDriver(user) ? DRIVER_NAV : ADMIN_NAV;
 
   return (
     <>
@@ -79,7 +100,7 @@ export function Sidebar() {
         <div className={cn('flex h-16 items-center px-4', collapsed && 'justify-center px-0')}>
           {collapsed ? <LogoMark /> : <Logo />}
         </div>
-        <NavContent collapsed={collapsed} />
+        <NavContent items={nav} collapsed={collapsed} />
         <button
           onClick={toggleCollapsed}
           className="m-3 flex items-center justify-center gap-2 rounded-md py-2 text-xs font-medium text-muted-foreground hover:bg-muted"
@@ -102,7 +123,7 @@ export function Sidebar() {
             <div className="flex h-16 items-center px-5">
               <Logo />
             </div>
-            <NavContent collapsed={false} onNavigate={() => setMobileOpen(false)} />
+            <NavContent items={nav} collapsed={false} onNavigate={() => setMobileOpen(false)} />
           </aside>
         </div>
       )}

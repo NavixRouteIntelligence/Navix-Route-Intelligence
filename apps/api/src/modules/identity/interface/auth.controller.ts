@@ -13,6 +13,7 @@ import type {
   AuthTokens,
   ForgotPasswordResponse,
   LoginResponse,
+  RegisterResponse,
   ResourceResponse,
 } from '@navix/contracts';
 
@@ -23,12 +24,14 @@ import { GetProfileUseCase } from '../application/get-profile.use-case';
 import { LoginUseCase } from '../application/login.use-case';
 import { LogoutUseCase } from '../application/logout.use-case';
 import { RefreshTokenUseCase } from '../application/refresh-token.use-case';
+import { RegisterUseCase } from '../application/register.use-case';
 import { RequestPasswordResetUseCase } from '../application/request-password-reset.use-case';
 import { ResetPasswordUseCase } from '../application/reset-password.use-case';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { ForgotPasswordDto, ResetPasswordDto } from './dto/forgot-password.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
+import { RegisterDto } from './dto/register.dto';
 
 /**
  * Endpoints de autenticação e conta (ver docs/api.md §14 e docs/security.md §2).
@@ -38,6 +41,7 @@ import { RefreshDto } from './dto/refresh.dto';
 export class AuthController {
   constructor(
     private readonly login: LoginUseCase,
+    private readonly register: RegisterUseCase,
     private readonly refresh: RefreshTokenUseCase,
     private readonly logout: LogoutUseCase,
     private readonly getProfile: GetProfileUseCase,
@@ -45,6 +49,13 @@ export class AuthController {
     private readonly requestReset: RequestPasswordResetUseCase,
     private readonly resetPassword: ResetPasswordUseCase,
   ) {}
+
+  @Post('register')
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @HttpCode(HttpStatus.CREATED)
+  registerHandler(@Body() dto: RegisterDto): Promise<RegisterResponse> {
+    return this.register.execute(dto);
+  }
 
   @Post('login')
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
