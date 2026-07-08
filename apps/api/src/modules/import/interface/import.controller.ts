@@ -19,6 +19,7 @@ import type {
   CollectionResponse,
   ConfirmImportResponse,
   ImportBatchView,
+  ImportConnectorDescriptor,
   ImportFileType,
   ImportPreviewResponse,
 } from '@navix/contracts';
@@ -31,6 +32,7 @@ import { Roles } from '../../../shared/security/roles.decorator';
 import { RolesGuard } from '../../../shared/security/roles.guard';
 import { ConfirmImportUseCase } from '../application/confirm-import.use-case';
 import { GetImportUseCase } from '../application/get-import.use-case';
+import { ListConnectorsUseCase } from '../application/list-connectors.use-case';
 import { ListImportsUseCase } from '../application/list-imports.use-case';
 import { PreviewImportUseCase } from '../application/preview-import.use-case';
 import { ListQueryDto } from './dto/list-query.dto';
@@ -57,7 +59,14 @@ export class ImportController {
     private readonly confirm: ConfirmImportUseCase,
     private readonly getImport: GetImportUseCase,
     private readonly listImports: ListImportsUseCase,
+    private readonly listConnectors: ListConnectorsUseCase,
   ) {}
+
+  @Get('connectors')
+  @ApiOperation({ summary: 'Catálogo de conectores (disponíveis e planejados)' })
+  connectors(): { data: ImportConnectorDescriptor[] } {
+    return { data: this.listConnectors.execute() };
+  }
 
   @Post('preview')
   @Roles('admin', 'dispatcher')

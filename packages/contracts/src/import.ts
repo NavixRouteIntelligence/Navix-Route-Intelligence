@@ -8,6 +8,51 @@ export type ImportFileType = 'csv' | 'xlsx' | 'pdf';
 export type ImportBatchStatus = 'preview' | 'imported' | 'failed';
 export type ImportRowStatus = 'valid' | 'invalid' | 'duplicate';
 
+/**
+ * Conectores de importação — a fonte plugável de onde as entregas chegam.
+ * Três famílias: arquivos, captura (scan/imagem) e integrações externas.
+ */
+export type ConnectorKind = 'file' | 'capture' | 'integration';
+
+/** `available`: pronto para uso. `planned`: ponto de extensão preparado, sem lógica ainda. */
+export type ConnectorStatus = 'available' | 'planned';
+
+export type ConnectorId =
+  | 'csv'
+  | 'xlsx'
+  | 'pdf'
+  | 'barcode'
+  | 'qrcode'
+  | 'ocr'
+  | 'email'
+  | 'api'
+  | 'webhook'
+  | 'erp';
+
+/** Capacidades declaradas por um conector (usadas por UI e orquestração). */
+export interface ConnectorCapabilities {
+  /** Recebe upload de arquivo do usuário. */
+  fileUpload: boolean;
+  /** Puxa dados sob demanda de uma fonte externa. */
+  pull: boolean;
+  /** Recebe eventos de push (webhook/inbound). */
+  push: boolean;
+  /** Requer credenciais/configuração por tenant antes de operar. */
+  requiresConfig: boolean;
+}
+
+/** Descritor público de um conector (catálogo). */
+export interface ImportConnectorDescriptor {
+  id: ConnectorId;
+  kind: ConnectorKind;
+  status: ConnectorStatus;
+  label: string;
+  description: string;
+  /** Extensões aceitas (conectores de arquivo). */
+  accepts?: string[];
+  capabilities: ConnectorCapabilities;
+}
+
 /** Classificação heurística do endereço. */
 export type AddressCategory = 'residence' | 'commerce' | 'condo' | 'company' | 'unknown';
 

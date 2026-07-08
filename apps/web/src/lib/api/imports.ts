@@ -3,6 +3,7 @@ import type {
   ConfirmImportRequest,
   ConfirmImportResponse,
   ImportBatchView,
+  ImportConnectorDescriptor,
   ImportPreviewResponse,
 } from '@navix/contracts';
 
@@ -14,6 +15,8 @@ export interface ImportListParams {
 }
 
 export const importsApi = {
+  connectors: () =>
+    apiRequest<{ data: ImportConnectorDescriptor[] }>('/imports/connectors'),
   preview: (file: File) => {
     const form = new FormData();
     form.append('file', file);

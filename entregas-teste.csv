@@ -1,0 +1,6 @@
+Destinatário,Endereço,Telefone,Pedido,Observações,Prioridade
+Maria Silva,"Av. Paulista 1578, São Paulo, SP",11999990000,PED-001,Portão azul,alta
+João Souza,"Rua Augusta 900, São Paulo, SP",11988887777,PED-002,,normal
+João Souza,"Rua Augusta 900, São Paulo, SP",11988887777,PED-002,,normal
+Empresa Acme Ltda,"Rua Vergueiro 3000, São Paulo, SP",,PED-003,Recepção,urgente
+Cliente Sem Rua,,,PED-004,,normal

@@ -230,11 +230,14 @@ Resposta (Route Plan): `stops` (ordem ideal), `metrics` (distância/tempo/nº pa
 Autenticado; exige `admin`/`dispatcher`. Escopado ao tenant. Ingestão de entregas a partir de arquivos, em duas etapas (pré-visualização → confirmação).
 
 ```
+GET    /api/v1/imports/connectors   # catálogo de conectores (disponíveis e planejados)
 POST   /api/v1/imports/preview      # upload multipart (campo "file") → lote em preview (201)
 POST   /api/v1/imports/{id}/confirm # cria entregas e (opcional) otimiza a rota
 GET    /api/v1/imports              # histórico (paginado)
 GET    /api/v1/imports/{id}         # detalhe: linhas processadas + erros
 ```
+
+- **Conectores**: a ingestão é plugável por conectores (famílias `file`, `capture`, `integration`). Hoje `available`: CSV, Excel, PDF. `planned` (estrutura pronta, sem lógica): Barcode, QR Code, OCR, E-mail, API, Webhooks, ERP. Ver [modules/import-center.md](./modules/import-center.md) §7.
 
 - **Upload**: `multipart/form-data`, campo `file`. Formatos: **CSV**, **XLS/XLSX**, **PDF**. Limite 5 MB; até 1000 linhas por arquivo. O tipo é detectado pela extensão.
 - **Detecção de colunas**: mapeamento automático por sinônimos (pt/en) para Destinatário, Endereço, Telefone, Nº da encomenda, Observações e Prioridade; aceita `latitude`/`longitude` quando presentes.
@@ -260,3 +263,4 @@ GET    /api/v1/imports/{id}         # detalhe: linhas processadas + erros
 | 2026-07-05 | 0.2 | CTO | Jobs assíncronos (202), bulk import, API keys M2M, quotas por plano |
 | 2026-07-05 | 0.3 | Engenharia | Fase 1: endpoints do Fleet (vehicles, drivers) implementados |
 | 2026-07-07 | 0.4 | Engenharia | Fase 2: Import Center (preview/confirm/histórico) implementado |
+| 2026-07-08 | 0.5 | Engenharia | Import Center: arquitetura de conectores plugáveis + GET /imports/connectors |

@@ -7,6 +7,10 @@ import type {
 } from '@navix/contracts';
 
 import { AUDIT_LOG, type AuditLogPort } from '../../../shared/audit/audit-log.port';
+import {
+  CONNECTOR_REGISTRY,
+  type ConnectorRegistryPort,
+} from '../domain/connectors/connector-registry.port';
 import { ImportBatch } from '../domain/import-batch';
 import type { StoredImportRow } from '../domain/import-row';
 import {
@@ -21,7 +25,6 @@ import {
 import { ROUTE_ESTIMATOR, type RouteEstimatorPort } from '../domain/ports/route-estimator.port';
 import { toPreviewResponse } from './mappers/import.mapper';
 import { normalizePriority, resolveAddress } from './normalize';
-import { ParserRegistry } from './parser-registry';
 
 const MAX_ROWS = 1000;
 
@@ -36,7 +39,7 @@ export interface PreviewImportCommand {
 @Injectable()
 export class PreviewImportUseCase {
   constructor(
-    private readonly registry: ParserRegistry,
+    @Inject(CONNECTOR_REGISTRY) private readonly connectors: ConnectorRegistryPort,
     @Inject(GEOCODER) private readonly geocoder: GeocoderPort,
     @Inject(ADDRESS_CLASSIFIER) private readonly classifier: AddressClassifierPort,
     @Inject(ROUTE_ESTIMATOR) private readonly estimator: RouteEstimatorPort,
@@ -45,8 +48,14 @@ export class PreviewImportUseCase {
   ) {}
 
   async execute(command: PreviewImportCommand): Promise<ImportPreviewResponse> {
-    const parser = this.registry.get(command.fileType);
-    const parsed = (await parser.parse(command.buffer)).slice(0, MAX_ROWS);
+    const connector = this.connectors.get(command.fileType);
+    const parsed = (
+      await connector.read({
+        kind: 'file',
+        filename: command.filename,
+        buffer: command.buffer,
+      })
+    ).slice(0, MAX_ROWS);
 
     const rows: StoredImportRow[] = [];
     const seen = new Set<string>();

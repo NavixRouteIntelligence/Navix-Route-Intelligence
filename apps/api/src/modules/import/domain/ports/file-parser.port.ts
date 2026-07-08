@@ -16,12 +16,11 @@ export interface ParsedRow {
 }
 
 /**
- * Strategy de parsing por tipo de arquivo. Novas fontes (Shopee, Amazon,
- * Shopify, Woo, OCR…) entram como novas implementações desta porta.
+ * Strategy de parsing por tipo de arquivo. Cada parser é o detalhe interno de um
+ * conector de arquivo (ver domain/connectors) — os conectores é que são o ponto
+ * de extensão do módulo.
  */
 export interface FileParser {
   readonly type: ImportFileType;
   parse(buffer: Buffer): Promise<ParsedRow[]>;
 }
-
-export const FILE_PARSERS = Symbol('FILE_PARSERS');

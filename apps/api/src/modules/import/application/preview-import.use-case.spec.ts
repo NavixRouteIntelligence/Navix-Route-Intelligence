@@ -1,15 +1,31 @@
 import type { AuditLogPort } from '../../../shared/audit/audit-log.port';
+import type { ConnectorRegistryPort } from '../domain/connectors/connector-registry.port';
+import type { ImportConnector } from '../domain/connectors/import-connector.port';
 import type { AddressClassifierPort } from '../domain/ports/address-classifier.port';
-import type { FileParser, ParsedRow } from '../domain/ports/file-parser.port';
+import type { ParsedRow } from '../domain/ports/file-parser.port';
 import type { GeocoderPort } from '../domain/ports/geocoder.port';
 import type { ImportBatchRepositoryPort } from '../domain/ports/import-batch-repository.port';
 import type { RouteEstimatorPort } from '../domain/ports/route-estimator.port';
-import type { ParserRegistry } from './parser-registry';
 import { PreviewImportUseCase } from './preview-import.use-case';
 
 function buildUseCase(parsedRows: ParsedRow[]) {
-  const parser: FileParser = { type: 'csv', parse: async () => parsedRows };
-  const registry = { get: () => parser } as unknown as ParserRegistry;
+  const connector = {
+    descriptor: {
+      id: 'csv',
+      kind: 'file',
+      status: 'available',
+      label: 'CSV',
+      description: '',
+      capabilities: { fileUpload: true, pull: false, push: false, requiresConfig: false },
+    },
+    read: async () => parsedRows,
+  } satisfies ImportConnector;
+  const registry: ConnectorRegistryPort = {
+    get: () => connector,
+    all: () => [connector.descriptor],
+    available: () => [connector],
+    byKind: () => [connector.descriptor],
+  };
   const geocoder: GeocoderPort = {
     geocode: async (text: string) =>
       text.includes('sem-geo')
@@ -36,9 +52,9 @@ function buildUseCase(parsedRows: ParsedRow[]) {
 const row = (over: Partial<ParsedRow> = {}): ParsedRow => ({
   recipient: 'Cliente',
   addressText: 'Rua A, 100',
-  phone: null,
-  orderNumber: null,
-  notes: null,
+  phone: undefined,
+  orderNumber: undefined,
+  notes: undefined,
   priority: 'normal',
   latitude: undefined,
   longitude: undefined,
