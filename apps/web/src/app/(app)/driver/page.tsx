@@ -12,7 +12,7 @@ import {
   Pause,
   Play,
   Route as RouteIcon,
-  Truck,
+  Upload,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
@@ -176,14 +176,14 @@ export default function DriverDashboardPage() {
         <Card>
           <CardContent className="pt-6">
             <EmptyState
-              icon={Truck}
-              title="Nenhuma rota atribuída ainda"
-              description="Cadastre seu veículo para começar a receber rotas otimizadas."
+              icon={Upload}
+              title="Nenhuma rota ainda"
+              description="Importe suas entregas (CSV, Excel ou PDF) para gerar rotas otimizadas."
               action={
                 <Button asChild>
-                  <Link href="/fleet/vehicles">
-                    <Truck className="h-4 w-4" />
-                    Cadastrar veículo
+                  <Link href="/imports">
+                    <Upload className="h-4 w-4" />
+                    Importar entregas
                   </Link>
                 </Button>
               }

@@ -44,10 +44,10 @@ const ADMIN_NAV: NavItem[] = [
   { href: '/profile', label: 'nav.profile', icon: UserCircle },
 ];
 
-/** Navegação enxuta do Motorista Autônomo. */
+/** Navegação enxuta do Motorista Autônomo (sem Fleet/gestão — exclusivos da Empresa). */
 const DRIVER_NAV: NavItem[] = [
   { href: '/driver', label: 'nav.route', icon: Navigation },
-  { href: '/fleet/vehicles', label: 'nav.myVehicle', icon: Truck },
+  { href: '/imports', label: 'nav.imports', icon: Upload },
   { href: '/settings', label: 'nav.settings', icon: Settings },
   { href: '/profile', label: 'nav.profile', icon: UserCircle },
 ];

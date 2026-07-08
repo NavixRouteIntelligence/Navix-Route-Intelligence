@@ -248,7 +248,7 @@ Resposta (Route Plan): `stops` (ordem ideal), `metrics` (distância/tempo/nº pa
 
 ### 14.4 Import Center — implementado (Fase 2)
 
-Autenticado; exige `admin`/`dispatcher`. Escopado ao tenant. Ingestão de entregas a partir de arquivos, em duas etapas (pré-visualização → confirmação).
+Autenticado; `preview`/`confirm` exigem `admin`/`dispatcher`/**`driver`** (o Motorista Autônomo importa para a própria conta); consultas e catálogo abertos a qualquer autenticado. Escopado ao tenant (RLS). Ingestão de entregas a partir de arquivos, em duas etapas (pré-visualização → confirmação). As entregas confirmadas alimentam o Delivery, o Route Optimizer e o dashboard do motorista. **Fleet e gestão de usuários seguem exclusivos da conta Empresa.**
 
 ```
 GET    /api/v1/imports/connectors   # catálogo de conectores (disponíveis e planejados)

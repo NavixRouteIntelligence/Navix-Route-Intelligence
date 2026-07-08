@@ -11,8 +11,8 @@ import { Spinner } from '@/components/ui/spinner';
 import { useAuth } from '@/lib/auth/auth-provider';
 import { isDriver } from '@/lib/auth/roles';
 
-/** Rotas que o Motorista Autônomo pode acessar. */
-const DRIVER_ALLOWED = ['/driver', '/fleet/vehicles', '/profile', '/settings'];
+/** Rotas do Motorista Autônomo. Fleet e gestão de usuários seguem exclusivos da Empresa. */
+const DRIVER_ALLOWED = ['/driver', '/imports', '/profile', '/settings'];
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   const { status, user } = useAuth();

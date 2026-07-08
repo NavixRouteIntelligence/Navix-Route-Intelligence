@@ -69,7 +69,7 @@ export class ImportController {
   }
 
   @Post('preview')
-  @Roles('admin', 'dispatcher')
+  @Roles('admin', 'dispatcher', 'driver')
   @HttpCode(HttpStatus.CREATED)
   @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Envia um arquivo e gera a pré-visualização da importação' })
@@ -91,7 +91,7 @@ export class ImportController {
   }
 
   @Post(':id/confirm')
-  @Roles('admin', 'dispatcher')
+  @Roles('admin', 'dispatcher', 'driver')
   @ApiOperation({ summary: 'Confirma a importação: cria entregas e (opcional) otimiza' })
   confirmHandler(
     @CurrentUser() user: AuthenticatedUser,
