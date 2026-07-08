@@ -5,6 +5,7 @@ import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { Tooltip } from '@/components/ui/tooltip';
 
 export function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
@@ -12,14 +13,12 @@ export function ThemeToggle() {
   useEffect(() => setMounted(true), []);
 
   const isDark = resolvedTheme === 'dark';
+  const label = isDark ? 'Ativar modo claro' : 'Ativar modo escuro';
   return (
-    <Button
-      variant="ghost"
-      size="icon"
-      aria-label={isDark ? 'Ativar modo claro' : 'Ativar modo escuro'}
-      onClick={() => setTheme(isDark ? 'light' : 'dark')}
-    >
-      {mounted && isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-    </Button>
+    <Tooltip label={label} side="bottom">
+      <Button variant="ghost" size="icon" aria-label={label} onClick={() => setTheme(isDark ? 'light' : 'dark')}>
+        {mounted && isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+      </Button>
+    </Tooltip>
   );
 }

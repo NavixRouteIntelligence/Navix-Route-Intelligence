@@ -64,10 +64,12 @@ const config: Config = {
         'fade-in': { from: { opacity: '0', transform: 'translateY(2px)' }, to: { opacity: '1', transform: 'none' } },
         shimmer: { '100%': { transform: 'translateX(100%)' } },
         'toast-in': { from: { opacity: '0', transform: 'translateY(8px)' }, to: { opacity: '1', transform: 'none' } },
+        'scale-in': { from: { opacity: '0', transform: 'scale(0.9)' }, to: { opacity: '1', transform: 'none' } },
       },
       animation: {
         'fade-in': 'fade-in 0.2s ease-out',
         'toast-in': 'toast-in 0.18s ease-out',
+        'scale-in': 'scale-in 0.18s ease-out',
       },
     },
   },

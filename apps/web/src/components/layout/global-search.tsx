@@ -2,20 +2,24 @@
 
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { useQuery } from '@tanstack/react-query';
-import { LayoutDashboard, Package, Route, Search, Truck, Users } from 'lucide-react';
+import { LayoutDashboard, Package, Radio, Route, Search, Truck, Upload, Users } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
 import { cn } from '@/lib/utils';
 import { deliveriesApi } from '@/lib/api/deliveries';
 import { fleetApi } from '@/lib/api/fleet';
+import { importsApi } from '@/lib/api/imports';
+import { optimizerApi } from '@/lib/api/optimizer';
 
 const QUICK = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/deliveries', label: 'Entregas', icon: Package },
+  { href: '/imports', label: 'Importar', icon: Upload },
   { href: '/fleet/drivers', label: 'Motoristas', icon: Users },
   { href: '/fleet/vehicles', label: 'Veículos', icon: Truck },
   { href: '/optimizer', label: 'Otimizador', icon: Route },
+  { href: '/tracking', label: 'Rastreamento', icon: Radio },
 ];
 
 export function GlobalSearch() {
@@ -37,17 +41,28 @@ export function GlobalSearch() {
   const deliveries = useQuery({ queryKey: ['search', 'deliveries'], queryFn: () => deliveriesApi.list({ pageSize: 100 }), enabled: open });
   const vehicles = useQuery({ queryKey: ['search', 'vehicles'], queryFn: () => fleetApi.listVehicles({ pageSize: 100 }), enabled: open });
   const drivers = useQuery({ queryKey: ['search', 'drivers'], queryFn: () => fleetApi.listDrivers({ pageSize: 100 }), enabled: open });
+  const plans = useQuery({ queryKey: ['search', 'plans'], queryFn: () => optimizerApi.listPlans({ pageSize: 50 }), enabled: open });
+  const imports = useQuery({ queryKey: ['search', 'imports'], queryFn: () => importsApi.list({ pageSize: 50 }), enabled: open });
 
   const term = q.trim().toLowerCase();
   const quick = QUICK.filter((i) => i.label.toLowerCase().includes(term));
   const matched = useMemo(() => {
-    if (!term) return { deliveries: [], vehicles: [], drivers: [] };
+    if (!term) return { deliveries: [], vehicles: [], drivers: [], plans: [], imports: [] };
     return {
-      deliveries: (deliveries.data?.data ?? []).filter((d) => `${d.address.city} ${d.address.street}`.toLowerCase().includes(term)).slice(0, 5),
+      // Entregas cobrem a busca por cliente/destino (endereço + observações).
+      deliveries: (deliveries.data?.data ?? [])
+        .filter((d) => `${d.address.city} ${d.address.street} ${d.notes ?? ''}`.toLowerCase().includes(term))
+        .slice(0, 5),
       vehicles: (vehicles.data?.data ?? []).filter((v) => v.plate.toLowerCase().includes(term)).slice(0, 5),
       drivers: (drivers.data?.data ?? []).filter((d) => d.name.toLowerCase().includes(term)).slice(0, 5),
+      plans: (plans.data?.data ?? [])
+        .filter((p) => `${p.strategy} ${p.id.slice(0, 8)} rota`.toLowerCase().includes(term))
+        .slice(0, 5),
+      imports: (imports.data?.data ?? [])
+        .filter((b) => `${b.filename} ${b.fileType}`.toLowerCase().includes(term))
+        .slice(0, 5),
     };
-  }, [term, deliveries.data, vehicles.data, drivers.data]);
+  }, [term, deliveries.data, vehicles.data, drivers.data, plans.data, imports.data]);
 
   function go(href: string) {
     setOpen(false);
@@ -108,9 +123,29 @@ export function GlobalSearch() {
                   ))}
                 </Group>
               )}
-              {term && quick.length === 0 && matched.deliveries.length === 0 && matched.vehicles.length === 0 && matched.drivers.length === 0 && (
-                <p className="px-3 py-6 text-center text-sm text-muted-foreground">Nada encontrado para “{q}”.</p>
+              {matched.plans.length > 0 && (
+                <Group label="Rotas">
+                  {matched.plans.map((p) => (
+                    <Item key={p.id} onClick={() => go(`/optimizer/${p.id}`)} icon={<Route className="h-4 w-4" />} label={`Rota ${p.id.slice(0, 8)} · score ${p.score}`} />
+                  ))}
+                </Group>
               )}
+              {matched.imports.length > 0 && (
+                <Group label="Importações">
+                  {matched.imports.map((b) => (
+                    <Item key={b.id} onClick={() => go(`/imports/${b.id}`)} icon={<Upload className="h-4 w-4" />} label={b.filename} />
+                  ))}
+                </Group>
+              )}
+              {term &&
+                quick.length === 0 &&
+                matched.deliveries.length === 0 &&
+                matched.vehicles.length === 0 &&
+                matched.drivers.length === 0 &&
+                matched.plans.length === 0 &&
+                matched.imports.length === 0 && (
+                  <p className="px-3 py-6 text-center text-sm text-muted-foreground">Nada encontrado para “{q}”.</p>
+                )}
             </div>
           </DialogPrimitive.Content>
         </DialogPrimitive.Portal>

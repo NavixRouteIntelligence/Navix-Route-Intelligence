@@ -50,8 +50,25 @@ apps/web/src/
 | `/deliveries` | Lista com filtros, paginação, status inline; `/new` e `/[id]/edit` |
 | `/fleet/vehicles`, `/fleet/drivers` | CRUD com diálogos e confirmação |
 | `/optimizer` | Seleção de entregas → otimizar → Route Plan (métricas + mapa + paradas) · `/[id]` |
+| `/register` | Criação de conta (Motorista Autônomo × Empresa) |
+| `/driver` | Dashboard do Motorista (rota, mapa, ações, compartilhar localização) |
+| `/tracking` | Rastreamento da frota em tempo real (empresa) |
+| `/settings` | Configurações: tema, idioma, empresa (read-only) e preferências |
 | `/profile` | Dados da conta e troca de senha |
 | `/design-system` | Style guide navegável |
+
+## Produtividade e experiência
+
+- **i18n** (`lib/i18n`): `LocaleProvider` + `useT()` com dicionário PT-BR/EN, aplicado às áreas principais (shell, configurações, estados e páginas de sistema). Persistido em `localStorage`; mantém `<html lang>` em sincronia.
+- **Preferências** (`lib/preferences`): reduzir animações e modo compacto, persistidas e refletidas via classes no `<html>` (mais `prefers-reduced-motion`).
+- **Páginas de sistema**: 404 (`not-found.tsx`), 500 (`error.tsx`), 403 (via guarda de RBAC no layout, `components/system/forbidden.tsx`) e **Sem Conexão** (`OfflineOverlay`, eventos `online`/`offline`). Base comum em `StatusScreen`.
+- **Estados**: `Skeleton`, `EmptyState`, `ErrorState`, `SuccessState`, `Spinner` e `loading.tsx` de rota.
+- **Feedback**: `Toast`, `Tooltip` (acessível, hover + foco), animações sutis (`fade-in`, `scale-in`, `toast-in`).
+- **Busca global** (⌘K): entregas, veículos, motoristas, rotas e importações + navegação rápida.
+- **Notificações**: rotas otimizadas, entregas e importações, com contador de não lidas.
+- **Acessibilidade (WCAG)**: skip-link, landmark `main#main`, foco visível global, `aria-*`/roles em navegação, switches e diálogos, respeito a `prefers-reduced-motion`.
+
+> Persistência de tema/idioma/preferências é **client-side** (não há endpoint para isso); a seção "Empresa" das Configurações é read-only a partir de `/auth/me`. "Clientes" não é uma entidade própria da API — a busca cobre o destino/cliente via entregas (endereço + observações).
 
 ## Executar
 

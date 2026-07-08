@@ -7,6 +7,7 @@ import {
   Package,
   Radio,
   Route,
+  Settings,
   Truck,
   Upload,
   UserCircle,
@@ -20,31 +21,35 @@ import { useUiStore } from '@/components/layout/ui-store';
 import { Logo, LogoMark } from '@/components/ui/logo';
 import { useAuth } from '@/lib/auth/auth-provider';
 import { isDriver } from '@/lib/auth/roles';
+import type { TranslationKey } from '@/lib/i18n/dictionary';
+import { useT } from '@/lib/i18n/locale-provider';
 import { cn } from '@/lib/utils';
 
 interface NavItem {
   href: string;
-  label: string;
+  label: TranslationKey;
   icon: LucideIcon;
 }
 
 /** Navegação administrativa (empresa). */
 const ADMIN_NAV: NavItem[] = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/deliveries', label: 'Entregas', icon: Package },
-  { href: '/imports', label: 'Importar', icon: Upload },
-  { href: '/fleet/drivers', label: 'Motoristas', icon: Users },
-  { href: '/fleet/vehicles', label: 'Veículos', icon: Truck },
-  { href: '/optimizer', label: 'Otimizador', icon: Route },
-  { href: '/tracking', label: 'Rastreamento', icon: Radio },
-  { href: '/profile', label: 'Perfil', icon: UserCircle },
+  { href: '/dashboard', label: 'nav.dashboard', icon: LayoutDashboard },
+  { href: '/deliveries', label: 'nav.deliveries', icon: Package },
+  { href: '/imports', label: 'nav.imports', icon: Upload },
+  { href: '/fleet/drivers', label: 'nav.drivers', icon: Users },
+  { href: '/fleet/vehicles', label: 'nav.vehicles', icon: Truck },
+  { href: '/optimizer', label: 'nav.optimizer', icon: Route },
+  { href: '/tracking', label: 'nav.tracking', icon: Radio },
+  { href: '/settings', label: 'nav.settings', icon: Settings },
+  { href: '/profile', label: 'nav.profile', icon: UserCircle },
 ];
 
 /** Navegação enxuta do Motorista Autônomo. */
 const DRIVER_NAV: NavItem[] = [
-  { href: '/driver', label: 'Minha rota', icon: Navigation },
-  { href: '/fleet/vehicles', label: 'Meu veículo', icon: Truck },
-  { href: '/profile', label: 'Perfil', icon: UserCircle },
+  { href: '/driver', label: 'nav.route', icon: Navigation },
+  { href: '/fleet/vehicles', label: 'nav.myVehicle', icon: Truck },
+  { href: '/settings', label: 'nav.settings', icon: Settings },
+  { href: '/profile', label: 'nav.profile', icon: UserCircle },
 ];
 
 /** Conteúdo compartilhado (usado no rail desktop e no drawer mobile). */
@@ -58,6 +63,7 @@ function NavContent({
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
+  const t = useT();
   return (
     <nav className="flex-1 space-y-1 px-3 py-4" aria-label="Navegação principal">
       {items.map((item) => {
@@ -69,7 +75,7 @@ function NavContent({
             href={item.href}
             onClick={onNavigate}
             aria-current={active ? 'page' : undefined}
-            title={collapsed ? item.label : undefined}
+            title={collapsed ? t(item.label) : undefined}
             className={cn(
               'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
               collapsed && 'justify-center px-0',
@@ -77,7 +83,7 @@ function NavContent({
             )}
           >
             <Icon className="h-4 w-4 shrink-0" aria-hidden />
-            {!collapsed && <span className="truncate">{item.label}</span>}
+            {!collapsed && <span className="truncate">{t(item.label)}</span>}
           </Link>
         );
       })}
@@ -88,6 +94,7 @@ function NavContent({
 export function Sidebar() {
   const { collapsed, toggleCollapsed, mobileOpen, setMobileOpen } = useUiStore();
   const { user } = useAuth();
+  const t = useT();
   const nav = isDriver(user) ? DRIVER_NAV : ADMIN_NAV;
 
   return (
@@ -109,7 +116,7 @@ export function Sidebar() {
           aria-label={collapsed ? 'Expandir menu' : 'Recolher menu'}
         >
           <ChevronsLeft className={cn('h-4 w-4 transition-transform', collapsed && 'rotate-180')} />
-          {!collapsed && 'Recolher'}
+          {!collapsed && t('nav.collapse')}
         </button>
       </aside>
 

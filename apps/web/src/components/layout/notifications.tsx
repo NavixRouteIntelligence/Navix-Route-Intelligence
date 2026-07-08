@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { Bell, Package, Route } from 'lucide-react';
+import { Bell, Package, Route, Upload } from 'lucide-react';
 import { useMemo, useState, type ReactNode } from 'react';
 
 import {
@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { deliveriesApi } from '@/lib/api/deliveries';
+import { importsApi } from '@/lib/api/imports';
 import { optimizerApi } from '@/lib/api/optimizer';
 import { formatDateTime, formatNumber } from '@/lib/utils';
 
@@ -32,6 +33,7 @@ export function Notifications() {
 
   const plans = useQuery({ queryKey: ['notif', 'plans'], queryFn: () => optimizerApi.listPlans({ pageSize: 5 }) });
   const deliveries = useQuery({ queryKey: ['notif', 'deliveries'], queryFn: () => deliveriesApi.list({ pageSize: 5, sort: '-createdAt' }) });
+  const imports = useQuery({ queryKey: ['notif', 'imports'], queryFn: () => importsApi.list({ pageSize: 5 }) });
 
   const notes = useMemo<Note[]>(() => {
     const items: Note[] = [];
@@ -53,8 +55,17 @@ export function Notifications() {
         description: `${d.address.city} · ${d.address.street}`,
       });
     }
-    return items.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime()).slice(0, 8);
-  }, [plans.data, deliveries.data]);
+    for (const b of imports.data?.data ?? []) {
+      items.push({
+        id: `imp-${b.id}`,
+        at: b.createdAt,
+        icon: <Upload className="h-4 w-4 text-success" />,
+        title: b.status === 'imported' ? 'Importação concluída' : 'Importação criada',
+        description: `${b.filename} · ${b.summary.valid} válidas`,
+      });
+    }
+    return items.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime()).slice(0, 10);
+  }, [plans.data, deliveries.data, imports.data]);
 
   const unread = notes.filter((n) => new Date(n.at).getTime() > seen).length;
 

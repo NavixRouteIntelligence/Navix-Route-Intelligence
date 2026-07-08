@@ -1,6 +1,6 @@
 'use client';
 
-import { LogOut, Menu, UserCircle } from 'lucide-react';
+import { LogOut, Menu, Settings, UserCircle } from 'lucide-react';
 import Link from 'next/link';
 
 import { GlobalSearch } from '@/components/layout/global-search';
@@ -16,10 +16,12 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/lib/auth/auth-provider';
+import { useT } from '@/lib/i18n/locale-provider';
 
 export function Topbar() {
   const { user, logout } = useAuth();
   const { setMobileOpen } = useUiStore();
+  const t = useT();
 
   const initials = (user?.email ?? '?').slice(0, 2).toUpperCase();
 
@@ -28,7 +30,7 @@ export function Topbar() {
       <button
         onClick={() => setMobileOpen(true)}
         className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted md:hidden"
-        aria-label="Abrir menu"
+        aria-label={t('topbar.openMenu')}
       >
         <Menu className="h-5 w-5" />
       </button>
@@ -42,7 +44,7 @@ export function Topbar() {
           <DropdownMenuTrigger asChild>
             <button
               className="flex h-9 items-center gap-2 rounded-md pl-1 pr-2 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              aria-label="Menu do usuário"
+              aria-label={t('topbar.userMenu')}
             >
               <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
                 {initials}
@@ -58,12 +60,18 @@ export function Topbar() {
             <DropdownMenuItem asChild>
               <Link href="/profile">
                 <UserCircle className="h-4 w-4" />
-                Perfil
+                {t('nav.profile')}
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/settings">
+                <Settings className="h-4 w-4" />
+                {t('nav.settings')}
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem onSelect={() => void logout()} className="text-danger focus:bg-danger/10">
               <LogOut className="h-4 w-4" />
-              Sair
+              {t('topbar.logout')}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
