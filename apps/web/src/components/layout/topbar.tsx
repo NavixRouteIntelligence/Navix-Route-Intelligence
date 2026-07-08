@@ -1,6 +1,6 @@
 'use client';
 
-import { LogOut, Menu, Settings, UserCircle } from 'lucide-react';
+import { LogOut, Menu, UserCircle } from 'lucide-react';
 import Link from 'next/link';
 
 import { GlobalSearch } from '@/components/layout/global-search';
@@ -61,12 +61,6 @@ export function Topbar() {
               <Link href="/profile">
                 <UserCircle className="h-4 w-4" />
                 {t('nav.profile')}
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href="/settings">
-                <Settings className="h-4 w-4" />
-                {t('nav.settings')}
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem onSelect={() => void logout()} className="text-danger focus:bg-danger/10">

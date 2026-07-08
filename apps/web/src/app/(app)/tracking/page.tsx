@@ -2,9 +2,9 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { Radio, Users } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import { useState } from 'react';
 
-import { FleetMap } from '@/components/map/fleet-map';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -16,6 +16,11 @@ import { TD, TH, THead, TR, Table } from '@/components/ui/table';
 import { trackingApi } from '@/lib/api/tracking';
 import { TRACKING_STATUS } from '@/lib/tracking/status';
 import { formatDateTime, formatNumber } from '@/lib/utils';
+
+const FleetMap = dynamic(() => import('@/components/map/fleet-map').then((m) => m.FleetMap), {
+  ssr: false,
+  loading: () => <Skeleton className="h-[460px] w-full" />,
+});
 
 const POLL_MS = 8000; // polling; a arquitetura permite trocar por WebSocket/SSE.
 

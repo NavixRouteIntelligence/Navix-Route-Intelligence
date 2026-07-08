@@ -15,10 +15,10 @@ import {
   Upload,
 } from 'lucide-react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { useState } from 'react';
 
 import { AiRouteOptimizer } from '@/components/driver/ai-route-optimizer';
-import { RouteMap } from '@/components/map/route-map';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -36,6 +36,11 @@ import { useAuth } from '@/lib/auth/auth-provider';
 import { TRACKING_STATUS } from '@/lib/tracking/status';
 import { useShareLocation } from '@/lib/tracking/use-share-location';
 import { formatDateTime, formatNumber } from '@/lib/utils';
+
+const RouteMap = dynamic(() => import('@/components/map/route-map').then((m) => m.RouteMap), {
+  ssr: false,
+  loading: () => <Skeleton className="h-[420px] w-full" />,
+});
 
 const FUEL_L_PER_KM = 0.12; // fator médio de consumo (litros por km) — demo
 

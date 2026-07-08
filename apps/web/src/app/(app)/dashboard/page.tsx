@@ -17,17 +17,31 @@ import {
   Users,
 } from 'lucide-react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 
-import { StatusChart } from '@/components/charts/status-chart';
 import { ActivityTimeline } from '@/components/dashboard/activity-timeline';
-import { PeriodChart } from '@/components/dashboard/period-chart';
-import { RouteMap } from '@/components/map/route-map';
+import { AiInsights } from '@/components/dashboard/ai-insights';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/ui/page-header';
+import { Skeleton } from '@/components/ui/skeleton';
 import { StatCard } from '@/components/ui/stat-card';
+
+// Componentes pesados (Mapbox/recharts) carregados sob demanda, sem SSR.
+const StatusChart = dynamic(() => import('@/components/charts/status-chart').then((m) => m.StatusChart), {
+  ssr: false,
+  loading: () => <Skeleton className="h-64 w-full" />,
+});
+const PeriodChart = dynamic(() => import('@/components/dashboard/period-chart').then((m) => m.PeriodChart), {
+  ssr: false,
+  loading: () => <Skeleton className="h-64 w-full" />,
+});
+const RouteMap = dynamic(() => import('@/components/map/route-map').then((m) => m.RouteMap), {
+  ssr: false,
+  loading: () => <Skeleton className="h-[420px] w-full" />,
+});
 import { deliveriesApi } from '@/lib/api/deliveries';
 import { fleetApi } from '@/lib/api/fleet';
 import { optimizerApi } from '@/lib/api/optimizer';
@@ -110,6 +124,14 @@ export default function DashboardPage() {
         <StatCard label="Distância otimizada" value={`${formatNumber(optimizedKm, 1)} km`} icon={Navigation} tone="accent" loading={loading} />
         <StatCard label="Score médio" value={`${avgScore}/100`} icon={Gauge} tone="warning" loading={loading} />
       </div>
+
+      {/* AI Insights */}
+      <AiInsights
+        deliveries={deliveryItems}
+        plans={planItems}
+        fleet={{ activeVehicles, totalVehicles: vehicles.data?.meta.total ?? 0 }}
+        loading={loading}
+      />
 
       {/* Desempenho + Timeline */}
       <div className="grid gap-6 lg:grid-cols-3">

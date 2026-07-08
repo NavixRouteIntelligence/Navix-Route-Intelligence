@@ -2,12 +2,18 @@
 
 import type { RoutePlan } from '@navix/contracts';
 import { Clock, Gauge, MapPin, Route, TrendingDown } from 'lucide-react';
+import dynamic from 'next/dynamic';
 
-import { RouteMap } from '@/components/map/route-map';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { StatCard } from '@/components/ui/stat-card';
 import { TD, TH, THead, TR, Table } from '@/components/ui/table';
 import { formatNumber } from '@/lib/utils';
+
+const RouteMap = dynamic(() => import('@/components/map/route-map').then((m) => m.RouteMap), {
+  ssr: false,
+  loading: () => <Skeleton className="h-[420px] w-full" />,
+});
 
 export function RoutePlanView({ plan }: { plan: RoutePlan }) {
   return (

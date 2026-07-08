@@ -53,13 +53,16 @@ apps/web/src/
 | `/register` | Criação de conta (Motorista Autônomo × Empresa) |
 | `/driver` | Dashboard do Motorista (rota, mapa, ações, compartilhar localização) |
 | `/tracking` | Rastreamento da frota em tempo real (empresa) |
-| `/settings` | Configurações: tema, idioma, empresa (read-only) e preferências |
-| `/profile` | Dados da conta e troca de senha |
+| `/profile` | Perfil unificado: **Conta** (dados + trocar senha), **Aparência** (tema + idioma) e **Preferências** (abas). `/settings` redireciona para cá |
 | `/design-system` | Style guide navegável |
 
 ## Produtividade e experiência
 
-- **i18n** (`lib/i18n`): `LocaleProvider` + `useT()` com dicionário PT-BR/EN, aplicado às áreas principais (shell, configurações, estados e páginas de sistema). Persistido em `localStorage`; mantém `<html lang>` em sincronia.
+- **AI Insights** (`components/dashboard/ai-insights`): widget no Dashboard que gera observações heurísticas dos dados atuais (economia das rotas, entregas pendentes/falhas, eficiência, utilização da frota). Sem IA avançada; estruturado para receber um modelo real sem mudar a UI.
+- **i18n** (`lib/i18n`): `LocaleProvider` + `useT()` com dicionário **PT-BR, PT-PT, EN e ES**, aplicado às áreas principais (shell, perfil/configurações, estados, páginas de sistema e insights). Persistido em `localStorage`; mantém `<html lang>` em sincronia; migra o valor antigo `pt`.
+- **PWA**: `app/manifest.ts` (instalável), ícone SVG (`public/icon.svg`), `theme-color`/`appleWebApp` no layout e service worker mínimo (`public/sw.js`, network-first, registrado só em produção).
+- **Performance**: componentes pesados (Mapbox, recharts) carregados via `next/dynamic` (`ssr:false`) com fallback de `Skeleton`, reduzindo o bundle inicial das telas.
+- **Preferências** (`lib/preferences`): reduzir animações e modo compacto, persistidas e refletidas via classes no `<html>` (mais `prefers-reduced-motion`).
 - **Preferências** (`lib/preferences`): reduzir animações e modo compacto, persistidas e refletidas via classes no `<html>` (mais `prefers-reduced-motion`).
 - **Páginas de sistema**: 404 (`not-found.tsx`), 500 (`error.tsx`), 403 (via guarda de RBAC no layout, `components/system/forbidden.tsx`) e **Sem Conexão** (`OfflineOverlay`, eventos `online`/`offline`). Base comum em `StatusScreen`.
 - **Estados**: `Skeleton`, `EmptyState`, `ErrorState`, `SuccessState`, `Spinner` e `loading.tsx` de rota.

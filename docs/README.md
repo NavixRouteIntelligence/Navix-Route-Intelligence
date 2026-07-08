@@ -15,6 +15,7 @@ Base de conhecimento oficial do projeto. Toda decisão de produto, arquitetura e
 | [coding-standards.md](./coding-standards.md) | Padrões TypeScript, SOLID, testes, lint e Git. |
 | [decisions.md](./decisions.md) | Architecture Decision Records (ADRs). |
 | [modules/import-center.md](./modules/import-center.md) | Módulo Import Center: ingestão de entregas por arquivo (CSV/XLSX/PDF). |
+| [beta-roadmap.md](./beta-roadmap.md) | Lista priorizada de melhorias rumo ao Beta. |
 
 ## Como usar
 

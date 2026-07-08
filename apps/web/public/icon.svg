@@ -1,0 +1,7 @@
+<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Navix">
+  <rect width="512" height="512" rx="112" fill="#6d4aff" />
+  <path d="M128 352c64 0 64-128 128-128s64 96 128 96" stroke="#ffffff" stroke-width="34" stroke-linecap="round" stroke-dasharray="2 66" />
+  <circle cx="128" cy="352" r="38" fill="#22d3aa" />
+  <path d="M384 136c-30 0-54 24-54 54 0 38 54 82 54 82s54-44 54-82c0-30-24-54-54-54Z" fill="#ffffff" />
+  <circle cx="384" cy="189" r="20" fill="#6d4aff" />
+</svg>

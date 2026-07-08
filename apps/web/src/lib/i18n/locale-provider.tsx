@@ -2,9 +2,17 @@
 
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 
-import { DICTIONARY, type Locale, type TranslationKey } from './dictionary';
+import { DICTIONARY, HTML_LANG, type Locale, type TranslationKey } from './dictionary';
 
 const STORAGE_KEY = 'navix.locale';
+const VALID: Locale[] = ['pt-BR', 'pt-PT', 'en', 'es'];
+
+/** Normaliza valores persistidos (inclui migração dos antigos 'pt'/'en'). */
+function normalizeLocale(raw: string | null): Locale | null {
+  if (!raw) return null;
+  if (raw === 'pt') return 'pt-BR';
+  return (VALID as string[]).includes(raw) ? (raw as Locale) : null;
+}
 
 interface LocaleContextValue {
   locale: Locale;
@@ -15,17 +23,17 @@ interface LocaleContextValue {
 const LocaleContext = createContext<LocaleContextValue | null>(null);
 
 export function LocaleProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>('pt');
+  const [locale, setLocaleState] = useState<Locale>('pt-BR');
 
   // Restaura a preferência persistida (client-side).
   useEffect(() => {
-    const stored = window.localStorage.getItem(STORAGE_KEY);
-    if (stored === 'pt' || stored === 'en') setLocaleState(stored);
+    const stored = normalizeLocale(window.localStorage.getItem(STORAGE_KEY));
+    if (stored) setLocaleState(stored);
   }, []);
 
   // Mantém <html lang> em sincronia (acessibilidade).
   useEffect(() => {
-    document.documentElement.lang = locale === 'pt' ? 'pt-BR' : 'en';
+    document.documentElement.lang = HTML_LANG[locale];
   }, [locale]);
 
   const setLocale = useCallback((next: Locale) => {
@@ -34,7 +42,7 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const t = useCallback(
-    (key: TranslationKey) => DICTIONARY[locale][key] ?? DICTIONARY.pt[key] ?? key,
+    (key: TranslationKey) => DICTIONARY[locale][key] ?? DICTIONARY['pt-BR'][key] ?? key,
     [locale],
   );
 

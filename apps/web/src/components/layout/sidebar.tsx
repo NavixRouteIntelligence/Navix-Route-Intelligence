@@ -7,7 +7,6 @@ import {
   Package,
   Radio,
   Route,
-  Settings,
   Truck,
   Upload,
   UserCircle,
@@ -40,7 +39,6 @@ const ADMIN_NAV: NavItem[] = [
   { href: '/fleet/vehicles', label: 'nav.vehicles', icon: Truck },
   { href: '/optimizer', label: 'nav.optimizer', icon: Route },
   { href: '/tracking', label: 'nav.tracking', icon: Radio },
-  { href: '/settings', label: 'nav.settings', icon: Settings },
   { href: '/profile', label: 'nav.profile', icon: UserCircle },
 ];
 
@@ -48,7 +46,6 @@ const ADMIN_NAV: NavItem[] = [
 const DRIVER_NAV: NavItem[] = [
   { href: '/driver', label: 'nav.route', icon: Navigation },
   { href: '/imports', label: 'nav.imports', icon: Upload },
-  { href: '/settings', label: 'nav.settings', icon: Settings },
   { href: '/profile', label: 'nav.profile', icon: UserCircle },
 ];
 
