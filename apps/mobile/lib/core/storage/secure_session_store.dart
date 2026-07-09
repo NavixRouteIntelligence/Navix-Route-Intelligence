@@ -47,6 +47,7 @@ class SecureSessionStore {
   static const _kUser = 'navix.user';
   static const _kBiometric = 'navix.biometric';
   static const _kKeepConnected = 'navix.keepConnected';
+  static const _kTheme = 'navix.theme';
 
   Future<void> saveSession({
     required String accessToken,
@@ -84,6 +85,11 @@ class SecureSessionStore {
       _storage.write(key: _kKeepConnected, value: value ? '1' : '0');
 
   Future<bool> isKeepConnected() async => (await _storage.read(key: _kKeepConnected)) != '0';
+
+  /// Tema: 'dark' (padrão), 'light' ou 'system'.
+  Future<void> setThemeName(String value) => _storage.write(key: _kTheme, value: value);
+
+  Future<String> readThemeName() async => (await _storage.read(key: _kTheme)) ?? 'dark';
 
   Future<void> clear() async {
     await _storage.delete(key: _kAccess);

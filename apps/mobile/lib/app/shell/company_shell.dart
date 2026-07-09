@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/ui/placeholder_page.dart';
+import '../../features/dashboard/presentation/company_dashboard_page.dart';
 import '../../features/profile/presentation/profile_page.dart';
 import '../../l10n/gen/app_localizations.dart';
 
@@ -19,7 +20,7 @@ class _CompanyShellState extends State<CompanyShell> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final pages = [
-      PlaceholderPage(title: l10n.navDashboard, icon: Icons.dashboard_outlined),
+      const CompanyDashboardPage(),
       PlaceholderPage(title: l10n.navDeliveries, icon: Icons.inventory_2_outlined),
       PlaceholderPage(title: l10n.navTracking, icon: Icons.podcasts_outlined),
       const ProfilePage(),

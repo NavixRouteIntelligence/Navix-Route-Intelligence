@@ -3,6 +3,8 @@ import 'package:get_it/get_it.dart';
 import '../../features/auth/data/auth_api.dart';
 import '../../features/auth/data/auth_repository_impl.dart';
 import '../../features/auth/domain/auth_repository.dart';
+import '../../features/dashboard/data/dashboard_repository.dart';
+import '../../features/dashboard/presentation/dashboard_cubit.dart';
 import '../config/app_config.dart';
 import '../error/error_handler.dart';
 import '../logging/app_logger.dart';
@@ -10,6 +12,7 @@ import '../network/dio_client.dart';
 import '../security/biometric_service.dart';
 import '../session/session_cubit.dart';
 import '../storage/secure_session_store.dart';
+import '../theme/theme_cubit.dart';
 
 /// Container global de injeção de dependências.
 final GetIt getIt = GetIt.instance;
@@ -44,5 +47,10 @@ Future<void> configureDependencies(AppConfig config) async {
         biometric: getIt<BiometricService>(),
         logger: getIt<AppLogger>(),
       ),
-    );
+    )
+    ..registerLazySingleton<ThemeCubit>(() => ThemeCubit(getIt<SecureSessionStore>()))
+    ..registerLazySingleton<DashboardRepository>(
+      () => DashboardRepository(getIt<DioClient>().apiDio),
+    )
+    ..registerFactory<DashboardCubit>(() => DashboardCubit(getIt<DashboardRepository>()));
 }
