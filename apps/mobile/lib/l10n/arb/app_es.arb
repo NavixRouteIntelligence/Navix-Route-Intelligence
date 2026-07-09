@@ -1,0 +1,16 @@
+{
+  "@@locale": "es",
+  "appTitle": "Navix",
+  "navRoute": "Ruta",
+  "navDeliveries": "Entregas",
+  "navDashboard": "Panel",
+  "navTracking": "Rastreo",
+  "navProfile": "Perfil",
+  "loginTitle": "Iniciar sesión",
+  "loginSubtitle": "Accede a tu operación.",
+  "signInAsDriver": "Continuar como Conductor",
+  "signInAsCompany": "Continuar como Empresa",
+  "signOut": "Cerrar sesión",
+  "welcome": "Bienvenido, {name}",
+  "comingSoon": "Próximamente"
+}

@@ -5,7 +5,8 @@
   "description": "Navix Route Intelligence — plataforma SaaS de inteligência logística de última milha.",
   "workspaces": [
     "packages/*",
-    "apps/*"
+    "apps/api",
+    "apps/web"
   ],
   "engines": {
     "node": ">=20"

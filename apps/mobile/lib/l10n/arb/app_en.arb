@@ -1,0 +1,21 @@
+{
+  "@@locale": "en",
+  "appTitle": "Navix",
+  "@appTitle": { "description": "Application name" },
+  "navRoute": "Route",
+  "navDeliveries": "Deliveries",
+  "navDashboard": "Dashboard",
+  "navTracking": "Tracking",
+  "navProfile": "Profile",
+  "loginTitle": "Sign in",
+  "loginSubtitle": "Access your operation.",
+  "signInAsDriver": "Continue as Driver",
+  "signInAsCompany": "Continue as Company",
+  "signOut": "Sign out",
+  "welcome": "Welcome, {name}",
+  "@welcome": {
+    "description": "Greeting",
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "comingSoon": "Coming soon"
+}

@@ -1,0 +1,29 @@
+# Flutter/Dart
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+pubspec.lock
+.metadata
+
+# l10n gerado (flutter gen-l10n)
+lib/l10n/gen/
+
+# Código gerado
+*.g.dart
+*.freezed.dart
+*.config.dart
+
+# Plataformas geradas por `flutter create .` (recriáveis localmente)
+android/
+ios/
+web/
+macos/
+linux/
+windows/
+
+# IDE
+.idea/
+*.iml
+.vscode/
