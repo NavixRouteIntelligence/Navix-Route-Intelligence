@@ -10,6 +10,11 @@
   --radius: 0.7rem;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 
+  /* Motion (paridade com o mobile — ver docs/design-tokens.md §6) */
+  --motion-fast: 120ms;
+  --motion-base: 200ms;
+  --motion-slow: 320ms;
+
   --background: 240 25% 99%;
   --surface: 240 22% 97%;
   --foreground: 240 24% 12%;

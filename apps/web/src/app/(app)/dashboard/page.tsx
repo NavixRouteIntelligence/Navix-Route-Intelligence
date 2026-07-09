@@ -85,6 +85,11 @@ export default function DashboardPage() {
   const savedMin = planItems.reduce((acc, p) => acc + p.savings.timeMinutes, 0);
   const optimizedKm = planItems.reduce((acc, p) => acc + p.metrics.totalDistanceKm, 0);
   const avgScore = planItems.length ? Math.round(planItems.reduce((a, p) => a + p.score, 0) / planItems.length) : 0;
+  // Ganho médio de otimização (real) — usado nos chips de variação.
+  const avgSavingsPct = planItems.length
+    ? planItems.reduce((a, p) => a + p.savings.distancePct, 0) / planItems.length
+    : 0;
+  const savingsDelta = avgSavingsPct > 0 ? { label: `${formatNumber(avgSavingsPct, 0)}%`, positive: true } : undefined;
   const activeVehicles = (vehicles.data?.data ?? []).filter((v) => v.status === 'active').length;
   const activeDrivers = (drivers.data?.data ?? []).filter((d) => d.status === 'active').length;
   const latestPlan = planItems[0];
@@ -120,9 +125,9 @@ export default function DashboardPage() {
         <StatCard label="Rotas otimizadas" value={formatNumber(plans.data?.meta.total ?? 0)} icon={Route} tone="accent" loading={loading} />
         <StatCard label="Motoristas" value={formatNumber(drivers.data?.meta.total ?? 0)} icon={Users} tone="primary" hint={`${activeDrivers} ativos`} loading={loading} />
         <StatCard label="Veículos" value={formatNumber(vehicles.data?.meta.total ?? 0)} icon={Truck} tone="primary" hint={`${activeVehicles} ativos`} loading={loading} />
-        <StatCard label="Economia de combustível" value={`${formatNumber(savedKm * FUEL_L_PER_KM, 1)} L`} icon={Fuel} tone="success" loading={loading} />
+        <StatCard label="Economia de combustível" value={`${formatNumber(savedKm * FUEL_L_PER_KM, 1)} L`} icon={Fuel} tone="success" delta={savingsDelta} loading={loading} />
         <StatCard label="Economia de tempo" value={formatMinutes(savedMin)} icon={Clock} tone="warning" loading={loading} />
-        <StatCard label="Distância otimizada" value={`${formatNumber(optimizedKm, 1)} km`} icon={Navigation} tone="accent" loading={loading} />
+        <StatCard label="Distância otimizada" value={`${formatNumber(optimizedKm, 1)} km`} icon={Navigation} tone="accent" delta={savingsDelta} loading={loading} />
         <StatCard label="Score médio" value={`${avgScore}/100`} icon={Gauge} tone="warning" loading={loading} />
       </div>
 

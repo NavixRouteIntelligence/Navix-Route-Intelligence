@@ -2,6 +2,7 @@ import type { LucideIcon } from 'lucide-react';
 
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { StatChip } from '@/components/ui/stat-chip';
 import { cn } from '@/lib/utils';
 
 type Tone = 'primary' | 'accent' | 'success' | 'warning' | 'danger';
@@ -20,6 +21,7 @@ export function StatCard({
   icon: Icon,
   tone = 'primary',
   hint,
+  delta,
   loading,
 }: {
   label: string;
@@ -27,10 +29,12 @@ export function StatCard({
   icon: LucideIcon;
   tone?: Tone;
   hint?: string;
+  /** Chip de variação (paridade com o mobile). */
+  delta?: { label: string; positive?: boolean };
   loading?: boolean;
 }) {
   return (
-    <Card className="p-5">
+    <Card className="p-5 transition-shadow hover:shadow-card">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-sm text-muted-foreground">{label}</p>
@@ -39,7 +43,12 @@ export function StatCard({
           ) : (
             <p className="mt-1 text-h1 tabular-nums">{value}</p>
           )}
-          {hint && !loading && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
+          {!loading && delta && (
+            <div className="mt-2">
+              <StatChip label={delta.label} positive={delta.positive} />
+            </div>
+          )}
+          {hint && !loading && !delta && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
         </div>
         <span className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-lg', TONE_BG[tone])}>
           <Icon className="h-5 w-5" aria-hidden />

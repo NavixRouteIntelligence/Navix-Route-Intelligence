@@ -73,3 +73,15 @@ Mesmos nomes/comportamento nos dois lados: `Card`, `Button` (primary/outline/gho
 
 `loading` (skeleton) · `empty` (EmptyState com ação) · `error` (ErrorState com retry)
 · `success/feedback` (toast/snackbar). Ações principais em **1 toque/clique**.
+
+## 9. Implementação por plataforma (conformidade)
+
+| Token | Web (Next.js) | Mobile (Flutter) |
+|-------|---------------|------------------|
+| Cores | CSS vars HSL em `globals.css` (`--primary`, `--accent`, `--success`, `--warning`, `--danger`, `--surface`, `--border`, `--muted`) | `ColorScheme` + `NavixTokens` (ThemeExtension) |
+| Tema padrão | `dark` (next-themes `defaultTheme="dark"`, claro completo) | `dark` (ThemeMode, claro completo, `ThemeCubit`) |
+| Motion | `--motion-fast/base/slow` | `NavixTokens.motionFast/Base/Slow` |
+| Componentes | `StatCard`, `StatChip`, `Badge`, `EmptyState`, `ErrorState`, `Skeleton`, `Toast`, charts (recharts) | `NavixKpiCard`, `NavixStatChip`, `NavixStatusPill`, `NavixEmptyState`, `NavixErrorState`, `NavixSkeleton`, `NavixDonut`, `NavixBarChart`, Snackbar |
+
+Ambas as plataformas seguem os mesmos valores semânticos desta doc. Alterou um
+token aqui → atualize os dois mapeamentos acima.
