@@ -287,6 +287,24 @@ GET  /api/v1/tracking/drivers/{id}/history  # histórico de um motorista (empres
 - **Tempo real**: o frontend faz *polling* (isolado num hook), com a arquitetura pronta para trocar por WebSocket/SSE sem alterar a UI.
 - **Extensível** para ETA, otimização dinâmica e notificações.
 
+### 14.6 Proof of Delivery (POD) — implementado
+
+Comprovante de entrega registrado pelo motorista. Isolado por tenant (RLS) e com RBAC.
+
+```
+POST /api/v1/pod                  # registra o comprovante (role driver/admin/dispatcher)
+GET  /api/v1/pod                  # histórico (paginado)
+GET  /api/v1/pod/summary          # resumo por status (Dashboard)
+GET  /api/v1/pod/{deliveryId}     # comprovante de uma entrega
+```
+
+- **Payload**: `{ deliveryId, status, note?, latitude?, longitude?, photo?, signature? }`. `status`: `delivered` | `absent` | `refused`. `photo`/`signature` são **data URLs** (foto reduzida no cliente; assinatura em canvas). Comprovante `delivered` exige foto **ou** assinatura.
+- **Integração com Delivery**: ao registrar, o POD aplica o desfecho na entrega na **mesma transação** — `delivered`→`delivered`, `absent`/`refused`→`failed` — respeitando a máquina de estados (passa por `in_route`). Um comprovante por entrega (índice único).
+- **Integração com Tracking**: o cliente também registra a posição do desfecho (`finished`).
+- **Dashboard**: card de resumo (entregues/ausentes/recusados) + últimos comprovantes; nas **Entregas**, ícone para visualizar foto/assinatura/GPS/observação.
+- **Persistência**: `proof_of_delivery` (RLS FORCE por tenant). Fotos em base64 no banco no MVP — produção usaria object storage (S3). Limite de body de 8 MB para as mídias.
+- **Web e Mobile**: componentes responsivos, câmera via `capture` e assinatura por toque (PWA). App nativo fora do escopo desta fase.
+
 ## 15. Documentação viva
 
 - OpenAPI/Swagger exposto em ambiente não-produtivo.
@@ -306,3 +324,4 @@ GET  /api/v1/tracking/drivers/{id}/history  # histórico de um motorista (empres
 | 2026-07-08 | 0.6 | Engenharia | Contas por perfil (RBAC): POST /auth/register (Motorista Autônomo × Empresa), tenant.account_type, Dashboard do Motorista |
 | 2026-07-08 | 0.7 | Engenharia | Tracking (MVP): posições do motorista, visão de frota (empresa), driver_positions (TimescaleDB-ready), mapa em tempo real |
 | 2026-07-08 | 0.8 | Engenharia | Otimização IA para Motorista Autônomo: POST /route-plans/mine (aditivo), painel de rentabilidade, integração com tracking |
+| 2026-07-09 | 0.9 | Engenharia | Proof of Delivery: comprovante (foto/assinatura/GPS/status), integração Delivery+Tracking+Dashboard |

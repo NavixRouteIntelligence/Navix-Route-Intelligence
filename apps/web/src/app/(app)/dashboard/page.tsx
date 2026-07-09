@@ -21,6 +21,7 @@ import dynamic from 'next/dynamic';
 
 import { ActivityTimeline } from '@/components/dashboard/activity-timeline';
 import { AiInsights } from '@/components/dashboard/ai-insights';
+import { PodSummaryCard } from '@/components/dashboard/pod-summary-card';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -170,6 +171,9 @@ export default function DashboardPage() {
           <Row icon={<Navigation className="h-4 w-4 text-success" />} label="Km economizados" value={`${formatNumber(savedKm, 1)} km`} />
         </Panel>
       </div>
+
+      {/* Comprovantes de entrega (POD) */}
+      <PodSummaryCard />
 
       {/* Status + Mapa */}
       <div className="grid gap-6 lg:grid-cols-2">

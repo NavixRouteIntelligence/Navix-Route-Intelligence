@@ -1,6 +1,12 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import type { DeliveryPriority } from '@navix/contracts';
 
+import { AUDIT_LOG, type AuditLogPort } from '../../../shared/audit/audit-log.port';
+import { NotFoundError } from '../../../shared/kernel/domain-error';
+import {
+  DELIVERY_REPOSITORY,
+  type DeliveryRepositoryPort,
+} from '../domain/ports/delivery-repository.port';
 import { CreateDeliveryUseCase } from './create-delivery.use-case';
 
 /** Rascunho de entrega vindo de outra origem (ex.: Import Center). */
@@ -21,9 +27,19 @@ export interface DeliveryDraft {
   timeWindow?: { start: string; end: string };
 }
 
+/** Desfecho de uma entrega (usado pelo Proof of Delivery). */
+export interface DeliveryOutcomeInput {
+  tenantId: string;
+  actorId: string;
+  deliveryId: string;
+  status: 'delivered' | 'failed';
+}
+
 /** API pública de escrita do contexto Delivery. */
 export interface DeliveryWriterPort {
   create(draft: DeliveryDraft): Promise<string>;
+  /** Registra o desfecho, respeitando a máquina de estados (passa por in_route). */
+  markOutcome(input: DeliveryOutcomeInput): Promise<void>;
 }
 
 export const DELIVERY_WRITER = Symbol('DELIVERY_WRITER');
@@ -32,7 +48,35 @@ const DEFAULT_WINDOW_HOURS = 8;
 
 @Injectable()
 export class DeliveryWriterService implements DeliveryWriterPort {
-  constructor(private readonly createDelivery: CreateDeliveryUseCase) {}
+  constructor(
+    private readonly createDelivery: CreateDeliveryUseCase,
+    @Inject(DELIVERY_REPOSITORY) private readonly deliveries: DeliveryRepositoryPort,
+    @Inject(AUDIT_LOG) private readonly audit: AuditLogPort,
+  ) {}
+
+  async markOutcome(input: DeliveryOutcomeInput): Promise<void> {
+    const delivery = await this.deliveries.findById(input.tenantId, input.deliveryId);
+    if (!delivery) {
+      throw new NotFoundError('Entrega não encontrada.');
+    }
+    const from = delivery.status;
+    if (from === input.status) return;
+
+    // Máquina de estados: o desfecho final vem de `in_route`.
+    if (delivery.status === 'pending' || delivery.status === 'failed') {
+      delivery.changeStatus('in_route');
+    }
+    delivery.changeStatus(input.status);
+    await this.deliveries.save(delivery);
+
+    await this.audit.record({
+      tenantId: input.tenantId,
+      actorId: input.actorId,
+      action: 'delivery.outcome',
+      resource: `delivery:${input.deliveryId}`,
+      metadata: { from, to: input.status },
+    });
+  }
 
   async create(draft: DeliveryDraft): Promise<string> {
     const now = Date.now();

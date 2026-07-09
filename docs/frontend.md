@@ -58,6 +58,7 @@ apps/web/src/
 
 ## Produtividade e experiência
 
+- **Proof of Delivery** (`components/pod`): captura de comprovante (status, foto com câmera, assinatura em canvas por toque, GPS, observação) no fluxo "Concluir entrega" do motorista; visualização nas Entregas e resumo no Dashboard. Responsivo (Web/Mobile via PWA).
 - **AI Insights** (`components/dashboard/ai-insights`): widget no Dashboard que gera observações heurísticas dos dados atuais (economia das rotas, entregas pendentes/falhas, eficiência, utilização da frota). Sem IA avançada; estruturado para receber um modelo real sem mudar a UI.
 - **i18n** (`lib/i18n`): `LocaleProvider` + `useT()` com dicionário **PT-BR, PT-PT, EN e ES**, aplicado às áreas principais (shell, perfil/configurações, estados, páginas de sistema e insights). Persistido em `localStorage`; mantém `<html lang>` em sincronia; migra o valor antigo `pt`.
 - **PWA**: `app/manifest.ts` (instalável), ícone SVG (`public/icon.svg`), `theme-color`/`appleWebApp` no layout e service worker mínimo (`public/sw.js`, network-first, registrado só em produção).

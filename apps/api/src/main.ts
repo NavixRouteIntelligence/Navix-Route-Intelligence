@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import { ValidationPipe, VersioningType } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { json, urlencoded } from 'express';
 import { Logger } from 'nestjs-pino';
 import helmet from 'helmet';
 
@@ -22,6 +23,9 @@ async function bootstrap(): Promise<void> {
   // desativado para permitir o Swagger UI (scripts inline); em produção o CSP
   // padrão do helmet fica ativo (o Swagger não é exposto lá).
   app.use(helmet({ contentSecurityPolicy: config.isProduction ? undefined : false }));
+  // Corpo maior para comprovantes (foto/assinatura em base64 no Proof of Delivery).
+  app.use(json({ limit: '8mb' }));
+  app.use(urlencoded({ extended: true, limit: '8mb' }));
   app.enableCors({
     origin: corsOrigins,
     credentials: true,

@@ -19,6 +19,7 @@ import dynamic from 'next/dynamic';
 import { useState } from 'react';
 
 import { AiRouteOptimizer } from '@/components/driver/ai-route-optimizer';
+import { PodCapture } from '@/components/pod/pod-capture';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -56,6 +57,7 @@ export default function DriverDashboardPage() {
   const qc = useQueryClient();
   const [completed, setCompleted] = useState(0);
   const [running, setRunning] = useState(false);
+  const [podFor, setPodFor] = useState<string | null>(null);
   const share = useShareLocation();
 
   const myPosition = useQuery({
@@ -86,10 +88,17 @@ export default function DriverDashboardPage() {
 
   const delivered = history.data?.data ?? [];
 
+  // Abre o comprovante (POD) para a próxima parada.
   function concludeStop() {
-    if (remaining <= 0) return;
+    if (remaining <= 0 || !nextStop) return;
+    setPodFor(nextStop.deliveryId);
+  }
+
+  // Após registrar o comprovante: avança a parada e atualiza os dados.
+  function onPodDone() {
     setCompleted((c) => c + 1);
-    toast({ tone: 'success', title: 'Entrega concluída', description: `Faltam ${remaining - 1} paradas.` });
+    qc.invalidateQueries({ queryKey: ['driver-history'] });
+    qc.invalidateQueries({ queryKey: ['deliveries'] });
   }
 
   return (
@@ -306,6 +315,13 @@ export default function DriverDashboardPage() {
           )}
         </CardContent>
       </Card>
+
+      <PodCapture
+        open={podFor !== null}
+        onOpenChange={(o) => !o && setPodFor(null)}
+        deliveryId={podFor}
+        onDone={onPodDone}
+      />
     </div>
   );
 }

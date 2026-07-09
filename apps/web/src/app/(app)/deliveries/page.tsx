@@ -8,10 +8,11 @@ import {
   type DeliveryStatus,
 } from '@navix/contracts';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Package, Pencil, Plus, Trash2 } from 'lucide-react';
+import { FileCheck, Package, Pencil, Plus, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 
+import { PodViewerDialog } from '@/components/pod/pod-viewer-dialog';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -48,6 +49,7 @@ export default function DeliveriesPage() {
   const [status, setStatus] = useState<DeliveryStatus | ''>('');
   const [priority, setPriority] = useState<DeliveryPriority | ''>('');
   const [deleting, setDeleting] = useState<Delivery | null>(null);
+  const [podFor, setPodFor] = useState<string | null>(null);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['deliveries', { page, status, priority }],
@@ -190,6 +192,11 @@ export default function DeliveriesPage() {
                       <TD className="text-muted-foreground">{formatDateTime(d.timeWindow.start)}</TD>
                       <TD>
                         <div className="flex justify-end gap-1">
+                          {(d.status === 'delivered' || d.status === 'failed') && (
+                            <Button variant="ghost" size="icon" aria-label="Ver comprovante" onClick={() => setPodFor(d.id)}>
+                              <FileCheck className="h-4 w-4 text-primary" />
+                            </Button>
+                          )}
                           <Button asChild variant="ghost" size="icon" aria-label="Editar">
                             <Link href={`/deliveries/${d.id}/edit`}>
                               <Pencil className="h-4 w-4" />
@@ -231,6 +238,8 @@ export default function DeliveriesPage() {
         loading={remove.isPending}
         onConfirm={() => deleting && remove.mutate(deleting.id)}
       />
+
+      <PodViewerDialog deliveryId={podFor} open={podFor !== null} onOpenChange={(o) => !o && setPodFor(null)} />
     </div>
   );
 }
