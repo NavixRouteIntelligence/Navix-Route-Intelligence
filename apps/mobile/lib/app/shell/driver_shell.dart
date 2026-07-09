@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/ui/placeholder_page.dart';
+import '../../features/profile/presentation/profile_page.dart';
 import '../../l10n/gen/app_localizations.dart';
 
 /// Casca de navegação do Motorista (Rota, Entregas, Perfil).
@@ -21,7 +22,7 @@ class _DriverShellState extends State<DriverShell> {
     final pages = [
       PlaceholderPage(title: l10n.navRoute, icon: Icons.navigation_outlined),
       PlaceholderPage(title: l10n.navDeliveries, icon: Icons.inventory_2_outlined),
-      PlaceholderPage(title: l10n.navProfile, icon: Icons.person_outline),
+      const ProfilePage(),
     ];
 
     return Scaffold(

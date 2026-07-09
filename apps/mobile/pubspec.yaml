@@ -24,6 +24,15 @@ dependencies:
   # Injeção de dependências
   get_it: ^7.7.0
 
+  # Rede
+  dio: ^5.7.0
+
+  # Armazenamento seguro (tokens)
+  flutter_secure_storage: ^9.2.2
+
+  # Biometria (Face ID / Touch ID)
+  local_auth: ^2.3.0
+
   # i18n (versão fixada pelo flutter_localizations do SDK)
   intl: ^0.20.2
 

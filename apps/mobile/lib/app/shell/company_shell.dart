@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/ui/placeholder_page.dart';
+import '../../features/profile/presentation/profile_page.dart';
 import '../../l10n/gen/app_localizations.dart';
 
 /// Casca de navegação da Empresa (Dashboard, Entregas, Rastreamento, Perfil).
@@ -21,7 +22,7 @@ class _CompanyShellState extends State<CompanyShell> {
       PlaceholderPage(title: l10n.navDashboard, icon: Icons.dashboard_outlined),
       PlaceholderPage(title: l10n.navDeliveries, icon: Icons.inventory_2_outlined),
       PlaceholderPage(title: l10n.navTracking, icon: Icons.podcasts_outlined),
-      PlaceholderPage(title: l10n.navProfile, icon: Icons.person_outline),
+      const ProfilePage(),
     ];
 
     return Scaffold(

@@ -17,5 +17,20 @@
     "description": "Greeting",
     "placeholders": { "name": { "type": "String" } }
   },
-  "comingSoon": "Coming soon"
+  "comingSoon": "Coming soon",
+  "fieldEmail": "Email",
+  "fieldPassword": "Password",
+  "fieldTenant": "Tenant ID",
+  "fieldName": "Full name",
+  "fieldCompanyName": "Company name",
+  "keepConnected": "Keep me signed in",
+  "useBiometrics": "Unlock with Face/Touch ID",
+  "signInAction": "Sign in",
+  "registerTitle": "Create account",
+  "registerSubtitle": "Choose your account type.",
+  "createAccount": "Create account",
+  "noAccountRegister": "Create account",
+  "haveAccountLogin": "Sign in",
+  "accountDriver": "Independent Driver",
+  "accountCompany": "Company"
 }

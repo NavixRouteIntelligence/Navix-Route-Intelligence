@@ -12,5 +12,20 @@
   "signInAsCompany": "Continuar como Empresa",
   "signOut": "Cerrar sesión",
   "welcome": "Bienvenido, {name}",
-  "comingSoon": "Próximamente"
+  "comingSoon": "Próximamente",
+  "fieldEmail": "Correo",
+  "fieldPassword": "Contraseña",
+  "fieldTenant": "Tenant ID",
+  "fieldName": "Nombre completo",
+  "fieldCompanyName": "Nombre de la empresa",
+  "keepConnected": "Mantener sesión iniciada",
+  "useBiometrics": "Desbloquear con Face/Touch ID",
+  "signInAction": "Iniciar sesión",
+  "registerTitle": "Crear cuenta",
+  "registerSubtitle": "Elige el tipo de cuenta.",
+  "createAccount": "Crear cuenta",
+  "noAccountRegister": "Crear cuenta",
+  "haveAccountLogin": "Iniciar sesión",
+  "accountDriver": "Conductor Independiente",
+  "accountCompany": "Empresa"
 }
