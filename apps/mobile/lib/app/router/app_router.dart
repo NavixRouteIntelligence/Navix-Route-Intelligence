@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/session/session_cubit.dart';
@@ -5,6 +8,24 @@ import '../../core/session/session_state.dart';
 import '../../features/auth/presentation/login_page.dart';
 import '../shell/company_shell.dart';
 import '../shell/driver_shell.dart';
+
+/// Listenable que notifica o go_router a cada evento de um stream (a sessão).
+/// Implementação própria para não depender de utilitários que mudam entre
+/// versões do go_router.
+class _StreamRefresh extends ChangeNotifier {
+  _StreamRefresh(Stream<dynamic> stream) {
+    notifyListeners();
+    _subscription = stream.asBroadcastStream().listen((_) => notifyListeners());
+  }
+
+  late final StreamSubscription<dynamic> _subscription;
+
+  @override
+  void dispose() {
+    _subscription.cancel();
+    super.dispose();
+  }
+}
 
 /// Rotas nomeadas do app.
 abstract final class Routes {
@@ -18,7 +39,7 @@ abstract final class Routes {
 GoRouter createRouter(SessionCubit session) {
   return GoRouter(
     initialLocation: Routes.login,
-    refreshListenable: GoRouterRefreshStream(session.stream),
+    refreshListenable: _StreamRefresh(session.stream),
     redirect: (context, state) {
       final s = session.state;
       final loc = state.matchedLocation;
