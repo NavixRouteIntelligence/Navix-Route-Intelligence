@@ -22,6 +22,8 @@ import dynamic from 'next/dynamic';
 import { ActivityTimeline } from '@/components/dashboard/activity-timeline';
 import { AiInsights } from '@/components/dashboard/ai-insights';
 import { PodSummaryCard } from '@/components/dashboard/pod-summary-card';
+import { RecentImports } from '@/components/dashboard/recent-imports';
+import { RecentPlans } from '@/components/dashboard/recent-plans';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -157,6 +159,12 @@ export default function DashboardPage() {
             <ActivityTimeline deliveries={deliveryItems} plans={planItems} />
           </CardContent>
         </Card>
+      </div>
+
+      {/* Recentes: Route Optimizer + Import Center */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <RecentPlans plans={planItems} loading={loading} />
+        <RecentImports />
       </div>
 
       {/* Painéis */}
