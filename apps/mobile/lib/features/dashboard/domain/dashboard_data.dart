@@ -40,6 +40,45 @@ class FleetDriver extends Equatable {
   List<Object?> get props => [id, status];
 }
 
+class FleetCounts extends Equatable {
+  const FleetCounts({
+    this.activeVehicles = 0,
+    this.totalVehicles = 0,
+    this.activeDrivers = 0,
+    this.totalDrivers = 0,
+  });
+
+  final int activeVehicles;
+  final int totalVehicles;
+  final int activeDrivers;
+  final int totalDrivers;
+
+  @override
+  List<Object?> get props => [activeVehicles, totalVehicles, activeDrivers, totalDrivers];
+}
+
+class PlanSummary extends Equatable {
+  const PlanSummary({required this.id, required this.score, required this.savingsPct, required this.stops});
+  final String id;
+  final int score;
+  final double savingsPct;
+  final int stops;
+
+  @override
+  List<Object?> get props => [id, score, savingsPct, stops];
+}
+
+class ImportSummaryItem extends Equatable {
+  const ImportSummaryItem({required this.filename, required this.valid, required this.total, required this.status});
+  final String filename;
+  final int valid;
+  final int total;
+  final String status;
+
+  @override
+  List<Object?> get props => [filename, valid, total, status];
+}
+
 /// Dados agregados do painel da Empresa.
 class DashboardData extends Equatable {
   const DashboardData({
@@ -47,21 +86,49 @@ class DashboardData extends Equatable {
     required this.routesTotal,
     required this.avgScore,
     required this.savedKm,
-    required this.perfSeries,
+    required this.avgSavingsPct,
+    required this.perfPlanned,
+    required this.perfOptimized,
     required this.pod,
+    required this.positions,
     required this.fleet,
+    required this.recentPlans,
+    required this.recentImports,
   });
 
   final DeliveryCounts deliveries;
   final int routesTotal;
   final int avgScore;
   final double savedKm;
-  final List<double> perfSeries;
+  final double avgSavingsPct;
+  final List<double> perfPlanned;
+  final List<double> perfOptimized;
   final PodCounts pod;
-  final List<FleetDriver> fleet;
+  final List<FleetDriver> positions;
+  final FleetCounts fleet;
+  final List<PlanSummary> recentPlans;
+  final List<ImportSummaryItem> recentImports;
 
-  bool get isEmpty => deliveries.total == 0 && routesTotal == 0 && pod.total == 0;
+  int get concluded => deliveries.delivered;
+  double get completionRate =>
+      deliveries.total == 0 ? 0 : (deliveries.delivered / deliveries.total) * 100;
+
+  bool get isEmpty =>
+      deliveries.total == 0 && routesTotal == 0 && pod.total == 0 && recentImports.isEmpty;
 
   @override
-  List<Object?> get props => [deliveries, routesTotal, avgScore, savedKm, perfSeries, pod, fleet];
+  List<Object?> get props => [
+        deliveries,
+        routesTotal,
+        avgScore,
+        savedKm,
+        avgSavingsPct,
+        perfPlanned,
+        perfOptimized,
+        pod,
+        positions,
+        fleet,
+        recentPlans,
+        recentImports,
+      ];
 }
