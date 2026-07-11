@@ -6,7 +6,6 @@ import { CheckCircle2, History, RotateCcw, Route as RouteIcon, Upload } from 'lu
 import Link from 'next/link';
 import { useState } from 'react';
 
-import { ConnectorCatalog } from '@/components/imports/connector-catalog';
 import { ImportDropzone } from '@/components/imports/import-dropzone';
 import { ImportPreviewTable } from '@/components/imports/import-preview-table';
 import { ImportSummaryCards } from '@/components/imports/import-summary-cards';
@@ -88,8 +87,6 @@ export default function ImportsPage() {
           </CardContent>
         </Card>
       )}
-
-      {!preview && <ConnectorCatalog />}
 
       {preview && (
         <div className="space-y-6">
