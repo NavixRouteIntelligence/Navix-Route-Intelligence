@@ -12,6 +12,7 @@ import '../../../core/ui/navix_section_header.dart';
 import '../../../core/ui/navix_skeleton.dart';
 import '../../../core/ui/navix_states.dart';
 import '../../../core/ui/navix_status_pill.dart';
+import '../../pod/presentation/pod_capture_sheet.dart';
 import '../domain/driver_dashboard_data.dart';
 import 'driver_dashboard_cubit.dart';
 import 'location_sharing_cubit.dart';
@@ -59,6 +60,25 @@ class _DriverViewState extends State<_DriverView> {
     }
   }
 
+  Future<void> _register(DriverDashboardData data) async {
+    final next = data.next;
+    if (next == null) {
+      _snack('Nenhuma entrega pendente para registrar.');
+      return;
+    }
+    final dashboard = context.read<DriverDashboardCubit>();
+    final registered = await showPodCaptureSheet(
+      context,
+      deliveryId: next.id,
+      deliveryLabel: next.addressLine.isEmpty ? null : next.addressLine,
+    );
+    if (!mounted) return;
+    if (registered == true) {
+      _snack('Comprovante registrado.');
+      dashboard.load();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final sharing = context.watch<LocationSharingCubit>().state.sharing;
@@ -86,7 +106,7 @@ class _DriverViewState extends State<_DriverView> {
                         data: state.data!,
                         running: sharing,
                         onToggleRun: _toggleShare,
-                        onRegister: () => _snack('Registrar entrega — em breve no app.'),
+                        onRegister: () => _register(state.data!),
                         onAction: _snack,
                       ),
               };

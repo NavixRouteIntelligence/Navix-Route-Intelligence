@@ -12,6 +12,8 @@ import '../../features/driver/presentation/location_sharing_cubit.dart';
 import '../location/location_service.dart';
 import '../../features/imports/data/import_repository.dart';
 import '../../features/imports/presentation/import_cubit.dart';
+import '../../features/pod/data/pod_repository.dart';
+import '../../features/pod/presentation/pod_capture_cubit.dart';
 import '../config/app_config.dart';
 import '../error/error_handler.dart';
 import '../logging/app_logger.dart';
@@ -74,5 +76,11 @@ Future<void> configureDependencies(AppConfig config) async {
     ..registerLazySingleton<ImportRepository>(
       () => ImportRepository(getIt<DioClient>().apiDio),
     )
-    ..registerFactory<ImportCubit>(() => ImportCubit(getIt<ImportRepository>()));
+    ..registerFactory<ImportCubit>(() => ImportCubit(getIt<ImportRepository>()))
+    ..registerLazySingleton<PodRepository>(
+      () => PodRepository(getIt<DioClient>().apiDio),
+    )
+    ..registerFactory<PodCaptureCubit>(
+      () => PodCaptureCubit(getIt<PodRepository>(), getIt<LocationService>(), getIt<TrackingRepository>()),
+    );
 }
