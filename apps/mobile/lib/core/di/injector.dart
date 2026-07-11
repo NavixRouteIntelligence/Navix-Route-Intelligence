@@ -14,6 +14,8 @@ import '../../features/imports/data/import_repository.dart';
 import '../../features/imports/presentation/import_cubit.dart';
 import '../../features/pod/data/pod_repository.dart';
 import '../../features/pod/presentation/pod_capture_cubit.dart';
+import '../../features/tracking/data/fleet_tracking_repository.dart';
+import '../../features/tracking/presentation/fleet_tracking_cubit.dart';
 import '../config/app_config.dart';
 import '../error/error_handler.dart';
 import '../logging/app_logger.dart';
@@ -82,5 +84,9 @@ Future<void> configureDependencies(AppConfig config) async {
     )
     ..registerFactory<PodCaptureCubit>(
       () => PodCaptureCubit(getIt<PodRepository>(), getIt<LocationService>(), getIt<TrackingRepository>()),
-    );
+    )
+    ..registerLazySingleton<FleetTrackingRepository>(
+      () => FleetTrackingRepository(getIt<DioClient>().apiDio),
+    )
+    ..registerFactory<FleetTrackingCubit>(() => FleetTrackingCubit(getIt<FleetTrackingRepository>()));
 }
