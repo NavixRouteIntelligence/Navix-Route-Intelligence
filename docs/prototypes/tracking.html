@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Navix — Frota ao vivo (Mobile · Empresa)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;550;600;620;650;680;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --primary:#6D4AFF; --primaryFg:#FFFFFF; --accent:#22D3AA;
+    --success:#22C55E; --warning:#F59E0B; --danger:#EF4444;
+    --bg:#0B0B12; --surface:#14141D; --surfaceAlt:#1B1B27;
+    --line:#262636; --text:#F3F3F7; --muted:#9AA0B4;
+    --r-sm:8px; --r-md:12px; --r-lg:16px; --r-pill:999px;
+    --fast:120ms cubic-bezier(0,0,.2,1);
+    --base:200ms cubic-bezier(.215,.61,.355,1);
+    --slow:320ms cubic-bezier(.215,.61,.355,1);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-font-smoothing:antialiased;}
+  html,body{background:#17171D;}
+  body{
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    color:var(--text); display:flex; flex-direction:column; align-items:center;
+    padding:48px 16px 96px; gap:20px;
+  }
+  .num{font-variant-numeric:tabular-nums; font-feature-settings:'tnum';}
+
+  /* ============ scaffolding da página de referência ============ */
+  .ref-head{width:390px; max-width:100%;}
+  .ref-head .kicker{font-size:11.5px; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--muted);}
+  .ref-head h1{font-size:22px; font-weight:680; margin-top:6px;}
+  .ref-head p{font-size:12.5px; font-weight:500; color:var(--muted); margin-top:6px; line-height:1.5;}
+  .state-tag{
+    width:390px; max-width:100%; display:flex; align-items:center; gap:10px;
+    margin-top:28px; font-size:11.5px; font-weight:600; letter-spacing:.12em;
+    text-transform:uppercase; color:var(--muted);
+  }
+  .state-tag::after{content:""; flex:1; height:1px; background:var(--line);}
+  .state-tag b{
+    display:inline-flex; align-items:center; justify-content:center; min-width:22px; height:22px;
+    border-radius:var(--r-pill); background:rgba(109,74,255,.16); color:#B9A6FF;
+    border:1px solid rgba(109,74,255,.4); font-size:11px; font-weight:700; padding:0 7px; letter-spacing:0;
+  }
+
+  /* ============ moldura do celular ============ */
+  .phone{
+    width:390px; max-width:100%; background:var(--bg);
+    border-radius:44px; border:1px solid #2C2C3A;
+    outline:8px solid #060609; outline-offset:0;
+    overflow:hidden; position:relative;
+    box-shadow:0 30px 80px rgba(0,0,0,.55);
+  }
+  .statusbar{
+    height:44px; display:flex; align-items:center; justify-content:space-between;
+    padding:0 24px 0 28px; position:relative; z-index:60; color:var(--text);
+    font-size:13px; font-weight:600;
+  }
+  .statusbar .notch{
+    position:absolute; left:50%; top:9px; transform:translateX(-50%);
+    width:110px; height:26px; border-radius:var(--r-pill); background:#060609;
+  }
+  .sb-icons{display:flex; align-items:center; gap:6px;}
+
+  /* ============ mapa ============ */
+  .map-wrap{position:relative; height:620px; overflow:hidden; background:#0D0D16;}
+  .map-wrap.short{height:250px;}
+  .map-wrap svg.map{position:absolute; inset:0; width:100%; height:100%;}
+  .map-tag{
+    position:absolute; right:12px; bottom:190px; z-index:5;
+    font-size:11.5px; font-weight:500; color:var(--muted);
+    background:rgba(11,11,18,.72); border:1px solid var(--line);
+    padding:3px 9px; border-radius:var(--r-pill); backdrop-filter:blur(6px);
+  }
+
+  /* topbar sobre o mapa */
+  .topbar{
+    position:absolute; top:8px; left:12px; right:12px; z-index:40;
+    display:flex; flex-direction:column; gap:8px;
+    animation:drop-in var(--slow) both;
+  }
+  .topbar-row{display:flex; align-items:center; gap:8px;}
+  .topbar-main{
+    flex:1; display:flex; align-items:center; gap:10px;
+    background:rgba(20,20,29,.86); border:1px solid var(--line);
+    border-radius:var(--r-lg); padding:10px 12px; backdrop-filter:blur(10px);
+  }
+  .topbar-main h2{font-size:18px; font-weight:650; letter-spacing:-.01em;}
+  .chip-live{
+    display:inline-flex; align-items:center; gap:6px;
+    font-size:11.5px; font-weight:600; color:var(--accent);
+    background:rgba(34,211,170,.1); border:1px solid rgba(34,211,170,.35);
+    border-radius:var(--r-pill); padding:3px 9px 3px 7px; white-space:nowrap;
+  }
+  .chip-live .dot{width:7px; height:7px; border-radius:50%; background:var(--accent); position:relative;}
+  .chip-live .dot::after{
+    content:""; position:absolute; inset:-4px; border-radius:50%;
+    border:1.5px solid var(--accent); animation:ping 1.8s cubic-bezier(0,0,.2,1) infinite;
+  }
+  .topbar-count{
+    margin-left:auto; font-size:11.5px; font-weight:500; color:var(--muted); white-space:nowrap;
+  }
+  .topbar-count b{color:var(--text); font-weight:620;}
+  .icon-btn{
+    width:42px; height:42px; flex:0 0 auto; border-radius:var(--r-lg);
+    background:rgba(20,20,29,.86); border:1px solid var(--line);
+    display:flex; align-items:center; justify-content:center;
+    color:var(--muted); cursor:pointer; backdrop-filter:blur(10px);
+    transition:transform var(--fast), color var(--fast), border-color var(--fast);
+  }
+  .icon-btn:active{transform:scale(.94);}
+  .icon-btn:hover{color:var(--text); border-color:#34344a;}
+
+  /* card compartilhamento / recepção de posições */
+  .rt-card{
+    display:flex; align-items:center; gap:10px;
+    background:rgba(20,20,29,.86); border:1px solid var(--line);
+    border-radius:var(--r-lg); padding:9px 12px; backdrop-filter:blur(10px);
+    animation:drop-in var(--slow) .1s both;
+  }
+  .rt-card .pulse-ico{
+    width:32px; height:32px; border-radius:10px; flex:0 0 auto;
+    background:rgba(34,211,170,.12); border:1px solid rgba(34,211,170,.3);
+    display:flex; align-items:center; justify-content:center; color:var(--accent);
+  }
+  .rt-card .rt-txt{flex:1; min-width:0;}
+  .rt-card .rt-txt strong{display:block; font-size:12.5px; font-weight:600;}
+  .rt-card .rt-txt span{display:block; font-size:11.5px; font-weight:500; color:var(--muted); margin-top:1px;}
+  .toggle{
+    position:relative; width:40px; height:24px; flex:0 0 auto; border-radius:var(--r-pill);
+    background:var(--accent); cursor:pointer; transition:background var(--base);
+    border:none;
+  }
+  .toggle::after{
+    content:""; position:absolute; top:3px; left:19px; width:18px; height:18px;
+    border-radius:50%; background:#0B0B12; transition:left var(--base);
+  }
+  .toggle.off{background:#313142;}
+  .toggle.off::after{left:3px; background:var(--muted);}
+  .rt-card .rt-action{font-size:11.5px; font-weight:600; color:var(--muted); text-align:right; margin-right:2px; white-space:nowrap;}
+
+  /* pinos */
+  .pin{position:absolute; z-index:20; transform:translate(-50%,-50%); display:flex; flex-direction:column; align-items:center;}
+  .pin .p-dot{
+    width:16px; height:16px; border-radius:50%;
+    border:2.5px solid #0B0B12; position:relative;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .pin.route .p-dot{background:var(--accent); box-shadow:0 0 0 1px rgba(34,211,170,.4);}
+  .pin.route .p-dot::before{
+    content:""; position:absolute; inset:-7px; border-radius:50%;
+    border:1.5px solid var(--accent); opacity:.8;
+    animation:ping 2s cubic-bezier(0,0,.2,1) infinite;
+  }
+  .pin.idle .p-dot{background:var(--warning); box-shadow:0 0 0 1px rgba(245,158,11,.4);}
+  .pin.off{opacity:.45;}
+  .pin.off .p-dot{background:var(--muted);}
+  .pin .p-lbl{
+    margin-top:5px; font-size:10.5px; font-weight:600; color:var(--muted);
+    background:rgba(11,11,18,.78); border:1px solid var(--line);
+    border-radius:var(--r-pill); padding:1.5px 7px; white-space:nowrap;
+  }
+  .pin.selected{z-index:30;}
+  .pin.selected .p-dot{
+    width:26px; height:26px; background:var(--primary); border-width:3px;
+    box-shadow:0 0 0 2px rgba(109,74,255,.45), 0 6px 18px rgba(109,74,255,.45);
+    color:var(--primaryFg);
+  }
+  .pin.selected .p-dot::before{
+    content:""; position:absolute; inset:-9px; border-radius:50%;
+    border:2px solid var(--primary); animation:ping 2s cubic-bezier(0,0,.2,1) infinite;
+  }
+  .pin.selected .p-lbl{
+    color:var(--primaryFg); background:var(--primary); border-color:var(--primary);
+    font-weight:650; padding:3px 10px; font-size:11.5px;
+    box-shadow:0 4px 14px rgba(109,74,255,.4);
+  }
+  .pin.dest .p-dot{width:14px; height:14px; background:#0B0B12; border:2.5px solid var(--primary);}
+  .pin.dest .p-lbl{color:#B9A6FF; border-color:rgba(109,74,255,.5);}
+
+  /* controles flutuantes do mapa */
+  .map-ctrls{
+    position:absolute; right:12px; bottom:236px; z-index:25;
+    display:flex; flex-direction:column; gap:8px;
+  }
+  .map-ctrls .icon-btn{width:44px; height:44px; border-radius:var(--r-pill);}
+
+  /* ============ bottom sheet ============ */
+  .sheet{
+    position:absolute; left:0; right:0; bottom:0; z-index:50;
+    background:var(--surface); border:1px solid var(--line); border-bottom:none;
+    border-radius:20px 20px 0 0;
+    box-shadow:0 -18px 48px rgba(0,0,0,.5);
+    animation:sheet-up var(--slow) .12s both;
+  }
+  .sheet .handle{width:40px; height:4px; border-radius:var(--r-pill); background:#34344a; margin:10px auto 0;}
+  .sheet-head{display:flex; align-items:center; gap:8px; padding:12px 16px 0;}
+  .sheet-head h3{font-size:15px; font-weight:620;}
+  .legend{margin-left:auto; display:flex; gap:6px;}
+  .legend .lg{
+    display:inline-flex; align-items:center; gap:5px; font-size:10.5px; font-weight:500;
+    color:var(--muted); background:var(--surfaceAlt); border:1px solid var(--line);
+    border-radius:var(--r-pill); padding:3px 8px;
+  }
+  .legend .lg i{width:7px; height:7px; border-radius:50%; flex:0 0 auto;}
+  .legend .lg.on i{background:var(--accent);} .legend .lg.on{color:#7DE8CF;}
+  .legend .lg.id i{background:var(--warning);}
+  .legend .lg.of i{background:var(--muted);}
+
+  .search{
+    margin:10px 16px 0; display:flex; align-items:center; gap:8px;
+    background:var(--surfaceAlt); border:1px solid var(--line);
+    border-radius:var(--r-md); padding:9px 12px; color:var(--muted);
+    font-size:12.5px; font-weight:500;
+  }
+
+  /* alertas */
+  .alerts{
+    margin:10px 16px 0; border:1px solid rgba(245,158,11,.35);
+    background:rgba(245,158,11,.07); border-radius:var(--r-lg); overflow:hidden;
+    animation:rise-in var(--slow) .2s both;
+  }
+  .alerts-head{
+    display:flex; align-items:center; gap:8px; padding:9px 12px;
+    font-size:12.5px; font-weight:600; color:var(--warning);
+    border-bottom:1px solid rgba(245,158,11,.2);
+  }
+  .alerts-head .cnt{
+    margin-left:auto; font-size:10.5px; font-weight:700; color:#0B0B12;
+    background:var(--warning); border-radius:var(--r-pill); padding:1px 7px;
+  }
+  .alert-row{display:flex; align-items:center; gap:9px; padding:8px 12px;}
+  .alert-row + .alert-row{border-top:1px solid rgba(245,158,11,.14);}
+  .alert-row .a-ico{flex:0 0 auto; display:flex;}
+  .alert-row p{flex:1; font-size:12px; font-weight:500; color:var(--text); line-height:1.35;}
+  .alert-row p span{color:var(--muted); font-weight:450;}
+  .alert-row .a-act{display:flex; gap:4px;}
+  .btn-mini{
+    font-size:11px; font-weight:600; border-radius:var(--r-sm); padding:5px 9px;
+    border:1px solid var(--line); background:var(--surfaceAlt); color:var(--text);
+    cursor:pointer; font-family:inherit; transition:border-color var(--fast), transform var(--fast);
+  }
+  .btn-mini:active{transform:scale(.95);}
+  .btn-mini.ghost{color:var(--muted); background:transparent;}
+  .btn-mini.warn{border-color:rgba(245,158,11,.5); color:var(--warning); background:rgba(245,158,11,.1);}
+
+  /* lista de motoristas */
+  .drivers{padding:8px 8px 14px; max-height:246px; overflow:hidden; position:relative;}
+  .drivers::after{
+    content:""; position:absolute; left:0; right:0; bottom:0; height:44px; pointer-events:none;
+    background:linear-gradient(to bottom, rgba(20,20,29,0), var(--surface));
+  }
+  .drv{
+    display:flex; align-items:center; gap:11px; padding:10px 8px;
+    border-radius:var(--r-md); cursor:pointer;
+    transition:background var(--fast);
+    animation:rise-in var(--slow) both;
+  }
+  .drv:nth-child(1){animation-delay:.22s} .drv:nth-child(2){animation-delay:.28s}
+  .drv:nth-child(3){animation-delay:.34s} .drv:nth-child(4){animation-delay:.40s}
+  .drv:nth-child(5){animation-delay:.46s} .drv:nth-child(6){animation-delay:.52s}
+  .drv:hover{background:var(--surfaceAlt);}
+  .drv.sel{background:rgba(109,74,255,.1); box-shadow:inset 0 0 0 1px rgba(109,74,255,.45);}
+  .drv.dim{opacity:.55;}
+  .avatar{
+    width:38px; height:38px; border-radius:var(--r-md); flex:0 0 auto; position:relative;
+    background:var(--surfaceAlt); border:1px solid var(--line);
+    display:flex; align-items:center; justify-content:center;
+    font-size:13px; font-weight:650; color:var(--text);
+  }
+  .avatar.p{background:rgba(109,74,255,.18); border-color:rgba(109,74,255,.5); color:#C9BAFF;}
+  .avatar .st-dot{
+    position:absolute; right:-3px; bottom:-3px; width:11px; height:11px; border-radius:50%;
+    border:2.5px solid var(--surface);
+  }
+  .st-dot.on{background:var(--accent);} .st-dot.id{background:var(--warning);} .st-dot.of{background:var(--muted);}
+  .drv-main{flex:1; min-width:0;}
+  .drv-name{display:flex; align-items:center; gap:7px; font-size:14px; font-weight:600;}
+  .drv-sub{display:flex; align-items:center; gap:8px; margin-top:3px; font-size:11.5px; font-weight:500; color:var(--muted);}
+  .drv-sub b{color:var(--text); font-weight:620;}
+  .drv-eta{text-align:right; flex:0 0 auto;}
+  .drv-eta .e1{font-size:15px; font-weight:680;}
+  .drv-eta .e1 small{font-size:10.5px; font-weight:600; color:var(--muted); margin-left:2px;}
+  .drv-eta .e2{font-size:10.5px; font-weight:500; color:var(--muted); margin-top:2px;}
+  .drv-eta .e1.acc{color:var(--accent);} .drv-eta .e1.mut{color:var(--muted); font-weight:500; font-size:12px;}
+
+  .pill{
+    display:inline-flex; align-items:center; gap:4.5px;
+    font-size:10.5px; font-weight:620; border-radius:var(--r-pill);
+    padding:2px 8px 2px 6px; white-space:nowrap;
+  }
+  .pill i{width:6px; height:6px; border-radius:50%;}
+  .pill.on{color:#7DE8CF; background:rgba(34,211,170,.1); border:1px solid rgba(34,211,170,.35);} .pill.on i{background:var(--accent);}
+  .pill.id{color:#FBBF54; background:rgba(245,158,11,.1); border:1px solid rgba(245,158,11,.4);} .pill.id i{background:var(--warning);}
+  .pill.of{color:var(--muted); background:rgba(154,160,180,.08); border:1px solid var(--line);} .pill.of i{background:var(--muted);}
+  .pill.lg{font-size:11.5px; padding:3.5px 10px 3.5px 8px;}
+
+  .ago{display:inline-flex; align-items:center; gap:4px;}
+  .ago i{width:5px; height:5px; border-radius:50%; background:var(--accent); animation:blink 2s ease-in-out infinite;}
+  .ago.stale i{background:var(--muted); animation:none;}
+
+  /* toast dentro do phone */
+  .toast{
+    position:absolute; left:50%; bottom:24px; transform:translate(-50%,80px); z-index:70;
+    display:flex; align-items:center; gap:8px;
+    background:var(--surfaceAlt); border:1px solid var(--line); border-radius:var(--r-pill);
+    padding:9px 16px; font-size:12.5px; font-weight:500; white-space:nowrap;
+    box-shadow:0 12px 32px rgba(0,0,0,.5); opacity:0;
+  }
+  .toast.show{animation:toast-in var(--slow) both, toast-out var(--slow) 3.4s both;}
+
+  /* faixa de conexão */
+  .conn{
+    display:flex; align-items:center; gap:9px;
+    border-radius:var(--r-md); padding:9px 12px;
+    font-size:12.5px; font-weight:600;
+  }
+  .conn.offline{background:rgba(245,158,11,.1); border:1px solid rgba(245,158,11,.4); color:var(--warning);}
+  .conn.online{background:rgba(34,211,170,.1); border:1px solid rgba(34,211,170,.4); color:var(--accent);}
+  .conn .spin{
+    width:13px; height:13px; border-radius:50%; flex:0 0 auto;
+    border:2px solid rgba(245,158,11,.25); border-top-color:var(--warning);
+    animation:rot 1s linear infinite;
+  }
+
+  /* ============ painel detalhe (estado 2) ============ */
+  .detail{padding:0 0 20px;}
+  .det-head{display:flex; align-items:center; gap:12px; padding:14px 16px 0;}
+  .det-head .avatar{width:48px; height:48px; font-size:17px; border-radius:14px;}
+  .det-id{flex:1; min-width:0;}
+  .det-id h3{font-size:18px; font-weight:650; letter-spacing:-.01em;}
+  .det-id p{font-size:11.5px; font-weight:500; color:var(--muted); margin-top:2px;}
+  .det-speed{text-align:right;}
+  .det-speed .v{font-size:28px; font-weight:700; line-height:1; letter-spacing:-.02em;}
+  .det-speed .u{font-size:10.5px; font-weight:600; color:var(--muted); letter-spacing:.06em; text-transform:uppercase;}
+  .det-tags{display:flex; align-items:center; gap:8px; padding:10px 16px 0;}
+  .det-tags .upd{font-size:11.5px; font-weight:500; color:var(--muted);}
+
+  .eta-card{
+    margin:12px 16px 0; border-radius:var(--r-lg);
+    background:linear-gradient(135deg, rgba(109,74,255,.2), rgba(109,74,255,.06));
+    border:1px solid rgba(109,74,255,.45);
+    padding:14px; display:flex; align-items:center; gap:12px;
+    animation:rise-in var(--slow) .05s both;
+  }
+  .eta-card .eta-num{display:flex; align-items:baseline; gap:4px;}
+  .eta-card .eta-num b{font-size:34px; font-weight:800; letter-spacing:-.03em; line-height:1; color:var(--primaryFg);}
+  .eta-card .eta-num span{font-size:12.5px; font-weight:600; color:#C9BAFF;}
+  .eta-card .eta-info{flex:1; min-width:0;}
+  .eta-card .eta-info .l1{font-size:11.5px; font-weight:600; color:#C9BAFF; letter-spacing:.08em; text-transform:uppercase;}
+  .eta-card .eta-info .l2{font-size:13px; font-weight:600; margin-top:3px;}
+  .eta-card .eta-info .l3{font-size:11.5px; font-weight:500; color:var(--muted); margin-top:1px;}
+  .eta-card .eta-when{
+    font-size:12.5px; font-weight:650; color:var(--primaryFg);
+    background:rgba(109,74,255,.4); border:1px solid rgba(109,74,255,.6);
+    border-radius:var(--r-pill); padding:4px 10px; flex:0 0 auto;
+  }
+
+  .metrics{display:flex; gap:8px; margin:10px 16px 0;}
+  .metric{
+    flex:1; background:var(--surfaceAlt); border:1px solid var(--line);
+    border-radius:var(--r-md); padding:10px 12px;
+    animation:rise-in var(--slow) .1s both;
+  }
+  .metric .m-v{font-size:18px; font-weight:680;}
+  .metric .m-v small{font-size:11.5px; color:var(--muted); font-weight:500;}
+  .metric .m-l{font-size:10.5px; font-weight:500; color:var(--muted); margin-top:2px;}
+  .metric .bar{height:4px; border-radius:var(--r-pill); background:#262636; margin-top:8px; overflow:hidden;}
+  .metric .bar i{display:block; height:100%; width:62%; border-radius:var(--r-pill); background:var(--success); animation:grow 800ms cubic-bezier(.215,.61,.355,1) .3s both;}
+
+  .actions{display:flex; gap:8px; margin:12px 16px 0;}
+  .act-btn{
+    flex:1; display:flex; flex-direction:column; align-items:center; gap:6px;
+    background:var(--surfaceAlt); border:1px solid var(--line); border-radius:var(--r-lg);
+    padding:12px 6px; color:var(--text); font-size:11.5px; font-weight:600;
+    cursor:pointer; font-family:inherit;
+    transition:transform var(--fast), border-color var(--fast), background var(--fast);
+  }
+  .act-btn:active{transform:scale(.96);}
+  .act-btn:hover{border-color:#34344a;}
+  .act-btn.pri{background:var(--primary); border-color:var(--primary); color:var(--primaryFg);}
+  .act-btn.pri:hover{background:#7C5CFF;}
+  .act-btn svg{opacity:.9;}
+
+  /* timeline */
+  .tl-block{margin:16px 16px 0;}
+  .tl-title{display:flex; align-items:center; gap:8px; font-size:12.5px; font-weight:600; color:var(--muted); letter-spacing:.08em; text-transform:uppercase;}
+  .tl{margin-top:12px; position:relative; padding-left:26px;}
+  .tl::before{content:""; position:absolute; left:8px; top:8px; bottom:10px; width:2px; background:var(--line); border-radius:1px;}
+  .tl-item{position:relative; padding-bottom:16px; animation:rise-in var(--slow) both;}
+  .tl-item:nth-child(1){animation-delay:.15s} .tl-item:nth-child(2){animation-delay:.22s}
+  .tl-item:nth-child(3){animation-delay:.29s} .tl-item:nth-child(4){animation-delay:.36s}
+  .tl-item:nth-child(5){animation-delay:.43s}
+  .tl-item:last-child{padding-bottom:2px;}
+  .tl-dot{
+    position:absolute; left:-26px; top:2px; width:18px; height:18px; border-radius:50%;
+    background:var(--surface); border:2px solid var(--line);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .tl-dot.ok{border-color:var(--success); color:var(--success);}
+  .tl-dot.now{border-color:var(--accent); color:var(--accent); box-shadow:0 0 0 4px rgba(34,211,170,.12);}
+  .tl-dot.now::after{content:""; position:absolute; inset:-6px; border-radius:50%; border:1.5px solid var(--accent); animation:ping 2s cubic-bezier(0,0,.2,1) infinite;}
+  .tl-dot.warn{border-color:var(--warning); color:var(--warning);}
+  .tl-row{display:flex; align-items:baseline; gap:10px;}
+  .tl-row .t{font-size:12px; font-weight:620; color:var(--muted); flex:0 0 44px;}
+  .tl-row .w{flex:1;}
+  .tl-row .w b{font-size:13.5px; font-weight:600; display:block;}
+  .tl-row .w span{font-size:11.5px; font-weight:500; color:var(--muted); display:block; margin-top:1px;}
+  .tl-row .w .hl-acc{color:var(--accent);} .tl-row .w .hl-warn{color:var(--warning);}
+
+  /* variações menores (estado 3) */
+  .var-stack{width:390px; max-width:100%; display:flex; flex-direction:column; gap:12px;}
+  .var-card{
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg);
+    padding:14px; animation:rise-in var(--slow) both;
+  }
+  .var-lbl{font-size:10.5px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); margin-bottom:10px;}
+
+  .share-card{display:flex; align-items:center; gap:11px;}
+  .share-ico{
+    width:40px; height:40px; border-radius:var(--r-md); flex:0 0 auto; position:relative;
+    background:rgba(34,211,170,.12); border:1px solid rgba(34,211,170,.35);
+    display:flex; align-items:center; justify-content:center; color:var(--accent);
+  }
+  .share-ico::after{content:""; position:absolute; inset:-1px; border-radius:var(--r-md); border:1px solid rgba(34,211,170,.4); animation:ping-sq 2.2s cubic-bezier(0,0,.2,1) infinite;}
+  .share-txt{flex:1; min-width:0;}
+  .share-txt strong{font-size:13.5px; font-weight:620; display:block;}
+  .share-txt span{font-size:11.5px; font-weight:500; color:var(--muted); display:block; margin-top:2px;}
+  .btn-stop{
+    flex:0 0 auto; display:inline-flex; align-items:center; gap:6px;
+    font-family:inherit; font-size:12px; font-weight:620; cursor:pointer;
+    color:var(--danger); background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.4);
+    border-radius:var(--r-md); padding:8px 12px;
+    transition:transform var(--fast), background var(--fast);
+  }
+  .btn-stop:active{transform:scale(.95);}
+
+  /* skeleton */
+  .sk{border-radius:var(--r-sm); background:linear-gradient(90deg, #1B1B27 25%, #232333 50%, #1B1B27 75%); background-size:200% 100%; animation:shimmer 1.4s linear infinite;}
+  .sk-row{display:flex; align-items:center; gap:11px; padding:9px 2px;}
+  .sk-av{width:38px; height:38px; border-radius:var(--r-md); flex:0 0 auto;}
+  .sk-l1{height:11px; width:46%; margin-bottom:7px;}
+  .sk-l2{height:9px; width:68%;}
+  .sk-eta{width:44px; height:26px; border-radius:var(--r-sm); flex:0 0 auto;}
+
+  /* empty */
+  .empty{display:flex; flex-direction:column; align-items:center; text-align:center; padding:18px 20px 10px;}
+  .empty .e-ico{
+    width:52px; height:52px; border-radius:var(--r-lg);
+    background:var(--surfaceAlt); border:1px solid var(--line);
+    display:flex; align-items:center; justify-content:center; color:var(--muted); margin-bottom:12px;
+  }
+  .empty h4{font-size:15px; font-weight:620;}
+  .empty p{font-size:12.5px; font-weight:500; color:var(--muted); margin-top:4px; line-height:1.5;}
+  .btn-sec{
+    margin-top:14px; font-family:inherit; font-size:12.5px; font-weight:620; cursor:pointer;
+    color:var(--text); background:var(--surfaceAlt); border:1px solid var(--line);
+    border-radius:var(--r-md); padding:9px 16px;
+    transition:transform var(--fast), border-color var(--fast);
+  }
+  .btn-sec:active{transform:scale(.96);}
+
+  .toast-static{
+    display:inline-flex; align-items:center; gap:8px;
+    background:var(--surfaceAlt); border:1px solid var(--line); border-radius:var(--r-pill);
+    padding:9px 16px; font-size:12.5px; font-weight:500;
+    box-shadow:0 12px 32px rgba(0,0,0,.45);
+  }
+
+  /* keyframes */
+  @keyframes ping{0%{transform:scale(.6); opacity:.9;} 70%{transform:scale(1.6); opacity:0;} 100%{transform:scale(1.6); opacity:0;}}
+  @keyframes ping-sq{0%{transform:scale(.92); opacity:.9;} 70%{transform:scale(1.25); opacity:0;} 100%{transform:scale(1.25); opacity:0;}}
+  @keyframes blink{0%,100%{opacity:1;} 50%{opacity:.25;}}
+  @keyframes drop-in{from{opacity:0; transform:translateY(-14px);} to{opacity:1; transform:none;}}
+  @keyframes rise-in{from{opacity:0; transform:translateY(12px);} to{opacity:1; transform:none;}}
+  @keyframes sheet-up{from{transform:translateY(48px); opacity:0;} to{transform:none; opacity:1;}}
+  @keyframes dash{to{stroke-dashoffset:-28;}}
+  @keyframes rot{to{transform:rotate(360deg);}}
+  @keyframes shimmer{to{background-position:-200% 0;}}
+  @keyframes grow{from{width:0;}}
+  @keyframes toast-in{from{opacity:0; transform:translate(-50%,80px);} to{opacity:1; transform:translate(-50%,0);}}
+  @keyframes toast-out{from{opacity:1; transform:translate(-50%,0);} to{opacity:0; transform:translate(-50%,80px);}}
+  @keyframes drift{0%,100%{transform:translate(-50%,-50%);} 50%{transform:translate(calc(-50% + 3px), calc(-50% - 4px));}}
+</style>
+</head>
+<body>
+
+  <header class="ref-head">
+    <div class="kicker">Navix Route Intelligence · Protótipo de referência</div>
+    <h1>Tracking em tempo real — Empresa · Mobile</h1>
+    <p>Tela de rastreamento da frota (visão da central). Estados empilhados abaixo para referência de implementação em Flutter. Mapa ilustrativo.</p>
+  </header>
+
+  <!-- ================================================================ -->
+  <!-- ESTADO 1 · TELA PRINCIPAL: mapa + sheet peek -->
+  <!-- ================================================================ -->
+  <div class="state-tag"><b>1</b> Tela principal — mapa ao vivo + sheet recolhido (peek)</div>
+
+  <div class="phone">
+    <div class="statusbar">
+      <span class="num">09:08</span>
+      <span class="notch"></span>
+      <span class="sb-icons">
+        <svg width="16" height="11" viewBox="0 0 16 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="4.5" width="3" height="6.5" rx="1"/><rect x="9" y="2" width="3" height="9" rx="1"/><rect x="13.5" y="0" width="2.5" height="11" rx="1" opacity=".35"/></svg>
+        <svg width="15" height="11" viewBox="0 0 15 11" fill="currentColor"><path d="M7.5 9.2a1.3 1.3 0 1 0 0 2.6 1.3 1.3 0 0 0 0-2.6zM7.5 5.6c-1.5 0-2.9.6-3.9 1.6l1.3 1.3a3.7 3.7 0 0 1 5.2 0l1.3-1.3a5.5 5.5 0 0 0-3.9-1.6zM7.5 2C5 2 2.7 3 1 4.7l1.3 1.3A7.3 7.3 0 0 1 7.5 3.8c2 0 3.9.8 5.2 2.2L14 4.7A9.2 9.2 0 0 0 7.5 2z" transform="translate(0,-1.5)"/></svg>
+        <svg width="24" height="11" viewBox="0 0 24 11"><rect x="0.5" y="0.5" width="20" height="10" rx="3" fill="none" stroke="currentColor" opacity=".4"/><rect x="2" y="2" width="14" height="7" rx="1.6" fill="currentColor"/><rect x="21.6" y="3.4" width="1.8" height="4.2" rx="0.9" fill="currentColor" opacity=".4"/></svg>
+      </span>
+    </div>
+
+    <div class="map-wrap">
+      <!-- mapa ilustrativo -->
+      <svg class="map" viewBox="0 0 390 620" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+        <rect width="390" height="620" fill="#0D0D16"/>
+        <!-- parque -->
+        <rect x="18" y="418" width="118" height="112" rx="10" fill="rgba(34,211,170,0.05)" stroke="rgba(34,211,170,0.12)"/>
+        <!-- rio -->
+        <path d="M330 -10 C 300 90, 386 160, 352 268 C 330 340, 402 420, 372 640" fill="none" stroke="rgba(109,74,255,0.10)" stroke-width="26" stroke-linecap="round"/>
+        <!-- quarteirões -->
+        <g fill="#14141D" stroke="#1D1D2B" stroke-width="1">
+          <rect x="18" y="14" width="96" height="88" rx="7"/>
+          <rect x="132" y="14" width="86" height="88" rx="7"/>
+          <rect x="236" y="14" width="66" height="88" rx="7"/>
+          <rect x="18" y="120" width="96" height="70" rx="7"/>
+          <rect x="132" y="120" width="86" height="70" rx="7"/>
+          <rect x="236" y="120" width="58" height="70" rx="7"/>
+          <rect x="18" y="208" width="66" height="92" rx="7"/>
+          <rect x="102" y="208" width="116" height="92" rx="7"/>
+          <rect x="236" y="208" width="72" height="92" rx="7"/>
+          <rect x="18" y="318" width="118" height="82" rx="7"/>
+          <rect x="154" y="318" width="64" height="82" rx="7"/>
+          <rect x="236" y="318" width="80" height="82" rx="7"/>
+          <rect x="154" y="418" width="64" height="112" rx="7"/>
+          <rect x="236" y="418" width="88" height="112" rx="7"/>
+          <rect x="18" y="548" width="200" height="80" rx="7"/>
+          <rect x="236" y="548" width="100" height="80" rx="7"/>
+        </g>
+        <!-- vias principais -->
+        <g stroke="#23233394" stroke-width="7" stroke-linecap="round" fill="none">
+          <path d="M0 108 H390"/>
+          <path d="M0 198 H390"/>
+          <path d="M0 308 H390"/>
+          <path d="M0 410 H390"/>
+          <path d="M0 538 H390"/>
+          <path d="M124 0 V620"/>
+          <path d="M227 0 V620"/>
+          <path d="M92 198 V620" stroke-width="5"/>
+        </g>
+        <!-- avenida diagonal -->
+        <path d="M-10 470 L 240 240 L 390 96" stroke="#2A2A3D" stroke-width="9" stroke-linecap="round" fill="none" opacity=".8"/>
+        <path d="M-10 470 L 240 240 L 390 96" stroke="#3A3A52" stroke-width="1.4" stroke-dasharray="8 10" fill="none" opacity=".55"/>
+        <!-- nomes de rua fictícios -->
+        <g fill="#4A4A63" font-family="Inter, sans-serif" font-size="9" font-weight="500">
+          <text x="140" y="104">Av. Norte</text>
+          <text x="30" y="304">R. das Docas</text>
+          <text x="243" y="406">R. Aurora</text>
+          <text x="60" y="463" fill="rgba(34,211,170,0.35)">Parque Sul</text>
+        </g>
+        <!-- ROTA do selecionado até o próximo ponto -->
+        <path id="routePath" d="M140 362 L 124 362 L 124 308 L 227 308 L 227 198 L 288 198 L 288 152"
+              fill="none" stroke="#6D4AFF" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity=".95"/>
+        <path d="M140 362 L 124 362 L 124 308 L 227 308 L 227 198 L 288 198 L 288 152"
+              fill="none" stroke="#C9BAFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"
+              stroke-dasharray="2 26" style="animation:dash 1.2s linear infinite;"/>
+      </svg>
+
+      <span class="map-tag">Mapa ilustrativo</span>
+
+      <!-- pinos -->
+      <div class="pin selected" style="left:35.9%; top:58.4%; animation:drift 5s ease-in-out infinite;">
+        <div class="p-dot">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
+        </div>
+        <span class="p-lbl">Carlos M. · <span class="num">42 km/h</span></span>
+      </div>
+      <div class="pin dest" style="left:73.8%; top:24.5%;">
+        <div class="p-dot"></div>
+        <span class="p-lbl">Próx. parada · ETA <span class="num">12 min</span></span>
+      </div>
+      <div class="pin route" style="left:18%; top:24%; animation:drift 6s ease-in-out infinite;">
+        <div class="p-dot"></div><span class="p-lbl">Ana</span>
+      </div>
+      <div class="pin route" style="left:66%; top:69%; animation:drift 7s ease-in-out infinite;">
+        <div class="p-dot"></div><span class="p-lbl">Bruno</span>
+      </div>
+      <div class="pin route" style="left:84%; top:44%; animation:drift 5.5s ease-in-out infinite;">
+        <div class="p-dot"></div><span class="p-lbl">Marina</span>
+      </div>
+      <div class="pin idle" style="left:29%; top:79%;">
+        <div class="p-dot"></div><span class="p-lbl">João · parado <span class="num">8 min</span></span>
+      </div>
+      <div class="pin off" style="left:55%; top:14%;">
+        <div class="p-dot"></div><span class="p-lbl">Rafael · sem sinal <span class="num">3 min</span></span>
+      </div>
+
+      <!-- topbar -->
+      <div class="topbar">
+        <div class="topbar-row">
+          <div class="topbar-main">
+            <h2>Frota ao vivo</h2>
+            <span class="chip-live"><span class="dot"></span> ao vivo</span>
+            <span class="topbar-count num"><b>8</b> online · <b>2</b> offline</span>
+          </div>
+          <button class="icon-btn" title="Filtros e tema" aria-label="Filtros">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
+          </button>
+        </div>
+        <!-- compartilhamento de localização: visão da CENTRAL -->
+        <div class="rt-card">
+          <span class="pulse-ico">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M2 12h4l3-8 4 16 3-8h6"/></svg>
+          </span>
+          <span class="rt-txt">
+            <strong>Recebendo posições em tempo real</strong>
+            <span>atualizado <span class="ago"><i></i>há <span class="num js-ago" data-base="4">4</span>s</span> · 8 veículos transmitindo</span>
+          </span>
+          <span class="rt-action">Pausar<br>atualização</span>
+          <button class="toggle" id="rtToggle" aria-label="Pausar atualização"></button>
+        </div>
+      </div>
+
+      <!-- controles do mapa -->
+      <div class="map-ctrls">
+        <button class="icon-btn" title="Camadas" aria-label="Camadas">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="m12 3 9 5-9 5-9-5 9-5z"/><path d="m3 13 9 5 9-5" opacity=".55"/></svg>
+        </button>
+        <button class="icon-btn" title="Recentralizar" aria-label="Recentralizar" style="color:var(--accent); border-color:rgba(34,211,170,.35);">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2v3.5M12 18.5V22M2 12h3.5M18.5 12H22"/></svg>
+        </button>
+      </div>
+
+      <!-- toast vivo -->
+      <div class="toast show" id="liveToast">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+        Rota do Carlos recalculada
+      </div>
+    </div>
+
+    <!-- BOTTOM SHEET · peek -->
+    <div class="sheet">
+      <div class="handle"></div>
+      <div class="sheet-head">
+        <h3>Motoristas (<span class="num">10</span>)</h3>
+        <div class="legend" aria-label="Legenda de status">
+          <span class="lg on"><i></i>Em rota</span>
+          <span class="lg id"><i></i>Parado</span>
+          <span class="lg of"><i></i>Offline</span>
+        </div>
+      </div>
+
+      <div class="search">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        Buscar motorista, placa ou rota…
+      </div>
+
+      <!-- alertas -->
+      <div class="alerts">
+        <div class="alerts-head">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+          Alertas ativos <span class="cnt num">2</span>
+        </div>
+        <div class="alert-row">
+          <span class="a-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+          <p><b>João</b> parado há <b class="num">8 min</b> <span>· R. das Docas, 220</span></p>
+          <span class="a-act"><button class="btn-mini warn">Ver</button><button class="btn-mini ghost">Ignorar</button></span>
+        </div>
+        <div class="alert-row">
+          <span class="a-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2" stroke-linecap="round"><path d="M12 2a7 7 0 0 1 7 7c0 5-7 13-7 13S5 14 5 9a7 7 0 0 1 7-7z"/><path d="M9.5 9.5 14.5 14.5M14.5 9.5 9.5 14.5" transform="translate(0,-2.4) scale(0.9) translate(1.2,1.2)"/></svg></span>
+          <p>GPS de <b>Ana</b> instável <span>· precisão &gt; 150 m</span></p>
+          <span class="a-act"><button class="btn-mini warn">Ver</button><button class="btn-mini ghost">Ignorar</button></span>
+        </div>
+      </div>
+
+      <!-- lista ordenada por status -->
+      <div class="drivers">
+        <div class="drv sel">
+          <div class="avatar p">CM<span class="st-dot on"></span></div>
+          <div class="drv-main">
+            <div class="drv-name">Carlos Mendes <span class="pill on"><i></i>Em rota</span></div>
+            <div class="drv-sub"><span><b class="num">42</b> km/h</span> · <span class="ago"><i></i>há <span class="num js-ago" data-base="3">3</span>s</span></div>
+          </div>
+          <div class="drv-eta">
+            <div class="e1 num" style="color:#C9BAFF;">12<small>min</small></div>
+            <div class="e2 num">ETA 09:20</div>
+          </div>
+        </div>
+        <div class="drv">
+          <div class="avatar">AS<span class="st-dot on"></span></div>
+          <div class="drv-main">
+            <div class="drv-name">Ana Souza <span class="pill on"><i></i>Em rota</span></div>
+            <div class="drv-sub"><span><b class="num">38</b> km/h</span> · <span class="ago"><i></i>há <span class="num js-ago" data-base="6">6</span>s</span></div>
+          </div>
+          <div class="drv-eta">
+            <div class="e1 acc num">8<small>min</small></div>
+            <div class="e2 num">ETA 09:16</div>
+          </div>
+        </div>
+        <div class="drv">
+          <div class="avatar">BL<span class="st-dot on"></span></div>
+          <div class="drv-main">
+            <div class="drv-name">Bruno Lima <span class="pill on"><i></i>Em rota</span></div>
+            <div class="drv-sub"><span><b class="num">51</b> km/h</span> · <span class="ago"><i></i>há <span class="num js-ago" data-base="2">2</span>s</span></div>
+          </div>
+          <div class="drv-eta">
+            <div class="e1 acc num">21<small>min</small></div>
+            <div class="e2 num">ETA 09:29</div>
+          </div>
+        </div>
+        <div class="drv">
+          <div class="avatar">MA<span class="st-dot on"></span></div>
+          <div class="drv-main">
+            <div class="drv-name">Marina Alves <span class="pill on"><i></i>Em rota</span></div>
+            <div class="drv-sub"><span><b class="num">27</b> km/h</span> · <span class="ago"><i></i>há <span class="num js-ago" data-base="5">5</span>s</span></div>
+          </div>
+          <div class="drv-eta">
+            <div class="e1 acc num">34<small>min</small></div>
+            <div class="e2 num">ETA 09:42</div>
+          </div>
+        </div>
+        <div class="drv">
+          <div class="avatar">JP<span class="st-dot id"></span></div>
+          <div class="drv-main">
+            <div class="drv-name">João Pereira <span class="pill id"><i></i>Parado</span></div>
+            <div class="drv-sub"><span><b class="num">0</b> km/h · parado <b class="num">8 min</b></span> · <span class="ago"><i></i>há <span class="num js-ago" data-base="4">4</span>s</span></div>
+          </div>
+          <div class="drv-eta">
+            <div class="e1 num" style="color:var(--warning);">18<small>min</small></div>
+            <div class="e2 num">ETA 09:26</div>
+          </div>
+        </div>
+        <div class="drv dim">
+          <div class="avatar">RC<span class="st-dot of"></span></div>
+          <div class="drv-main">
+            <div class="drv-name">Rafael Costa <span class="pill of"><i></i>Offline</span></div>
+            <div class="drv-sub"><span>— km/h</span> · <span class="ago stale"><i></i>sem sinal há <b class="num">3 min</b></span></div>
+          </div>
+          <div class="drv-eta">
+            <div class="e1 mut">ETA —</div>
+            <div class="e2">últ. pos. 09:05</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================================ -->
+  <!-- ESTADO 2 · SHEET EXPANDIDO: detalhe do motorista -->
+  <!-- ================================================================ -->
+  <div class="state-tag"><b>2</b> Sheet expandido — detalhe do motorista selecionado</div>
+
+  <div class="phone">
+    <div class="statusbar">
+      <span class="num">09:08</span>
+      <span class="notch"></span>
+      <span class="sb-icons">
+        <svg width="16" height="11" viewBox="0 0 16 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="4.5" width="3" height="6.5" rx="1"/><rect x="9" y="2" width="3" height="9" rx="1"/><rect x="13.5" y="0" width="2.5" height="11" rx="1" opacity=".35"/></svg>
+        <svg width="24" height="11" viewBox="0 0 24 11"><rect x="0.5" y="0.5" width="20" height="10" rx="3" fill="none" stroke="currentColor" opacity=".4"/><rect x="2" y="2" width="14" height="7" rx="1.6" fill="currentColor"/><rect x="21.6" y="3.4" width="1.8" height="4.2" rx="0.9" fill="currentColor" opacity=".4"/></svg>
+      </span>
+    </div>
+
+    <!-- fatia do mapa visível atrás do sheet -->
+    <div class="map-wrap short">
+      <svg class="map" viewBox="0 0 390 250" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+        <rect width="390" height="250" fill="#0D0D16"/>
+        <g fill="#14141D" stroke="#1D1D2B" stroke-width="1">
+          <rect x="18" y="-20" width="96" height="120" rx="7"/>
+          <rect x="132" y="-20" width="86" height="120" rx="7"/>
+          <rect x="236" y="-20" width="120" height="120" rx="7"/>
+          <rect x="18" y="118" width="96" height="140" rx="7"/>
+          <rect x="132" y="118" width="86" height="140" rx="7"/>
+          <rect x="236" y="118" width="120" height="140" rx="7"/>
+        </g>
+        <g stroke="#23233394" stroke-width="7" stroke-linecap="round" fill="none">
+          <path d="M0 108 H390"/><path d="M124 0 V250"/><path d="M227 0 V250"/>
+        </g>
+        <path d="M96 210 L 124 210 L 124 108 L 260 108 L 260 62"
+              fill="none" stroke="#6D4AFF" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M96 210 L 124 210 L 124 108 L 260 108 L 260 62"
+              fill="none" stroke="#C9BAFF" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="2 26" style="animation:dash 1.2s linear infinite;"/>
+      </svg>
+      <div class="pin selected" style="left:24.6%; top:84%;">
+        <div class="p-dot">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
+        </div>
+      </div>
+      <div class="pin dest" style="left:66.6%; top:24.8%;">
+        <div class="p-dot"></div>
+        <span class="p-lbl">Cliente B</span>
+      </div>
+      <span class="map-tag" style="bottom:12px;">Mapa ilustrativo</span>
+      <button class="icon-btn" style="position:absolute; top:10px; left:12px; z-index:30;" aria-label="Voltar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+      </button>
+    </div>
+
+    <div class="sheet" style="position:relative; animation-delay:0s;">
+      <div class="handle"></div>
+      <div class="detail">
+        <div class="det-head">
+          <div class="avatar p">CM<span class="st-dot on"></span></div>
+          <div class="det-id">
+            <h3>Carlos Mendes</h3>
+            <p>Fiorino · <span class="num">BRA-2E19</span> · Rota #<span class="num">R-118</span></p>
+          </div>
+          <div class="det-speed">
+            <div class="v num">42</div>
+            <div class="u">km/h</div>
+          </div>
+        </div>
+        <div class="det-tags">
+          <span class="pill on lg"><i></i>Em rota</span>
+          <span class="upd"><span class="ago"><i></i>atualizado há <span class="num js-ago" data-base="3">3</span>s</span></span>
+        </div>
+
+        <!-- ETA destacado -->
+        <div class="eta-card">
+          <div class="eta-num"><b class="num">12</b><span>min</span></div>
+          <div class="eta-info">
+            <div class="l1">Próxima parada</div>
+            <div class="l2">Cliente B — Mercado Aurora</div>
+            <div class="l3">R. Aurora, 482 · Centro</div>
+          </div>
+          <span class="eta-when num">09:20</span>
+        </div>
+
+        <!-- mini métricas -->
+        <div class="metrics">
+          <div class="metric">
+            <div class="m-v num">5<small> / 8</small></div>
+            <div class="m-l">Paradas concluídas</div>
+            <div class="bar"><i></i></div>
+          </div>
+          <div class="metric">
+            <div class="m-v num">7,4<small> km</small></div>
+            <div class="m-l">Distância restante</div>
+          </div>
+          <div class="metric">
+            <div class="m-v num">09:58</div>
+            <div class="m-l">Fim previsto da rota</div>
+          </div>
+        </div>
+
+        <!-- ações rápidas -->
+        <div class="actions">
+          <button class="act-btn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.7A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.8a2 2 0 0 1-.4 2.1L8 10a16 16 0 0 0 6 6l1.4-1.4a2 2 0 0 1 2.1-.4c.9.3 1.9.5 2.8.7a2 2 0 0 1 1.7 2z"/></svg>
+            Ligar
+          </button>
+          <button class="act-btn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            Mensagem
+          </button>
+          <button class="act-btn pri">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 20 3 17V4l6 3 6-3 6 3v13l-6-3-6 3z"/><path d="M9 7v13M15 4v13"/></svg>
+            Ver rota
+          </button>
+        </div>
+
+        <!-- timeline -->
+        <div class="tl-block">
+          <div class="tl-title">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+            Timeline da rota
+          </div>
+          <div class="tl">
+            <div class="tl-item">
+              <span class="tl-dot ok"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+              <div class="tl-row"><span class="t num">08:12</span><div class="w"><b>Saiu do CD Navix — Zona Sul</b><span>Início da rota #R-118 · 8 paradas</span></div></div>
+            </div>
+            <div class="tl-item">
+              <span class="tl-dot warn"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 6v6M12 16.5h.01"/></svg></span>
+              <div class="tl-row"><span class="t num">08:31</span><div class="w"><b>Parado por 6 min <span class="hl-warn">⚠</span></b><span>Trânsito na Av. Norte · retomou 08:37</span></div></div>
+            </div>
+            <div class="tl-item">
+              <span class="tl-dot ok"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+              <div class="tl-row"><span class="t num">09:03</span><div class="w"><b>Entregue — Cliente A ✓</b><span>Padaria Estrela · assinatura coletada</span></div></div>
+            </div>
+            <div class="tl-item">
+              <span class="tl-dot now"><span style="width:6px;height:6px;border-radius:50%;background:var(--accent);display:block;"></span></span>
+              <div class="tl-row"><span class="t num">agora</span><div class="w"><b class="hl-acc">Em rota para Cliente B</b><span>ETA <b class="num" style="color:var(--text);">09:20</b> · 2,1 km · via Av. Norte</span></div></div>
+            </div>
+            <div class="tl-item">
+              <span class="tl-dot"></span>
+              <div class="tl-row"><span class="t num">09:34</span><div class="w"><b style="color:var(--muted); font-weight:500;">Cliente C — previsto</b><span>R. das Docas, 90</span></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================================ -->
+  <!-- ESTADO 3 · VARIAÇÕES E ESTADOS DO SISTEMA -->
+  <!-- ================================================================ -->
+  <div class="state-tag"><b>3</b> Variações — conexão, compartilhamento, loading, vazio, toast</div>
+
+  <div class="var-stack">
+
+    <div class="var-card">
+      <div class="var-lbl">Conexão da central — offline vs. reconectada</div>
+      <div class="conn offline">
+        <span class="spin"></span>
+        Sem conexão — reconectando…
+        <span style="margin-left:auto; font-size:11px; font-weight:500; color:rgba(245,158,11,.7);" class="num">tentativa 2/5</span>
+      </div>
+      <div style="height:8px;"></div>
+      <div class="conn online">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+        Ao vivo novamente
+        <span style="margin-left:auto; font-size:11px; font-weight:500; color:rgba(34,211,170,.7);">posições sincronizadas</span>
+      </div>
+    </div>
+
+    <div class="var-card">
+      <div class="var-lbl">Visão do motorista — compartilhando localização</div>
+      <div class="share-card">
+        <span class="share-ico">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 1 7 7c0 5-7 13-7 13S5 14 5 9a7 7 0 0 1 7-7z"/><circle cx="12" cy="9" r="2.4"/></svg>
+        </span>
+        <span class="share-txt">
+          <strong>Você está compartilhando sua localização</strong>
+          <span>Com a central Navix · desde <span class="num">08:12</span> · GPS preciso</span>
+        </span>
+        <button class="btn-stop">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+          Parar
+        </button>
+      </div>
+    </div>
+
+    <div class="var-card">
+      <div class="var-lbl">Sheet — carregando motoristas (skeleton)</div>
+      <div class="sk-row"><span class="sk sk-av"></span><span style="flex:1;"><span class="sk sk-l1" style="display:block;"></span><span class="sk sk-l2" style="display:block;"></span></span><span class="sk sk-eta"></span></div>
+      <div class="sk-row"><span class="sk sk-av"></span><span style="flex:1;"><span class="sk sk-l1" style="display:block; width:58%;"></span><span class="sk sk-l2" style="display:block; width:44%;"></span></span><span class="sk sk-eta"></span></div>
+      <div class="sk-row"><span class="sk sk-av"></span><span style="flex:1;"><span class="sk sk-l1" style="display:block; width:38%;"></span><span class="sk sk-l2" style="display:block; width:60%;"></span></span><span class="sk sk-eta"></span></div>
+    </div>
+
+    <div class="var-card">
+      <div class="var-lbl">Sheet — estado vazio</div>
+      <div class="empty">
+        <span class="e-ico">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 1 7 7c0 5-7 13-7 13S5 14 5 9a7 7 0 0 1 7-7z" opacity=".5"/><path d="m4 4 16 16"/></svg>
+        </span>
+        <h4>Nenhum motorista online</h4>
+        <p>Quando um motorista iniciar uma rota e compartilhar a localização, ele aparece aqui em tempo real.</p>
+        <button class="btn-sec">Convidar motoristas</button>
+      </div>
+    </div>
+
+    <div class="var-card" style="display:flex; flex-direction:column; align-items:center; gap:10px;">
+      <div class="var-lbl" style="align-self:flex-start;">Toast de feedback</div>
+      <span class="toast-static">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+        Atualização pausada — retomando em <b class="num">30s</b>
+      </span>
+    </div>
+
+  </div>
+
+<script>
+  // contadores "há Xs" vivos
+  (function(){
+    var els = document.querySelectorAll('.js-ago');
+    setInterval(function(){
+      els.forEach(function(el){
+        var v = parseInt(el.textContent, 10) + 1;
+        if (v > 9) v = parseInt(el.getAttribute('data-base'), 10) || 2; // simula nova posição recebida
+        el.textContent = v;
+      });
+    }, 1000);
+  })();
+
+  // toggle pausar/retomar atualização
+  (function(){
+    var t = document.getElementById('rtToggle');
+    if (t) t.addEventListener('click', function(){ t.classList.toggle('off'); });
+  })();
+
+  // toast do estado 1 reaparece em loop suave para a demo
+  (function(){
+    var toast = document.getElementById('liveToast');
+    if (!toast) return;
+    setInterval(function(){
+      toast.classList.remove('show');
+      void toast.offsetWidth; // reinicia animação
+      toast.classList.add('show');
+    }, 9000);
+  })();
+
+  // seleção simples na lista (micro-interação)
+  (function(){
+    document.querySelectorAll('.drv').forEach(function(row){
+      row.addEventListener('click', function(){
+        document.querySelectorAll('.drv').forEach(function(r){ r.classList.remove('sel'); });
+        row.classList.add('sel');
+      });
+    });
+  })();
+</script>
+</body>
+</html>
