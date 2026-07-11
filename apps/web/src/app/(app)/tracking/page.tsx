@@ -5,6 +5,8 @@ import { Radio, Users } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useState } from 'react';
 
+import { TrackingAlerts, buildTrackingAlerts } from '@/components/tracking/tracking-alerts';
+import { TrackingDetailDialog } from '@/components/tracking/tracking-detail-dialog';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -13,6 +15,7 @@ import { PageHeader } from '@/components/ui/page-header';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatCard } from '@/components/ui/stat-card';
 import { TD, TH, THead, TR, Table } from '@/components/ui/table';
+import { fleetApi } from '@/lib/api/fleet';
 import { trackingApi } from '@/lib/api/tracking';
 import { TRACKING_STATUS } from '@/lib/tracking/status';
 import { formatDateTime, formatNumber } from '@/lib/utils';
@@ -26,6 +29,7 @@ const POLL_MS = 8000; // polling; a arquitetura permite trocar por WebSocket/SSE
 
 export default function TrackingPage() {
   const [live, setLive] = useState(true);
+  const [selected, setSelected] = useState<string | null>(null);
 
   // Polling isolado no data layer: trocar por SSE/WS é só mudar esta fonte.
   const { data, isLoading, error, dataUpdatedAt } = useQuery({
@@ -34,9 +38,17 @@ export default function TrackingPage() {
     refetchInterval: live ? POLL_MS : false,
   });
 
+  // Nomes dos motoristas (junta com as posições, que trazem só o id).
+  const drivers = useQuery({
+    queryKey: ['drivers', 'tracking'],
+    queryFn: () => fleetApi.listDrivers({ pageSize: 200 }),
+  });
+  const nameOf = (id: string) => drivers.data?.data.find((d) => d.id === id)?.name ?? `Motorista ${id.slice(0, 6)}`;
+
   const positions = data?.data ?? [];
   const enRoute = positions.filter((p) => p.status === 'en_route').length;
   const offline = positions.filter((p) => p.status === 'offline').length;
+  const alerts = buildTrackingAlerts(positions, nameOf);
 
   return (
     <div className="space-y-6">
@@ -57,6 +69,8 @@ export default function TrackingPage() {
       />
 
       {error && <Alert tone="error" title="Não foi possível carregar as posições" />}
+
+      <TrackingAlerts alerts={alerts} />
 
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard label="Motoristas" value={positions.length} icon={Users} tone="primary" loading={isLoading} />
@@ -98,8 +112,12 @@ export default function TrackingPage() {
                 </THead>
                 <tbody>
                   {positions.map((p) => (
-                    <TR key={p.driverId}>
-                      <TD className="font-mono text-xs">{p.driverId.slice(0, 8)}</TD>
+                    <TR
+                      key={p.driverId}
+                      className="cursor-pointer hover:bg-muted/40"
+                      onClick={() => setSelected(p.driverId)}
+                    >
+                      <TD className="font-medium">{nameOf(p.driverId)}</TD>
                       <TD>
                         <Badge tone={TRACKING_STATUS[p.status].tone}>{TRACKING_STATUS[p.status].label}</Badge>
                       </TD>
@@ -124,6 +142,13 @@ export default function TrackingPage() {
           )}
         </>
       )}
+
+      <TrackingDetailDialog
+        driverId={selected}
+        name={selected ? nameOf(selected) : ''}
+        open={selected !== null}
+        onOpenChange={(o) => !o && setSelected(null)}
+      />
     </div>
   );
 }
