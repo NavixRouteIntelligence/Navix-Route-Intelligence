@@ -7,6 +7,8 @@ import '../../features/dashboard/data/dashboard_repository.dart';
 import '../../features/dashboard/presentation/dashboard_cubit.dart';
 import '../../features/driver/data/driver_dashboard_repository.dart';
 import '../../features/driver/presentation/driver_dashboard_cubit.dart';
+import '../../features/imports/data/import_repository.dart';
+import '../../features/imports/presentation/import_cubit.dart';
 import '../config/app_config.dart';
 import '../error/error_handler.dart';
 import '../logging/app_logger.dart';
@@ -58,5 +60,9 @@ Future<void> configureDependencies(AppConfig config) async {
     ..registerLazySingleton<DriverDashboardRepository>(
       () => DriverDashboardRepository(getIt<DioClient>().apiDio),
     )
-    ..registerFactory<DriverDashboardCubit>(() => DriverDashboardCubit(getIt<DriverDashboardRepository>()));
+    ..registerFactory<DriverDashboardCubit>(() => DriverDashboardCubit(getIt<DriverDashboardRepository>()))
+    ..registerLazySingleton<ImportRepository>(
+      () => ImportRepository(getIt<DioClient>().apiDio),
+    )
+    ..registerFactory<ImportCubit>(() => ImportCubit(getIt<ImportRepository>()));
 }
