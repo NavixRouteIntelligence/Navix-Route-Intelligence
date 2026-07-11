@@ -14,6 +14,7 @@ import '../../../core/ui/navix_states.dart';
 import '../../../core/ui/navix_status_pill.dart';
 import '../domain/driver_dashboard_data.dart';
 import 'driver_dashboard_cubit.dart';
+import 'location_sharing_cubit.dart';
 
 /// Painel do Motorista — layout do protótipo aprovado, focado em operação com
 /// uma mão, poucos toques e leitura rápida. Dados reais com escopo de motorista.
@@ -22,8 +23,12 @@ class DriverDashboardPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => GetIt.instance<DriverDashboardCubit>()..load(),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(create: (_) => GetIt.instance<DriverDashboardCubit>()..load()),
+        // Singleton: o compartilhamento persiste enquanto o app vive (não é fechado aqui).
+        BlocProvider.value(value: GetIt.instance<LocationSharingCubit>()),
+      ],
       child: const _DriverView(),
     );
   }
@@ -37,49 +42,60 @@ class _DriverView extends StatefulWidget {
 }
 
 class _DriverViewState extends State<_DriverView> {
-  bool _running = true;
-
   void _snack(String msg) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(msg)));
   }
 
+  Future<void> _toggleShare() async {
+    final cubit = context.read<LocationSharingCubit>();
+    await cubit.toggle();
+    if (!mounted) return;
+    if (cubit.state.sharing) {
+      _snack('Compartilhando localização em tempo real.');
+    } else if (cubit.state.error == null) {
+      _snack('Rastreamento pausado.');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final sharing = context.watch<LocationSharingCubit>().state.sharing;
     return Scaffold(
       body: SafeArea(
         bottom: false,
-        child: BlocBuilder<DriverDashboardCubit, DriverDashboardState>(
-          builder: (context, state) {
-            final child = switch (state.status) {
-              DriverDashboardStatus.loading => const _LoadingView(),
-              DriverDashboardStatus.error => NavixErrorState(
-                  description: state.error ?? 'Não foi possível carregar.',
-                  onRetry: () => context.read<DriverDashboardCubit>().load(),
-                ),
-              DriverDashboardStatus.success => (state.data?.isEmpty ?? true)
-                  ? const NavixEmptyState(
-                      icon: Icons.local_shipping_outlined,
-                      title: 'Sem rota ativa',
-                      description: 'Quando houver entregas atribuídas, sua rota aparece aqui.',
-                    )
-                  : _Content(
-                      data: state.data!,
-                      running: _running,
-                      onToggleRun: () {
-                        setState(() => _running = !_running);
-                        _snack(_running ? 'Rota retomada' : 'Rota pausada');
-                      },
-                      onRegister: () => _snack('Registrar entrega — em breve no app.'),
-                      onAction: _snack,
-                    ),
-            };
-            return AnimatedSwitcher(
-              duration: context.tokens.motionBase,
-              child: KeyedSubtree(key: ValueKey(state.status), child: child),
-            );
-          },
+        child: BlocListener<LocationSharingCubit, LocationSharingState>(
+          listenWhen: (p, c) => p.error != c.error && c.error != null,
+          listener: (context, s) => _snack(s.error!),
+          child: BlocBuilder<DriverDashboardCubit, DriverDashboardState>(
+            builder: (context, state) {
+              final child = switch (state.status) {
+                DriverDashboardStatus.loading => const _LoadingView(),
+                DriverDashboardStatus.error => NavixErrorState(
+                    description: state.error ?? 'Não foi possível carregar.',
+                    onRetry: () => context.read<DriverDashboardCubit>().load(),
+                  ),
+                DriverDashboardStatus.success => (state.data?.isEmpty ?? true)
+                    ? const NavixEmptyState(
+                        icon: Icons.local_shipping_outlined,
+                        title: 'Sem rota ativa',
+                        description: 'Quando houver entregas atribuídas, sua rota aparece aqui.',
+                      )
+                    : _Content(
+                        data: state.data!,
+                        running: sharing,
+                        onToggleRun: _toggleShare,
+                        onRegister: () => _snack('Registrar entrega — em breve no app.'),
+                        onAction: _snack,
+                      ),
+              };
+              return AnimatedSwitcher(
+                duration: context.tokens.motionBase,
+                child: KeyedSubtree(key: ValueKey(state.status), child: child),
+              );
+            },
+          ),
         ),
       ),
     );
