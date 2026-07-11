@@ -1,0 +1,409 @@
+<!doctype html>
+<!--
+  Protótipo de referência — Import Center (Navix).
+  Gerado com o modelo Fable a partir do Design System aprovado (docs/design-tokens.md).
+  Uso: referência visual para a implementação em Flutter e Web. Não é código de produção.
+  Fluxo representado: Upload → Preview → Validação → Confirmar, + Histórico de lotes.
+-->
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Navix — Import Center (protótipo)</title>
+<style>body{margin:0;background:#0B0B12;padding:16px}</style></head>
+<body>
+<div id="navix-import">
+<style>
+#navix-import{--primary:#6D4AFF;--onprimary:#FFFFFF;--accent:#22D3AA;--success:#22C55E;--warning:#F59E0B;--danger:#EF4444;--bg:#0B0B12;--surface:#14141D;--surface2:#1B1B27;--line:#262636;--text:#F3F3F7;--muted:#9AA0B4;
+background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;border-radius:20px;padding:20px;max-width:1000px;margin:0 auto;font-size:14px;line-height:1.45;box-sizing:border-box}
+#navix-import *,#navix-import *::before,#navix-import *::after{box-sizing:border-box}
+#navix-import .num{font-variant-numeric:tabular-nums}
+#navix-import .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px}
+#navix-import .btn{border-radius:12px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid transparent;font-family:inherit}
+#navix-import .btn-primary{background:var(--primary);color:var(--onprimary)}
+#navix-import .btn-outline{background:transparent;color:var(--text);border-color:var(--line)}
+#navix-import .btn-ghost{background:transparent;color:var(--muted)}
+#navix-import .btn-sm{padding:6px 12px;font-size:12px}
+/* topbar */
+#navix-import .topbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+#navix-import .brand{font-size:18px;font-weight:800;display:flex;align-items:center;gap:8px}
+#navix-import .brand-dot{width:26px;height:26px;border-radius:8px;background:var(--primary);color:#fff;display:grid;place-items:center;font-size:13px}
+#navix-import .crumb{color:var(--muted);font-size:12.5px;font-weight:500}
+#navix-import .crumb b{color:var(--text);font-weight:650}
+#navix-import .spacer{flex:1}
+#navix-import .avatar{width:34px;height:34px;border-radius:999px;background:var(--surface2);border:1px solid var(--line);display:grid;place-items:center;font-size:11px;font-weight:700;color:var(--accent)}
+/* page header */
+#navix-import .ph h1{margin:0 0 4px;font-size:22px;font-weight:680}
+#navix-import .ph p{margin:0 0 16px;color:var(--muted);font-size:13px}
+/* stepper */
+#navix-import .stepper{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:12px 16px;margin-bottom:24px;flex-wrap:wrap}
+#navix-import .step{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;color:var(--muted)}
+#navix-import .step .n{width:24px;height:24px;border-radius:999px;display:grid;place-items:center;font-size:11.5px;font-weight:700;background:var(--surface2);border:1px solid var(--line);color:var(--muted)}
+#navix-import .step.done .n{background:rgba(34,197,94,.12);border-color:transparent;color:var(--success)}
+#navix-import .step.on{color:var(--text)}
+#navix-import .step.on .n{background:var(--primary);border-color:transparent;color:var(--onprimary)}
+#navix-import .step-sep{flex:1;min-width:16px;height:1px;background:var(--line)}
+/* section header */
+#navix-import .sec{margin-bottom:24px}
+#navix-import .sh{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+#navix-import .sh .tt small{display:block;color:var(--muted);font-size:11.5px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;margin-bottom:2px}
+#navix-import .sh h2{margin:0;font-size:18px;font-weight:650;display:flex;align-items:center;gap:8px}
+#navix-import .sh .act{display:flex;gap:8px;flex-wrap:wrap}
+/* pills & chips */
+#navix-import .pill{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:3px 10px;font-size:11px;font-weight:700;white-space:nowrap}
+#navix-import .pill .dot{width:6px;height:6px;border-radius:999px;background:currentColor}
+#navix-import .pill.ok{color:var(--success);background:rgba(34,197,94,.12)}
+#navix-import .pill.bad{color:var(--danger);background:rgba(239,68,68,.12)}
+#navix-import .pill.warn{color:var(--warning);background:rgba(245,158,11,.12)}
+#navix-import .pill.off{color:var(--muted);background:rgba(154,160,180,.12)}
+#navix-import .pill.brand{color:var(--primary);background:rgba(109,74,255,.14)}
+#navix-import .chip{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:2px 8px;font-size:11px;font-weight:700}
+#navix-import .chip.up{color:var(--success);background:rgba(34,197,94,.12)}
+#navix-import .fmt{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface2);border-radius:999px;padding:4px 12px;font-size:11.5px;font-weight:500;color:var(--muted)}
+/* dropzone */
+#navix-import .dz-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+#navix-import .dz{border:1.5px dashed var(--line);border-radius:16px;background:var(--surface);padding:32px 20px;text-align:center}
+#navix-import .dz .ic{width:44px;height:44px;border-radius:12px;background:var(--surface2);display:grid;place-items:center;font-size:20px;margin:0 auto 12px}
+#navix-import .dz b{display:block;font-size:15px;font-weight:620;margin-bottom:4px}
+#navix-import .dz small{display:block;color:var(--muted);font-size:12.5px;margin-bottom:14px}
+#navix-import .dz.over{border-color:var(--accent);background:rgba(34,211,170,.06)}
+#navix-import .dz.over .ic{background:rgba(34,211,170,.14)}
+#navix-import .dz.over b{color:var(--accent)}
+#navix-import .dz-tag{position:absolute;top:-9px;left:14px;background:var(--surface2);border:1px solid var(--line);border-radius:999px;padding:2px 9px;font-size:10.5px;font-weight:700;color:var(--muted);letter-spacing:.05em;text-transform:uppercase}
+#navix-import .dz-wrap{position:relative}
+#navix-import .dz-wrap.demo-over .dz-tag{color:var(--accent);border-color:rgba(34,211,170,.4)}
+#navix-import .fmts{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:10px}
+#navix-import .limit{color:var(--muted);font-size:11.5px}
+/* upload item / progress */
+#navix-import .file-row{display:flex;align-items:center;gap:12px}
+#navix-import .file-ic{width:38px;height:38px;border-radius:10px;background:var(--surface2);display:grid;place-items:center;font-size:17px;flex:none}
+#navix-import .file-meta{flex:1;min-width:0}
+#navix-import .file-meta b{font-size:13px;font-weight:620;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#navix-import .file-meta small{color:var(--muted);font-size:11.5px}
+#navix-import .prog{height:6px;border-radius:999px;background:var(--surface2);overflow:hidden;margin-top:7px}
+#navix-import .prog i{display:block;height:100%;border-radius:999px;background:var(--primary)}
+/* stat cards */
+#navix-import .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px}
+#navix-import .stat-top{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12px;font-weight:600;margin-bottom:8px}
+#navix-import .stat-ic{width:28px;height:28px;border-radius:9px;background:var(--surface2);display:grid;place-items:center;font-size:14px}
+#navix-import .stat-val{font-size:24px;font-weight:800;margin-bottom:6px}
+/* toggle */
+#navix-import .toggle-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+#navix-import .toggle-row b{font-size:13px;font-weight:620;display:block}
+#navix-import .toggle-row small{color:var(--muted);font-size:11.5px}
+#navix-import .switch{width:40px;height:22px;border-radius:999px;background:var(--primary);position:relative;flex:none}
+#navix-import .switch::after{content:"";position:absolute;top:3px;right:3px;width:16px;height:16px;border-radius:999px;background:#fff}
+/* mapping */
+#navix-import .map-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 24px}
+#navix-import .map-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
+#navix-import .map-row:last-child,#navix-import .map-grid .map-row:nth-last-child(2){border-bottom:0}
+#navix-import .src{flex:1;min-width:0;font-size:12.5px;font-weight:500;color:var(--text);background:var(--surface2);border:1px solid var(--line);border-radius:8px;padding:6px 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#navix-import .arr{color:var(--muted);font-size:12px;flex:none}
+#navix-import select{flex:1;min-width:0;font-family:inherit;font-size:12.5px;font-weight:500;color:var(--accent);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:6px 8px;outline:none}
+/* segmented */
+#navix-import .seg{display:inline-flex;background:var(--surface2);border:1px solid var(--line);border-radius:999px;padding:3px}
+#navix-import .seg button{border:0;background:transparent;color:var(--muted);border-radius:999px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap}
+#navix-import .seg button.on{background:var(--primary);color:#fff}
+/* table */
+#navix-import table{width:100%;border-collapse:collapse;font-size:12.5px}
+#navix-import th{text-align:left;color:var(--muted);font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:8px 10px;border-bottom:1px solid var(--line)}
+#navix-import td{padding:10px;border-bottom:1px solid var(--line);vertical-align:top}
+#navix-import tr:last-child td{border-bottom:0}
+#navix-import td b{font-weight:620}
+#navix-import .err-msg{display:block;color:var(--danger);font-size:11.5px;margin-top:2px}
+#navix-import .warn-msg{display:block;color:var(--warning);font-size:11.5px;margin-top:2px}
+#navix-import .mut-msg{display:block;color:var(--muted);font-size:11.5px;margin-top:2px}
+#navix-import .tbl-wrap{overflow-x:auto}
+/* alerts */
+#navix-import .alert{display:flex;gap:10px;border-radius:12px;padding:11px 14px;font-size:12.5px;border:1px solid;align-items:flex-start}
+#navix-import .alert b{display:block;font-weight:650;margin-bottom:1px}
+#navix-import .alert.info{background:rgba(109,74,255,.08);border-color:rgba(109,74,255,.35);color:var(--text)}
+#navix-import .alert.warning{background:rgba(245,158,11,.08);border-color:rgba(245,158,11,.35)}
+#navix-import .alert.success{background:rgba(34,197,94,.08);border-color:rgba(34,197,94,.35)}
+#navix-import .alert small{color:var(--muted)}
+/* inline edit */
+#navix-import .edit-box{border:1px solid rgba(109,74,255,.45);background:var(--surface2);border-radius:12px;padding:14px;margin-top:10px}
+#navix-import .edit-grid{display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px;margin-bottom:10px}
+#navix-import .fld label{display:block;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.04em;text-transform:uppercase;margin-bottom:5px}
+#navix-import .fld input{width:100%;font-family:inherit;font-size:12.5px;color:var(--text);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 10px;outline:none}
+#navix-import .fld input:focus{border-color:var(--primary)}
+#navix-import .geo{display:grid;grid-template-columns:1fr 220px;gap:12px;align-items:stretch}
+#navix-import .mini-map{position:relative;border-radius:10px;background:var(--surface);border:1px solid var(--line);overflow:hidden;min-height:110px}
+#navix-import .mini-map svg{position:absolute;inset:0;width:100%;height:100%}
+#navix-import .mini-map .pin{position:absolute;width:12px;height:12px;border-radius:999px;background:var(--accent);border:2px solid var(--bg);top:46%;left:52%}
+#navix-import .mini-map .lbl{position:absolute;bottom:6px;left:8px;font-size:10px;color:var(--muted);background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:1px 7px}
+#navix-import .before-after{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px;font-size:12px;color:var(--muted)}
+/* skeleton */
+#navix-import .skel{border-radius:8px;background:linear-gradient(90deg,var(--surface2) 25%,var(--line) 50%,var(--surface2) 75%);background-size:200% 100%;animation:nvx-sk 1.4s infinite}
+@keyframes nvx-sk{0%{background-position:200% 0}100%{background-position:-200% 0}}
+/* connectors */
+#navix-import .fam{color:var(--muted);font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin:14px 0 8px;display:flex;align-items:center;gap:8px}
+#navix-import .fam:first-of-type{margin-top:0}
+#navix-import .conn-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+#navix-import .conn{background:var(--surface2);border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
+#navix-import .conn .top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+#navix-import .conn .ic{width:32px;height:32px;border-radius:9px;background:var(--surface);border:1px solid var(--line);display:grid;place-items:center;font-size:15px}
+#navix-import .conn b{font-size:13px;font-weight:620;display:block}
+#navix-import .conn small{color:var(--muted);font-size:11px}
+#navix-import .conn.add{border-style:dashed;align-items:center;justify-content:center;text-align:center;color:var(--muted);cursor:pointer;background:transparent;min-height:96px}
+#navix-import .conn.add .plus{width:32px;height:32px;border-radius:999px;border:1.5px dashed var(--line);display:grid;place-items:center;font-size:16px;margin-bottom:2px}
+/* confirm bar & toast */
+#navix-import .confirm-bar{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+#navix-import .confirm-bar .sum b{font-size:14px;font-weight:650;display:block}
+#navix-import .confirm-bar .sum small{color:var(--muted);font-size:12px}
+#navix-import .toast{display:inline-flex;align-items:center;gap:10px;background:var(--surface2);border:1px solid rgba(34,197,94,.4);border-radius:12px;padding:10px 14px;font-size:12.5px;font-weight:600}
+#navix-import .toast .tic{width:22px;height:22px;border-radius:999px;background:rgba(34,197,94,.15);color:var(--success);display:grid;place-items:center;font-size:12px;flex:none}
+#navix-import .divider{height:1px;background:var(--line);margin:24px 0}
+#navix-import .stack{display:flex;flex-direction:column;gap:12px}
+#navix-import .two-col{display:grid;grid-template-columns:1.4fr 1fr;gap:12px}
+@media(max-width:760px){
+  #navix-import .dz-grid,#navix-import .map-grid,#navix-import .two-col,#navix-import .geo,#navix-import .edit-grid{grid-template-columns:1fr}
+  #navix-import .stats{grid-template-columns:repeat(2,1fr)}
+  #navix-import .conn-grid{grid-template-columns:repeat(2,1fr)}
+  #navix-import .step-sep{display:none}
+  #navix-import .stepper{gap:12px}
+}
+</style>
+
+<!-- ===== Topbar ===== -->
+<div class="topbar">
+  <div class="brand"><span class="brand-dot">◆</span>Navix</div>
+  <span class="crumb">Operações / <b>Import Center</b></span>
+  <span class="spacer"></span>
+  <span class="pill brand"><span class="dot"></span>Dispatcher</span>
+  <span class="avatar">MC</span>
+</div>
+
+<div class="ph">
+  <h1>📥 Import Center</h1>
+  <p>Importe entregas em massa a partir de arquivos — com detecção de colunas, validação, geocodificação e deduplicação automáticas.</p>
+</div>
+
+<!-- ===== Stepper ===== -->
+<div class="stepper">
+  <div class="step done"><span class="n">✓</span>Upload</div><span class="step-sep"></span>
+  <div class="step done"><span class="n">✓</span>Preview</div><span class="step-sep"></span>
+  <div class="step on"><span class="n">3</span>Validação</div><span class="step-sep"></span>
+  <div class="step"><span class="n">4</span>Confirmar</div>
+</div>
+
+<!-- ===== Etapa 1 · Upload ===== -->
+<div class="sec">
+  <div class="sh">
+    <div class="tt"><small>Etapa 1</small><h2>⬆ Upload do arquivo</h2></div>
+    <div class="act"><button class="btn btn-ghost btn-sm">⬇ Baixar modelo CSV</button></div>
+  </div>
+  <div class="dz-grid">
+    <div class="dz-wrap">
+      <span class="dz-tag">Estado normal</span>
+      <div class="dz">
+        <div class="ic">📂</div>
+        <b>Arraste o arquivo até aqui</b>
+        <small>ou selecione do seu computador</small>
+        <div class="fmts">
+          <span class="fmt">📄 CSV</span><span class="fmt">📊 Excel (XLS/XLSX)</span><span class="fmt">📕 PDF</span>
+        </div>
+        <button class="btn btn-primary btn-sm">Selecionar arquivo</button>
+        <div class="limit" style="margin-top:12px">Até 5 MB · máx. 1000 linhas por lote</div>
+      </div>
+    </div>
+    <div class="dz-wrap demo-over">
+      <span class="dz-tag">Estado · arrastando por cima</span>
+      <div class="dz over">
+        <div class="ic">⬇️</div>
+        <b>Solte para enviar</b>
+        <small>entregas_lisboa_11-07.csv</small>
+        <div class="fmts">
+          <span class="fmt" style="color:var(--accent);border-color:rgba(34,211,170,.4)">📄 CSV detectado</span>
+        </div>
+        <button class="btn btn-outline btn-sm" style="visibility:hidden">Selecionar arquivo</button>
+        <div class="limit" style="margin-top:12px">O arquivo será lido e pré-visualizado</div>
+      </div>
+    </div>
+  </div>
+  <div class="two-col">
+    <div class="card">
+      <div class="file-row">
+        <span class="file-ic">📄</span>
+        <div class="file-meta">
+          <b>entregas_lisboa_11-07.csv</b>
+          <small class="num">1,2 MB · 248 linhas · enviando… 72%</small>
+          <div class="prog"><i style="width:72%"></i></div>
+        </div>
+        <button class="btn btn-ghost btn-sm">✕</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="file-row" style="margin-bottom:10px">
+        <span class="file-ic">🧠</span>
+        <div class="file-meta"><b>Lendo e detectando colunas…</b><small>Skeleton exibido durante o parsing</small></div>
+      </div>
+      <div class="skel" style="height:10px;width:88%;margin-bottom:8px"></div>
+      <div class="skel" style="height:10px;width:64%;margin-bottom:8px"></div>
+      <div class="skel" style="height:10px;width:76%"></div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ===== Etapa 2 · Preview ===== -->
+<div class="sec">
+  <div class="sh">
+    <div class="tt"><small>Etapa 2</small><h2>👁 Pré-visualização do lote</h2></div>
+    <span class="pill off"><span class="dot"></span>Lote #IMP-0193 · preview</span>
+  </div>
+  <div class="stats">
+    <div class="card"><div class="stat-top"><span class="stat-ic">✅</span>Válidas</div><div class="stat-val num" style="color:var(--success)">241</div><span class="chip up num">97,2% do lote</span></div>
+    <div class="card"><div class="stat-top"><span class="stat-ic">⛔</span>Inválidas</div><div class="stat-val num" style="color:var(--danger)">4</div><span class="pill bad"><span class="dot"></span>Corrigir antes</span></div>
+    <div class="card"><div class="stat-top"><span class="stat-ic">🔁</span>Duplicados</div><div class="stat-val num" style="color:var(--muted)">3</div><span class="pill off"><span class="dot"></span>Serão ignorados</span></div>
+    <div class="card"><div class="stat-top"><span class="stat-ic">⛽</span>Economia estimada</div><div class="stat-val num">€ 42</div><span class="chip up num">▲ −38 km vs. rota atual</span></div>
+  </div>
+  <div class="two-col">
+    <div class="card">
+      <div class="sh" style="margin-bottom:10px"><h2 style="font-size:15px;font-weight:620">🧩 Detecção automática de colunas</h2><span class="pill ok"><span class="dot"></span>6/6 mapeadas</span></div>
+      <div class="map-grid">
+        <div class="map-row"><span class="src">Endereço</span><span class="arr">→</span><select><option>address</option><option>city</option><option>—</option></select></div>
+        <div class="map-row"><span class="src">Encomenda</span><span class="arr">→</span><select><option>parcelNo</option><option>notes</option><option>—</option></select></div>
+        <div class="map-row"><span class="src">Cidade</span><span class="arr">→</span><select><option>city</option><option>address</option><option>—</option></select></div>
+        <div class="map-row"><span class="src">Código Postal</span><span class="arr">→</span><select><option>postalCode</option><option>—</option></select></div>
+        <div class="map-row"><span class="src">Latitude</span><span class="arr">→</span><select><option>lat</option><option>—</option></select></div>
+        <div class="map-row"><span class="src">Longitude</span><span class="arr">→</span><select><option>lng</option><option>—</option></select></div>
+      </div>
+    </div>
+    <div class="stack">
+      <div class="card">
+        <div class="toggle-row">
+          <div><b>⚡ Otimizar rota após importar</b><small>Dispara o Route Optimizer ao confirmar o lote</small></div>
+          <span class="switch"></span>
+        </div>
+      </div>
+      <div class="alert info">
+        <span>ℹ️</span>
+        <div><b>Geocodificação automática</b><small>12 linhas sem coordenadas foram geocodificadas via Mapbox. Linhas sem resultado ficam marcadas como inválidas.</small></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ===== Etapa 3 · Validação ===== -->
+<div class="sec">
+  <div class="sh">
+    <div class="tt"><small>Etapa 3</small><h2>🔎 Validação linha a linha</h2></div>
+    <div class="seg">
+      <button class="on">Todas <span class="num">248</span></button>
+      <button>Válidas <span class="num">241</span></button>
+      <button>Inválidas <span class="num">4</span></button>
+      <button>Duplicados <span class="num">3</span></button>
+    </div>
+  </div>
+  <div class="card" style="padding:6px 16px">
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>#</th><th>Encomenda</th><th>Endereço</th><th>Cidade</th><th>Coordenadas</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td class="num">1</td><td><b class="num">PT-4821</b></td><td>Rua Augusta 120, 2.º Esq.</td><td>Lisboa</td><td class="num" style="color:var(--muted)">38.7105, −9.1379</td><td><span class="pill ok"><span class="dot"></span>Válida</span></td></tr>
+          <tr><td class="num">2</td><td><b class="num">PT-4822</b></td><td>Av. da Liberdade 210</td><td>Lisboa</td><td class="num" style="color:var(--muted)">38.7204, −9.1451</td><td><span class="pill ok"><span class="dot"></span>Válida</span></td></tr>
+          <tr><td class="num">3</td><td><b class="num">PT-4823</b></td><td>—<span class="err-msg">⛔ endereço ausente</span></td><td>Porto</td><td class="num" style="color:var(--muted)">—</td><td><span class="pill bad"><span class="dot"></span>Inválida</span></td></tr>
+          <tr><td class="num">4</td><td><b class="num">PT-4824</b></td><td>R. de Sta. Catarina 15??<span class="err-msg">⛔ sem coordenadas — geocodificação falhou</span></td><td>Porto</td><td class="num" style="color:var(--muted)">—</td><td><span class="pill bad"><span class="dot"></span>Inválida</span></td></tr>
+          <tr><td class="num">5</td><td><b class="num">PT-4821</b></td><td>Rua Augusta 120, 2.º Esq.<span class="mut-msg">🔁 mesma encomenda da linha 1</span></td><td>Lisboa</td><td class="num" style="color:var(--muted)">38.7105, −9.1379</td><td><span class="pill off"><span class="dot"></span>Duplicado</span></td></tr>
+          <tr><td class="num">6</td><td><b class="num">BR-1092</b></td><td>Av. Paulista 1578, Bela Vista<span class="warn-msg">⚠️ extraído de PDF — confirme os dados</span></td><td>São Paulo</td><td class="num" style="color:var(--muted)">−23.5614, −46.6559</td><td><span class="pill warn"><span class="dot"></span>Baixa confiança</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Etapa 3b · Correção inline ===== -->
+<div class="sec">
+  <div class="sh">
+    <div class="tt"><small>Etapa 3 · Correção</small><h2>✏️ Corrigir erros sem sair da tela</h2></div>
+    <div class="act">
+      <button class="btn btn-outline btn-sm">⬇ Exportar inválidas (CSV)</button>
+      <button class="btn btn-primary btn-sm">🔁 Corrigir e revalidar (4)</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="file-row">
+      <span class="file-ic">⛔</span>
+      <div class="file-meta"><b class="num">Linha 4 · PT-4824</b><small>sem coordenadas — geocodificação falhou</small></div>
+      <span class="pill bad"><span class="dot"></span>Inválida</span>
+    </div>
+    <div class="edit-box">
+      <div class="edit-grid">
+        <div class="fld"><label>Endereço</label><input value="Rua de Santa Catarina 1509"></div>
+        <div class="fld"><label>Cidade</label><input value="Porto"></div>
+        <div class="fld"><label>Código Postal</label><input value="4000-458"></div>
+      </div>
+      <div class="geo">
+        <div>
+          <div class="edit-grid" style="grid-template-columns:1fr 1fr;margin-bottom:10px">
+            <div class="fld"><label>Latitude</label><input class="num" value="41.1621"></div>
+            <div class="fld"><label>Longitude</label><input class="num" value="−8.6070"></div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-primary btn-sm">🔁 Revalidar linha</button>
+            <button class="btn btn-ghost btn-sm">📍 Geocodificar de novo</button>
+          </div>
+        </div>
+        <div class="mini-map">
+          <svg viewBox="0 0 220 120" preserveAspectRatio="none"><path d="M0 40 L80 36 L220 52" stroke="#262636" stroke-width="5" fill="none"/><path d="M96 0 L104 60 L92 120" stroke="#262636" stroke-width="4" fill="none"/><path d="M0 92 L140 84 L220 96" stroke="#262636" stroke-width="5" fill="none"/></svg>
+          <span class="pin"></span>
+          <span class="lbl">Geocodificação · Porto</span>
+        </div>
+      </div>
+      <div class="before-after">
+        Antes: <span class="pill bad"><span class="dot"></span>Inválida</span>
+        <span>→ após revalidar →</span>
+        Depois: <span class="pill ok"><span class="dot"></span>Válida</span>
+        <span style="color:var(--muted)">· contadores do lote atualizam para <b class="num" style="color:var(--success)">242</b> válidas</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ===== Etapa 4 · Confirmar ===== -->
+<div class="sec">
+  <div class="sh"><div class="tt"><small>Etapa 4</small><h2>🚀 Confirmar importação</h2></div></div>
+  <div class="stack">
+    <div class="card confirm-bar">
+      <div class="sum" style="flex:1;min-width:200px">
+        <b><span class="num">242</span> entregas serão criadas no Delivery</b>
+        <small class="num">3 duplicados e 3 inválidas restantes serão ignorados · otimização de rota ativada ⚡</small>
+      </div>
+      <button class="btn btn-outline">← Voltar à validação</button>
+      <button class="btn btn-primary">Confirmar importação</button>
+    </div>
+    <div class="alert warning">
+      <span>⚠️</span>
+      <div><b>Ainda há 3 linhas inválidas</b><small>Elas não serão importadas. Você pode corrigi-las agora ou exportá-las em CSV para tratar depois.</small></div>
+    </div>
+    <div class="toast"><span class="tic">✓</span>Lote #IMP-0193 importado — <span class="num">242</span> entregas criadas · rota otimizada (−38 km)<button class="btn btn-ghost btn-sm" style="margin-left:4px">Ver rota</button></div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ===== Histórico ===== -->
+<div class="sec">
+  <div class="sh">
+    <div class="tt"><small>Import Center</small><h2>🕓 Histórico de lotes</h2></div>
+    <button class="btn btn-ghost btn-sm">Ver todos →</button>
+  </div>
+  <div class="card" style="padding:6px 16px">
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Data</th><th>Arquivo</th><th>Formato</th><th>Linhas</th><th>Válidas / Inválidas</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+          <tr><td class="num">11/07 09:12</td><td><b>entregas_lisboa_11-07.csv</b></td><td><span class="fmt">📄 CSV</span></td><td class="num">248</td><td class="num"><span style="color:var(--success)">242</span> / <span style="color:var(--danger)">3</span></td><td><span class="pill warn"><span class="dot"></span>Preview</span></td><td><button class="btn btn-ghost btn-sm">Ver relatório de erros</button></td></tr>
+          <tr><td class="num">10/07 08:05</td><td><b>pedidos_10-07.csv</b></td><td><span class="fmt">📄 CSV</span></td><td class="num">312</td><td class="num"><span style="color:var(--success)">312</span> / <span style="color:var(--muted)">0</span></td><td><span class="pill ok"><span class="dot"></span>Importado</span></td><td><button class="btn btn-ghost btn-sm">Ver relatório de erros</button></td></tr>
+          <tr><td class="num">09/07 17:22</td><td><b>clientes_julho.xlsx</b></td><td><span class="fmt">📊 Excel</span></td><td class="num">204</td><td class="num"><span style="color:var(--success)">198</span> / <span style="color:var(--danger)">6</span></td><td><span class="pill ok"><span class="dot"></span>Importado</span></td><td><button class="btn btn-ghost btn-sm">Ver relatório de erros</button></td></tr>
+          <tr><td class="num">08/07 11:47</td><td><b>manifesto_transportadora.pdf</b></td><td><span class="fmt">📕 PDF</span></td><td class="num">57</td><td class="num"><span style="color:var(--success)">49</span> / <span style="color:var(--danger)">8</span></td><td><span class="pill ok"><span class="dot"></span>Importado</span></td><td><button class="btn btn-ghost btn-sm">Ver relatório de erros</button></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+</div>
+</body></html>
