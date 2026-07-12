@@ -537,12 +537,8 @@
         <div class="bubble"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.8 9L10 3.5" stroke="#22D3AA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
         <span class="lbl">Configurar</span>
       </div>
-      <div class="step done">
-        <div class="bubble"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.8 9L10 3.5" stroke="#22D3AA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-        <span class="lbl">Otimizar</span>
-      </div>
       <div class="step active">
-        <div class="bubble num">4</div>
+        <div class="bubble num">3</div>
         <span class="lbl">Resultado</span>
       </div>
     </nav>
@@ -748,68 +744,10 @@
     </section>
 
     <!-- ============================================================ -->
-    <!-- PASSO 3 — IA PROCESSANDO -->
+    <!-- PASSO 3 — RESULTADO -->
     <!-- ============================================================ -->
     <div class="flow-label">
-      <span class="tag">Passo 3</span>
-      <span class="state">Estado: loading · IA processando</span>
-      <span class="rule"></span>
-    </div>
-
-    <section class="card reveal">
-      <div class="ai-stage">
-        <div class="pulse-wrap" aria-hidden="true">
-          <span class="pulse-ring"></span>
-          <span class="pulse-ring"></span>
-          <span class="pulse-ring"></span>
-          <svg class="spin-arc" width="88" height="88" viewBox="0 0 88 88" fill="none">
-            <circle cx="44" cy="44" r="40" stroke="#262636" stroke-width="3"/>
-            <path d="M44 4 A40 40 0 0 1 82.6 33.5" stroke="#6D4AFF" stroke-width="3" stroke-linecap="round"/>
-            <path d="M44 84 A40 40 0 0 1 5.4 54.5" stroke="#22D3AA" stroke-width="3" stroke-linecap="round"/>
-          </svg>
-          <div class="ai-core">
-            <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
-              <path d="M13 3L14.9 9.4L21.5 10.3L16.7 14.8L18 21.4L13 18L8 21.4L9.3 14.8L4.5 10.3L11.1 9.4L13 3Z" fill="rgba(34,211,170,0.16)" stroke="#22D3AA" stroke-width="1.6" stroke-linejoin="round"/>
-            </svg>
-          </div>
-        </div>
-
-        <h2>Otimizando com IA…</h2>
-        <p class="sub num">Analisando 38 paradas e 1.406 combinações de trechos</p>
-
-        <div class="micro-steps">
-          <div class="mstep done">
-            <span class="mic"><svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.8 9L10 3.5" stroke="#22D3AA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-            Geocodificando endereços
-            <span class="eta num">38/38</span>
-          </div>
-          <div class="mstep done">
-            <span class="mic"><svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.8 9L10 3.5" stroke="#22D3AA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-            Matriz de distâncias
-            <span class="eta num">1,4k trechos</span>
-          </div>
-          <div class="mstep doing">
-            <span class="mic">
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1 A5 5 0 0 1 11 6" stroke="#6D4AFF" stroke-width="1.8" stroke-linecap="round"/></svg>
-            </span>
-            Resolvendo sequência ótima…
-          </div>
-          <div class="mstep wait">
-            <span class="mic"></span>
-            Aplicando janelas de horário
-          </div>
-        </div>
-
-        <div class="prog-track"><div class="prog-fill" id="aiProg"></div></div>
-        <div class="prog-meta num"><span>Etapa 3 de 4</span><span id="aiPct">68%</span></div>
-      </div>
-    </section>
-
-    <!-- ============================================================ -->
-    <!-- PASSO 4 — RESULTADO -->
-    <!-- ============================================================ -->
-    <div class="flow-label">
-      <span class="tag accent">Passo 4</span>
+      <span class="tag accent">Passo 3</span>
       <span class="state">Resultado da otimização</span>
       <span class="rule"></span>
     </div>
@@ -1139,19 +1077,6 @@
       var route = e.target.querySelector('#routeNew');
       if(route){ route.classList.add('draw'); }
 
-      /* AI progress bar */
-      var prog = e.target.querySelector('#aiProg');
-      if(prog){
-        setTimeout(function(){ prog.style.width = '68%'; }, 200);
-        /* gentle creep to simulate work */
-        var pct = 68, lbl = document.getElementById('aiPct');
-        var iv = setInterval(function(){
-          pct += 1;
-          if(pct >= 82){ clearInterval(iv); return; }
-          prog.style.width = pct + '%';
-          if(lbl) lbl.textContent = pct + '%';
-        }, 900);
-      }
     });
   }, { threshold: 0.25 });
 
