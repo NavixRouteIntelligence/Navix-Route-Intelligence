@@ -13,6 +13,7 @@ import '../../../core/ui/navix_section_header.dart';
 import '../../../core/ui/navix_skeleton.dart';
 import '../../../core/ui/navix_states.dart';
 import '../../../core/ui/navix_status_pill.dart';
+import '../../optimizer/presentation/optimizer_page.dart';
 import '../domain/dashboard_data.dart';
 import 'dashboard_cubit.dart';
 
@@ -83,6 +84,10 @@ class _Content extends StatelessWidget {
   const _Content({required this.data});
   final DashboardData data;
 
+  void _openOptimizer(BuildContext context) {
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const OptimizerPage()));
+  }
+
   void _soon(BuildContext context, String msg) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
@@ -117,7 +122,7 @@ class _Content extends StatelessWidget {
                 child: NavixButton(
                   label: 'Otimizar',
                   icon: Icons.bolt_outlined,
-                  onPressed: () => _soon(context, 'Otimizador em breve no app.'),
+                  onPressed: () => _openOptimizer(context),
                 ),
               ),
             ],
@@ -212,7 +217,7 @@ class _Content extends StatelessWidget {
                   title: 'Route Optimizer',
                   icon: Icons.navigation_outlined,
                   trailing: TextButton(
-                    onPressed: () => _soon(context, 'Otimizador em breve no app.'),
+                    onPressed: () => _openOptimizer(context),
                     child: const Text('Otimizar'),
                   ),
                 ),

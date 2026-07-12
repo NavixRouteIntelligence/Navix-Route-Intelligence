@@ -12,6 +12,8 @@ import '../../features/driver/presentation/location_sharing_cubit.dart';
 import '../location/location_service.dart';
 import '../../features/imports/data/import_repository.dart';
 import '../../features/imports/presentation/import_cubit.dart';
+import '../../features/optimizer/data/optimizer_repository.dart';
+import '../../features/optimizer/presentation/optimizer_cubit.dart';
 import '../../features/pod/data/pod_repository.dart';
 import '../../features/pod/presentation/pod_capture_cubit.dart';
 import '../../features/tracking/data/fleet_tracking_repository.dart';
@@ -88,5 +90,9 @@ Future<void> configureDependencies(AppConfig config) async {
     ..registerLazySingleton<FleetTrackingRepository>(
       () => FleetTrackingRepository(getIt<DioClient>().apiDio),
     )
-    ..registerFactory<FleetTrackingCubit>(() => FleetTrackingCubit(getIt<FleetTrackingRepository>()));
+    ..registerFactory<FleetTrackingCubit>(() => FleetTrackingCubit(getIt<FleetTrackingRepository>()))
+    ..registerLazySingleton<OptimizerRepository>(
+      () => OptimizerRepository(getIt<DioClient>().apiDio),
+    )
+    ..registerFactory<OptimizerCubit>(() => OptimizerCubit(getIt<OptimizerRepository>()));
 }
