@@ -67,4 +67,14 @@ npm run dev:web    # http://localhost:3000
 
 ## Status
 
-**Fase 0 — Fundação.** Apenas estrutura base: arquitetura, configuração, Docker, banco e autenticação inicial. Funcionalidades de negócio (frota, entregas, otimização) ainda **não** implementadas — ver [docs/roadmap.md](./docs/roadmap.md).
+**Fundação (Fase 0) concluída e boa parte da Fase 1 (MVP) já implementada.** O que **já existe** no código hoje:
+
+- **Identity & Access:** registro, login, refresh com rotação e detecção de reuso, logout, troca e reset de senha, RBAC por papéis. Access token **JWT RS256** (key ring + rotação), senhas com **Argon2id**.
+- **Multi-tenant com enforcement real:** `FORCE ROW LEVEL SECURITY` em todas as tabelas de negócio + role de runtime não-superusuário + interceptor de tenant por transação (ver [ADR-0012](./docs/decisions.md)).
+- **Fleet:** CRUD de veículos e motoristas. **Delivery:** CRUD de entregas com janelas de tempo, prioridade e máquina de estados. **Import Center:** importação em massa (CSV/XLSX/PDF) com preview, normalização e geocodificação (Mapbox).
+- **Optimizer:** motor VRP (nearest-neighbor + 2-opt) atrás de port, com endpoint para empresa e para motorista — **execução síncrona** (a fila assíncrona é roadmap).
+- **Tracking** (posições de motorista) e **Proof of Delivery** (foto/assinatura), com app do motorista e suporte offline no mobile.
+- **Configurações e perfil de usuário.** Frontend Next.js completo (dashboard, listagens, mapas, i18n).
+- Infra: Docker (Postgres+PostGIS, Redis, PgBouncer), migrações versionadas, CI (lint, typecheck, testes, migração smoke).
+
+**Ainda no roadmap** (documentado, mas **não** implementado — ver [docs/roadmap.md](./docs/roadmap.md) e o **Status da implementação** em [docs/decisions.md](./docs/decisions.md)): otimização assíncrona via fila/BullMQ, Transactional Outbox e eventos de domínio, uso do Redis (cache/filas/blacklist), TimescaleDB para telemetria, CQRS/read models, envelope encryption de PII, e billing/ML/multi-região.

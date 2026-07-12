@@ -9,9 +9,17 @@ Isolamento multi-tenant do backend (ver [docs/architecture.md](../../../../../do
 3. A camada de banco define `SET app.current_tenant = <tenantId>` na transação, ativando as políticas de **RLS** do PostgreSQL.
 4. Repositórios também filtram explicitamente por `tenant_id` (defesa em profundidade).
 
-## A implementar nas próximas etapas
+## Estado atual (implementado)
 
-- Interceptor/middleware que popula o `TenantContext` a partir do usuário autenticado.
-- Provider de conexão/transação que aplica `app.current_tenant` por request.
+Desde o hardening da Fase 1 (ADR-0012) o isolamento por transação está **ativo**:
 
-> Nesta Fase 0 disponibilizamos apenas o **contexto** e o contrato. A ativação de RLS por transação é ligada quando o primeiro módulo de negócio persistir dados escopados por tenant.
+- `TenantTransactionInterceptor` abre uma transação por request **autenticado**, define `app.current_tenant` via `set_config(..., true)` (SET LOCAL) e executa o handler dentro dela.
+- Os repositórios resolvem o `EntityManager` da transação (`transaction-context.ts` / `scopedRepository`), então toda query passa pela RLS.
+- A aplicação conecta como o role **não-superusuário** `navix_app` (migração `CreateAppRole`), pois superusuários/owners ignoram a RLS mesmo com `FORCE`.
+- Todas as tabelas de negócio têm `FORCE ROW LEVEL SECURITY` + política `tenant_isolation`. Coberto pelo e2e `test/tenant-isolation.e2e-spec.ts`.
+
+Requests **públicos** (sem `req.user`, como login/refresh) passam sem transação de tenant; as tabelas de auth ficam sem RLS por isso.
+
+## Roadmap
+
+- Estratégia de multi-tenancy para enterprise (schema/DB por tenant) — quando houver exigência de residência de dados.

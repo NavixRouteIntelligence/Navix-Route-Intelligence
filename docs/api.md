@@ -1,8 +1,10 @@
 # API — Navix Route Intelligence
 
-> **Status:** Em revisão · **Versão:** 0.2 · **Atualizado:** 2026-07-05
+> **Status:** Em revisão · **Versão:** 0.10 · **Atualizado:** 2026-07-12
 
 Convenções e contrato da API. Toda mudança de contrato deve atualizar este documento no mesmo PR.
+
+> **⚠️ Estado da implementação.** A maioria dos endpoints abaixo já existe (auth, fleet, deliveries, imports, route-plans, tracking, pod, settings). **Exceções importantes:** as **operações assíncronas com `202` + recurso de job** (§5.1, §5.2) e o endpoint `GET /jobs/{jobId}` **não existem** — otimização e importação são hoje **síncronas** (respondem `201`/`200` com o resultado). A **autenticação M2M por API key** (§5) também é roadmap. Itens não implementados estão marcados com ⬜.
 
 ## 1. Princípios
 
@@ -40,9 +42,11 @@ Convenções e contrato da API. Toda mudança de contrato deve atualizar este do
 - Fluxo de refresh: `POST /api/v1/auth/refresh` com o refresh token.
 - Detalhes de tokens em [security.md](./security.md).
 
-- Integrações máquina-a-máquina usam **API key** (`X-Api-Key`) ou OAuth2 client credentials, com escopo mínimo (ver [security.md](./security.md)).
+- ⬜ *Planejado:* integrações máquina-a-máquina usarão **API key** (`X-Api-Key`) ou OAuth2 client credentials, com escopo mínimo (ver [security.md](./security.md)). *Ainda não implementado — hoje só há o fluxo JWT.*
 
 ## 5.1 Operações assíncronas (jobs)
+
+> **Status:** ⬜ **Planejado (Fase 2).** Não implementado. **Hoje a otimização é síncrona:** `POST /api/v1/route-plans` (e `POST /api/v1/route-plans/mine` para o motorista) respondem **`201 Created`** com o Route Plan pronto (ver §14). Não há recurso de job nem `GET /jobs/{jobId}`. O modelo abaixo é o alvo para quando a fila (BullMQ) existir.
 
 Operações pesadas (otimização de rotas, importação em massa) **não** são síncronas. O servidor responde **`202 Accepted`** com um recurso de **job**; o cliente acompanha por *polling* ou webhook.
 
@@ -55,6 +59,8 @@ GET  /api/v1/jobs/{jobId}                    -> 200 { "status": "queued|running|
 - Falhas retornam `status: failed` com erro padronizado (ver §7).
 
 ## 5.2 Importação em massa
+
+> **Status:** 🟡 **Parcial.** O Import Center **existe e é síncrono**: `POST /api/v1/imports/preview` (upload + validação por linha) e `POST /api/v1/imports/confirm` (cria as entregas), além do histórico em `GET /api/v1/imports`. **Não há** o `deliveries:bulk` assíncrono com `202`/job descrito abaixo — isso é roadmap.
 
 Operadores logísticos importam grandes volumes de entregas. Endpoint assíncrono com validação por linha:
 
@@ -325,3 +331,4 @@ GET  /api/v1/pod/{deliveryId}     # comprovante de uma entrega
 | 2026-07-08 | 0.7 | Engenharia | Tracking (MVP): posições do motorista, visão de frota (empresa), driver_positions (TimescaleDB-ready), mapa em tempo real |
 | 2026-07-08 | 0.8 | Engenharia | Otimização IA para Motorista Autônomo: POST /route-plans/mine (aditivo), painel de rentabilidade, integração com tracking |
 | 2026-07-09 | 0.9 | Engenharia | Proof of Delivery: comprovante (foto/assinatura/GPS/status), integração Delivery+Tracking+Dashboard |
+| 2026-07-12 | 0.10 | Arquitetura | Alinhamento doc↔código: marcado que jobs assíncronos (202, §5.1/§5.2) e M2M por API key **não** existem; otimização/importação são síncronas |

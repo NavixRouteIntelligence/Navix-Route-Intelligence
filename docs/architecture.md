@@ -1,8 +1,10 @@
 # Arquitetura — Navix Route Intelligence
 
-> **Status:** Em revisão · **Versão:** 0.2 · **Atualizado:** 2026-07-05
+> **Status:** Em revisão · **Versão:** 0.3 · **Atualizado:** 2026-07-12
 
-Este documento é a fonte de verdade da arquitetura. Toda contribuição deve preservar os princípios aqui descritos. Mudanças estruturais exigem um ADR em [decisions.md](./decisions.md).
+Este documento é a fonte de verdade da arquitetura **alvo**. Toda contribuição deve preservar os princípios aqui descritos. Mudanças estruturais exigem um ADR em [decisions.md](./decisions.md).
+
+> **⚠️ Estado da implementação.** Este documento descreve a arquitetura-alvo; nem tudo está construído. **Já implementado:** Clean Architecture + módulos, DDD, multi-tenant com RLS forçada (ADR-0012), auth JWT RS256, PgBouncer, otimizador atrás de port (síncrono), TypeORM + PostGIS. **Ainda roadmap:** comunicação assíncrona/filas (§8), Transactional Outbox e eventos (§8.1), otimização assíncrona (§8.2), CQRS/read models (§8.3), TimescaleDB (§2) e uso do Redis. O estado preciso de cada decisão está na coluna **"Status da implementação"** em [decisions.md](./decisions.md). Onde este documento usa o presente do indicativo para algo ainda não construído, trata-se de **intenção de projeto**, não de fato.
 
 ## 1. Princípios
 
@@ -21,9 +23,9 @@ Este documento é a fonte de verdade da arquitetura. Toda contribuição deve pr
 | Framework | NestJS |
 | ORM | TypeORM (compatível com RLS e PostGIS — ver ADR-0005) |
 | Persistência | PostgreSQL 16 + PostGIS |
-| Telemetria (posições) | TimescaleDB (hypertables) — ver ADR-0009 |
-| Cache / filas / sessões | Redis 7 |
-| Mensageria assíncrona | Filas (BullMQ sobre Redis) — evoluível para broker dedicado |
+| Telemetria (posições) | TimescaleDB (hypertables) — ver ADR-0009 · ⬜ *planejado; hoje tabela Postgres comum* |
+| Cache / filas / sessões | Redis 7 — 🟡 *ativo no rate limiting; abstrações de cache/fila prontas, não consumidas* |
+| Mensageria assíncrona | Filas (BullMQ sobre Redis) — evoluível para broker dedicado · ⬜ *planejado* |
 | Auth | JWT (access) + Refresh Token · API keys/OAuth2 client credentials (M2M) |
 | Infra | Contêineres (Docker), CI/CD, orquestração a definir em ADR |
 
@@ -67,6 +69,8 @@ Este documento é a fonte de verdade da arquitetura. Toda contribuição deve pr
 Cada contexto tende a virar um **módulo NestJS** independente, com seu próprio domínio, casos de uso e infraestrutura. Comunicação entre contextos ocorre por interfaces de aplicação ou eventos, nunca por acesso direto ao banco alheio.
 
 > **Regra de fronteira (inegociável):** um módulo **nunca** lê/escreve tabelas de outro módulo nem importa suas classes internas — apenas *ports* públicas e eventos. Essa disciplina é o que mantém o **monólito modular** extraível para microserviços no futuro sem reescrita. Reforçada por lint de dependências (ver [coding-standards.md](./coding-standards.md)).
+>
+> **Estado atual do enforcement:** o `eslint-plugin-boundaries` (em `apps/api/.eslintrc.cjs`) já impede as violações **entre camadas** (domain → application/infra/interface, etc.). O **isolamento entre módulos de negócio** (um módulo não importar internals de outro) é hoje mantido por convenção e pelos gateways anti-corrupção — a regra de lint por módulo ainda **não** está configurada. Hoje a comunicação entre contextos é feita por *ports* de aplicação (ex.: Optimizer → Delivery via `DeliveryLookupPort`), **não** por eventos (o outbox é roadmap — §8.1).
 
 **Escopo do MVP (Fases 0–1):** implementar apenas **Identity & Access**, **Fleet**, **Delivery** e **Routing/Optimization**. Realtime Tracking, Intelligence, Billing e Notifications entram nas fases seguintes (ver [roadmap.md](./roadmap.md)) — mas seus contratos já são considerados no design.
 
@@ -127,10 +131,14 @@ src/
 
 ## 8. Comunicação assíncrona e eventos
 
+> **Status:** ⬜ **Planejado.** Não há filas, workers, BullMQ ou dead-letter no código hoje. A otimização roda de forma **síncrona** no request (ver §8.2). Esta seção descreve o alvo para a Fase 2.
+
 - Operações pesadas (otimização, ML, notificações) rodam em **workers** consumindo filas no Redis (BullMQ).
 - Idempotência e *retry* com backoff são obrigatórios em consumidores; mensagens sem sucesso vão para **dead-letter**.
 
 ### 8.1 Transactional Outbox (ADR-0006)
+
+> **Status:** 🟡 **Parcial (só schema).** A tabela `outbox` existe, mas não há gravação de eventos na transação, relay nem consumidores — nenhum evento é publicado. Ver [decisions.md](./decisions.md) ADR-0006.
 
 Para evitar *dual-write* (gravar estado e publicar evento em operações separadas), eventos de domínio são gravados numa tabela **`outbox`** **na mesma transação** do agregado. Um *relay* assíncrono lê o outbox e publica na fila. Assim, nenhum evento é perdido e nenhum evento é emitido para uma transação que falhou.
 
@@ -144,9 +152,13 @@ Contratos de evento são versionados e tratados como parte pública do módulo (
 
 ## 8.2 Motor de otimização (boundary isolável — ADR-0007)
 
+> **Status:** 🟡 **Parcial.** A port e a estratégia (nearest-neighbor + 2-opt) stateless já estão isoladas e o solver não é acessado diretamente pelos casos de uso — a extração futura está preservada. **Porém a execução é síncrona:** o endpoint responde **`201 Created`** com o plano pronto. A fila e o `202 Accepted` + recurso de job descritos abaixo são **roadmap** (Fase 2).
+
 O solver de VRP fica atrás da **port `RouteOptimizer`**, é **stateless** e roda de forma **assíncrona via fila**. No MVP executa como worker in-process; o contrato permite extrair para um **microserviço com escala horizontal** (e até outra linguagem/solver) sem reescrever os casos de uso. A API responde `202 Accepted` com um recurso de job (ver [api.md](./api.md)).
 
 ## 8.3 CQRS leve e read models (ADR-0011)
+
+> **Status:** ⬜ **Planejado.** Não há read models, materializações nem réplicas de leitura; dashboards e listagens consultam o OLTP diretamente. Depende do outbox (§8.1).
 
 Escrita permanece normalizada; **read models** (materializações alimentadas por eventos do outbox e servidas por **réplicas de leitura**) atendem dashboards e relatórios de eficiência sem competir com o OLTP. Isso é o que permite relatórios em escala de milhares de tenants.
 
@@ -183,7 +195,7 @@ Estratégias de crescimento previstas, acionadas por métricas: réplicas de lei
 
 ## 13. Decisões resolvidas e em aberto
 
-**Resolvidas nesta revisão:** ORM (ADR-0005), publicação de eventos via outbox (ADR-0006), boundary do otimizador (ADR-0007), série temporal de posições (ADR-0009), CQRS/read models (ADR-0011).
+**Decididas (ADR registrado) — note que "decidida" ≠ "implementada":** ORM (ADR-0005, ✅ implementado), publicação de eventos via outbox (ADR-0006, 🟡 só schema), boundary do otimizador (ADR-0007, 🟡 port pronta / execução síncrona), série temporal de posições (ADR-0009, 🟡 tabela sem TimescaleDB), CQRS/read models (ADR-0011, ⬜ não implementado). Ver o **Status da implementação** de cada uma em [decisions.md](./decisions.md).
 
 **Ainda em aberto (registrar ADR ao resolver):**
 
@@ -200,3 +212,4 @@ Estratégias de crescimento previstas, acionadas por métricas: réplicas de lei
 |------|--------|-------|---------|
 | 2026-07-05 | 0.1 | Engenharia | Estrutura inicial |
 | 2026-07-05 | 0.2 | CTO | Outbox, boundary do otimizador, CQRS, PgBouncer, TimescaleDB, regra de fronteira, metas de escala |
+| 2026-07-12 | 0.3 | Arquitetura | Callouts de estado da implementação (§2, §8, §8.1–8.3, §13); esclarecimento do enforcement de fronteira (§4) |

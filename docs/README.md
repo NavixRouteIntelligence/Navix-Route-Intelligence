@@ -26,14 +26,16 @@ Base de conhecimento oficial do projeto. Toda decisão de produto, arquitetura e
 
 ## Stack de referência
 
-- **Backend:** Node.js + NestJS + TypeScript · ORM TypeORM (ADR-0005)
-- **Banco:** PostgreSQL 16 + PostGIS · TimescaleDB (telemetria) · Redis 7 · PgBouncer
-- **Arquitetura:** Clean Architecture + DDD, monólito modular extraível, multi-tenant (RLS), event-driven com **Transactional Outbox** e **CQRS leve**
-- **Segurança:** JWT + Refresh Token, M2M via API keys/OAuth2, **envelope encryption por tenant** (AES-256), audit log imutável, OWASP Top 10
+> A lista abaixo é a stack **alvo**. Itens marcados ⬜ ainda **não** estão implementados — ver a coluna "Status da implementação" em [decisions.md](./decisions.md).
+
+- **Backend:** Node.js + NestJS + TypeScript · ORM TypeORM (ADR-0005) ✅
+- **Banco:** PostgreSQL 16 + PostGIS ✅ · PgBouncer ✅ · Redis 7 (🟡 ativo no rate limiting; cache/fila com abstração pronta) · TimescaleDB para telemetria (⬜ planejado)
+- **Arquitetura:** Clean Architecture + DDD ✅, monólito modular extraível ✅, multi-tenant (RLS forçada) ✅ · event-driven com **Transactional Outbox** (🟡 só schema) e **CQRS leve** (⬜ planejado)
+- **Segurança:** JWT RS256 + Refresh Token com rotação/detecção de reuso ✅, Argon2id ✅, rate limiting ✅, audit log (✅ append-only por convenção) · M2M via API keys/OAuth2 (⬜ planejado) · **envelope encryption por tenant** AES-256 (⬜ planejado — PII hoje em texto puro), OWASP Top 10
 
 ## Metas de escala
 
-Desenhado para evoluir sem reescrita até **milhares de tenants** e **milhões de entregas/dia** (ver [architecture.md](./architecture.md) §12).
+Desenhado para evoluir sem reescrita até **milhares de tenants** e **milhões de entregas/dia** (ver [architecture.md](./architecture.md) §12). *Meta de projeto — as capacidades de escala (filas, read models, TimescaleDB, sharding) são majoritariamente roadmap.*
 
 ## Convenções destes documentos
 
@@ -44,4 +46,4 @@ Desenhado para evoluir sem reescrita até **milhares de tenants** e **milhões d
 
 ---
 
-_Última atualização: 2026-07-05 · Revisão CTO (v0.2) · Mantenedor: Equipe de Engenharia Navix_
+_Última atualização: 2026-07-12 · Alinhamento doc↔código (v0.3) · Mantenedor: Equipe de Engenharia Navix_

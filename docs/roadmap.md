@@ -1,6 +1,6 @@
 # Roadmap — Navix Route Intelligence
 
-> **Status:** Em revisão · **Versão:** 0.2 · **Atualizado:** 2026-07-05
+> **Status:** Em revisão · **Versão:** 0.3 · **Atualizado:** 2026-07-12
 
 Roadmap por fases, orientado a valor. As datas são indicativas; o compromisso é com o escopo e os critérios de aceite de cada fase. Cada fase só avança quando a anterior está validada (funcional, testada e documentada).
 
@@ -8,11 +8,13 @@ Roadmap por fases, orientado a valor. As datas são indicativas; o compromisso �
 
 | Fase | Tema | Objetivo | Status |
 |------|------|----------|--------|
-| 0 | Fundação | Base técnica, CI/CD, segurança e multi-tenancy | ⏳ Em andamento |
-| 1 | MVP de otimização | Planejar rotas com restrições básicas | ⬜ Planejado |
-| 2 | Tempo real | Reotimização dinâmica e rastreamento | ⬜ Planejado |
+| 0 | Fundação | Base técnica, CI/CD, segurança e multi-tenancy | ✅ Concluída (exceto Outbox — 🟡 só schema) |
+| 1 | MVP de otimização | Planejar rotas com restrições básicas | 🟡 Em andamento (avançada — otimização **síncrona**; M2M e fila pendentes) |
+| 2 | Tempo real | Reotimização dinâmica e rastreamento | 🟡 Parcial (tracking + POD já existem; reotimização/TimescaleDB/CQRS pendentes) |
 | 3 | Inteligência | ML para ETA e previsão de demanda | ⬜ Planejado |
-| 4 | Escala global | Multi-região, i18n, billing | ⬜ Planejado |
+| 4 | Escala global | Multi-região, i18n, billing | ⬜ Planejado (i18n do frontend já existe) |
+
+> **Nota:** alguns itens de Fases 1–2 (Import Center, Proof of Delivery, Tracking, app do motorista, configurações/perfil) já foram implementados **fora da ordem estrita das fases** para viabilizar demos. O estado por decisão está na coluna "Status da implementação" em [decisions.md](./decisions.md).
 
 ---
 

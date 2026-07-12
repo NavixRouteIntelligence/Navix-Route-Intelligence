@@ -1,14 +1,16 @@
 # Banco de dados — Navix Route Intelligence
 
-> **Status:** Em revisão · **Versão:** 0.2 · **Atualizado:** 2026-07-05
+> **Status:** Em revisão · **Versão:** 0.3 · **Atualizado:** 2026-07-12
+
+> **⚠️ Estado da implementação.** Este documento mistura o modelo **atual** com o modelo **alvo**. **Tabelas que existem hoje** (via migrações): `tenants`, `roles`, `users`, `user_roles`, `refresh_tokens`, `api_keys`, `audit_log`, `outbox`, `password_reset_tokens`, `vehicles`, `drivers`, `deliveries`, `route_plans`, `import_batches`, `driver_positions`, `proof_of_delivery`, `user_settings`, `user_profiles`. **Ainda não existem** (roadmap): `depots`, `routes`, `route_stops`, read models (ex.: `tenant_efficiency_daily`), tabelas de Intelligence e Billing. **TimescaleDB** não está habilitado (posições em tabela comum). **Redis** está provisionado mas **sem uso no código**. **Criptografia de coluna (AES-256/DEK por tenant)** ainda **não** existe — PII está em texto puro. Cada item é rastreado na coluna "Status da implementação" em [decisions.md](./decisions.md).
 
 ## 1. Tecnologias
 
 | Uso | Tecnologia |
 |-----|-----------|
 | Dados relacionais / geoespaciais | PostgreSQL 16 + **PostGIS** |
-| Telemetria (série temporal) | **TimescaleDB** (extensão do Postgres) — ver ADR-0009 |
-| Cache, filas, sessões, rate limit | **Redis 7** |
+| Telemetria (série temporal) | **TimescaleDB** (extensão do Postgres) — ver ADR-0009 · ⬜ *planejado (hoje tabela comum)* |
+| Cache, filas, sessões, rate limit | **Redis 7** · 🟡 *ativo no rate limiting; cache/filas com abstração pronta, ainda não consumidas* |
 | ORM / migrações | **TypeORM** (ADR-0005), migrações versionadas e automatizadas |
 | Pooling de conexões | **PgBouncer** (modo transaction) |
 
@@ -51,32 +53,32 @@ CREATE POLICY tenant_isolation ON deliveries
 - **refresh_tokens** — `id`, `user_id`, `token_hash`, `expires_at`, `revoked_at`.
 - **api_keys** — `id`, `tenant_id`, `name`, `key_hash`, `scopes`, `last_used_at`, `revoked_at` (M2M — ver [security.md](./security.md)).
 - **audit_log** — `id`, `tenant_id`, `actor_id`, `action`, `resource`, `metadata (jsonb)`, `created_at`. **Append-only / imutável** (sem UPDATE/DELETE).
-- **outbox** — `id`, `aggregate`, `event_type`, `payload (jsonb)`, `occurred_at`, `published_at`. Escrita na mesma transação do agregado (ver ADR-0006).
+- **outbox** — `id`, `aggregate`, `event_type`, `payload (jsonb)`, `occurred_at`, `published_at`. Escrita na mesma transação do agregado (ver ADR-0006). 🟡 *Tabela criada, mas ainda sem producer/relay — nenhum evento é gravado hoje.*
 
 ### Fleet
 - **vehicles** — `id`, `tenant_id`, `plate`, `capacity`, `type`, `status`.
 - **drivers** — `id`, `tenant_id`, `name`, `skills`, `status`.
-- **depots** — `id`, `tenant_id`, `name`, `location geography(Point,4326)`.
+- **depots** — `id`, `tenant_id`, `name`, `location geography(Point,4326)`. ⬜ *Planejado — tabela ainda não criada.*
 
 ### Delivery
 - **deliveries** — `id`, `tenant_id`, `address`, `location geography(Point,4326)`, `time_window_start`, `time_window_end`, `priority`, `demand`, `status`.
 
 ### Routing / Optimization
-- **route_plans** — `id`, `tenant_id`, `status`, `created_by`, `metrics (jsonb)`, timestamps.
-- **routes** — `id`, `route_plan_id`, `vehicle_id`, `driver_id`, `total_distance`, `total_duration`.
-- **route_stops** — `id`, `route_id`, `delivery_id`, `sequence`, `eta`, `status`.
+- **route_plans** — `id`, `tenant_id`, `status`, `created_by`, `metrics (jsonb)`, timestamps. ✅ *Existe; as paradas otimizadas são persistidas no próprio plano (JSONB), não em tabelas separadas.*
+- **routes** — `id`, `route_plan_id`, `vehicle_id`, `driver_id`, `total_distance`, `total_duration`. ⬜ *Planejado — tabela ainda não criada.*
+- **route_stops** — `id`, `route_id`, `delivery_id`, `sequence`, `eta`, `status`. ⬜ *Planejado — tabela ainda não criada.*
 
 ### Realtime Tracking
-- **vehicle_positions** — `tenant_id`, `vehicle_id`, `location geography(Point,4326)`, `recorded_at`. **Hypertable TimescaleDB** com compressão e *downsampling* — o maior volume do sistema (ver ADR-0009). Não é fonte de verdade transacional.
+- **driver_positions** — `tenant_id`, `driver_id`, `location`, `recorded_at`. 🟡 *Existe como tabela Postgres comum (RLS + índices), preparada para virar **hypertable TimescaleDB** com compressão/downsampling (ADR-0009) — a extensão ainda não foi habilitada.* Não é fonte de verdade transacional. *(O nome histórico `vehicle_positions` foi implementado como `driver_positions`.)*
 
 ### Read models (CQRS — ADR-0011)
-- Tabelas de leitura desnormalizadas (ex.: `tenant_efficiency_daily`) alimentadas por eventos do outbox e servidas por **réplicas de leitura**, para dashboards/KPIs sem impactar o OLTP.
+- ⬜ *Planejado.* Tabelas de leitura desnormalizadas (ex.: `tenant_efficiency_daily`) alimentadas por eventos do outbox e servidas por **réplicas de leitura**, para dashboards/KPIs sem impactar o OLTP. *Nenhuma existe hoje; os dashboards consultam o OLTP diretamente.*
 
 ### Intelligence
-- **prediction_features** / **model_versions** — armazenamento de features e metadados de modelos por tenant.
+- ⬜ *Planejado (Fase 3).* **prediction_features** / **model_versions** — armazenamento de features e metadados de modelos por tenant.
 
 ### Billing
-- **subscriptions**, **usage_records**, **invoices** — planos, uso e faturamento.
+- ⬜ *Planejado (Fase 4).* **subscriptions**, **usage_records**, **invoices** — planos, uso e faturamento.
 
 ## 5. Índices e performance
 
@@ -88,6 +90,8 @@ CREATE POLICY tenant_isolation ON deliveries
 - Cache da **matriz de distância/tempo** no Redis com chave por **geohash** dos pontos (reduz custo/latência de provedores externos).
 
 ## 6. Redis — usos
+
+> **Status:** 🟡 **Parcial.** Existe uma conexão Redis compartilhada e resiliente (`shared/redis`), **já usada no rate limiting** (com fallback para memória — ADR-0014). As abstrações de **cache** (`CachePort`) e **fila** (`QueuePort`) estão registradas mas **ainda não consumidas**. Os demais usos abaixo (matriz de distância, sessões/blacklist, locks) seguem como alvo.
 
 | Uso | Detalhe |
 |-----|---------|
@@ -117,7 +121,7 @@ CREATE POLICY tenant_isolation ON deliveries
 
 - Conexões via TLS.
 - Credenciais em secret manager, com rotação.
-- Criptografia em repouso a nível de coluna para PII/sensível com **AES-256-GCM** e **DEK por tenant** (envelope encryption — ADR-0010). Permite *crypto-shredding* por tenant.
+- ⬜ *Planejado (ADR-0010, ainda não implementado):* criptografia em repouso a nível de coluna para PII/sensível com **AES-256-GCM** e **DEK por tenant** (envelope encryption). Permite *crypto-shredding* por tenant. **Hoje a PII está em texto puro.**
 - Princípio do menor privilégio para usuários de banco (app ≠ migração ≠ leitura).
 - Ver [security.md](./security.md) para detalhes.
 
@@ -128,7 +132,7 @@ CREATE POLICY tenant_isolation ON deliveries
 - Estratégia multi-região e residência de dados (schema/DB por tenant).
 - Retenção/downsampling fino da telemetria por plano.
 
-> Resolvidas nesta revisão: ORM = TypeORM (ADR-0005); posições em TimescaleDB (ADR-0009); analytics via read models/CQRS (ADR-0011).
+> Decididas por ADR (decisão ≠ implementação): ORM = TypeORM (ADR-0005, ✅); posições em TimescaleDB (ADR-0009, 🟡 tabela sem a extensão); analytics via read models/CQRS (ADR-0011, ⬜ não implementado).
 
 ---
 
@@ -138,3 +142,4 @@ CREATE POLICY tenant_isolation ON deliveries
 |------|--------|-------|---------|
 | 2026-07-05 | 0.1 | Engenharia | Estrutura inicial |
 | 2026-07-05 | 0.2 | CTO | UUIDv7, TimescaleDB, outbox/audit/api_keys, read models, PgBouncer, cache de matriz, envelope encryption |
+| 2026-07-12 | 0.3 | Arquitetura | Callout de estado da implementação; marcação do que existe vs. planejado (tabelas, TimescaleDB, Redis, cripto de coluna) |

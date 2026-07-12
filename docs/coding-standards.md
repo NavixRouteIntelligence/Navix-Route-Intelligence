@@ -29,7 +29,7 @@ Regras de engenharia para manter o código limpo, modular, seguro e escalável. 
 - Domínio livre de dependências de framework.
 - Casos de uso finos, orquestrando domínio + ports.
 - Nada de lógica de negócio em controllers.
-- **Fronteira de módulos (inegociável):** um módulo não importa internals de outro nem acessa suas tabelas — só *ports* públicas e eventos. Reforçado por **lint de dependências** no CI (ver [architecture.md](./architecture.md)).
+- **Fronteira de módulos (inegociável):** um módulo não importa internals de outro nem acessa suas tabelas — só *ports* públicas e eventos. Reforçado por **lint de dependências** no CI (`eslint-plugin-boundaries`, em `apps/api/.eslintrc.cjs`). **Nota de estado:** o lint hoje bloqueia violações **entre camadas** (domain → application/infra/interface); o **isolamento entre módulos de negócio** ainda é mantido por convenção + gateways anti-corrupção — a regra de lint por módulo é um endurecimento pendente (ver [architecture.md](./architecture.md) §4).
 - Publicação de eventos **sempre via outbox** (ADR-0006), nunca publicação direta pós-commit.
 - Mudanças de comportamento arriscadas ficam atrás de **feature flags**.
 
