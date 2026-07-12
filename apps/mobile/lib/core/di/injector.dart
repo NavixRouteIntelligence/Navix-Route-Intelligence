@@ -14,8 +14,11 @@ import '../../features/imports/data/import_repository.dart';
 import '../../features/imports/presentation/import_cubit.dart';
 import '../../features/optimizer/data/optimizer_repository.dart';
 import '../../features/optimizer/presentation/optimizer_cubit.dart';
+import '../../features/pod/data/pod_queue_store.dart';
 import '../../features/pod/data/pod_repository.dart';
 import '../../features/pod/presentation/pod_capture_cubit.dart';
+import '../../features/pod/presentation/pod_sync_cubit.dart';
+import '../connectivity/connectivity_service.dart';
 import '../../features/tracking/data/fleet_tracking_repository.dart';
 import '../../features/tracking/presentation/fleet_tracking_cubit.dart';
 import '../config/app_config.dart';
@@ -84,8 +87,13 @@ Future<void> configureDependencies(AppConfig config) async {
     ..registerLazySingleton<PodRepository>(
       () => PodRepository(getIt<DioClient>().apiDio),
     )
+    ..registerSingleton<ConnectivityService>(ConnectivityService())
+    ..registerSingleton<PodQueueStore>(PodQueueStore())
     ..registerFactory<PodCaptureCubit>(
-      () => PodCaptureCubit(getIt<PodRepository>(), getIt<LocationService>(), getIt<TrackingRepository>()),
+      () => PodCaptureCubit(getIt<PodRepository>(), getIt<LocationService>(), getIt<TrackingRepository>(), getIt<PodQueueStore>()),
+    )
+    ..registerSingleton<PodSyncCubit>(
+      PodSyncCubit(getIt<PodRepository>(), getIt<PodQueueStore>(), getIt<ConnectivityService>())..init(),
     )
     ..registerLazySingleton<FleetTrackingRepository>(
       () => FleetTrackingRepository(getIt<DioClient>().apiDio),

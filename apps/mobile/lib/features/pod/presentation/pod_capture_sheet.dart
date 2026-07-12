@@ -8,6 +8,7 @@ import 'package:signature/signature.dart';
 
 import '../../../app/theme/navix_tokens.dart';
 import 'pod_capture_cubit.dart';
+import 'pod_sync_cubit.dart';
 
 /// Abre a captura de comprovante de entrega. Retorna `true` se registrado.
 Future<bool?> showPodCaptureSheet(BuildContext context, {required String deliveryId, String? deliveryLabel}) {
@@ -17,8 +18,11 @@ Future<bool?> showPodCaptureSheet(BuildContext context, {required String deliver
     useSafeArea: true,
     backgroundColor: Theme.of(context).colorScheme.surface,
     shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-    builder: (_) => BlocProvider(
-      create: (_) => GetIt.instance<PodCaptureCubit>()..captureLocation(),
+    builder: (_) => MultiBlocProvider(
+      providers: [
+        BlocProvider(create: (_) => GetIt.instance<PodCaptureCubit>()..captureLocation()),
+        BlocProvider.value(value: GetIt.instance<PodSyncCubit>()),
+      ],
       child: _PodSheet(deliveryId: deliveryId, deliveryLabel: deliveryLabel),
     ),
   );
@@ -72,6 +76,7 @@ class _PodSheetState extends State<_PodSheet> {
           note: _note.text.trim().isEmpty ? null : _note.text.trim(),
           photoDataUrl: _photoDataUrl,
           signatureDataUrl: sigDataUrl,
+          label: widget.deliveryLabel,
         );
   }
 
@@ -81,6 +86,9 @@ class _PodSheetState extends State<_PodSheet> {
     return BlocListener<PodCaptureCubit, PodCaptureState>(
       listener: (context, s) {
         if (s.done) {
+          ScaffoldMessenger.of(context)
+            ..hideCurrentSnackBar()
+            ..showSnackBar(SnackBar(content: Text(s.queued ? 'Sem conexão — comprovante salvo e será sincronizado.' : 'Comprovante registrado.')));
           Navigator.of(context).pop(true);
         } else if (s.error != null) {
           ScaffoldMessenger.of(context)
@@ -107,6 +115,24 @@ class _PodSheetState extends State<_PodSheet> {
                 Text(widget.deliveryLabel!, style: TextStyle(color: t.muted, fontSize: 13)),
               ],
               const SizedBox(height: 16),
+
+              // Banner offline
+              BlocBuilder<PodSyncCubit, PodSyncState>(
+                buildWhen: (p, c) => p.online != c.online,
+                builder: (context, sync) {
+                  if (sync.online) return const SizedBox.shrink();
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(color: t.warning.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(12), border: Border.all(color: t.warning.withValues(alpha: 0.4))),
+                    child: Row(children: [
+                      Icon(Icons.cloud_off_outlined, size: 16, color: t.warning),
+                      const SizedBox(width: 8),
+                      Expanded(child: Text('Sem conexão — o comprovante será salvo e sincronizado depois.', style: TextStyle(fontSize: 12, color: t.warning))),
+                    ]),
+                  );
+                },
+              ),
 
               // Status
               Row(

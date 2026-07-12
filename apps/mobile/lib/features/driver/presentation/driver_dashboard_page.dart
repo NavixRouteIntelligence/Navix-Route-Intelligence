@@ -13,6 +13,7 @@ import '../../../core/ui/navix_skeleton.dart';
 import '../../../core/ui/navix_states.dart';
 import '../../../core/ui/navix_status_pill.dart';
 import '../../pod/presentation/pod_capture_sheet.dart';
+import '../../pod/presentation/pod_sync_cubit.dart';
 import '../domain/driver_dashboard_data.dart';
 import 'driver_dashboard_cubit.dart';
 import 'location_sharing_cubit.dart';
@@ -27,8 +28,9 @@ class DriverDashboardPage extends StatelessWidget {
     return MultiBlocProvider(
       providers: [
         BlocProvider(create: (_) => GetIt.instance<DriverDashboardCubit>()..load()),
-        // Singleton: o compartilhamento persiste enquanto o app vive (não é fechado aqui).
+        // Singletons: persistem enquanto o app vive (não são fechados aqui).
         BlocProvider.value(value: GetIt.instance<LocationSharingCubit>()),
+        BlocProvider.value(value: GetIt.instance<PodSyncCubit>()),
       ],
       child: const _DriverView(),
     );
@@ -74,7 +76,8 @@ class _DriverViewState extends State<_DriverView> {
     );
     if (!mounted) return;
     if (registered == true) {
-      _snack('Comprovante registrado.');
+      // O sheet já dá o feedback (registrado / salvo offline). Atualiza a fila e os dados.
+      GetIt.instance<PodSyncCubit>().refresh();
       dashboard.load();
     }
   }
@@ -149,6 +152,7 @@ class _Content extends StatelessWidget {
               children: [
                 _TopBar(running: running),
                 const SizedBox(height: 16),
+                const _SyncBanner(),
                 _RouteHero(data: data),
                 const SizedBox(height: 12),
                 if (data.next != null) ...[
@@ -170,6 +174,47 @@ class _Content extends StatelessWidget {
         ),
         _ActionBar(running: running, onToggleRun: onToggleRun, onRegister: onRegister),
       ],
+    );
+  }
+}
+
+/// Banner de comprovantes aguardando sincronização (fila offline).
+class _SyncBanner extends StatelessWidget {
+  const _SyncBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    return BlocBuilder<PodSyncCubit, PodSyncState>(
+      builder: (context, sync) {
+        if (sync.pending == 0 && !sync.syncing) return const SizedBox.shrink();
+        final color = sync.syncing ? t.accent : t.warning;
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: NavixCard(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              children: [
+                if (sync.syncing)
+                  SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(color)))
+                else
+                  Icon(Icons.cloud_upload_outlined, size: 16, color: color),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    sync.syncing
+                        ? 'Sincronizando comprovantes…'
+                        : '${sync.pending} comprovante(s) aguardando sincronização',
+                    style: TextStyle(fontSize: 12.5, color: color, fontWeight: FontWeight.w600),
+                  ),
+                ),
+                if (!sync.syncing && sync.online)
+                  TextButton(onPressed: () => context.read<PodSyncCubit>().syncNow(), child: const Text('Sincronizar')),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

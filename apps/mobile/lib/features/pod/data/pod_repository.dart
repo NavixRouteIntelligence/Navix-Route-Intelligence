@@ -12,6 +12,7 @@ class PodSubmission {
     this.longitude,
     this.photoDataUrl,
     this.signatureDataUrl,
+    this.label,
   });
 
   final String deliveryId;
@@ -22,6 +23,10 @@ class PodSubmission {
   final String? photoDataUrl;
   final String? signatureDataUrl;
 
+  /// Rótulo amigável para a fila (ex.: endereço/cliente). Não vai para a API.
+  final String? label;
+
+  /// Corpo enviado à API (/pod).
   Map<String, dynamic> toJson() => {
         'deliveryId': deliveryId,
         'status': status,
@@ -31,6 +36,20 @@ class PodSubmission {
         if (photoDataUrl != null) 'photo': photoDataUrl,
         if (signatureDataUrl != null) 'signature': signatureDataUrl,
       };
+
+  /// Serialização completa para persistência offline (inclui o rótulo).
+  Map<String, dynamic> toStorage() => {...toJson(), if (label != null) 'label': label};
+
+  factory PodSubmission.fromStorage(Map<String, dynamic> j) => PodSubmission(
+        deliveryId: (j['deliveryId'] as String?) ?? '',
+        status: (j['status'] as String?) ?? 'delivered',
+        note: j['note'] as String?,
+        latitude: (j['latitude'] as num?)?.toDouble(),
+        longitude: (j['longitude'] as num?)?.toDouble(),
+        photoDataUrl: j['photo'] as String?,
+        signatureDataUrl: j['signature'] as String?,
+        label: j['label'] as String?,
+      );
 }
 
 /// Envio do comprovante de entrega (/pod). Lança [Failure] em erro.
