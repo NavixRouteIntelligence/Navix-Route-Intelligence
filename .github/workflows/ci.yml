@@ -5,25 +5,19 @@ on:
     branches: [main]
   pull_request:
 
+# Cancela execuções anteriores do mesmo ref (economiza minutos de CI).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  build:
+  # ===========================================================================
+  # Qualidade + testes unitários (API e Web) com COBERTURA obrigatória.
+  # Qualquer passo que falhe reprova o job (comportamento padrão do Actions).
+  # ===========================================================================
+  test:
+    name: Lint, typecheck e testes (cobertura)
     runs-on: ubuntu-latest
-
-    services:
-      postgres:
-        image: postgis/postgis:16-3.4
-        env:
-          POSTGRES_USER: navix
-          POSTGRES_PASSWORD: navix_dev_password
-          POSTGRES_DB: navix
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U navix -d navix"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
     steps:
       - uses: actions/checkout@v4
 
@@ -44,17 +38,138 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Unit tests
-        run: npm test
+      - name: Testes unitários (API) + cobertura
+        run: npm run test:cov -w apps/api
 
-      - name: Run migrations (smoke)
-        env:
-          DB_HOST: localhost
-          DB_DIRECT_PORT: 5432
-          DB_USER: navix
-          DB_PASSWORD: navix_dev_password
-          DB_NAME: navix
-        run: npm run migration:run
+      - name: Testes (Web) + cobertura
+        run: npm run test:cov -w apps/web
 
       - name: Build apps
         run: npm run build -w apps/api && npm run build -w apps/web
+
+      - name: Upload relatórios de cobertura
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: |
+            apps/api/coverage/lcov.info
+            apps/web/coverage/lcov.info
+          if-no-files-found: ignore
+
+  # ===========================================================================
+  # Testes E2E da API contra Postgres + Redis reais.
+  # ===========================================================================
+  e2e:
+    name: Testes E2E (Postgres + Redis)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_USER: navix
+          POSTGRES_PASSWORD: navix_dev_password
+          POSTGRES_DB: navix
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U navix -d navix"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DB_HOST: localhost
+      # Sem PgBouncer no CI: a aplicação conecta direto no Postgres.
+      DB_PORT: 5432
+      DB_DIRECT_PORT: 5432
+      DB_USER: navix
+      DB_PASSWORD: navix_dev_password
+      DB_APP_USER: navix_app
+      DB_APP_PASSWORD: navix_app_password
+      DB_NAME: navix
+      DB_SSL: 'false'
+      REDIS_HOST: localhost
+      REDIS_PORT: 6379
+      ENCRYPTION_KEK: ci-encryption-kek-placeholder-32b
+      NODE_ENV: test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Build shared contracts
+        run: npm run build -w packages/contracts
+
+      - name: Run migrations (schema + role de runtime + RLS forçada)
+        run: npm run migration:run
+
+      - name: Testes E2E (API)
+        run: npm run test:e2e -w apps/api
+
+  # ===========================================================================
+  # Segurança: auditoria de dependências (SCA) + secret scan.
+  # ===========================================================================
+  security:
+    name: Auditoria de dependências e secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Roda ANTES do npm ci: sem node_modules, o scan cobre apenas o código
+      # versionado (evita ruído das dependências de terceiros).
+      - name: Secret scan (gitleaks)
+        run: |
+          VERSION=8.18.4
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/gitleaks_${VERSION}_linux_x64.tar.gz" \
+            | tar -xz gitleaks
+          ./gitleaks detect --source . --no-git --config .gitleaks.toml --redact --verbose --exit-code 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # Gate rígido: reprova a build em vulnerabilidades CRITICAL nas dependências
+      # de PRODUÇÃO (o que efetivamente vai para runtime). Criticals apenas em
+      # devDependencies (tooling) não bloqueiam, mas aparecem no relatório abaixo.
+      - name: Auditoria de dependências (bloqueia em critical de produção)
+        run: npm audit --omit=dev --audit-level=critical
+
+      # Relatório completo (inclui dev, high/moderate) para visibilidade — não
+      # bloqueia: há dívidas conhecidas sem correção upstream (ex.: xlsx; ver
+      # docs/reviews e a dívida M2 da auditoria de arquitetura).
+      - name: Auditoria de dependências (relatório completo)
+        run: npm audit || true
+
+  # ===========================================================================
+  # Build das imagens Docker (valida os Dockerfiles de produção; sem push).
+  # ===========================================================================
+  docker:
+    name: Build de imagens Docker
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build da imagem da API
+        run: docker build -f docker/api.Dockerfile -t navix-api:ci .
+
+      - name: Build da imagem do Web
+        run: docker build -f docker/web.Dockerfile -t navix-web:ci .
