@@ -15,7 +15,61 @@ const RouteMap = dynamic(() => import('@/components/map/route-map').then((m) => 
   loading: () => <Skeleton className="h-[420px] w-full" />,
 });
 
+const FUEL_L_PER_KM = 0.12; // fator médio (L/km) — estimativa
+const FUEL_PRICE_PER_L = 6; // R$/L — estimativa
+
+function fmtMin(minutes: number): string {
+  const m = Math.round(minutes);
+  if (m >= 60) {
+    const h = Math.floor(m / 60);
+    const rem = m % 60;
+    return rem === 0 ? `${h}h` : `${h}h ${rem}min`;
+  }
+  return `${m} min`;
+}
+
+function CompareBar({ label, before, after, unit, pct }: { label: string; before: number; after: number; unit: string; pct: number }) {
+  const ratio = before > 0 ? Math.min(after / before, 1) : 0;
+  const dec = unit === 'km' ? 1 : 0;
+  return (
+    <div>
+      <div className="mb-2 flex items-center justify-between">
+        <span className="text-sm font-medium">{label}</span>
+        {pct > 0 && <span className="text-xs font-medium text-accent">−{formatNumber(pct, 0)}%</span>}
+      </div>
+      <div className="space-y-1.5">
+        <div className="flex items-center gap-3">
+          <span className="w-12 text-xs text-muted-foreground">Antes</span>
+          <div className="h-2.5 flex-1 rounded-full bg-muted">
+            <div className="h-full rounded-full bg-muted-foreground/60" style={{ width: '100%' }} />
+          </div>
+          <span className="w-16 text-right text-xs font-medium tabular-nums">{formatNumber(before, dec)} {unit}</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="w-12 text-xs text-muted-foreground">Depois</span>
+          <div className="h-2.5 flex-1 rounded-full bg-muted">
+            <div className="h-full rounded-full bg-accent transition-all" style={{ width: `${Math.max(ratio * 100, 4)}%` }} />
+          </div>
+          <span className="w-16 text-right text-xs font-medium tabular-nums">{formatNumber(after, dec)} {unit}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SaveTile({ label, value, sub }: { label: string; value: string; sub: string }) {
+  return (
+    <div className="rounded-lg bg-muted/40 p-3">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="mt-1 text-xl font-medium tabular-nums">{value}</p>
+      <p className="text-xs font-medium text-success">{sub}</p>
+    </div>
+  );
+}
+
 export function RoutePlanView({ plan }: { plan: RoutePlan }) {
+  const fuelL = plan.savings.distanceKm * FUEL_L_PER_KM;
+  const fuelReais = fuelL * FUEL_PRICE_PER_L;
   return (
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -30,6 +84,22 @@ export function RoutePlanView({ plan }: { plan: RoutePlan }) {
         />
         <StatCard label="Score da rota" value={`${plan.score}/100`} icon={Gauge} tone="warning" hint={`${plan.metrics.stops} paradas`} />
       </div>
+
+      {/* Antes × Depois + economia */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Antes × Depois</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <CompareBar label="Distância" before={plan.baseline.totalDistanceKm} after={plan.metrics.totalDistanceKm} unit="km" pct={plan.savings.distancePct} />
+          <CompareBar label="Tempo" before={plan.baseline.totalTimeMinutes} after={plan.metrics.totalTimeMinutes} unit="min" pct={plan.savings.timePct} />
+          <div className="grid grid-cols-2 gap-3">
+            <SaveTile label="Combustível" value={`${formatNumber(fuelL, 1)} L`} sub={`≈ R$ ${formatNumber(fuelReais, 0)}`} />
+            <SaveTile label="Tempo" value={fmtMin(plan.savings.timeMinutes)} sub={`−${formatNumber(plan.savings.timePct, 0)}%`} />
+          </div>
+          <p className="text-xs text-muted-foreground">Economia de combustível estimada ({FUEL_L_PER_KM} L/km · R$ {FUEL_PRICE_PER_L}/L).</p>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
