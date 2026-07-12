@@ -63,6 +63,8 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   const response = await fetch(`${BASE_URL}/v1${path}`, {
     method,
     headers,
+    // Envia/recebe o cookie HttpOnly do refresh token (fluxo de auth de produção).
+    credentials: 'include',
     body: body === undefined ? undefined : JSON.stringify(body),
   });
 
@@ -97,7 +99,12 @@ export async function apiUpload<T>(path: string, form: FormData, _retry = false)
     if (token) headers.Authorization = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${BASE_URL}/v1${path}`, { method: 'POST', headers, body: form });
+  const response = await fetch(`${BASE_URL}/v1${path}`, {
+    method: 'POST',
+    headers,
+    credentials: 'include',
+    body: form,
+  });
 
   if (response.status === 401 && bridge && !_retry) {
     const newToken = await bridge.refresh();

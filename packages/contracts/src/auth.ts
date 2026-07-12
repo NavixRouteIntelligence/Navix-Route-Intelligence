@@ -42,17 +42,29 @@ export interface RegisterResponse {
   accountType: AccountType;
 }
 
-/** Corpo da requisição de refresh de token. */
+/**
+ * Corpo da requisição de refresh de token.
+ *
+ * No fluxo web (padrão de produção) o refresh token viaja em **cookie HttpOnly**
+ * e o corpo fica vazio. Clientes nativos (mobile) que operam em modo *bearer*
+ * (header `X-Auth-Mode: bearer`) enviam o token aqui.
+ */
 export interface RefreshRequest {
-  refreshToken: string;
+  refreshToken?: string;
 }
 
-/** Par de tokens retornado no login/refresh. */
+/**
+ * Par de tokens retornado no login/refresh.
+ *
+ * `refreshToken` é **opcional**: só é incluído no corpo para clientes em modo
+ * *bearer* (mobile). No fluxo web ele é entregue via **cookie HttpOnly** e nunca
+ * aparece no corpo nem é acessível por JavaScript (ver docs/security.md §2).
+ */
 export interface AuthTokens {
   accessToken: string;
   /** Segundos até a expiração do access token. */
   expiresIn: number;
-  refreshToken: string;
+  refreshToken?: string;
 }
 
 /** Representação pública e segura do usuário autenticado (sem dados sensíveis). */
@@ -102,4 +114,35 @@ export interface ForgotPasswordResponse {
 export interface ResetPasswordRequest {
   token: string;
   newPassword: string;
+}
+
+/**
+ * Perfil do usuário (dados de identificação exibíveis). Distinto de
+ * `AuthenticatedUser` (identidade/segurança) — ver docs/modules/settings.md §3.1.
+ */
+export interface UserProfile {
+  /** Nome de exibição. */
+  displayName: string;
+  /** Telefone em formato E.164 (ex.: +5511999998888) ou nulo. */
+  phone: string | null;
+  /** Cargo/função (rótulo livre) ou nulo. */
+  jobTitle: string | null;
+  /** Fuso horário IANA (ex.: America/Sao_Paulo). */
+  timeZone: string;
+  /** Avatar como data URL (image/*) ou nulo. */
+  avatarUrl: string | null;
+}
+
+/** Atualização parcial do perfil. `null` limpa o campo; ausência preserva. */
+export interface UpdateProfileRequest {
+  displayName?: string;
+  phone?: string | null;
+  jobTitle?: string | null;
+  timeZone?: string;
+}
+
+/** Define o avatar do usuário (data URL de imagem). */
+export interface UpdateAvatarRequest {
+  /** Data URL `data:image/...;base64,...`. */
+  avatar: string;
 }

@@ -21,15 +21,11 @@ export const authApi = {
   register: (payload: RegisterRequest) =>
     apiRequest<RegisterResponse>('/auth/register', { method: 'POST', body: payload, auth: false }),
 
-  refresh: (refreshToken: string) =>
-    apiRequest<AuthTokens>('/auth/refresh', {
-      method: 'POST',
-      body: { refreshToken },
-      auth: false,
-    }),
+  // O refresh token viaja no cookie HttpOnly; o corpo vai vazio (fluxo web).
+  refresh: () =>
+    apiRequest<AuthTokens>('/auth/refresh', { method: 'POST', auth: false }),
 
-  logout: (refreshToken: string) =>
-    apiRequest<void>('/auth/logout', { method: 'POST', body: { refreshToken } }),
+  logout: () => apiRequest<void>('/auth/logout', { method: 'POST', auth: false }),
 
   me: () => apiRequest<ResourceResponse<AuthenticatedUser>>('/auth/me'),
 

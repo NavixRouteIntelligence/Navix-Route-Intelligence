@@ -5,6 +5,8 @@ import {
   HttpCode,
   HttpStatus,
   Post,
+  Req,
+  Res,
   UseGuards,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
@@ -16,9 +18,19 @@ import type {
   RegisterResponse,
   ResourceResponse,
 } from '@navix/contracts';
+import type { Request, Response } from 'express';
 
+import { AppConfigService } from '../../../shared/config/app-config.service';
+import { UnauthorizedError } from '../../../shared/kernel/domain-error';
 import { CurrentUser } from '../../../shared/interface/current-user.decorator';
 import { JwtAuthGuard } from '../../../shared/security/jwt-auth.guard';
+import {
+  clearRefreshCookie,
+  isBearerMode,
+  resolveRefreshToken,
+  setRefreshCookie,
+  type RefreshCookieConfig,
+} from './auth-cookie';
 import { ChangePasswordUseCase } from '../application/change-password.use-case';
 import { GetProfileUseCase } from '../application/get-profile.use-case';
 import { LoginUseCase } from '../application/login.use-case';
@@ -40,6 +52,7 @@ import { RegisterDto } from './dto/register.dto';
 @Controller({ path: 'auth', version: '1' })
 export class AuthController {
   constructor(
+    private readonly config: AppConfigService,
     private readonly login: LoginUseCase,
     private readonly register: RegisterUseCase,
     private readonly refresh: RefreshTokenUseCase,
@@ -50,32 +63,86 @@ export class AuthController {
     private readonly resetPassword: ResetPasswordUseCase,
   ) {}
 
+  /** Config do cookie de refresh (Secure em produção; SameSite=lax). */
+  private cookieConfig(): RefreshCookieConfig {
+    return {
+      secure: this.config.isProduction,
+      sameSite: 'lax',
+      maxAgeSeconds: this.config.jwt.refreshTtl,
+    };
+  }
+
+  /**
+   * Entrega a sessão: grava o refresh token no cookie HttpOnly e, salvo em modo
+   * *bearer* (mobile), remove o refresh token do corpo da resposta (fluxo web).
+   */
+  private withSession<T extends { tokens: AuthTokens }>(
+    req: Request,
+    res: Response,
+    payload: T,
+  ): T {
+    const { refreshToken } = payload.tokens;
+    if (refreshToken) setRefreshCookie(res, refreshToken, this.cookieConfig());
+    if (isBearerMode(req)) return payload;
+    // Fluxo web: nunca expõe o refresh token no corpo (fica só no cookie).
+    return {
+      ...payload,
+      tokens: { accessToken: payload.tokens.accessToken, expiresIn: payload.tokens.expiresIn },
+    };
+  }
+
   @Post('register')
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @HttpCode(HttpStatus.CREATED)
-  registerHandler(@Body() dto: RegisterDto): Promise<RegisterResponse> {
-    return this.register.execute(dto);
+  async registerHandler(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+    @Body() dto: RegisterDto,
+  ): Promise<RegisterResponse> {
+    const result = await this.register.execute(dto);
+    return this.withSession(req, res, result);
   }
 
   @Post('login')
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @HttpCode(HttpStatus.OK)
-  loginHandler(@Body() dto: LoginDto): Promise<LoginResponse> {
-    return this.login.execute(dto);
+  async loginHandler(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+    @Body() dto: LoginDto,
+  ): Promise<LoginResponse> {
+    const result = await this.login.execute(dto);
+    return this.withSession(req, res, result);
   }
 
   @Post('refresh')
   @Throttle({ default: { limit: 20, ttl: 60_000 } })
   @HttpCode(HttpStatus.OK)
-  refreshHandler(@Body() dto: RefreshDto): Promise<AuthTokens> {
-    return this.refresh.execute(dto.refreshToken);
+  async refreshHandler(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+    @Body() dto: RefreshDto,
+  ): Promise<AuthTokens> {
+    const presented = resolveRefreshToken(req, dto.refreshToken);
+    if (!presented) throw new UnauthorizedError('Sessão inválida.');
+
+    const tokens = await this.refresh.execute(presented);
+    if (tokens.refreshToken) setRefreshCookie(res, tokens.refreshToken, this.cookieConfig());
+    if (isBearerMode(req)) return tokens;
+    // Fluxo web: só access token no corpo; o novo refresh token vai no cookie.
+    return { accessToken: tokens.accessToken, expiresIn: tokens.expiresIn };
   }
 
   @Post('logout')
-  @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
-  async logoutHandler(@Body() dto: RefreshDto): Promise<void> {
-    await this.logout.execute(dto.refreshToken);
+  async logoutHandler(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+    @Body() dto: RefreshDto,
+  ): Promise<void> {
+    const presented = resolveRefreshToken(req, dto.refreshToken);
+    if (presented) await this.logout.execute(presented);
+    clearRefreshCookie(res, this.cookieConfig());
   }
 
   @Get('me')
