@@ -7,9 +7,9 @@ import {
   Package,
   Radio,
   Route,
+  Settings,
   Truck,
   Upload,
-  UserCircle,
   Users,
   type LucideIcon,
 } from 'lucide-react';
@@ -39,14 +39,14 @@ const ADMIN_NAV: NavItem[] = [
   { href: '/fleet/vehicles', label: 'nav.vehicles', icon: Truck },
   { href: '/optimizer', label: 'nav.optimizer', icon: Route },
   { href: '/tracking', label: 'nav.tracking', icon: Radio },
-  { href: '/profile', label: 'nav.profile', icon: UserCircle },
+  { href: '/settings', label: 'nav.settings', icon: Settings },
 ];
 
 /** Navegação enxuta do Motorista Autônomo (sem Fleet/gestão — exclusivos da Empresa). */
 const DRIVER_NAV: NavItem[] = [
   { href: '/driver', label: 'nav.route', icon: Navigation },
   { href: '/imports', label: 'nav.imports', icon: Upload },
-  { href: '/profile', label: 'nav.profile', icon: UserCircle },
+  { href: '/settings', label: 'nav.settings', icon: Settings },
 ];
 
 /** Conteúdo compartilhado (usado no rail desktop e no drawer mobile). */
