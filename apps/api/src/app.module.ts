@@ -2,8 +2,11 @@ import { Module } from '@nestjs/common';
 
 import { AppConfigModule } from './shared/config/config.module';
 import { AuditModule } from './shared/audit/audit.module';
+import { CacheModule } from './shared/cache/cache.module';
 import { DatabaseModule } from './database/database.module';
 import { LoggerModule } from './shared/observability/logger.module';
+import { QueueModule } from './shared/queue/queue.module';
+import { RedisModule } from './shared/redis/redis.module';
 import { TenancyModule } from './shared/tenancy/tenancy.module';
 import { ThrottlingModule } from './shared/security/throttling.module';
 import { DeliveryModule } from './modules/delivery/delivery.module';
@@ -14,6 +17,7 @@ import { PodModule } from './modules/pod/pod.module';
 import { TrackingModule } from './modules/tracking/tracking.module';
 import { HealthModule } from './modules/health/health.module';
 import { IdentityModule } from './modules/identity/identity.module';
+import { UserSettingsModule } from './modules/user-settings/user-settings.module';
 
 /**
  * Módulo raiz. Compõe infraestrutura transversal (config, logging, banco) e
@@ -24,12 +28,16 @@ import { IdentityModule } from './modules/identity/identity.module';
   imports: [
     AppConfigModule,
     LoggerModule,
+    RedisModule,
+    CacheModule,
+    QueueModule,
     DatabaseModule,
     AuditModule,
     TenancyModule,
     ThrottlingModule,
     HealthModule,
     IdentityModule,
+    UserSettingsModule,
     FleetModule,
     DeliveryModule,
     OptimizerModule,
