@@ -41,6 +41,7 @@ describe('UpdateUserProfileUseCase', () => {
 
   const users: UserRepositoryPort = {
     findByEmail: jest.fn(),
+    findByEmailAndOrganization: jest.fn(),
     findById: jest.fn().mockResolvedValue(user),
     updatePassword: jest.fn(),
   };

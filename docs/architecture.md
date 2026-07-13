@@ -104,6 +104,7 @@ src/
 
 **Estratégia inicial:** banco único, **RLS (Row-Level Security)** do PostgreSQL + coluna `tenant_id` em todas as tabelas de negócio.
 
+- No **login** o tenant é resolvido pelo **e-mail** (identidade global) ou pelo **slug** da empresa — sem `tenantId` no corpo (ADR-0016). A resolução ocorre em `users`/`tenants` (sem RLS, fluxo público pré-tenant); daí em diante o `tenant_id` viaja no JWT.
 - Um `TenantContext` é resolvido a partir do JWT em cada requisição (interceptor/guard).
 - Toda query é automaticamente filtrada por `tenant_id`; RLS atua como rede de segurança no banco.
 - Migração futura para **schema-por-tenant** ou **DB-por-tenant** para clientes enterprise/residência de dados é prevista (ver [database.md](./database.md) e registrar ADR ao decidir).

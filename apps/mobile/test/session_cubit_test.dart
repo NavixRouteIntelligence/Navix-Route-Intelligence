@@ -22,7 +22,7 @@ void main() {
   final logger = AppLogger(enabled: false);
 
   setUpAll(() {
-    registerFallbackValue(const LoginParams(tenantId: 't', email: 'e@x.com', password: 'password'));
+    registerFallbackValue(const LoginParams(email: 'e@x.com', password: 'password'));
   });
 
   setUp(() {
@@ -57,7 +57,7 @@ void main() {
         when(() => store.setKeepConnected(any())).thenAnswer((_) async {});
         when(() => store.setBiometricEnabled(any())).thenAnswer((_) async {});
       },
-      act: (c) => c.login(const LoginParams(tenantId: 't', email: 'd@x.com', password: 'password')),
+      act: (c) => c.login(const LoginParams(email: 'd@x.com', password: 'password')),
       verify: (c) {
         expect(c.state.isAuthenticated, isTrue);
         expect(c.state.isDriver, isTrue);

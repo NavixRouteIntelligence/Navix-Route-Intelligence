@@ -39,6 +39,7 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 | ADR-0013 | Access token JWT RS256 com key ring e rotação | Aceito | ✅ Implementado | 2026-07-06 |
 | ADR-0014 | Rate limiting com @nestjs/throttler | Aceito | ✅ Throttler global + login/refresh estritos; storage **Redis** (multi-instância) com fallback em memória | 2026-07-06 |
 | ADR-0015 | Autenticação separada: Web (cookie) e Mobile (bearer) por endpoints dedicados | Aceito | ✅ `/auth/*` cookie (web) e `/auth/mobile/*` bearer (mobile); header `X-Auth-Mode` eliminado | 2026-07-13 |
+| ADR-0016 | Login sem `tenantId`: tenant resolvido por e-mail (ou slug da empresa) | Aceito | ✅ `LoginRequest { email, password, organization? }`; e-mail global único + `tenants.slug` | 2026-07-13 |
 
 ---
 
@@ -185,6 +186,15 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 - **Alternativas consideradas:** Manter o header `X-Auth-Mode` (acoplamento implícito, footgun); negociação por `Accept`/User-Agent (mágica e frágil); um só endpoint sempre com refresh no corpo (perde a proteção XSS do cookie no web).
 - **Consequências:** Web e mobile ficam desacoplados e auto-documentados; o contrato mobile é explícito (refresh token sempre presente). Custo: um controller a mais e leve duplicação de rotas — compensado pela clareza e por eliminar o footgun. Supersede o mecanismo de header introduzido junto ao cookie (ADR-0013/hardening).
 
+## ADR-0016 — Login sem `tenantId`: tenant resolvido por e-mail (ou slug da empresa)
+
+- **Status:** Aceito · **Data:** 2026-07-13
+- **Status da implementação:** ✅ Implementado. `LoginRequest`/`ForgotPasswordRequest` passam a `{ email, password, organization? }` — sem `tenantId` (UUID). Resolução: se `organization` (slug da empresa) for informado, busca o usuário por e-mail dentro daquele tenant; senão resolve o tenant pelo **e-mail** (agora identidade **global**). A migração `TenantSlugAndEmailIdentity` adiciona `tenants.slug` (único) e um índice único global de e-mail em `users`; o register gera um slug único e rejeita e-mail duplicado.
+- **Contexto:** Exigir o `tenantId` (UUID) no login era um bloqueio de UX — especialmente para o app Flutter (motoristas não conhecem o UUID do tenant). Era o risco #2 da análise do app Flutter.
+- **Decisão:** O e-mail é a identidade primária e resolve o tenant automaticamente; o `slug` da empresa é uma alternativa opcional para desambiguar. Não se exige mais o `tenantId` no corpo.
+- **Alternativas consideradas:** Resolver por subdomínio/host (adia o problema para infra de DNS; não serve ao mobile); manter `tenantId` (UX ruim); permitir e-mail repetido entre tenants com desambiguação obrigatória (vaza existência de e-mail e complica o cliente).
+- **Consequências:** Login e recuperação de senha ficam com UX padrão de mercado (só e-mail + senha). Assume-se **e-mail globalmente único** — a associação de um mesmo usuário a múltiplos tenants (multi-org) passará a exigir uma tabela de *membership* dedicada quando/se for necessária. **Compatível com a RLS:** a resolução ocorre em `users`/`tenants` (sem RLS, fluxo público pré-tenant); o `tenant_id` continua vindo do JWT para todo o resto.
+
 ---
 
 ## Template
@@ -213,3 +223,4 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 | 2026-07-12 | 0.4 | Arquitetura | Alinhamento doc↔código: coluna "Status da implementação" por ADR; status ajustados para `Parcial`/`Planejado` onde ainda não implementado (0002, 0006, 0007, 0009, 0010, 0011, 0014) |
 | 2026-07-12 | 0.5 | Engenharia | Redis: conexão compartilhada resiliente + rate limiting em Redis com fallback (ADR-0014 → Aceito); abstrações de cache/fila prontas (ADR-0002 atualizado) |
 | 2026-07-13 | 0.6 | Arquitetura | ADR-0015: separação Web (cookie) × Mobile (bearer) por endpoints dedicados; header X-Auth-Mode eliminado |
+| 2026-07-13 | 0.7 | Arquitetura | ADR-0016: login sem tenantId — tenant resolvido por e-mail (ou slug da empresa); e-mail global único + tenants.slug |

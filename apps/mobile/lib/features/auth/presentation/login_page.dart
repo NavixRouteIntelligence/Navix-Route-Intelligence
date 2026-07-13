@@ -9,7 +9,7 @@ import '../../../core/ui/navix_button.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../domain/auth_entities.dart';
 
-/// Tela de login: tenant/e-mail/senha, "manter conectado" e biometria opcional.
+/// Tela de login: e-mail/senha (+ empresa opcional), "manter conectado" e biometria.
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -19,9 +19,9 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
-  final _tenant = TextEditingController();
   final _email = TextEditingController();
   final _password = TextEditingController();
+  final _organization = TextEditingController();
 
   bool _keepConnected = true;
   bool _useBiometrics = false;
@@ -39,9 +39,9 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   void dispose() {
-    _tenant.dispose();
     _email.dispose();
     _password.dispose();
+    _organization.dispose();
     super.dispose();
   }
 
@@ -54,9 +54,9 @@ class _LoginPageState extends State<LoginPage> {
     try {
       await GetIt.instance<SessionCubit>().login(
         LoginParams(
-          tenantId: _tenant.text.trim(),
           email: _email.text.trim(),
           password: _password.text,
+          organization: _organization.text.trim().isEmpty ? null : _organization.text.trim(),
         ),
         keepConnected: _keepConnected,
         enableBiometric: _useBiometrics,
@@ -91,12 +91,6 @@ class _LoginPageState extends State<LoginPage> {
                     Text(l10n.loginSubtitle, style: Theme.of(context).textTheme.bodyMedium),
                     const SizedBox(height: 24),
                     TextFormField(
-                      controller: _tenant,
-                      decoration: InputDecoration(labelText: l10n.fieldTenant),
-                      validator: (v) => (v == null || v.trim().isEmpty) ? '—' : null,
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
                       controller: _email,
                       keyboardType: TextInputType.emailAddress,
                       autofillHints: const [AutofillHints.email],
@@ -110,6 +104,14 @@ class _LoginPageState extends State<LoginPage> {
                       autofillHints: const [AutofillHints.password],
                       decoration: InputDecoration(labelText: l10n.fieldPassword),
                       validator: (v) => (v == null || v.length < 8) ? '—' : null,
+                    ),
+                    const SizedBox(height: 12),
+                    // Empresa (opcional): o tenant é resolvido pelo e-mail; este
+                    // campo só é necessário para desambiguar (ADR-0016).
+                    TextFormField(
+                      controller: _organization,
+                      autofillHints: const [AutofillHints.organizationName],
+                      decoration: const InputDecoration(labelText: 'Empresa (opcional)'),
                     ),
                     const SizedBox(height: 8),
                     SwitchListTile(

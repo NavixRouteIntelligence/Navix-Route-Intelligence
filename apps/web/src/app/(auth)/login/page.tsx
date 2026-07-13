@@ -15,13 +15,11 @@ import { ApiError } from '@/lib/api/client';
 import { useAuth } from '@/lib/auth/auth-provider';
 
 const schema = z.object({
-  tenantId: z.string().uuid('Tenant ID inválido.'),
   email: z.string().email('E-mail inválido.'),
   password: z.string().min(8, 'Mínimo de 8 caracteres.'),
+  organization: z.string().max(64).optional(),
 });
 type FormValues = z.infer<typeof schema>;
-
-const DEMO_TENANT = '019f335f-a2ae-7dd9-bcda-d458fe138c98';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -33,13 +31,15 @@ export default function LoginPage() {
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { tenantId: DEMO_TENANT, email: '', password: '' },
+    defaultValues: { email: '', password: '', organization: '' },
   });
 
   async function onSubmit(values: FormValues) {
     setFormError(null);
     try {
-      await login(values);
+      // Tenant é resolvido pelo e-mail; envia organization só se preenchido.
+      const organization = values.organization?.trim();
+      await login({ email: values.email, password: values.password, ...(organization ? { organization } : {}) });
       router.push('/dashboard');
     } catch (error) {
       setFormError(error instanceof ApiError ? error.message : 'Falha ao entrar.');
@@ -54,14 +54,14 @@ export default function LoginPage() {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4" noValidate>
-          <Field label="Tenant ID" error={errors.tenantId?.message}>
-            <Input {...register('tenantId')} placeholder="uuid do tenant" autoComplete="off" />
-          </Field>
           <Field label="E-mail" error={errors.email?.message}>
             <Input type="email" {...register('email')} placeholder="voce@empresa.com" autoComplete="email" />
           </Field>
           <Field label="Senha" error={errors.password?.message}>
             <Input type="password" {...register('password')} placeholder="••••••••" autoComplete="current-password" />
+          </Field>
+          <Field label="Empresa (opcional)" error={errors.organization?.message}>
+            <Input {...register('organization')} placeholder="identificador da empresa" autoComplete="organization" />
           </Field>
 
           {formError && (

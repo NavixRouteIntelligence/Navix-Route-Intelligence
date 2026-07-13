@@ -47,6 +47,7 @@ describe('LoginUseCase', () => {
   }): LoginUseCase {
     const users: UserRepositoryPort = {
       findByEmail: jest.fn().mockResolvedValue(overrides.user),
+      findByEmailAndOrganization: jest.fn().mockResolvedValue(overrides.user),
       findById: jest.fn(),
       updatePassword: jest.fn().mockResolvedValue(undefined),
     };
@@ -61,7 +62,6 @@ describe('LoginUseCase', () => {
     const useCase = buildUseCase({ user: activeUser, passwordValid: true });
 
     const result = await useCase.execute({
-      tenantId: 'tenant-1',
       email: 'ops@navix.test',
       password: 'correct-password',
     });
@@ -72,17 +72,27 @@ describe('LoginUseCase', () => {
     expect(refreshRepo.save).toHaveBeenCalled();
   });
 
+  it('resolve o tenant pela organização (slug) quando informada', async () => {
+    const useCase = buildUseCase({ user: activeUser, passwordValid: true });
+    const result = await useCase.execute({
+      email: 'ops@navix.test',
+      password: 'correct-password',
+      organization: 'acme-log',
+    });
+    expect(result.user.id).toBe('user-1');
+  });
+
   it('rejeita quando o usuário não existe', async () => {
     const useCase = buildUseCase({ user: null, passwordValid: false });
     await expect(
-      useCase.execute({ tenantId: 't', email: 'x@y.z', password: 'whatever-123' }),
+      useCase.execute({ email: 'x@y.z', password: 'whatever-123' }),
     ).rejects.toBeInstanceOf(UnauthorizedError);
   });
 
   it('rejeita quando a senha é inválida', async () => {
     const useCase = buildUseCase({ user: activeUser, passwordValid: false });
     await expect(
-      useCase.execute({ tenantId: 'tenant-1', email: 'ops@navix.test', password: 'wrong-pass' }),
+      useCase.execute({ email: 'ops@navix.test', password: 'wrong-pass' }),
     ).rejects.toBeInstanceOf(UnauthorizedError);
   });
 });

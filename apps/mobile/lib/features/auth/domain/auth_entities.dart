@@ -45,16 +45,19 @@ class AuthSession extends Equatable {
   List<Object?> get props => [user, accessToken, refreshToken];
 }
 
-/// Credenciais de login (o tenant vem explícito nesta fase, como no Web).
+/// Credenciais de login. O tenant é resolvido pelo e-mail (ou por [organization],
+/// o slug da empresa, opcional) — sem tenantId (ADR-0016).
 class LoginParams extends Equatable {
-  const LoginParams({required this.tenantId, required this.email, required this.password});
+  const LoginParams({required this.email, required this.password, this.organization});
 
-  final String tenantId;
   final String email;
   final String password;
 
+  /// Identificador (slug) da empresa — opcional, para desambiguação.
+  final String? organization;
+
   @override
-  List<Object?> get props => [tenantId, email, password];
+  List<Object?> get props => [email, password, organization];
 }
 
 /// Dados de cadastro por perfil.

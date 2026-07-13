@@ -38,6 +38,7 @@ Convenções e contrato da API. Toda mudança de contrato deve atualizar este do
 
 ## 5. Autenticação
 
+- **Login sem `tenantId` (ADR-0016):** o corpo é `{ email, password, organization? }`. O tenant é resolvido automaticamente pelo **e-mail** (identidade global); `organization` (o `slug` da empresa) é opcional, para desambiguar. Vale para `login` e `forgot-password` (web e mobile).
 - `Authorization: Bearer <access_token>` em endpoints protegidos.
 - **Dois fluxos dedicados, sem acoplamento (ADR-0015):**
   - **Web** — `POST /api/v1/auth/{register,login,refresh,logout}`. Refresh token entregue/lido via **cookie HttpOnly**; o corpo **nunca** o expõe. `refresh`/`logout` não recebem corpo (usam o cookie).
@@ -344,3 +345,4 @@ GET  /api/v1/pod/{deliveryId}     # comprovante de uma entrega
 | 2026-07-09 | 0.9 | Engenharia | Proof of Delivery: comprovante (foto/assinatura/GPS/status), integração Delivery+Tracking+Dashboard |
 | 2026-07-12 | 0.10 | Arquitetura | Alinhamento doc↔código: marcado que jobs assíncronos (202, §5.1/§5.2) e M2M por API key **não** existem; otimização/importação são síncronas |
 | 2026-07-13 | 0.11 | Arquitetura | Auth Web (cookie) × Mobile (bearer) por endpoints dedicados `/auth/mobile/*` (ADR-0015); header X-Auth-Mode removido |
+| 2026-07-13 | 0.12 | Arquitetura | Login sem tenantId: `{ email, password, organization? }` — tenant por e-mail/slug (ADR-0016) |

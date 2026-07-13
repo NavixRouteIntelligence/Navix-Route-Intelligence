@@ -13,15 +13,17 @@ export type AccountType = 'driver' | 'company';
 /** Papéis conhecidos usados para adaptar a interface (RBAC). */
 export type KnownRole = 'admin' | 'dispatcher' | 'fleet_manager' | 'driver';
 
-/** Corpo da requisição de login. */
+/**
+ * Corpo da requisição de login. O tenant é resolvido automaticamente pelo
+ * **e-mail** (identidade global) — ver ADR-0016. `organization` (o `slug` da
+ * empresa) é **opcional** e serve para desambiguar/escolher explicitamente a
+ * organização. Não é mais necessário informar o `tenantId` (UUID).
+ */
 export interface LoginRequest {
-  /**
-   * Tenant alvo. Enviado explicitamente nesta fase; pode evoluir para
-   * resolução por subdomínio/host (ver docs/architecture.md §6).
-   */
-  tenantId: string;
   email: string;
   password: string;
+  /** Identificador (slug) da empresa. Opcional — normalmente o e-mail basta. */
+  organization?: string;
 }
 
 /** Criação de conta. Empresa exige `organizationName`; autônomo o deriva do nome. */
@@ -136,10 +138,13 @@ export interface ChangePasswordRequest {
   newPassword: string;
 }
 
-/** Solicitação de recuperação de senha. */
+/**
+ * Solicitação de recuperação de senha. Como no login, o tenant é resolvido pelo
+ * e-mail; `organization` (slug) é opcional para desambiguar (ADR-0016).
+ */
 export interface ForgotPasswordRequest {
-  tenantId: string;
   email: string;
+  organization?: string;
 }
 
 /**

@@ -13,9 +13,9 @@ class AuthApi {
 
   Future<Map<String, dynamic>> login(LoginParams p) async {
     final res = await authDio.post<dynamic>('/auth/mobile/login', data: {
-      'tenantId': p.tenantId,
       'email': p.email,
       'password': p.password,
+      if (p.organization != null) 'organization': p.organization,
     });
     return res.data as Map<String, dynamic>;
   }

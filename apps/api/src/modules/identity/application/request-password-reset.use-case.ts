@@ -18,8 +18,9 @@ const TTL_MINUTES = 30;
 const GENERIC_MESSAGE = 'Se o e-mail existir, enviaremos instruções de recuperação.';
 
 export interface RequestPasswordResetCommand {
-  tenantId: string;
   email: string;
+  /** Slug da empresa — opcional; senão resolve o tenant pelo e-mail (ADR-0016). */
+  organization?: string;
 }
 
 /**
@@ -37,7 +38,11 @@ export class RequestPasswordResetUseCase {
   ) {}
 
   async execute(command: RequestPasswordResetCommand): Promise<ForgotPasswordResponse> {
-    const user = await this.users.findByEmail(command.tenantId, command.email);
+    const email = command.email.trim().toLowerCase();
+    const organization = command.organization?.trim();
+    const user = organization
+      ? await this.users.findByEmailAndOrganization(email, organization)
+      : await this.users.findByEmail(email);
     if (!user) {
       return { message: GENERIC_MESSAGE };
     }
@@ -53,7 +58,7 @@ export class RequestPasswordResetUseCase {
     });
 
     await this.audit.record({
-      tenantId: command.tenantId,
+      tenantId: user.tenantId,
       actorId: user.id,
       action: 'auth.password_reset.requested',
       resource: `user:${user.id}`,

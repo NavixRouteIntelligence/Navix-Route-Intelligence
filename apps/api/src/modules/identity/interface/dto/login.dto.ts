@@ -1,12 +1,11 @@
 import type { LoginRequest } from '@navix/contracts';
-import { IsEmail, IsString, IsUUID, MaxLength, MinLength } from 'class-validator';
+import { IsEmail, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 
-/** Validação da requisição de login (ver docs/api.md §9). */
+/**
+ * Validação do login (ver docs/api.md §5). O tenant é resolvido pelo e-mail
+ * (ou pelo `organization`/slug, opcional) — sem `tenantId` (ADR-0016).
+ */
 export class LoginDto implements LoginRequest {
-  /** Tenant alvo. No futuro pode ser resolvido por subdomínio em vez do body. */
-  @IsUUID()
-  tenantId!: string;
-
   @IsEmail()
   @MaxLength(320)
   email!: string;
@@ -15,4 +14,10 @@ export class LoginDto implements LoginRequest {
   @MinLength(8)
   @MaxLength(128)
   password!: string;
+
+  /** Identificador (slug) da empresa — opcional, para desambiguação. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  organization?: string;
 }
