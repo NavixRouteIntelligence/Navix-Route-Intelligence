@@ -40,6 +40,7 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 | ADR-0014 | Rate limiting com @nestjs/throttler | Aceito | ✅ Throttler global + login/refresh estritos; storage **Redis** (multi-instância) com fallback em memória | 2026-07-06 |
 | ADR-0015 | Autenticação separada: Web (cookie) e Mobile (bearer) por endpoints dedicados | Aceito | ✅ `/auth/*` cookie (web) e `/auth/mobile/*` bearer (mobile); header `X-Auth-Mode` eliminado | 2026-07-13 |
 | ADR-0016 | Login sem `tenantId`: tenant resolvido por e-mail (ou slug da empresa) | Aceito | ✅ `LoginRequest { email, password, organization? }`; e-mail global único + `tenants.slug` | 2026-07-13 |
+| ADR-0017 | Idempotency-Key nas operações críticas (offline) | Aceito | ✅ Interceptor `@Idempotent()` + tabela `idempotency_keys`; aplicado em POD, tracking, import/confirm e otimização | 2026-07-13 |
 
 ---
 
@@ -194,6 +195,15 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 - **Decisão:** O e-mail é a identidade primária e resolve o tenant automaticamente; o `slug` da empresa é uma alternativa opcional para desambiguar. Não se exige mais o `tenantId` no corpo.
 - **Alternativas consideradas:** Resolver por subdomínio/host (adia o problema para infra de DNS; não serve ao mobile); manter `tenantId` (UX ruim); permitir e-mail repetido entre tenants com desambiguação obrigatória (vaza existência de e-mail e complica o cliente).
 - **Consequências:** Login e recuperação de senha ficam com UX padrão de mercado (só e-mail + senha). Assume-se **e-mail globalmente único** — a associação de um mesmo usuário a múltiplos tenants (multi-org) passará a exigir uma tabela de *membership* dedicada quando/se for necessária. **Compatível com a RLS:** a resolução ocorre em `users`/`tenants` (sem RLS, fluxo público pré-tenant); o `tenant_id` continua vindo do JWT para todo o resto.
+
+## ADR-0017 — Idempotency-Key nas operações críticas (offline)
+
+- **Status:** Aceito · **Data:** 2026-07-13
+- **Status da implementação:** ✅ Implementado. Um `IdempotencyInterceptor` global (registrado após o `TenancyModule`, para rodar **dentro** da transação de tenant) atende os endpoints marcados com `@Idempotent()` quando o cliente envia o header `Idempotency-Key`. A resposta da primeira execução é gravada em `idempotency_keys` (escopada por tenant, RLS FORCE) por `(tenant, key, método, rota)`; reenvios com a mesma chave **replicam** a resposta, sem re-executar. Aplicado em: **POD** (`POST /pod`), **Tracking** (`POST /tracking/positions`), **Import** (`POST /imports/:id/confirm`) e **Otimização** (`POST /route-plans` e `/route-plans/mine`).
+- **Contexto:** Sem idempotência, re-sincronizações offline (fila do app do motorista) podiam **duplicar** entregas/planos ou receber `409` no reenvio de um POD já gravado — risco #3 da análise do app Flutter.
+- **Decisão:** Header `Idempotency-Key` opcional, deduplicado por um interceptor transversal. A gravação da chave é **atômica com a operação** (mesma transação): se a operação falha, a chave não é persistida (o reenvio re-executa); se sucede, o reenvio replica. O índice único é a rede de segurança contra corrida — reenvios **sequenciais** (o caso offline) são sempre deduplicados.
+- **Alternativas consideradas:** Idempotência caso a caso em cada use case (repetitivo, fácil de esquecer); dedup só por chave natural (ex.: `uq_pod_delivery`) — resolve POD mas não import/otimização e ainda retorna `409` no reenvio; storage em Redis (volátil — idempotência exige durabilidade).
+- **Consequências:** Reenvios viram operações seguras; base para o *sync* offline confiável. Requer que o cliente **gere e persista** uma chave por operação enfileirada. As chaves acumulam — um job de expiração/limpeza (TTL) fica como follow-up (há índice em `created_at`). Concorrência real com a mesma chave (raro) pode abortar a transação e exigir novo envio (que então replica).
 
 ---
 

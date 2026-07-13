@@ -28,6 +28,7 @@ import { CurrentUser } from '../../../shared/interface/current-user.decorator';
 import { ValidationError } from '../../../shared/kernel/domain-error';
 import { buildCollection } from '../../../shared/kernel/pagination';
 import { JwtAuthGuard } from '../../../shared/security/jwt-auth.guard';
+import { Idempotent } from '../../../shared/idempotency/idempotency.decorator';
 import { Roles } from '../../../shared/security/roles.decorator';
 import { RolesGuard } from '../../../shared/security/roles.guard';
 import { ConfirmImportUseCase } from '../application/confirm-import.use-case';
@@ -92,6 +93,7 @@ export class ImportController {
 
   @Post(':id/confirm')
   @Roles('admin', 'dispatcher', 'driver')
+  @Idempotent()
   @ApiOperation({ summary: 'Confirma a importação: cria entregas e (opcional) otimiza' })
   confirmHandler(
     @CurrentUser() user: AuthenticatedUser,

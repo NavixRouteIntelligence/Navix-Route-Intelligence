@@ -111,7 +111,7 @@ Cada tenant possui uma **DEK** (Data Encryption Key) própria, protegida por uma
 - **CORS** restrito a origens conhecidas.
 - **Security headers** (HSTS, CSP, X-Content-Type-Options, etc.).
 - Proteção contra **CSRF** quando houver cookies de sessão.
-- Idempotência em operações sensíveis; proteção contra replay.
+- Idempotência em operações críticas via `Idempotency-Key` (POD, tracking, import, otimização — ADR-0017), atômica com a operação e escopada por tenant. ✅ *Implementado.*
 - Sem detalhes internos em mensagens de erro (ver [api.md](./api.md)).
 
 ### 7.1 Auditoria e acesso privilegiado
