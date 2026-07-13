@@ -114,6 +114,7 @@ Cada tenant possui uma **DEK** (Data Encryption Key) própria, protegida por uma
 - **Security headers** (HSTS, CSP, X-Content-Type-Options, etc.).
 - Proteção contra **CSRF** quando houver cookies de sessão.
 - Idempotência em operações críticas via `Idempotency-Key` (POD, tracking, import, otimização — ADR-0017), atômica com a operação e escopada por tenant. ✅ *Implementado.*
+- **Mídia do POD em object storage** (ADR-0019): foto/assinatura ficam **fora do Postgres**, o banco guarda só a URL, com chave por tenant (`pod/<tenantId>/…`). O driver `local` serve por **capability URL** não-adivinhável, porém **sem autenticação** — adequado a desenvolvimento; produção usa `s3`/R2/GCS atrás de CDN, idealmente com **URLs assinadas** de vida curta. ✅ *Implementado (assinatura de URL: ⬜ roadmap).*
 - Sem detalhes internos em mensagens de erro (ver [api.md](./api.md)).
 
 ### 7.1 Auditoria e acesso privilegiado

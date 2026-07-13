@@ -1,6 +1,7 @@
 /**
  * Contratos do Proof of Delivery (POD) — comprovante de entrega.
- * Foto e assinatura trafegam como data URLs (produção usaria object storage).
+ * No envio, foto e assinatura trafegam como data URLs; o backend faz o offload
+ * para object storage (ADR-0019) e a view expõe a URL hospedada da mídia.
  */
 
 /** Desfecho da entrega registrado pelo motorista. */
@@ -15,9 +16,9 @@ export interface CreatePodRequest {
   note?: string | null;
   latitude?: number | null;
   longitude?: number | null;
-  /** Data URL da foto (image/*), opcional. */
+  /** Foto (image/*): data URL a enviar, ou URL já hospedada. Opcional. */
   photo?: string | null;
-  /** Data URL da assinatura (image/png), opcional. */
+  /** Assinatura (image/png): data URL a enviar, ou URL já hospedada. Opcional. */
   signature?: string | null;
 }
 

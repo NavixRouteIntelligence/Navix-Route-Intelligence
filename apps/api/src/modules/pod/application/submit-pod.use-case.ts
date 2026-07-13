@@ -4,6 +4,8 @@ import type { CreatePodRequest, ProofOfDeliveryView } from '@navix/contracts';
 import { AUDIT_LOG, type AuditLogPort } from '../../../shared/audit/audit-log.port';
 import { ConflictError, ValidationError } from '../../../shared/kernel/domain-error';
 import { newId } from '../../../shared/kernel/id';
+import { decodeDataUrl, isDataUrl } from '../../../shared/storage/data-url';
+import { STORAGE, type StoragePort } from '../../../shared/storage/storage.port';
 import { outcomeToDeliveryStatus, type ProofOfDelivery } from '../domain/proof-of-delivery';
 import {
   DELIVERY_OUTCOME,
@@ -28,6 +30,7 @@ export class SubmitPodUseCase {
     @Inject(POD_REPOSITORY) private readonly repo: PodRepositoryPort,
     @Inject(DELIVERY_OUTCOME) private readonly delivery: DeliveryOutcomePort,
     @Inject(AUDIT_LOG) private readonly audit: AuditLogPort,
+    @Inject(STORAGE) private readonly storage: StoragePort,
   ) {}
 
   async execute(command: SubmitPodCommand): Promise<ProofOfDeliveryView> {
@@ -44,6 +47,11 @@ export class SubmitPodUseCase {
       throw new ConflictError('Esta entrega já possui um comprovante.');
     }
 
+    // Mídia fora do Postgres: data URLs são enviadas ao storage; salva-se a URL.
+    const podId = newId();
+    const photoUrl = await this.offload(command.tenantId, podId, 'photo', photo);
+    const signatureUrl = await this.offload(command.tenantId, podId, 'signature', signature);
+
     // Aplica o desfecho na entrega (respeita a máquina de estados).
     await this.delivery.markOutcome({
       tenantId: command.tenantId,
@@ -53,7 +61,7 @@ export class SubmitPodUseCase {
     });
 
     const pod: ProofOfDelivery = {
-      id: newId(),
+      id: podId,
       tenantId: command.tenantId,
       deliveryId: command.deliveryId,
       driverId: command.driverId,
@@ -61,8 +69,8 @@ export class SubmitPodUseCase {
       note: command.note ?? null,
       latitude: command.latitude ?? null,
       longitude: command.longitude ?? null,
-      photo: photo ?? null,
-      signature: signature ?? null,
+      photo: photoUrl,
+      signature: signatureUrl,
       recordedAt: new Date(),
     };
     await this.repo.save(pod);
@@ -76,5 +84,30 @@ export class SubmitPodUseCase {
     });
 
     return toPodView(pod);
+  }
+
+  /**
+   * Move uma mídia para o storage e devolve a URL. Compatibilidade: se o valor
+   * já for uma URL (upload direto futuro), passa direto; `null` permanece nulo.
+   */
+  private async offload(
+    tenantId: string,
+    podId: string,
+    field: 'photo' | 'signature',
+    value: string | null | undefined,
+  ): Promise<string | null> {
+    if (!value) return null;
+    if (!isDataUrl(value)) return value;
+    const { buffer, contentType, extension } = decodeDataUrl(value);
+    const { url } = await this.storage.save({
+      scope: 'pod',
+      tenantId,
+      id: podId,
+      field,
+      buffer,
+      contentType,
+      extension,
+    });
+    return url;
   }
 }

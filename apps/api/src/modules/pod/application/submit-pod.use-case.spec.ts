@@ -1,5 +1,6 @@
 import type { AuditLogPort } from '../../../shared/audit/audit-log.port';
 import { ConflictError, ValidationError } from '../../../shared/kernel/domain-error';
+import type { StoragePort } from '../../../shared/storage/storage.port';
 import type { ProofOfDelivery } from '../domain/proof-of-delivery';
 import type { DeliveryOutcomePort, PodRepositoryPort } from '../domain/ports/pod-repository.port';
 import { SubmitPodUseCase } from './submit-pod.use-case';
@@ -17,7 +18,11 @@ function build(existing: ProofOfDelivery | null = null) {
     markOutcome: async (i) => void outcomes.push({ deliveryId: i.deliveryId, status: i.status }),
   };
   const audit: AuditLogPort = { record: async () => undefined };
-  return { uc: new SubmitPodUseCase(repo, delivery, audit), saved, outcomes };
+  const storage: StoragePort = {
+    save: async (input) => ({ url: `https://cdn.test/${input.scope}/${input.id}-${input.field}.${input.extension}` }),
+    delete: async () => undefined,
+  };
+  return { uc: new SubmitPodUseCase(repo, delivery, audit, storage), saved, outcomes };
 }
 
 const base = { tenantId: 't1', driverId: 'u1', deliveryId: '11111111-1111-1111-1111-111111111111' as const };
@@ -29,6 +34,9 @@ describe('SubmitPodUseCase', () => {
     expect(outcomes[0].status).toBe('delivered');
     expect(saved).toHaveLength(1);
     expect(view.status).toBe('delivered');
+    // Mídia foi para o storage: o banco guarda a URL, não a data URL.
+    expect(saved[0].photo).toMatch(/^https:\/\/cdn\.test\/pod\/.*-photo\.jpg$/);
+    expect(view.photo).toBe(saved[0].photo);
   });
 
   it('ausente: aplica desfecho failed', async () => {

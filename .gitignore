@@ -36,3 +36,8 @@ Thumbs.db
 
 # Docker volumes (local)
 docker/volumes/
+
+# Object storage (driver local de desenvolvimento) — apenas a saída em runtime,
+# ancorada na raiz (NÃO o código em src/**/storage/).
+/storage/
+/apps/api/storage/
