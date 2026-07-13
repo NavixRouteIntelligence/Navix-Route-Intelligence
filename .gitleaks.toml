@@ -7,10 +7,15 @@ title = "Navix gitleaks config"
 useDefault = true
 
 [allowlist]
-description = "Arquivos de exemplo, infra local e documentação (sem segredos reais)"
+description = "Arquivos de exemplo, infra local, documentação e testes (fixtures, sem segredos reais)"
 paths = [
   '''\.env\.example$''',
   '''docker/docker-compose\.yml$''',
   '''^docs/''',
   '''package-lock\.json$''',
+  # Testes usam valores fake (ex.: uma Idempotency-Key literal), que disparam o
+  # rule generic-api-key. Fixtures de teste não são segredos reais.
+  '''\.spec\.ts$''',
+  '''\.e2e-spec\.ts$''',
+  '''^apps/api/test/''',
 ]
