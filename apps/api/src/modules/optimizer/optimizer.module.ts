@@ -18,7 +18,7 @@ import { OPTIMIZATION_JOB_REPOSITORY } from './domain/ports/optimization-job-rep
 import { OPTIMIZATION_STRATEGIES } from './domain/ports/route-optimization-strategy.port';
 import { ROUTE_PLAN_REPOSITORY } from './domain/ports/route-plan-repository.port';
 import { HaversineDistanceProvider } from './infrastructure/distance/haversine-distance.provider';
-import { LoggingJobEvents } from './infrastructure/events/logging-job-events';
+import { RealtimeJobEvents } from './infrastructure/events/realtime-job-events';
 import { DeliveryGateway } from './infrastructure/gateways/delivery.gateway';
 import { OptimizationJobOrmEntity } from './infrastructure/persistence/optimization-job.orm-entity';
 import { OptimizationJobRepository } from './infrastructure/persistence/optimization-job.repository';
@@ -56,7 +56,7 @@ import { OptimizerController } from './interface/optimizer.controller';
     { provide: ROUTE_PLAN_REPOSITORY, useClass: RoutePlanRepository },
     { provide: OPTIMIZATION_JOB_REPOSITORY, useClass: OptimizationJobRepository },
     { provide: OPTIMIZATION_JOB_QUEUE, useClass: InProcessOptimizationJobQueue },
-    { provide: JOB_EVENTS, useClass: LoggingJobEvents },
+    { provide: JOB_EVENTS, useClass: RealtimeJobEvents },
     { provide: DELIVERY_GATEWAY, useClass: DeliveryGateway },
     { provide: OPTIMIZER_SERVICE, useClass: OptimizerService },
   ],

@@ -21,7 +21,7 @@
 
 ## 3. Tempo real e PWA
 
-10. **WebSocket/SSE** no lugar do polling do Tracking e do dashboard (o data layer já está isolado para a troca).
+10. ✅ **SSE** no lugar do polling do Tracking (feito — ADR-0018; polling só como fallback). Dashboard e demais telas podem migrar reusando o `RealtimeProvider`.
 11. **PWA offline-first**: precache de rotas/assets, sincronização em background e ícones PNG maskable dedicados (hoje SVG + network-first).
 12. **Notificações push** (web push) para eventos de rota/entrega.
 

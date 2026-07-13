@@ -153,7 +153,9 @@ Contratos de evento são versionados e tratados como parte pública do módulo (
 
 ## 8.2 Motor de otimização (boundary isolável — ADR-0007)
 
-> **Status:** 🟡 **Parcial (avançado).** A otimização é **assíncrona**: o `POST /route-plans` enfileira e responde **`202 Accepted` + `jobId`**; o status vem por `GET /route-plans/jobs/:id` (polling; WebSocket é o próximo passo via `JobEventsPort`). Um processador reusa o solver fora da requisição. A **port de fila** isola o transporte; a implementação atual é **in-process** (não-durável) — a troca por **BullMQ**/worker dedicado é o passo pendente, sem alterar os casos de uso.
+> **Status:** 🟡 **Parcial (avançado).** A otimização é **assíncrona**: o `POST /route-plans` enfileira e responde **`202 Accepted` + `jobId`**; o status vem por `GET /route-plans/jobs/:id` (polling como fallback) **e por SSE em tempo real** — a `JobEventsPort` publica no `RealtimeHub` (ADR-0018). Um processador reusa o solver fora da requisição. A **port de fila** isola o transporte; a implementação atual é **in-process** (não-durável) — a troca por **BullMQ**/worker dedicado é o passo pendente, sem alterar os casos de uso.
+>
+> **Tempo real (ADR-0018):** transporte servidor→cliente por **SSE** (`/realtime/stream`, autenticado por ticket), com um `RealtimeHub` in-process isolado por tenant. Publicam nele o **Tracking** (`tracking.position`) e os **jobs de otimização** (`optimization.job`). O **polling** permanece só como *fallback*; multi-instância → **Redis pub/sub** (roadmap).
 
 O solver de VRP fica atrás da **port `RouteOptimizer`**, é **stateless** e roda de forma **assíncrona via fila**. No MVP executa como worker in-process; o contrato permite extrair para um **microserviço com escala horizontal** (e até outra linguagem/solver) sem reescrever os casos de uso. A API responde `202 Accepted` com um recurso de job (ver [api.md](./api.md)).
 

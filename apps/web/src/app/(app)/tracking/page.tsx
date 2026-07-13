@@ -1,9 +1,11 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Radio, Users } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useState } from 'react';
+
+import { useRealtime, useRealtimeEvent } from '@/lib/realtime/realtime-provider';
 
 import { TrackingAlerts, buildTrackingAlerts } from '@/components/tracking/tracking-alerts';
 import { TrackingDetailDialog } from '@/components/tracking/tracking-detail-dialog';
@@ -30,12 +32,19 @@ const POLL_MS = 8000; // polling; a arquitetura permite trocar por WebSocket/SSE
 export default function TrackingPage() {
   const [live, setLive] = useState(true);
   const [selected, setSelected] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const { connected } = useRealtime();
 
-  // Polling isolado no data layer: trocar por SSE/WS é só mudar esta fonte.
+  // Tempo real (SSE): cada posição publicada atualiza a frota na hora.
+  useRealtimeEvent('tracking.position', () => {
+    if (live) queryClient.invalidateQueries({ queryKey: ['fleet-positions'] });
+  });
+
+  // Polling **apenas como fallback**: só quando o SSE não está conectado (ADR-0018).
   const { data, isLoading, error, dataUpdatedAt } = useQuery({
     queryKey: ['fleet-positions'],
     queryFn: () => trackingApi.fleetLatest(),
-    refetchInterval: live ? POLL_MS : false,
+    refetchInterval: live && !connected ? POLL_MS : false,
   });
 
   // Nomes dos motoristas (junta com as posições, que trazem só o id).

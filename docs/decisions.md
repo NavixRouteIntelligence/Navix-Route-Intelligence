@@ -41,6 +41,7 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 | ADR-0015 | Autenticação separada: Web (cookie) e Mobile (bearer) por endpoints dedicados | Aceito | ✅ `/auth/*` cookie (web) e `/auth/mobile/*` bearer (mobile); header `X-Auth-Mode` eliminado | 2026-07-13 |
 | ADR-0016 | Login sem `tenantId`: tenant resolvido por e-mail (ou slug da empresa) | Aceito | ✅ `LoginRequest { email, password, organization? }`; e-mail global único + `tenants.slug` | 2026-07-13 |
 | ADR-0017 | Idempotency-Key nas operações críticas (offline) | Aceito | ✅ Interceptor `@Idempotent()` + tabela `idempotency_keys`; aplicado em POD, tracking, import/confirm e otimização | 2026-07-13 |
+| ADR-0018 | Transporte em tempo real por SSE (ticket de conexão) | Aceito | ✅ `RealtimeHub` + `/realtime/ticket` + `/realtime/stream`; tracking e jobs publicam; polling só como fallback | 2026-07-13 |
 
 ---
 
@@ -204,6 +205,15 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 - **Decisão:** Header `Idempotency-Key` opcional, deduplicado por um interceptor transversal. A gravação da chave é **atômica com a operação** (mesma transação): se a operação falha, a chave não é persistida (o reenvio re-executa); se sucede, o reenvio replica. O índice único é a rede de segurança contra corrida — reenvios **sequenciais** (o caso offline) são sempre deduplicados.
 - **Alternativas consideradas:** Idempotência caso a caso em cada use case (repetitivo, fácil de esquecer); dedup só por chave natural (ex.: `uq_pod_delivery`) — resolve POD mas não import/otimização e ainda retorna `409` no reenvio; storage em Redis (volátil — idempotência exige durabilidade).
 - **Consequências:** Reenvios viram operações seguras; base para o *sync* offline confiável. Requer que o cliente **gere e persista** uma chave por operação enfileirada. As chaves acumulam — um job de expiração/limpeza (TTL) fica como follow-up (há índice em `created_at`). Concorrência real com a mesma chave (raro) pode abortar a transação e exigir novo envio (que então replica).
+
+## ADR-0018 — Transporte em tempo real por SSE (ticket de conexão)
+
+- **Status:** Aceito · **Data:** 2026-07-13
+- **Status da implementação:** ✅ Implementado. **SSE** (Server-Sent Events) via NestJS `@Sse`, sem dependências novas. Um `RealtimeHub` (pub/sub **in-process**, isolado por tenant) recebe eventos de `tracking.position` (a cada posição do motorista) e `optimization.job` (transições de job — a `JobEventsPort` do ADR-0007 agora publica no hub). Endpoints: `POST /realtime/ticket` (autenticado) emite um **ticket** curto; `GET /realtime/stream?ticket=…` é o stream do tenant (com `ping` de keep-alive). O web tem um `RealtimeProvider` (EventSource + reconexão com backoff) e o Tracking consome os eventos; o **polling permanece apenas como fallback** (só quando o SSE está desconectado).
+- **Contexto:** O tracking (e o status de jobs) dependia de **polling**, ruim para latência/bateria e para escala. Era o risco #5 da análise do app Flutter.
+- **Decisão:** **SSE**, não WebSocket — o transporte necessário é **servidor → cliente** (uma via), o SSE é HTTP puro (sem `socket.io`/deps), reconecta nativamente e é simples de consumir em web e Flutter. Como o `EventSource` do navegador **não envia cabeçalhos**, a conexão é autenticada por um **ticket curto** (obtido com o access token, passado na query) — evita expor o access token em URL/logs.
+- **Alternativas consideradas:** **WebSocket/socket.io** (bidirecional, porém dependência pesada e overkill para push unidirecional); **access token na query do SSE** (vaza token em logs); **long-polling** (o que estamos substituindo).
+- **Consequências:** Tracking em tempo real com fallback resiliente. **Pendências:** o hub e o store de tickets são **in-process** — multi-instância exige **Redis pub/sub** (a conexão Redis já existe) para propagar entre réplicas, sem alterar publicadores nem endpoint; enquanto isso o polling cobre o gap. Bidirecionalidade futura (ex.: comandos ao motorista) exigiria WebSocket.
 
 ---
 

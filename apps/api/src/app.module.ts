@@ -6,6 +6,7 @@ import { CacheModule } from './shared/cache/cache.module';
 import { DatabaseModule } from './database/database.module';
 import { LoggerModule } from './shared/observability/logger.module';
 import { QueueModule } from './shared/queue/queue.module';
+import { RealtimeModule } from './shared/realtime/realtime.module';
 import { RedisModule } from './shared/redis/redis.module';
 import { TenancyModule } from './shared/tenancy/tenancy.module';
 import { IdempotencyModule } from './shared/idempotency/idempotency.module';
@@ -30,6 +31,7 @@ import { UserSettingsModule } from './modules/user-settings/user-settings.module
     AppConfigModule,
     LoggerModule,
     RedisModule,
+    RealtimeModule,
     CacheModule,
     QueueModule,
     DatabaseModule,
