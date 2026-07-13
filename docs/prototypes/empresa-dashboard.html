@@ -1,0 +1,143 @@
+<!doctype html>
+<!--
+  Protótipo de referência — Dashboard Empresa (Navix).
+  Gerado com o modelo Fable a partir do Design System aprovado (docs/design-tokens.md).
+  Uso: referência visual para a implementação em Flutter e Web. Não é código de produção.
+-->
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Navix — Dashboard Empresa (protótipo)</title>
+<style>body{margin:0;background:#0B0B12;padding:16px}</style></head>
+<body>
+<div id="navix-dash">
+<style>
+#navix-dash{--primary:#6D4AFF;--onprimary:#FFFFFF;--accent:#22D3AA;--success:#22C55E;--warning:#F59E0B;--danger:#EF4444;--bg:#0B0B12;--surface:#14141D;--surface2:#1B1B27;--line:#262636;--text:#F3F3F7;--muted:#9AA0B4;
+background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;border-radius:20px;padding:20px;max-width:1000px;margin:0 auto;font-size:14px;line-height:1.45;box-sizing:border-box}
+#navix-dash *,#navix-dash *::before,#navix-dash *::after{box-sizing:border-box}
+#navix-dash .num{font-variant-numeric:tabular-nums}
+#navix-dash .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px}
+#navix-dash .btn{border-radius:12px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid transparent;font-family:inherit}
+#navix-dash .btn-primary{background:var(--primary);color:var(--onprimary)}
+#navix-dash .btn-outline{background:transparent;color:var(--text);border-color:var(--line)}
+#navix-dash .btn-sm{padding:6px 12px;font-size:12px}
+#navix-dash .topbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+#navix-dash .brand{font-size:18px;font-weight:800;display:flex;align-items:center;gap:8px}
+#navix-dash .brand-dot{width:26px;height:26px;border-radius:8px;background:var(--primary);color:#fff;display:grid;place-items:center;font-size:13px}
+#navix-dash .seg{display:flex;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:3px}
+#navix-dash .seg button{border:0;background:transparent;color:var(--muted);border-radius:999px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer}
+#navix-dash .seg button.on{background:var(--primary);color:#fff}
+#navix-dash .search{flex:1;min-width:140px;display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:7px 12px;color:var(--muted)}
+#navix-dash .search input{border:0;background:transparent;color:var(--text);outline:none;width:100%;font-size:13px}
+#navix-dash .icon-btn{width:34px;height:34px;border-radius:12px;background:var(--surface);border:1px solid var(--line);color:var(--text);display:grid;place-items:center;position:relative;font-size:14px}
+#navix-dash .icon-btn .badge{position:absolute;top:-3px;right:-3px;width:15px;height:15px;border-radius:999px;background:var(--danger);color:#fff;font-size:9px;font-weight:700;display:grid;place-items:center}
+#navix-dash .avatar{width:34px;height:34px;border-radius:999px;background:var(--surface2);border:1px solid var(--line);display:grid;place-items:center;font-size:11px;font-weight:700;color:var(--accent)}
+#navix-dash .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px}
+#navix-dash .kpi-top{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12px;font-weight:600;margin-bottom:8px}
+#navix-dash .kpi-ic{width:28px;height:28px;border-radius:9px;background:var(--surface2);display:grid;place-items:center;font-size:14px}
+#navix-dash .kpi-val{font-size:24px;font-weight:800;margin-bottom:6px}
+#navix-dash .chip{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:2px 8px;font-size:11px;font-weight:700}
+#navix-dash .chip.up{color:var(--success);background:rgba(34,197,94,.12)}
+#navix-dash .chip.down{color:var(--danger);background:rgba(239,68,68,.12)}
+#navix-dash .pill{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:3px 10px;font-size:11px;font-weight:700}
+#navix-dash .pill .dot{width:6px;height:6px;border-radius:999px;background:currentColor}
+#navix-dash .pill.ok{color:var(--success);background:rgba(34,197,94,.12)}
+#navix-dash .pill.off{color:var(--muted);background:rgba(154,160,180,.12)}
+#navix-dash .pill.warn{color:var(--warning);background:rgba(245,158,11,.12)}
+#navix-dash .grid{display:grid;grid-template-columns:1.6fr 1fr;gap:12px;margin-bottom:12px}
+#navix-dash .col{display:flex;flex-direction:column;gap:12px}
+#navix-dash .bottom{display:grid;grid-template-columns:1fr 1.6fr;gap:12px}
+#navix-dash .sh{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+#navix-dash .sh h3{margin:0;font-size:14px;font-weight:700;display:flex;align-items:center;gap:7px}
+#navix-dash .legend{display:flex;gap:14px;font-size:11px;color:var(--muted)}
+#navix-dash .legend i{display:inline-block;width:8px;height:8px;border-radius:3px;margin-right:5px}
+#navix-dash .bars{display:flex;align-items:flex-end;gap:10px;height:150px;padding-top:8px}
+#navix-dash .bgrp{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end}
+#navix-dash .bpair{display:flex;gap:4px;align-items:flex-end;width:100%;justify-content:center;flex:1}
+#navix-dash .bar{width:38%;max-width:22px;border-radius:5px 5px 2px 2px}
+#navix-dash .bx{font-size:11px;color:var(--muted)}
+#navix-dash .map{position:relative;height:170px;border-radius:12px;background:var(--surface2);border:1px solid var(--line);overflow:hidden;margin-bottom:12px}
+#navix-dash .map svg{position:absolute;inset:0;width:100%;height:100%}
+#navix-dash .pin{position:absolute;width:12px;height:12px;border-radius:999px;border:2px solid var(--bg)}
+#navix-dash .row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-top:1px solid var(--line)}
+#navix-dash .row:first-of-type{border-top:0}
+#navix-dash .who{display:flex;align-items:center;gap:10px;min-width:0}
+#navix-dash .mini-av{width:30px;height:30px;border-radius:999px;background:var(--surface2);border:1px solid var(--line);display:grid;place-items:center;font-size:11px;font-weight:700;color:var(--primary)}
+#navix-dash .row b{font-size:13px;display:block}#navix-dash .row small{color:var(--muted);font-size:11px}
+#navix-dash .ins{display:flex;gap:10px;padding:9px 0;border-top:1px solid var(--line)}
+#navix-dash .ins:first-of-type{border-top:0}
+#navix-dash .ins .dot{width:8px;height:8px;border-radius:999px;margin-top:5px}
+#navix-dash .ins b{font-size:13px;display:block}#navix-dash .ins small{color:var(--muted);font-size:12px}
+#navix-dash .donut-wrap{display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+#navix-dash .dleg{display:grid;gap:8px;font-size:12px;flex:1;min-width:160px}
+#navix-dash .dleg div{display:flex;align-items:center;gap:8px;justify-content:space-between}
+#navix-dash .dleg span{display:flex;align-items:center;gap:8px;color:var(--muted)}
+#navix-dash .dleg i{width:8px;height:8px;border-radius:3px;display:inline-block}
+#navix-dash .fleet{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+#navix-dash .mini{background:var(--surface2);border:1px solid var(--line);border-radius:12px;padding:12px}
+#navix-dash .mini .v{font-size:20px;font-weight:800}#navix-dash .mini small{color:var(--muted);font-size:11px}
+@media(max-width:760px){#navix-dash .kpis{grid-template-columns:repeat(2,1fr)}#navix-dash .grid,#navix-dash .bottom{grid-template-columns:1fr}}
+</style>
+<div class="topbar">
+  <div class="brand"><span class="brand-dot">◆</span>Navix</div>
+  <div class="seg"><button class="on">Hoje</button><button>Semana</button><button>Mês</button></div>
+  <label class="search">🔎<input placeholder="Buscar rota, motorista, pedido…"></label>
+  <button class="icon-btn">🔔<span class="badge num">3</span></button>
+  <span class="avatar">MC</span>
+  <button class="btn btn-outline btn-sm">⬆ Importar</button>
+  <button class="btn btn-primary btn-sm">⚡ Otimizar rotas</button>
+</div>
+<div class="kpis">
+  <div class="card"><div class="kpi-top"><span class="kpi-ic">📦</span>Entregas</div><div class="kpi-val num">1.284</div><span class="chip up num">▲ 12,4%</span></div>
+  <div class="card"><div class="kpi-top"><span class="kpi-ic">🗺️</span>Rotas otimizadas</div><div class="kpi-val num">86</div><span class="chip up num">▲ 8,1%</span></div>
+  <div class="card"><div class="kpi-top"><span class="kpi-ic">⛽</span>Economia</div><div class="kpi-val num">€ 3.420</div><span class="chip up num">▲ 15,2%</span></div>
+  <div class="card"><div class="kpi-top"><span class="kpi-ic">⭐</span>Score médio</div><div class="kpi-val num">92,3</div><span class="chip up num">▲ 1,8%</span></div>
+  <div class="card"><div class="kpi-top"><span class="kpi-ic">✅</span>Taxa de conclusão</div><div class="kpi-val num">96,7%</div><span class="chip down num">▼ 0,4%</span></div>
+</div>
+<div class="grid">
+  <div class="col">
+    <div class="card"><div class="sh"><h3>📊 Desempenho semanal</h3><div class="legend"><span><i style="background:var(--primary)"></i>Planejado</span><span><i style="background:var(--accent)"></i>Otimizado</span></div></div>
+      <div class="bars">
+        <div class="bgrp"><div class="bpair"><div class="bar" style="height:62%;background:var(--primary)"></div><div class="bar" style="height:48%;background:var(--accent)"></div></div><span class="bx">Seg</span></div>
+        <div class="bgrp"><div class="bpair"><div class="bar" style="height:74%;background:var(--primary)"></div><div class="bar" style="height:55%;background:var(--accent)"></div></div><span class="bx">Ter</span></div>
+        <div class="bgrp"><div class="bpair"><div class="bar" style="height:58%;background:var(--primary)"></div><div class="bar" style="height:44%;background:var(--accent)"></div></div><span class="bx">Qua</span></div>
+        <div class="bgrp"><div class="bpair"><div class="bar" style="height:88%;background:var(--primary)"></div><div class="bar" style="height:63%;background:var(--accent)"></div></div><span class="bx">Qui</span></div>
+        <div class="bgrp"><div class="bpair"><div class="bar" style="height:96%;background:var(--primary)"></div><div class="bar" style="height:70%;background:var(--accent)"></div></div><span class="bx">Sex</span></div>
+        <div class="bgrp"><div class="bpair"><div class="bar" style="height:50%;background:var(--primary)"></div><div class="bar" style="height:38%;background:var(--accent)"></div></div><span class="bx">Sáb</span></div>
+        <div class="bgrp"><div class="bpair"><div class="bar" style="height:30%;background:var(--primary)"></div><div class="bar" style="height:24%;background:var(--accent)"></div></div><span class="bx">Dom</span></div>
+      </div></div>
+    <div class="card"><div class="sh"><h3>📡 Tracking · frota ao vivo</h3><span class="pill ok"><span class="dot"></span>7 em rota</span></div>
+      <div class="map"><svg viewBox="0 0 400 170" preserveAspectRatio="none"><path d="M0 60 L90 55 L180 70 L400 50" stroke="#262636" stroke-width="6" fill="none"/><path d="M120 0 L110 80 L130 170" stroke="#262636" stroke-width="5" fill="none"/><path d="M0 120 L200 130 L400 110" stroke="#262636" stroke-width="6" fill="none"/><path d="M72 118 L96 55 L220 99 L288 45" stroke="#6D4AFF" stroke-width="2" stroke-dasharray="5 4" fill="none"/></svg>
+        <span class="pin" style="background:var(--accent);top:32%;left:24%"></span><span class="pin" style="background:var(--primary);top:58%;left:55%"></span><span class="pin" style="background:var(--warning);top:26%;left:72%"></span></div>
+      <div class="row"><div class="who"><span class="mini-av">CA</span><div><b>Carlos Almeida</b><small>VAN-12 · 14/26 · ETA 17:40</small></div></div><span class="pill ok"><span class="dot"></span>Em rota</span></div>
+      <div class="row"><div class="who"><span class="mini-av">JS</span><div><b>Juliana Santos</b><small>VAN-07 · 9/18 · ETA 18:15</small></div></div><span class="pill ok"><span class="dot"></span>Em rota</span></div>
+      <div class="row"><div class="who"><span class="mini-av">RP</span><div><b>Rafael Pereira</b><small>MOTO-03 · encerrado 16:02</small></div></div><span class="pill off"><span class="dot"></span>Offline</span></div></div>
+  </div>
+  <div class="col">
+    <div class="card"><div class="sh"><h3>🤖 IA Insights</h3></div>
+      <div class="ins"><span class="dot" style="background:var(--accent)"></span><div><b>Janela ociosa detectada</b><small>Consolidar Zona Norte às 14h poupa ~38 km/dia.</small></div></div>
+      <div class="ins"><span class="dot" style="background:var(--warning)"></span><div><b>Risco de atraso na VAN-07</b><small>Trânsito na Marginal: replanejar paradas finais.</small></div></div>
+      <div class="ins"><span class="dot" style="background:var(--success)"></span><div><b>Combustível abaixo da meta</b><small>Consumo médio caiu 6%.</small></div></div></div>
+    <div class="card"><div class="sh"><h3>🧭 Route Optimizer</h3><button class="btn btn-primary btn-sm">⚡ Otimizar</button></div>
+      <div class="row"><div><b>#R-2841 · Zona Sul</b><small>26 paradas</small></div><div style="text-align:right"><b class="num" style="color:var(--accent)">−18% km</b><small class="num">Score 94</small></div></div>
+      <div class="row"><div><b>#R-2840 · Centro</b><small>18 paradas</small></div><div style="text-align:right"><b class="num" style="color:var(--accent)">−12% km</b><small class="num">Score 91</small></div></div></div>
+    <div class="card"><div class="sh"><h3>📥 Import Center</h3><button class="btn btn-outline btn-sm">⬆ Importar</button></div>
+      <div class="row"><div><b>pedidos_10-07.csv</b><small>hoje 08:05</small></div><span class="pill ok"><span class="dot"></span><span class="num">312/312</span></span></div>
+      <div class="row"><div><b>clientes_julho.xlsx</b><small>ontem 17:22</small></div><span class="pill warn"><span class="dot"></span><span class="num">198/204</span></span></div></div>
+  </div>
+</div>
+<div class="bottom">
+  <div class="card"><div class="sh"><h3>🚚 Fleet</h3></div>
+    <div class="fleet">
+      <div class="mini"><div class="v num">12<span style="color:var(--muted);font-size:13px">/15</span></div><small>Veículos ativos</small></div>
+      <div class="mini"><div class="v num">9<span style="color:var(--muted);font-size:13px">/11</span></div><small>Motoristas ativos</small></div>
+    </div></div>
+  <div class="card"><div class="sh"><h3>📦 Delivery · status</h3></div>
+    <div class="donut-wrap">
+      <svg width="130" height="130" viewBox="0 0 42 42"><circle cx="21" cy="21" r="15.9" fill="none" stroke="#262636" stroke-width="5"/><circle cx="21" cy="21" r="15.9" fill="none" stroke="#22C55E" stroke-width="5" stroke-dasharray="68 32" stroke-dashoffset="25"/><circle cx="21" cy="21" r="15.9" fill="none" stroke="#6D4AFF" stroke-width="5" stroke-dasharray="18 82" stroke-dashoffset="57"/><circle cx="21" cy="21" r="15.9" fill="none" stroke="#F59E0B" stroke-width="5" stroke-dasharray="11 89" stroke-dashoffset="75"/><text x="21" y="22" text-anchor="middle" font-size="7" font-weight="800" fill="#F3F3F7">68%</text></svg>
+      <div class="dleg">
+        <div><span><i style="background:var(--success)"></i>Entregue</span><b class="num">873</b></div>
+        <div><span><i style="background:var(--primary)"></i>Em rota</span><b class="num">231</b></div>
+        <div><span><i style="background:var(--warning)"></i>Pendente</span><b class="num">141</b></div>
+        <div><span><i style="background:var(--danger)"></i>Falhou</span><b class="num">39</b></div>
+      </div></div></div>
+</div>
+</div>
+</body></html>

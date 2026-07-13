@@ -29,13 +29,10 @@ async function main(): Promise<void> {
       tenantId = existingTenant[0].id;
     } else {
       tenantId = uuidv7();
-      await ds.query(`INSERT INTO tenants (id, name, plan, region, status) VALUES ($1,$2,$3,$4,$5)`, [
-        tenantId,
-        DEMO.tenantName,
-        'pro',
-        'global',
-        'active',
-      ]);
+      await ds.query(
+        `INSERT INTO tenants (id, name, plan, region, status, slug) VALUES ($1,$2,$3,$4,$5,$6)`,
+        [tenantId, DEMO.tenantName, 'pro', 'global', 'active', 'navix-demo'],
+      );
     }
 
     // Usuário admin

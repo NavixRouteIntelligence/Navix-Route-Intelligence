@@ -1,19 +1,20 @@
 import type { DataSource } from 'typeorm';
 
 import type { AuditLogPort } from '../../../shared/audit/audit-log.port';
-import { ValidationError } from '../../../shared/kernel/domain-error';
+import { ConflictError, ValidationError } from '../../../shared/kernel/domain-error';
 import type { RefreshTokenRepositoryPort } from '../domain/ports/refresh-token-repository.port';
 import type { PasswordHasherPort } from './ports/password-hasher.port';
 import type { TokenServicePort } from './ports/token-service.port';
 import { RegisterUseCase } from './register.use-case';
 
-function build() {
+function build(opts: { emailExists?: boolean } = {}) {
   const queries: { sql: string; params: unknown[] }[] = [];
   const dataSource = {
     transaction: async (fn: (m: unknown) => Promise<unknown>) =>
       fn({
         query: async (sql: string, params: unknown[]) => {
           queries.push({ sql, params });
+          if (sql.includes('SELECT 1 FROM users')) return opts.emailExists ? [{ one: 1 }] : [];
           return [];
         },
       }),
@@ -65,7 +66,22 @@ describe('RegisterUseCase', () => {
 
     const tenantInsert = queries.find((q) => q.sql.includes('INSERT INTO tenants'));
     expect(tenantInsert?.params).toEqual(expect.arrayContaining(['ACME Log', 'company']));
+    // Slug único derivado do nome + sufixo do id (ADR-0016).
+    expect(tenantInsert?.params[3]).toMatch(/^acme-log-[0-9a-f]{6}$/);
     expect(audits).toContain('auth.registered');
+  });
+
+  it('rejeita e-mail já cadastrado (identidade global)', async () => {
+    const { uc } = build({ emailExists: true });
+    await expect(
+      uc.execute({
+        accountType: 'company',
+        name: 'Ana',
+        email: 'dup@acme.com',
+        password: 'supersecret',
+        organizationName: 'ACME Log',
+      }),
+    ).rejects.toBeInstanceOf(ConflictError);
   });
 
   it('motorista autônomo: cria organização pessoal + usuário driver', async () => {

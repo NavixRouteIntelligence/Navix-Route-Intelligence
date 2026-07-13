@@ -6,3 +6,4 @@ export * from './optimizer';
 export * from './import';
 export * from './tracking';
 export * from './pod';
+export * from './settings';

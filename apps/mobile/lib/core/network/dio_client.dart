@@ -23,6 +23,11 @@ class DioClient {
           connectTimeout: const Duration(seconds: 15),
           receiveTimeout: const Duration(seconds: 20),
           contentType: 'application/json',
+          // Autenticação por bearer token nos endpoints dedicados /auth/mobile/*:
+          // o refresh token vem no corpo e é guardado no armazenamento seguro
+          // (secure_session_store). Sem cookies e sem headers especiais — web e
+          // mobile são totalmente desacoplados (ver ADR-0015).
+          //
           // Status padrão: Dio lança DioException em não-2xx; os repositórios
           // mapeiam para Failure (incl. 401, que o AuthInterceptor intercepta).
         ),

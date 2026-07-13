@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Navix — Dashboard do Motorista</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;550;620;650;680;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --primary:#6D4AFF; --primaryFg:#FFFFFF; --accent:#22D3AA;
+    --success:#22C55E; --warning:#F59E0B; --danger:#EF4444;
+    --bg:#0B0B12; --surface:#14141D; --surfaceAlt:#1B1B27; --line:#262636;
+    --text:#F3F3F7; --muted:#9AA0B4;
+    --r-sm:8px; --r-md:12px; --r-lg:16px; --r-pill:999px;
+    --fast:120ms ease-out; --base:200ms cubic-bezier(.33,1,.68,1); --slow:320ms cubic-bezier(.33,1,.68,1);
+  }
+  .phone.light{
+    --bg:#F4F4F8; --surface:#FFFFFF; --surfaceAlt:#F0F0F6; --line:#E2E2EC;
+    --text:#15151E; --muted:#5D6478;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-font-smoothing:antialiased;}
+  html,body{background:#1A1A20;}
+  body{
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+    min-height:100vh;display:flex;align-items:center;justify-content:center;padding:32px 12px;
+  }
+  .phone{
+    width:390px;height:844px;background:var(--bg);border-radius:48px;
+    border:1px solid #33333E;box-shadow:0 24px 80px rgba(0,0,0,.55), inset 0 0 0 3px #08080D;
+    position:relative;overflow:hidden;flex-shrink:0;
+    transition:background var(--slow);
+  }
+  .statusbar{
+    position:absolute;top:0;left:0;right:0;height:44px;z-index:40;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:0 28px;color:var(--text);font-size:13px;font-weight:620;
+    font-variant-numeric:tabular-nums;pointer-events:none;
+  }
+  .notch{
+    position:absolute;top:11px;left:50%;transform:translateX(-50%);
+    width:118px;height:26px;background:#08080D;border-radius:var(--r-pill);z-index:41;
+  }
+  .sb-right{display:flex;align-items:center;gap:6px;}
+  .battery{width:24px;height:12px;border:1.5px solid var(--muted);border-radius:4px;position:relative;}
+  .battery::after{content:'';position:absolute;inset:2px;right:5px;background:var(--success);border-radius:1.5px;}
+  .battery::before{content:'';position:absolute;right:-4px;top:3px;width:2px;height:4px;background:var(--muted);border-radius:1px;}
+
+  .screen{
+    height:100%;overflow-y:auto;overflow-x:hidden;
+    padding:56px 16px 132px 16px;scrollbar-width:none;
+  }
+  .screen::-webkit-scrollbar{display:none;}
+
+  @keyframes fadeUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+  .anim{opacity:0;animation:fadeUp 320ms cubic-bezier(.33,1,.68,1) forwards;}
+
+  .display{font-size:28px;font-weight:700;line-height:1.1;color:var(--text);font-variant-numeric:tabular-nums;}
+  .h1{font-size:22px;font-weight:680;color:var(--text);}
+  .h2{font-size:18px;font-weight:650;color:var(--text);}
+  .h3{font-size:15px;font-weight:620;color:var(--text);}
+  .body{font-size:14px;font-weight:450;color:var(--text);}
+  .label{font-size:12.5px;font-weight:500;color:var(--muted);}
+  .caption{font-size:11.5px;font-weight:500;color:var(--muted);}
+  .tnum{font-variant-numeric:tabular-nums;}
+
+  .card{
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);
+    padding:16px;margin-bottom:12px;transition:background var(--slow),border-color var(--slow);
+  }
+
+  .topbar{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
+  .avatar{
+    width:44px;height:44px;border-radius:var(--r-pill);flex-shrink:0;
+    background:linear-gradient(135deg,var(--primary),#4B2FD6);
+    display:flex;align-items:center;justify-content:center;
+    color:#fff;font-size:16px;font-weight:680;border:1px solid rgba(255,255,255,.14);
+  }
+  .greet{flex:1;min-width:0;}
+  .greet .hello{font-size:18px;font-weight:650;color:var(--text);line-height:1.2;}
+  .chip-status{
+    display:inline-flex;align-items:center;gap:6px;margin-top:4px;
+    background:rgba(34,211,170,.10);border:1px solid rgba(34,211,170,.35);
+    color:var(--accent);font-size:11.5px;font-weight:620;
+    padding:3px 10px 3px 8px;border-radius:var(--r-pill);
+  }
+  .dot-live{width:7px;height:7px;border-radius:50%;background:var(--accent);position:relative;}
+  .dot-live::after{
+    content:'';position:absolute;inset:-4px;border-radius:50%;
+    border:1.5px solid var(--accent);opacity:.7;animation:pulse 1.6s cubic-bezier(.33,1,.68,1) infinite;
+  }
+  @keyframes pulse{0%{transform:scale(.5);opacity:.8;}100%{transform:scale(1.5);opacity:0;}}
+  .btn-icon{
+    width:44px;height:44px;border-radius:var(--r-md);flex-shrink:0;cursor:pointer;
+    background:var(--surface);border:1px solid var(--line);color:var(--muted);
+    display:flex;align-items:center;justify-content:center;transition:all var(--fast);
+  }
+  .btn-icon:active{background:var(--surfaceAlt);transform:scale(.94);}
+
+  .hero{
+    background:linear-gradient(160deg, rgba(109,74,255,.14), rgba(109,74,255,.03) 55%), var(--surface);
+    border:1px solid rgba(109,74,255,.35);padding:20px 16px 18px;
+  }
+  .hero-top{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:4px;}
+  .hero-count{font-size:34px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;line-height:1;}
+  .hero-count .of{font-size:18px;font-weight:620;color:var(--muted);}
+  .pct-chip{font-size:12.5px;font-weight:650;color:var(--accent);font-variant-numeric:tabular-nums;}
+  .progress{
+    height:10px;background:var(--surfaceAlt);border-radius:var(--r-pill);
+    overflow:hidden;margin:14px 0 14px;border:1px solid var(--line);
+  }
+  .progress-fill{
+    height:100%;width:0%;border-radius:var(--r-pill);
+    background:linear-gradient(90deg,var(--primary),#8B6DFF);
+    transition:width 1100ms cubic-bezier(.33,1,.68,1);position:relative;
+  }
+  .progress-fill::after{
+    content:'';position:absolute;right:0;top:0;bottom:0;width:14px;
+    background:rgba(255,255,255,.3);filter:blur(6px);
+  }
+  .hero-stats{display:flex;gap:8px;}
+  .hstat{
+    flex:1;background:var(--surfaceAlt);border:1px solid var(--line);
+    border-radius:var(--r-md);padding:10px 12px;
+  }
+  .hstat .v{font-size:17px;font-weight:680;color:var(--text);font-variant-numeric:tabular-nums;}
+  .hstat .k{font-size:11.5px;font-weight:500;color:var(--muted);margin-top:2px;}
+
+  .next-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+  .sec-title{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:620;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;}
+  .badge{
+    display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:650;
+    padding:4px 10px;border-radius:var(--r-pill);
+  }
+  .badge-danger{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.4);color:#FF8A8A;}
+  .phone.light .badge-danger{color:#D92D2D;}
+  .next-name{font-size:18px;font-weight:650;color:var(--text);margin-bottom:3px;}
+  .next-addr{font-size:14px;font-weight:450;color:var(--muted);line-height:1.45;}
+  .next-meta{display:flex;gap:8px;margin:12px 0 14px;flex-wrap:wrap;}
+  .meta-chip{
+    display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:550;
+    color:var(--text);background:var(--surfaceAlt);border:1px solid var(--line);
+    padding:6px 10px;border-radius:var(--r-sm);font-variant-numeric:tabular-nums;
+  }
+  .meta-chip svg{color:var(--muted);}
+  .quick-actions{display:flex;gap:10px;}
+  .qa-btn{
+    flex:1;height:52px;border-radius:var(--r-md);cursor:pointer;border:1px solid var(--line);
+    background:var(--surfaceAlt);color:var(--text);font-family:inherit;
+    font-size:14px;font-weight:620;display:flex;align-items:center;justify-content:center;gap:8px;
+    transition:all var(--fast);
+  }
+  .qa-btn:active{transform:scale(.97);background:var(--surface);}
+  .qa-btn.nav{background:rgba(109,74,255,.14);border-color:rgba(109,74,255,.5);color:#B9A6FF;}
+  .phone.light .qa-btn.nav{color:var(--primary);}
+
+  .map-card{padding:0;overflow:hidden;position:relative;}
+  .map-live{
+    position:absolute;top:12px;left:12px;z-index:5;
+    display:flex;align-items:center;gap:6px;
+    background:rgba(11,11,18,.78);backdrop-filter:blur(6px);
+    border:1px solid rgba(34,211,170,.4);border-radius:var(--r-pill);
+    padding:5px 12px 5px 9px;color:var(--accent);font-size:11.5px;font-weight:650;
+  }
+  .map-note{
+    position:absolute;bottom:10px;right:12px;z-index:5;
+    font-size:10.5px;font-weight:500;color:var(--muted);
+    background:rgba(11,11,18,.7);padding:3px 8px;border-radius:var(--r-sm);
+  }
+  @keyframes dash{to{stroke-dashoffset:0;}}
+  .route-line{stroke-dasharray:420;stroke-dashoffset:420;animation:dash 1.6s cubic-bezier(.33,1,.68,1) .5s forwards;}
+
+  .track-grid{display:flex;gap:0;}
+  .tstat{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:2px 0;}
+  .tstat + .tstat{border-left:1px solid var(--line);}
+  .tstat .v{font-size:19px;font-weight:680;color:var(--text);font-variant-numeric:tabular-nums;display:flex;align-items:baseline;gap:3px;}
+  .tstat .v small{font-size:11.5px;font-weight:500;color:var(--muted);}
+  .tstat .k{font-size:11.5px;font-weight:500;color:var(--muted);}
+  .gps-bars{display:flex;align-items:flex-end;gap:2.5px;height:19px;padding-top:2px;}
+  .gps-bars i{width:4.5px;border-radius:2px;background:var(--success);}
+  .gps-bars i:nth-child(1){height:6px;}.gps-bars i:nth-child(2){height:10px;}
+  .gps-bars i:nth-child(3){height:14px;}.gps-bars i:nth-child(4){height:18px;background:var(--surfaceAlt);border:1px solid var(--line);}
+
+  .pod{display:flex;align-items:center;gap:14px;}
+  .pod-thumb{
+    width:64px;height:64px;border-radius:var(--r-md);flex-shrink:0;position:relative;
+    background:var(--surfaceAlt);border:1px solid var(--line);
+    display:flex;align-items:center;justify-content:center;color:var(--muted);
+  }
+  .pod-thumb .sig{position:absolute;bottom:-6px;right:-6px;width:28px;height:28px;border-radius:var(--r-sm);
+    background:var(--surface);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;color:var(--accent);}
+  .pod-body{flex:1;min-width:0;}
+  .pod-cta{
+    height:48px;padding:0 18px;border-radius:var(--r-md);border:none;cursor:pointer;flex-shrink:0;
+    background:var(--primary);color:var(--primaryFg);font-family:inherit;font-size:14px;font-weight:650;
+    display:flex;align-items:center;gap:8px;transition:all var(--fast);
+  }
+  .pod-cta:active{transform:scale(.96);filter:brightness(1.12);}
+
+  .kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+  .kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:14px;}
+  .kpi .k{font-size:11.5px;font-weight:550;color:var(--muted);display:flex;align-items:center;gap:6px;margin-bottom:8px;}
+  .kpi .v{font-size:24px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;line-height:1.1;}
+  .kpi .v small{font-size:13px;font-weight:550;color:var(--muted);}
+  .kpi .sub{font-size:11.5px;font-weight:500;color:var(--muted);margin-top:4px;}
+  .up-chip{
+    display:inline-flex;align-items:center;gap:3px;margin-top:8px;
+    font-size:11.5px;font-weight:650;color:var(--success);
+    background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.35);
+    padding:3px 8px;border-radius:var(--r-pill);font-variant-numeric:tabular-nums;
+  }
+  .kpi-score{grid-row:span 2;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;}
+  .donut-wrap{position:relative;width:110px;height:110px;margin:6px 0 4px;}
+  .donut-wrap svg{transform:rotate(-90deg);}
+  .donut-track{fill:none;stroke:var(--surfaceAlt);stroke-width:10;}
+  .donut-val{fill:none;stroke:var(--success);stroke-width:10;stroke-linecap:round;
+    stroke-dasharray:289;stroke-dashoffset:289;transition:stroke-dashoffset 1300ms cubic-bezier(.33,1,.68,1);}
+  .donut-num{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+  .donut-num .n{font-size:28px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;line-height:1;}
+  .donut-num .t{font-size:10.5px;font-weight:550;color:var(--muted);margin-top:2px;}
+  .score-badge{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:650;color:var(--success);
+    background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.35);padding:3px 10px;border-radius:var(--r-pill);}
+
+  .ai-card{border-color:rgba(109,74,255,.35);}
+  .ai-head{display:flex;align-items:center;gap:8px;margin-bottom:12px;}
+  .ai-spark{
+    width:30px;height:30px;border-radius:var(--r-sm);
+    background:rgba(109,74,255,.16);border:1px solid rgba(109,74,255,.4);
+    display:flex;align-items:center;justify-content:center;color:#B9A6FF;
+  }
+  .phone.light .ai-spark{color:var(--primary);}
+  .insight{
+    display:flex;align-items:center;gap:12px;padding:12px;
+    background:var(--surfaceAlt);border:1px solid var(--line);border-radius:var(--r-md);
+  }
+  .insight + .insight{margin-top:8px;}
+  .insight .txt{flex:1;min-width:0;font-size:13.5px;font-weight:450;color:var(--text);line-height:1.4;}
+  .insight .txt b{font-weight:650;}
+  .insight .gain{font-size:11.5px;font-weight:600;margin-top:3px;display:block;}
+  .gain.g-success{color:var(--success);}
+  .gain.g-warning{color:var(--warning);}
+  .mini-cta{
+    height:36px;padding:0 14px;flex-shrink:0;cursor:pointer;border-radius:var(--r-sm);
+    background:rgba(109,74,255,.16);border:1px solid rgba(109,74,255,.5);
+    color:#B9A6FF;font-family:inherit;font-size:12.5px;font-weight:650;transition:all var(--fast);
+  }
+  .phone.light .mini-cta{color:var(--primary);}
+  .mini-cta:active{transform:scale(.95);background:rgba(109,74,255,.3);}
+  .mini-cta.ghost{background:transparent;border-color:var(--line);color:var(--muted);}
+
+  .actionbar{
+    position:absolute;left:0;right:0;bottom:0;z-index:30;
+    padding:12px 16px 26px;
+    background:linear-gradient(to top, var(--bg) 62%, transparent);
+  }
+  .actionbar-inner{
+    background:var(--surface);border:1px solid var(--line);border-radius:20px;
+    padding:10px;box-shadow:0 -8px 32px rgba(0,0,0,.35);
+  }
+  .flow-steps{
+    display:flex;align-items:center;justify-content:center;gap:6px;
+    font-size:10.5px;font-weight:550;color:var(--muted);margin-bottom:9px;
+  }
+  .flow-steps .on{color:var(--accent);font-weight:650;}
+  .flow-steps .sep{opacity:.5;}
+  .ab-row{display:flex;gap:10px;}
+  .btn-secondary{
+    height:56px;padding:0 16px;border-radius:var(--r-lg);cursor:pointer;
+    background:var(--surfaceAlt);border:1px solid var(--line);color:var(--text);
+    font-family:inherit;font-size:14px;font-weight:620;
+    display:flex;align-items:center;gap:8px;transition:all var(--fast);flex-shrink:0;
+  }
+  .btn-secondary:active{transform:scale(.96);}
+  .btn-primary{
+    flex:1;height:56px;border:none;border-radius:var(--r-lg);cursor:pointer;
+    background:var(--primary);color:var(--primaryFg);font-family:inherit;
+    font-size:16px;font-weight:680;display:flex;align-items:center;justify-content:center;gap:10px;
+    transition:transform var(--fast), filter var(--fast);
+    box-shadow:0 4px 20px rgba(109,74,255,.35);
+  }
+  .btn-primary:active{transform:scale(.97);filter:brightness(1.12);}
+
+  .toast{
+    position:absolute;left:16px;right:16px;bottom:128px;z-index:50;
+    display:flex;align-items:center;gap:10px;
+    background:var(--surfaceAlt);border:1px solid rgba(34,197,94,.45);
+    border-radius:var(--r-md);padding:13px 16px;
+    color:var(--text);font-size:14px;font-weight:550;
+    box-shadow:0 8px 28px rgba(0,0,0,.45);
+    opacity:0;transform:translateY(14px);pointer-events:none;
+    transition:opacity 200ms cubic-bezier(.33,1,.68,1), transform 200ms cubic-bezier(.33,1,.68,1);
+  }
+  .toast.show{opacity:1;transform:translateY(0);}
+  .toast .tick{
+    width:24px;height:24px;border-radius:50%;flex-shrink:0;
+    background:rgba(34,197,94,.16);border:1px solid rgba(34,197,94,.5);
+    display:flex;align-items:center;justify-content:center;color:var(--success);
+  }
+</style>
+</head>
+<body>
+
+<div class="phone" id="phone">
+  <div class="notch"></div>
+  <div class="statusbar">
+    <span>09:41</span>
+    <div class="sb-right">
+      <svg width="16" height="12" viewBox="0 0 16 12" fill="currentColor" style="color:var(--muted)"><path d="M1 8.5h2V11H1zM4.5 6.5h2V11h-2zM8 4h2v7H8zM11.5 1.5h2V11h-2z"/></svg>
+      <div class="battery"></div>
+    </div>
+  </div>
+
+  <div class="screen">
+
+    <div class="topbar anim" style="animation-delay:40ms">
+      <div class="avatar">CA</div>
+      <div class="greet">
+        <div class="hello">Olá, Carlos</div>
+        <span class="chip-status"><span class="dot-live"></span>Em rota</span>
+      </div>
+      <button class="btn-icon" id="themeBtn" aria-label="Alternar tema">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg>
+      </button>
+    </div>
+
+    <div class="card hero anim" style="animation-delay:90ms">
+      <div class="sec-title" style="margin-bottom:10px">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="6" cy="19" r="2.5"/><circle cx="18" cy="5" r="2.5"/><path d="M8.5 19H15a3.5 3.5 0 0 0 0-7H9a3.5 3.5 0 0 1 0-7h6.5"/></svg>
+        Minha rota
+      </div>
+      <div class="hero-top">
+        <div class="hero-count">Entrega 4 <span class="of">de 12</span></div>
+        <span class="pct-chip tnum">33%</span>
+      </div>
+      <div class="progress"><div class="progress-fill" id="routeProgress"></div></div>
+      <div class="hero-stats">
+        <div class="hstat"><div class="v">18,4 km</div><div class="k">restantes</div></div>
+        <div class="hstat"><div class="v">14:35</div><div class="k">fim previsto</div></div>
+        <div class="hstat"><div class="v">8 <small style="font-size:12px;color:var(--muted);font-weight:500">paradas</small></div><div class="k">à frente</div></div>
+      </div>
+    </div>
+
+    <div class="card anim" style="animation-delay:140ms">
+      <div class="next-head">
+        <div class="sec-title">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
+          Próxima entrega
+        </div>
+        <span class="badge badge-danger">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/></svg>
+          Urgente
+        </span>
+      </div>
+      <div class="next-name">Mercado São Jorge</div>
+      <div class="next-addr">Rua Augusta, 1240 — Consolação, São Paulo</div>
+      <div class="next-meta">
+        <span class="meta-chip">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+          10:00 – 10:30
+        </span>
+        <span class="meta-chip">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 21 3l-8 18-2.5-7.5L3 11z"/></svg>
+          2,1 km · ~7 min
+        </span>
+      </div>
+      <div class="quick-actions">
+        <button class="qa-btn">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.7A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.13.96.36 1.9.7 2.8a2 2 0 0 1-.45 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.45c.9.34 1.84.57 2.8.7A2 2 0 0 1 22 16.9z"/></svg>
+          Ligar
+        </button>
+        <button class="qa-btn nav">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 21 3l-8 18-2.5-7.5L3 11z"/></svg>
+          Navegar
+        </button>
+      </div>
+    </div>
+
+    <div class="card map-card anim" style="animation-delay:190ms">
+      <span class="map-live"><span class="dot-live"></span>ao vivo</span>
+      <span class="map-note">mapa ilustrativo</span>
+      <svg viewBox="0 0 358 190" width="100%" style="display:block" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Mapa ilustrativo da rota">
+        <rect width="358" height="190" fill="#10101A"/>
+        <g fill="#15151F">
+          <rect x="12" y="14" width="72" height="52" rx="4"/><rect x="98" y="14" width="96" height="52" rx="4"/>
+          <rect x="208" y="14" width="60" height="52" rx="4"/><rect x="282" y="14" width="64" height="52" rx="4"/>
+          <rect x="12" y="80" width="72" height="44" rx="4"/><rect x="98" y="80" width="96" height="44" rx="4"/>
+          <rect x="208" y="80" width="138" height="44" rx="4"/>
+          <rect x="12" y="138" width="182" height="40" rx="4"/><rect x="208" y="138" width="138" height="40" rx="4"/>
+        </g>
+        <g stroke="#262636" stroke-width="2">
+          <line x1="0" y1="73" x2="358" y2="73"/><line x1="0" y1="131" x2="358" y2="131"/>
+          <line x1="91" y1="0" x2="91" y2="190"/><line x1="201" y1="0" x2="201" y2="190"/><line x1="275" y1="0" x2="275" y2="73"/>
+        </g>
+        <rect x="284" y="82" width="60" height="40" rx="4" fill="rgba(34,197,94,.09)" stroke="rgba(34,197,94,.25)" stroke-width="1"/>
+        <path d="M30 168 L91 168 L91 131" fill="none" stroke="#3A3A4E" stroke-width="4" stroke-linecap="round" stroke-dasharray="1 8"/>
+        <path class="route-line" d="M91 131 L201 131 L201 73 L275 73 L275 40 L316 40" fill="none" stroke="#6D4AFF" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="91" cy="131" r="8" fill="none" stroke="#6D4AFF" opacity=".6"><animate attributeName="r" values="8;20" dur="1.8s" repeatCount="indefinite"/><animate attributeName="opacity" values=".7;0" dur="1.8s" repeatCount="indefinite"/></circle>
+        <circle cx="91" cy="131" r="7" fill="#6D4AFF" stroke="#F3F3F7" stroke-width="2.5"/>
+        <g transform="translate(316,40)">
+          <path d="M0 4 C-9 4 -12 -3 -12 -8 A12 12 0 1 1 12 -8 C12 -3 9 4 0 4 Z" fill="#22D3AA" transform="translate(0,-6)"/>
+          <circle cx="0" cy="-14" r="4.5" fill="#0B0B12"/>
+        </g>
+        <circle cx="201" cy="131" r="4" fill="#14141D" stroke="#6D4AFF" stroke-width="2"/>
+        <circle cx="275" cy="73" r="4" fill="#14141D" stroke="#6D4AFF" stroke-width="2"/>
+      </svg>
+    </div>
+
+    <div class="card anim" style="animation-delay:240ms;padding:14px 12px">
+      <div class="track-grid">
+        <div class="tstat">
+          <div class="v">42 <small>km/h</small></div>
+          <div class="k">velocidade</div>
+        </div>
+        <div class="tstat">
+          <div class="v">há 12s</div>
+          <div class="k">última posição</div>
+        </div>
+        <div class="tstat">
+          <div class="gps-bars"><i></i><i></i><i></i><i></i></div>
+          <div class="k">GPS forte</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card anim" style="animation-delay:290ms">
+      <div class="sec-title" style="margin-bottom:12px">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+        Comprovante de entrega
+      </div>
+      <div class="pod">
+        <div class="pod-thumb">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          <span class="sig">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 17c3-6 5-8 6-6s-1 6 1 6 3-4 5-4 1 4 6 4"/></svg>
+          </span>
+        </div>
+        <div class="pod-body">
+          <div class="h3">Foto + assinatura</div>
+          <div class="caption tnum" style="margin-top:3px">3 comprovantes hoje</div>
+        </div>
+        <button class="pod-cta" onclick="showToast()">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          Registrar
+        </button>
+      </div>
+    </div>
+
+    <div class="sec-title anim" style="animation-delay:330ms;margin:16px 2px 10px">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V10M12 20V4M20 20v-7"/></svg>
+      Meu dia
+    </div>
+    <div class="kpi-grid anim" style="animation-delay:360ms">
+      <div class="kpi kpi-score" style="grid-column:2;grid-row:1 / span 2">
+        <div class="k" style="justify-content:center">Score de eficiência</div>
+        <div class="donut-wrap">
+          <svg width="110" height="110" viewBox="0 0 110 110">
+            <circle class="donut-track" cx="55" cy="55" r="46"/>
+            <circle class="donut-val" id="donut" cx="55" cy="55" r="46"/>
+          </svg>
+          <div class="donut-num"><span class="n" id="scoreNum">0</span><span class="t">de 100</span></div>
+        </div>
+        <span class="score-badge">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+          Alto
+        </span>
+      </div>
+      <div class="kpi" style="grid-column:1;grid-row:1">
+        <div class="k">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v3M5.6 5.6l2.1 2.1M3 12h3M12 21a8 8 0 1 1 8-8"/><path d="M12 13l4-3"/></svg>
+          Economia do dia
+        </div>
+        <div class="v">9,2 <small>km</small></div>
+        <div class="sub">≈ R$ 11 em combustível</div>
+        <span class="up-chip">▲ 12% vs. rota não otimizada</span>
+      </div>
+      <div class="kpi" style="grid-column:1;grid-row:2">
+        <div class="k">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+          Tempo restante
+        </div>
+        <div class="v">3h 40<small>min</small></div>
+        <div class="sub">jornada termina ~14:35</div>
+      </div>
+    </div>
+
+    <div class="card ai-card anim" style="animation-delay:410ms">
+      <div class="ai-head">
+        <span class="ai-spark">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.9 5.6L20 9.5l-5.4 2.4L12 18l-2.6-6.1L4 9.5l6.1-1.9L12 2z"/><path d="M19 15l.9 2.6 2.6.9-2.6.9L19 22l-.9-2.6-2.6-.9 2.6-.9L19 15z" opacity=".7"/></svg>
+        </span>
+        <div>
+          <div class="h3">IA Insights</div>
+          <div class="caption">sugestões para a sua rota agora</div>
+        </div>
+      </div>
+      <div class="insight">
+        <div class="txt">Reordene as <b>2 próximas paradas</b><span class="gain g-success">economiza ~8 min</span></div>
+        <button class="mini-cta" onclick="showToast('Rota reordenada')">Aplicar</button>
+      </div>
+      <div class="insight">
+        <div class="txt">Trânsito intenso na <b>Av. Paulista</b><span class="gain g-success">desvio sugerido: −6 min</span></div>
+        <button class="mini-cta" onclick="showToast('Desvio aplicado')">Aplicar</button>
+      </div>
+      <div class="insight">
+        <div class="txt">Janela do <b>cliente #7</b> fecha em breve<span class="gain g-warning">restam 20 min — priorize</span></div>
+        <button class="mini-cta ghost">Ver</button>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="toast" id="toast">
+    <span class="tick">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+    </span>
+    <span id="toastMsg">Entrega registrada</span>
+  </div>
+
+  <div class="actionbar">
+    <div class="actionbar-inner">
+      <div class="flow-steps">
+        <span>Iniciar rota</span><span class="sep">›</span>
+        <span class="on">● Em rota</span><span class="sep">›</span>
+        <span>Finalizar</span>
+      </div>
+      <div class="ab-row">
+        <button class="btn-secondary">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 5v14M15 5v14"/></svg>
+          Pausar
+        </button>
+        <button class="btn-primary" onclick="showToast()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          Registrar entrega
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  requestAnimationFrame(function(){
+    setTimeout(function(){ document.getElementById('routeProgress').style.width = '33%'; }, 350);
+  });
+
+  var SCORE = 86, CIRC = 2 * Math.PI * 46;
+  var donut = document.getElementById('donut'), scoreNum = document.getElementById('scoreNum');
+  donut.style.strokeDasharray = CIRC;
+  donut.style.strokeDashoffset = CIRC;
+  setTimeout(function(){
+    donut.style.strokeDashoffset = CIRC * (1 - SCORE / 100);
+    var t0 = performance.now(), DUR = 1300;
+    (function tick(now){
+      var p = Math.min((now - t0) / DUR, 1);
+      var e = 1 - Math.pow(1 - p, 3);
+      scoreNum.textContent = Math.round(SCORE * e);
+      if (p < 1) requestAnimationFrame(tick);
+    })(t0);
+  }, 700);
+
+  var toastTimer;
+  function showToast(msg){
+    var t = document.getElementById('toast');
+    document.getElementById('toastMsg').textContent = msg || 'Entrega registrada';
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ t.classList.remove('show'); }, 2400);
+  }
+  setTimeout(function(){ showToast(); }, 2200);
+
+  document.getElementById('themeBtn').addEventListener('click', function(){
+    document.getElementById('phone').classList.toggle('light');
+  });
+</script>
+</body>
+</html>

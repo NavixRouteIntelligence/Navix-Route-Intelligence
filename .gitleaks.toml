@@ -1,0 +1,16 @@
+# Configuração do gitleaks para o secret scan do CI (ver .github/workflows/ci.yml).
+# Estende as regras padrão do gitleaks e permite arquivos que contêm apenas
+# placeholders de desenvolvimento / documentação — nunca segredos reais.
+title = "Navix gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Arquivos de exemplo, infra local e documentação (sem segredos reais)"
+paths = [
+  '''\.env\.example$''',
+  '''docker/docker-compose\.yml$''',
+  '''^docs/''',
+  '''package-lock\.json$''',
+]

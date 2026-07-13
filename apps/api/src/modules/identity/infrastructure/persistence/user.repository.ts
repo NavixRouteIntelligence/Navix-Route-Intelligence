@@ -14,8 +14,32 @@ export class UserRepository implements UserRepositoryPort {
     private readonly repo: Repository<UserOrmEntity>,
   ) {}
 
-  async findByEmail(tenantId: string, email: string): Promise<User | null> {
-    const row = await this.repo.findOne({ where: { tenantId, email } });
+  async findByEmail(email: string): Promise<User | null> {
+    const row = await this.repo
+      .createQueryBuilder('u')
+      .where('LOWER(u.email) = LOWER(:email)', { email })
+      .getOne();
+    return row ? this.toDomain(row) : null;
+  }
+
+  async findByEmailAndOrganization(
+    email: string,
+    organizationSlug: string,
+  ): Promise<User | null> {
+    // Resolve o tenant pelo slug (tabela `tenants` sem RLS, acessível pré-tenant),
+    // depois busca o usuário por e-mail dentro desse tenant.
+    const tenants = (await this.repo.query(
+      `SELECT id FROM tenants WHERE LOWER(slug) = LOWER($1) LIMIT 1`,
+      [organizationSlug],
+    )) as Array<{ id: string }>;
+    const tenantId = tenants[0]?.id;
+    if (!tenantId) return null;
+
+    const row = await this.repo
+      .createQueryBuilder('u')
+      .where('u.tenantId = :tenantId', { tenantId })
+      .andWhere('LOWER(u.email) = LOWER(:email)', { email })
+      .getOne();
     return row ? this.toDomain(row) : null;
   }
 

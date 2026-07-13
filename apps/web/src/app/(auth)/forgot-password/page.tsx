@@ -10,10 +10,7 @@ import { Label } from '@/components/ui/label';
 import { authApi } from '@/lib/api/auth';
 import { ApiError } from '@/lib/api/client';
 
-const DEMO_TENANT = '019f335f-a2ae-7dd9-bcda-d458fe138c98';
-
 export default function ForgotPasswordPage() {
-  const [tenantId, setTenantId] = useState(DEMO_TENANT);
   const [email, setEmail] = useState('');
   const [resetToken, setResetToken] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -27,7 +24,7 @@ export default function ForgotPasswordPage() {
     setError(null);
     setLoading(true);
     try {
-      const res = await authApi.forgotPassword({ tenantId, email });
+      const res = await authApi.forgotPassword({ email });
       setMessage(res.message);
       // Em dev, o backend retorna o token para concluir o fluxo sem e-mail.
       if (res.resetToken) setResetToken(res.resetToken);
@@ -76,10 +73,6 @@ export default function ForgotPasswordPage() {
       </CardHeader>
       <CardContent className="space-y-5">
         <form onSubmit={requestReset} className="grid gap-4">
-          <div className="grid gap-1.5">
-            <Label>Tenant ID</Label>
-            <Input value={tenantId} onChange={(e) => setTenantId(e.target.value)} />
-          </div>
           <div className="grid gap-1.5">
             <Label>E-mail</Label>
             <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />

@@ -1,8 +1,10 @@
 # API — Navix Route Intelligence
 
-> **Status:** Em revisão · **Versão:** 0.2 · **Atualizado:** 2026-07-05
+> **Status:** Em revisão · **Versão:** 0.10 · **Atualizado:** 2026-07-12
 
 Convenções e contrato da API. Toda mudança de contrato deve atualizar este documento no mesmo PR.
+
+> **⚠️ Estado da implementação.** A maioria dos endpoints abaixo já existe (auth, fleet, deliveries, imports, route-plans, tracking, pod, settings). **Exceções importantes:** as **operações assíncronas com `202` + recurso de job** (§5.1, §5.2) e o endpoint `GET /jobs/{jobId}` **não existem** — otimização e importação são hoje **síncronas** (respondem `201`/`200` com o resultado). A **autenticação M2M por API key** (§5) também é roadmap. Itens não implementados estão marcados com ⬜.
 
 ## 1. Princípios
 
@@ -36,13 +38,19 @@ Convenções e contrato da API. Toda mudança de contrato deve atualizar este do
 
 ## 5. Autenticação
 
+- **Login sem `tenantId` (ADR-0016):** o corpo é `{ email, password, organization? }`. O tenant é resolvido automaticamente pelo **e-mail** (identidade global); `organization` (o `slug` da empresa) é opcional, para desambiguar. Vale para `login` e `forgot-password` (web e mobile).
 - `Authorization: Bearer <access_token>` em endpoints protegidos.
-- Fluxo de refresh: `POST /api/v1/auth/refresh` com o refresh token.
+- **Dois fluxos dedicados, sem acoplamento (ADR-0015):**
+  - **Web** — `POST /api/v1/auth/{register,login,refresh,logout}`. Refresh token entregue/lido via **cookie HttpOnly**; o corpo **nunca** o expõe. `refresh`/`logout` não recebem corpo (usam o cookie).
+  - **Mobile** — `POST /api/v1/auth/mobile/{register,login,refresh,logout}`. Modelo **bearer**: `login`/`register` retornam `tokens` **com `refreshToken`** no corpo; `refresh`/`logout` recebem `{ "refreshToken": "..." }` no corpo. Sem cookie e **sem header de modo** (o antigo `X-Auth-Mode` foi eliminado).
+- Endpoints de conta (`/auth/me`, `change-password`, `forgot/reset-password`) são **compartilhados** (dependem do access token).
 - Detalhes de tokens em [security.md](./security.md).
 
-- Integrações máquina-a-máquina usam **API key** (`X-Api-Key`) ou OAuth2 client credentials, com escopo mínimo (ver [security.md](./security.md)).
+- ⬜ *Planejado:* integrações máquina-a-máquina usarão **API key** (`X-Api-Key`) ou OAuth2 client credentials, com escopo mínimo (ver [security.md](./security.md)). *Ainda não implementado — hoje só há o fluxo JWT.*
 
 ## 5.1 Operações assíncronas (jobs)
+
+> **Status:** ⬜ **Planejado (Fase 2).** Não implementado. **Hoje a otimização é síncrona:** `POST /api/v1/route-plans` (e `POST /api/v1/route-plans/mine` para o motorista) respondem **`201 Created`** com o Route Plan pronto (ver §14). Não há recurso de job nem `GET /jobs/{jobId}`. O modelo abaixo é o alvo para quando a fila (BullMQ) existir.
 
 Operações pesadas (otimização de rotas, importação em massa) **não** são síncronas. O servidor responde **`202 Accepted`** com um recurso de **job**; o cliente acompanha por *polling* ou webhook.
 
@@ -55,6 +63,8 @@ GET  /api/v1/jobs/{jobId}                    -> 200 { "status": "queued|running|
 - Falhas retornam `status: failed` com erro padronizado (ver §7).
 
 ## 5.2 Importação em massa
+
+> **Status:** 🟡 **Parcial.** O Import Center **existe e é síncrono**: `POST /api/v1/imports/preview` (upload + validação por linha) e `POST /api/v1/imports/confirm` (cria as entregas), além do histórico em `GET /api/v1/imports`. **Não há** o `deliveries:bulk` assíncrono com `202`/job descrito abaixo — isso é roadmap.
 
 Operadores logísticos importam grandes volumes de entregas. Endpoint assíncrono com validação por linha:
 
@@ -148,10 +158,18 @@ Formato padronizado (nunca vaza detalhes internos):
 ## 14. Exemplos de endpoints (preliminar)
 
 ```
+# Web (cookie HttpOnly)
 POST   /api/v1/auth/register
 POST   /api/v1/auth/login
 POST   /api/v1/auth/refresh
 POST   /api/v1/auth/logout
+# Mobile (bearer token no corpo) — ADR-0015
+POST   /api/v1/auth/mobile/register
+POST   /api/v1/auth/mobile/login
+POST   /api/v1/auth/mobile/refresh
+POST   /api/v1/auth/mobile/logout
+# Conta (compartilhado, via access token)
+GET    /api/v1/auth/me
 
 GET    /api/v1/deliveries
 POST   /api/v1/deliveries
@@ -325,3 +343,6 @@ GET  /api/v1/pod/{deliveryId}     # comprovante de uma entrega
 | 2026-07-08 | 0.7 | Engenharia | Tracking (MVP): posições do motorista, visão de frota (empresa), driver_positions (TimescaleDB-ready), mapa em tempo real |
 | 2026-07-08 | 0.8 | Engenharia | Otimização IA para Motorista Autônomo: POST /route-plans/mine (aditivo), painel de rentabilidade, integração com tracking |
 | 2026-07-09 | 0.9 | Engenharia | Proof of Delivery: comprovante (foto/assinatura/GPS/status), integração Delivery+Tracking+Dashboard |
+| 2026-07-12 | 0.10 | Arquitetura | Alinhamento doc↔código: marcado que jobs assíncronos (202, §5.1/§5.2) e M2M por API key **não** existem; otimização/importação são síncronas |
+| 2026-07-13 | 0.11 | Arquitetura | Auth Web (cookie) × Mobile (bearer) por endpoints dedicados `/auth/mobile/*` (ADR-0015); header X-Auth-Mode removido |
+| 2026-07-13 | 0.12 | Arquitetura | Login sem tenantId: `{ email, password, organization? }` — tenant por e-mail/slug (ADR-0016) |

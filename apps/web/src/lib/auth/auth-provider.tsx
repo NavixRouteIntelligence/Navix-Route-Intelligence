@@ -15,8 +15,6 @@ import {
 import { authApi } from '@/lib/api/auth';
 import { setTokenBridge } from '@/lib/api/client';
 
-const REFRESH_KEY = 'navix.refresh';
-
 type Status = 'loading' | 'authenticated' | 'guest';
 
 interface AuthContextValue {
@@ -29,31 +27,34 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+/**
+ * Autenticação padrão de produção:
+ *  - **Access token** apenas em memória (`useRef`) — nunca em localStorage.
+ *  - **Refresh token** em **cookie HttpOnly** gerido pelo backend — inacessível
+ *    ao JavaScript. O cliente nunca lê nem guarda o refresh token.
+ *  - A sessão é restaurada no boot chamando `/auth/refresh` (o cookie, se
+ *    existir, autentica a rotação e devolve um novo access token).
+ */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [status, setStatus] = useState<Status>('loading');
   const [user, setUser] = useState<AuthenticatedUser | null>(null);
   const accessToken = useRef<string | null>(null);
-  const refreshToken = useRef<string | null>(null);
 
   const clearSession = useCallback(() => {
     accessToken.current = null;
-    refreshToken.current = null;
-    if (typeof window !== 'undefined') window.localStorage.removeItem(REFRESH_KEY);
     setUser(null);
     setStatus('guest');
   }, []);
 
   const doRefresh = useCallback(async (): Promise<string | null> => {
-    const token = refreshToken.current;
-    if (!token) return null;
     try {
-      const tokens = await authApi.refresh(token);
+      // Sem argumento: o refresh token vai no cookie HttpOnly (credentials:include).
+      const tokens = await authApi.refresh();
       accessToken.current = tokens.accessToken;
-      refreshToken.current = tokens.refreshToken;
-      if (typeof window !== 'undefined') window.localStorage.setItem(REFRESH_KEY, tokens.refreshToken);
       return tokens.accessToken;
     } catch {
+      accessToken.current = null;
       return null;
     }
   }, []);
@@ -68,14 +69,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => setTokenBridge(null);
   }, [doRefresh, clearSession]);
 
-  // Restaura sessão a partir do refresh token persistido.
+  // Restaura a sessão a partir do cookie HttpOnly de refresh (se houver).
   useEffect(() => {
-    const stored = typeof window !== 'undefined' ? window.localStorage.getItem(REFRESH_KEY) : null;
-    if (!stored) {
-      setStatus('guest');
-      return;
-    }
-    refreshToken.current = stored;
     void (async () => {
       const token = await doRefresh();
       if (!token) {
@@ -92,13 +87,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })();
   }, [doRefresh, clearSession]);
 
-  const applySession = useCallback((result: { user: AuthenticatedUser; tokens: { accessToken: string; refreshToken: string } }) => {
-    accessToken.current = result.tokens.accessToken;
-    refreshToken.current = result.tokens.refreshToken;
-    if (typeof window !== 'undefined') window.localStorage.setItem(REFRESH_KEY, result.tokens.refreshToken);
-    setUser(result.user);
-    setStatus('authenticated');
-  }, []);
+  const applySession = useCallback(
+    (result: { user: AuthenticatedUser; tokens: { accessToken: string } }) => {
+      accessToken.current = result.tokens.accessToken;
+      setUser(result.user);
+      setStatus('authenticated');
+    },
+    [],
+  );
 
   const login = useCallback(
     async (payload: LoginRequest) => {
@@ -118,13 +114,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const logout = useCallback(async () => {
-    const token = refreshToken.current;
-    if (token) {
-      try {
-        await authApi.logout(token);
-      } catch {
-        // ignora — limpamos a sessão de qualquer forma
-      }
+    try {
+      // Revoga o refresh token (via cookie) e limpa o cookie no servidor.
+      await authApi.logout();
+    } catch {
+      // ignora — limpamos a sessão de qualquer forma
     }
     clearSession();
     router.push('/login');

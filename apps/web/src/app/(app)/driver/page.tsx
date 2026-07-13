@@ -19,6 +19,7 @@ import dynamic from 'next/dynamic';
 import { useState } from 'react';
 
 import { AiRouteOptimizer } from '@/components/driver/ai-route-optimizer';
+import { DriverInsights } from '@/components/driver/driver-insights';
 import { PodCapture } from '@/components/pod/pod-capture';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -183,6 +184,9 @@ export default function DriverDashboardPage() {
         <StatCard label="Score de eficiência" value={plan ? `${plan.score}/100` : '—'} icon={Gauge} tone="primary" loading={plans.isLoading} />
         <StatCard label="Concluídas hoje" value={completed} icon={CheckCircle2} tone="success" loading={plans.isLoading} />
       </div>
+
+      {/* IA Insights — paridade com o app do motorista */}
+      <DriverInsights plan={plan} remaining={remaining} trackingActive={share.sharing || trackStatus !== 'offline'} />
 
       {plans.isLoading ? (
         <Skeleton className="h-[420px] w-full" />

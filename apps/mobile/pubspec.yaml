@@ -33,6 +33,20 @@ dependencies:
   # Biometria (Face ID / Touch ID)
   local_auth: ^2.3.0
 
+  # Seleção de arquivos (Import Center: CSV/Excel/PDF)
+  file_picker: ^8.1.2
+
+  # Geolocalização (rastreamento do motorista)
+  geolocator: ^13.0.1
+
+  # Comprovante de entrega (POD): foto e assinatura
+  image_picker: ^1.1.2
+  signature: ^5.5.0
+
+  # POD offline: fila local + detecção de conectividade
+  path_provider: ^2.1.4
+  connectivity_plus: ^6.0.5
+
   # i18n (versão fixada pelo flutter_localizations do SDK)
   intl: ^0.20.2
 

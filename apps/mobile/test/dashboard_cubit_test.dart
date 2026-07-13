@@ -16,9 +16,14 @@ void main() {
     routesTotal: 2,
     avgScore: 80,
     savedKm: 10,
-    perfSeries: [1, 2, 3],
+    avgSavingsPct: 12,
+    perfPlanned: [3, 2, 1],
+    perfOptimized: [2, 1.5, 0.8],
     pod: PodCounts(total: 3, delivered: 2, absent: 1),
-    fleet: [],
+    positions: [],
+    fleet: FleetCounts(activeVehicles: 2, totalVehicles: 3, activeDrivers: 2, totalDrivers: 4),
+    recentPlans: [PlanSummary(id: 'plan-1234', score: 80, savingsPct: 12, stops: 8)],
+    recentImports: [ImportSummaryItem(filename: 'rotas.csv', valid: 40, total: 42, status: 'committed')],
   );
 
   setUp(() => repo = _MockRepo());

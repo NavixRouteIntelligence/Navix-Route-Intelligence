@@ -13,15 +13,17 @@ export type AccountType = 'driver' | 'company';
 /** Papéis conhecidos usados para adaptar a interface (RBAC). */
 export type KnownRole = 'admin' | 'dispatcher' | 'fleet_manager' | 'driver';
 
-/** Corpo da requisição de login. */
+/**
+ * Corpo da requisição de login. O tenant é resolvido automaticamente pelo
+ * **e-mail** (identidade global) — ver ADR-0016. `organization` (o `slug` da
+ * empresa) é **opcional** e serve para desambiguar/escolher explicitamente a
+ * organização. Não é mais necessário informar o `tenantId` (UUID).
+ */
 export interface LoginRequest {
-  /**
-   * Tenant alvo. Enviado explicitamente nesta fase; pode evoluir para
-   * resolução por subdomínio/host (ver docs/architecture.md §6).
-   */
-  tenantId: string;
   email: string;
   password: string;
+  /** Identificador (slug) da empresa. Opcional — normalmente o e-mail basta. */
+  organization?: string;
 }
 
 /** Criação de conta. Empresa exige `organizationName`; autônomo o deriva do nome. */
@@ -35,26 +37,6 @@ export interface RegisterRequest {
   organizationName?: string;
 }
 
-/** Resposta do cadastro: já autentica (mesmo shape do login) + tipo de conta. */
-export interface RegisterResponse {
-  user: AuthenticatedUser;
-  tokens: AuthTokens;
-  accountType: AccountType;
-}
-
-/** Corpo da requisição de refresh de token. */
-export interface RefreshRequest {
-  refreshToken: string;
-}
-
-/** Par de tokens retornado no login/refresh. */
-export interface AuthTokens {
-  accessToken: string;
-  /** Segundos até a expiração do access token. */
-  expiresIn: number;
-  refreshToken: string;
-}
-
 /** Representação pública e segura do usuário autenticado (sem dados sensíveis). */
 export interface AuthenticatedUser {
   id: string;
@@ -63,10 +45,83 @@ export interface AuthenticatedUser {
   roles: string[];
 }
 
-/** Resposta do login: usuário + tokens. */
-export interface LoginResponse {
+// ===========================================================================
+// Tokens
+// ===========================================================================
+
+/** Access token entregue no corpo da resposta (comum a web e mobile). */
+export interface AccessToken {
+  accessToken: string;
+  /** Segundos até a expiração do access token. */
+  expiresIn: number;
+}
+
+/**
+ * Conjunto completo de tokens — inclui o **refresh token no corpo**. É a resposta
+ * dos endpoints **mobile** (`/auth/mobile/*`), que operam em modo *bearer* e
+ * guardam o refresh token em armazenamento seguro do dispositivo.
+ */
+export interface SessionTokens extends AccessToken {
+  refreshToken: string;
+}
+
+// ===========================================================================
+// Camada de aplicação (client-agnostic) — SEMPRE contém o refresh token.
+// Cada controller mapeia este resultado para o contrato do seu cliente.
+// ===========================================================================
+
+/** Resultado de autenticação da aplicação (login/refresh). */
+export interface AuthResult {
   user: AuthenticatedUser;
-  tokens: AuthTokens;
+  tokens: SessionTokens;
+}
+
+/** Resultado de cadastro da aplicação (login + tipo de conta). */
+export interface AuthResultWithAccount extends AuthResult {
+  accountType: AccountType;
+}
+
+// ===========================================================================
+// WEB — autenticação por COOKIE HttpOnly. O corpo NUNCA traz o refresh token
+// (ele vai no cookie `Set-Cookie`, inacessível a JavaScript). Rotas: /auth/*.
+// ===========================================================================
+
+/** Resposta de login web: usuário + apenas o access token no corpo. */
+export interface WebAuthResponse {
+  user: AuthenticatedUser;
+  tokens: AccessToken;
+}
+
+/** Resposta de cadastro web (+ tipo de conta). */
+export interface WebRegisterResponse extends WebAuthResponse {
+  accountType: AccountType;
+}
+
+// ===========================================================================
+// MOBILE — autenticação por BEARER TOKEN. Rotas dedicadas: /auth/mobile/*.
+// O refresh token trafega no corpo (request e response); não há cookie nem
+// dependência de header algum (ex.: o antigo `X-Auth-Mode`). Ver ADR-0015.
+// ===========================================================================
+
+/** Resposta de login mobile: usuário + tokens completos (com refresh token). */
+export interface MobileAuthResponse {
+  user: AuthenticatedUser;
+  tokens: SessionTokens;
+}
+
+/** Resposta de cadastro mobile (+ tipo de conta). */
+export interface MobileRegisterResponse extends MobileAuthResponse {
+  accountType: AccountType;
+}
+
+/** Corpo do refresh mobile: o refresh token é **obrigatório**. */
+export interface MobileRefreshRequest {
+  refreshToken: string;
+}
+
+/** Corpo do logout mobile: revoga o refresh token apresentado. */
+export interface MobileLogoutRequest {
+  refreshToken: string;
 }
 
 /** Claims mínimas carregadas no access token (payload do JWT). */
@@ -83,10 +138,13 @@ export interface ChangePasswordRequest {
   newPassword: string;
 }
 
-/** Solicitação de recuperação de senha. */
+/**
+ * Solicitação de recuperação de senha. Como no login, o tenant é resolvido pelo
+ * e-mail; `organization` (slug) é opcional para desambiguar (ADR-0016).
+ */
 export interface ForgotPasswordRequest {
-  tenantId: string;
   email: string;
+  organization?: string;
 }
 
 /**
@@ -102,4 +160,35 @@ export interface ForgotPasswordResponse {
 export interface ResetPasswordRequest {
   token: string;
   newPassword: string;
+}
+
+/**
+ * Perfil do usuário (dados de identificação exibíveis). Distinto de
+ * `AuthenticatedUser` (identidade/segurança) — ver docs/modules/settings.md §3.1.
+ */
+export interface UserProfile {
+  /** Nome de exibição. */
+  displayName: string;
+  /** Telefone em formato E.164 (ex.: +5511999998888) ou nulo. */
+  phone: string | null;
+  /** Cargo/função (rótulo livre) ou nulo. */
+  jobTitle: string | null;
+  /** Fuso horário IANA (ex.: America/Sao_Paulo). */
+  timeZone: string;
+  /** Avatar como data URL (image/*) ou nulo. */
+  avatarUrl: string | null;
+}
+
+/** Atualização parcial do perfil. `null` limpa o campo; ausência preserva. */
+export interface UpdateProfileRequest {
+  displayName?: string;
+  phone?: string | null;
+  jobTitle?: string | null;
+  timeZone?: string;
+}
+
+/** Define o avatar do usuário (data URL de imagem). */
+export interface UpdateAvatarRequest {
+  /** Data URL `data:image/...;base64,...`. */
+  avatar: string;
 }

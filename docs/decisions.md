@@ -1,41 +1,52 @@
 # Registro de decisões (ADRs) — Navix Route Intelligence
 
-> **Status:** Em revisão · **Versão:** 0.2 · **Atualizado:** 2026-07-05
+> **Status:** Em revisão · **Versão:** 0.4 · **Atualizado:** 2026-07-12
 
 Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnica significativa (arquitetura, stack, segurança, dados, processo) deve ser registrada aqui, de forma imutável. Decisões não se apagam: quando mudam, cria-se um novo ADR que **supera** (supersedes) o anterior.
+
+> **Duas dimensões distintas.** O **Status** reflete a maturidade da decisão *e* do seu enforcement no código; a coluna **Status da implementação** descreve, de forma objetiva, o que já existe no repositório hoje. Uma decisão pode estar tecnicamente aprovada mas ainda **não construída** — nesse caso o Status é `Planejado` (nada implementado) ou `Parcial` (parte implementada), **nunca `Aceito`**. `Aceito` fica reservado para decisões cujo escopo essencial já está implementado e ativo.
 
 ## Como registrar um ADR
 
 1. Copie o [template](#template) para o fim da lista.
 2. Numere sequencialmente (`ADR-0001`, `ADR-0002`, …).
-3. Defina o status: `Proposto` · `Aceito` · `Rejeitado` · `Substituído` · `Depreciado`.
-4. Abra no mesmo PR da mudança que a decisão afeta.
+3. Defina o status: `Proposto` · `Planejado` · `Parcial` · `Aceito` · `Rejeitado` · `Substituído` · `Depreciado`.
+   - `Planejado` — decisão registrada, **ainda não implementada** (roadmap).
+   - `Parcial` — **parte** da decisão implementada; o restante é roadmap (detalhar na implementação).
+   - `Aceito` — escopo essencial **implementado e ativo** no código.
+4. Preencha também o **Status da implementação** (o que existe hoje, com precisão).
+5. Abra no mesmo PR da mudança que a decisão afeta.
+
+**Legenda do Status da implementação:** ✅ Implementado · 🟡 Parcial · ⬜ Planejado.
 
 ## Índice
 
-| ID | Título | Status | Data |
-|----|--------|--------|------|
-| ADR-0000 | Adoção do processo de ADR | Aceito | 2026-07-05 |
-| ADR-0001 | Stack de backend: NestJS + TypeScript | Aceito | 2026-07-05 |
-| ADR-0002 | Persistência: PostgreSQL + PostGIS e Redis | Aceito | 2026-07-05 |
-| ADR-0003 | Estratégia de multi-tenancy inicial | Aceito | 2026-07-05 |
-| ADR-0004 | Autenticação com JWT + Refresh Token | Aceito | 2026-07-05 |
-| ADR-0005 | ORM: TypeORM (compatível com RLS) | Aceito | 2026-07-05 |
-| ADR-0006 | Transactional Outbox para eventos de domínio | Aceito | 2026-07-05 |
-| ADR-0007 | Motor de otimização como serviço isolável (port) | Aceito | 2026-07-05 |
-| ADR-0008 | Chaves primárias UUIDv7 (ordenáveis) | Aceito | 2026-07-05 |
-| ADR-0009 | Telemetria de posições em série temporal | Aceito | 2026-07-05 |
-| ADR-0010 | Envelope encryption com chave por tenant | Aceito | 2026-07-05 |
-| ADR-0011 | CQRS leve com read models para relatórios | Aceito | 2026-07-05 |
-| ADR-0012 | RLS forçada + interceptor de tenant por transação | Aceito | 2026-07-06 |
-| ADR-0013 | Access token JWT RS256 com key ring e rotação | Aceito | 2026-07-06 |
-| ADR-0014 | Rate limiting com @nestjs/throttler | Aceito | 2026-07-06 |
+| ID | Título | Status | Status da implementação | Data |
+|----|--------|--------|-------------------------|------|
+| ADR-0000 | Adoção do processo de ADR | Aceito | ✅ Em uso (este arquivo) | 2026-07-05 |
+| ADR-0001 | Stack de backend: NestJS + TypeScript | Aceito | ✅ Implementado | 2026-07-05 |
+| ADR-0002 | Persistência: PostgreSQL + PostGIS e Redis | Parcial | 🟡 Postgres+PostGIS em uso; Redis ativo no rate limiting; cache/filas com abstração pronta (ainda não consumida) | 2026-07-05 |
+| ADR-0003 | Estratégia de multi-tenancy inicial | Aceito | ✅ Implementado (enforcement no ADR-0012) | 2026-07-05 |
+| ADR-0004 | Autenticação com JWT + Refresh Token | Aceito | ✅ Núcleo implementado; blacklist Redis e MFA/M2M pendentes | 2026-07-05 |
+| ADR-0005 | ORM: TypeORM (compatível com RLS) | Aceito | ✅ Implementado | 2026-07-05 |
+| ADR-0006 | Transactional Outbox para eventos de domínio | Parcial | 🟡 Só a tabela `outbox`; sem producer/relay/consumer | 2026-07-05 |
+| ADR-0007 | Motor de otimização como serviço isolável (port) | Parcial | 🟡 Port + estratégia isoladas; execução **síncrona**, sem fila | 2026-07-05 |
+| ADR-0008 | Chaves primárias UUIDv7 (ordenáveis) | Aceito | ✅ Implementado (`newId()` via `uuid` v7) | 2026-07-05 |
+| ADR-0009 | Telemetria de posições em série temporal | Parcial | 🟡 Tabela `driver_positions` pronta; TimescaleDB **não** habilitado | 2026-07-05 |
+| ADR-0010 | Envelope encryption com chave por tenant | Planejado | ⬜ Não implementado; PII em texto puro; `ENCRYPTION_KEK` sem uso | 2026-07-05 |
+| ADR-0011 | CQRS leve com read models para relatórios | Planejado | ⬜ Não implementado; dashboards leem o OLTP direto | 2026-07-05 |
+| ADR-0012 | RLS forçada + interceptor de tenant por transação | Aceito | ✅ Implementado (FORCE + role `navix_app` + interceptor) | 2026-07-06 |
+| ADR-0013 | Access token JWT RS256 com key ring e rotação | Aceito | ✅ Implementado | 2026-07-06 |
+| ADR-0014 | Rate limiting com @nestjs/throttler | Aceito | ✅ Throttler global + login/refresh estritos; storage **Redis** (multi-instância) com fallback em memória | 2026-07-06 |
+| ADR-0015 | Autenticação separada: Web (cookie) e Mobile (bearer) por endpoints dedicados | Aceito | ✅ `/auth/*` cookie (web) e `/auth/mobile/*` bearer (mobile); header `X-Auth-Mode` eliminado | 2026-07-13 |
+| ADR-0016 | Login sem `tenantId`: tenant resolvido por e-mail (ou slug da empresa) | Aceito | ✅ `LoginRequest { email, password, organization? }`; e-mail global único + `tenants.slug` | 2026-07-13 |
 
 ---
 
 ## ADR-0000 — Adoção do processo de ADR
 
 - **Status:** Aceito · **Data:** 2026-07-05
+- **Status da implementação:** ✅ Processo em uso — este arquivo mantém os ADRs versionados junto ao código.
 - **Contexto:** Precisamos registrar decisões técnicas de forma rastreável e durável.
 - **Decisão:** Adotar ADRs neste arquivo, imutáveis e versionados junto ao código.
 - **Consequências:** Histórico claro de "por que" cada escolha foi feita; leve overhead por decisão.
@@ -43,6 +54,7 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 ## ADR-0001 — Stack de backend: NestJS + TypeScript
 
 - **Status:** Aceito · **Data:** 2026-07-05
+- **Status da implementação:** ✅ Implementado — API em NestJS 10 + TypeScript `strict`, com módulos em Clean Architecture.
 - **Contexto:** Precisamos de um framework que favoreça modularidade, DI e Clean Architecture/DDD.
 - **Decisão:** Node.js + **NestJS** com **TypeScript** em modo strict.
 - **Alternativas consideradas:** Express/Fastify puro (mais leve, porém mais boilerplate estrutural).
@@ -50,7 +62,8 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 
 ## ADR-0002 — Persistência: PostgreSQL + PostGIS e Redis
 
-- **Status:** Aceito · **Data:** 2026-07-05
+- **Status:** Parcial · **Data:** 2026-07-05
+- **Status da implementação:** 🟡 Parcial. **PostgreSQL 16 + PostGIS** em uso: extensão criada no init do container e coluna `location geography(Point,4326)` gerada em `deliveries`. **Redis 7** agora tem uma conexão compartilhada resiliente (`shared/redis`, `REDIS_CLIENT`) e **já é usado no rate limiting** (ADR-0014). As abstrações de **cache** (`CachePort`/`RedisCache`) e de **fila** (`QueuePort`/`RedisQueue`) estão prontas e registradas, mas **ainda não são consumidas** por nenhum módulo (infraestrutura preparada, sem alterar comportamento). Blacklist de tokens e a fila definitiva (BullMQ) seguem como roadmap.
 - **Contexto:** O domínio é fortemente geoespacial e exige cache/filas de baixa latência.
 - **Decisão:** **PostgreSQL 16 + PostGIS** como fonte de verdade; **Redis 7** para cache, filas, sessões e rate limiting.
 - **Alternativas consideradas:** Postgres sem PostGIS + cálculo externo; bancos NoSQL geoespaciais.
@@ -59,6 +72,7 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 ## ADR-0003 — Estratégia de multi-tenancy inicial
 
 - **Status:** Aceito · **Data:** 2026-07-05
+- **Status da implementação:** ✅ Implementado. Todas as tabelas de negócio têm `tenant_id` + RLS; o enforcement completo (FORCE + role de runtime + interceptor) está descrito e implementado no **ADR-0012**.
 - **Contexto:** Produto SaaS multi-tenant global; isolamento de dados é crítico.
 - **Decisão:** Banco único com coluna `tenant_id` + **Row-Level Security (RLS)**, reforçado por filtro na aplicação.
 - **Alternativas consideradas:** Schema-por-tenant; database-por-tenant (mais isolamento, mais custo operacional).
@@ -67,6 +81,7 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 ## ADR-0004 — Autenticação com JWT + Refresh Token
 
 - **Status:** Aceito · **Data:** 2026-07-05
+- **Status da implementação:** ✅ Núcleo implementado. Access token JWT (RS256 — ver ADR-0013) + refresh token opaco, **hasheado** e **rotacionado** a cada uso, com **detecção de reuso** que revoga a família inteira (`refresh-token.use-case.ts`) e logout que revoga o token. **Pendências (roadmap):** blacklist de tokens no Redis, MFA para contas administrativas e autenticação M2M (OAuth2/API keys — a tabela `api_keys` existe, mas não há fluxo de autenticação por API key).
 - **Contexto:** APIs stateless multi-tenant precisam de autenticação segura e escalável.
 - **Decisão:** **JWT** de curta duração + **Refresh Token** rotacionado e revogável (hash no banco), com detecção de reuso.
 - **Alternativas consideradas:** Sessões server-side puras; tokens opacos com introspecção.
@@ -75,6 +90,7 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 ## ADR-0005 — ORM: TypeORM (compatível com RLS)
 
 - **Status:** Aceito · **Data:** 2026-07-05
+- **Status da implementação:** ✅ Implementado — TypeORM com migrações versionadas, `DataSource` direto para DDL e repositórios "transaction-aware" que participam da transação de tenant (RLS).
 - **Contexto:** A estratégia de multi-tenancy (ADR-0003) depende de definir `SET app.current_tenant` por transação e de RLS. Precisávamos resolver a decisão de ORM que estava em aberto.
 - **Decisão:** Adotar **TypeORM**, que permite controle transacional explícito, execução de SQL bruto e definição de variáveis de sessão por conexão — requisitos para RLS confiável e para consultas geoespaciais (PostGIS).
 - **Alternativas consideradas:** **Prisma** (DX excelente, porém suporte histórico limitado a variáveis de sessão/RLS e a tipos PostGIS); **Drizzle** (leve, mas ecossistema menos maduro para este caso).
@@ -82,7 +98,8 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 
 ## ADR-0006 — Transactional Outbox para eventos de domínio
 
-- **Status:** Aceito · **Data:** 2026-07-05
+- **Status:** Parcial · **Data:** 2026-07-05
+- **Status da implementação:** 🟡 Parcial — **apenas a tabela `outbox`** foi criada (migração `InitPhase0`, com índice de não-publicados). **Não há** gravação de eventos na transação dos agregados, **nem relay**, **nem consumidores** — nenhum evento de domínio é emitido ou publicado hoje. Efetivamente ainda no roadmap; a base de schema já está pronta.
 - **Contexto:** Publicar eventos (ex.: `RoutePlanned`) e gravar estado no banco em operações separadas cria *dual-write* — risco de perder eventos ou emitir eventos de transações que falharam.
 - **Decisão:** Usar o padrão **Transactional Outbox**: o evento é gravado na mesma transação do agregado, e um *relay* assíncrono publica na fila (Redis/BullMQ hoje, broker dedicado no futuro). Consumidores são **idempotentes**.
 - **Alternativas consideradas:** Publicação direta pós-commit (sujeita a perda); 2PC/XA (complexo e pouco escalável).
@@ -90,7 +107,8 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 
 ## ADR-0007 — Motor de otimização como serviço isolável (port)
 
-- **Status:** Aceito · **Data:** 2026-07-05
+- **Status:** Parcial · **Data:** 2026-07-05
+- **Status da implementação:** 🟡 Parcial. A **port** (`RouteOptimizationStrategy`/`DistanceProvider`) e a estratégia **nearest-neighbor + 2-opt** stateless estão implementadas e isoladas atrás de interfaces, e o Optimizer só acessa o Delivery por um gateway anti-corrupção — logo, a **extração futura está preservada**. Porém a execução é **síncrona e in-process** (o endpoint responde `201` com o plano pronto), **sem BullMQ/fila e sem o `202 Accepted` + recurso de job** previstos. A parte assíncrona é roadmap (Fase 2).
 - **Contexto:** A resolução do VRP é CPU-intensiva, tem perfil de escala diferente da API e pode exigir linguagem/solver especializados. Embutir a lógica no request bloquearia o processo e dificultaria a extração futura.
 - **Decisão:** Definir o otimizador atrás de uma **port** (`RouteOptimizer`) desde o início, executado de forma **assíncrona via fila** e **stateless**. Começa in-process/worker no MVP, mas com contrato que permite extrair para microserviço com escala horizontal sem reescrita.
 - **Alternativas consideradas:** Solver acoplado ao caso de uso (mais simples, porém difícil de escalar/extrair).
@@ -99,6 +117,7 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 ## ADR-0008 — Chaves primárias UUIDv7 (ordenáveis)
 
 - **Status:** Aceito · **Data:** 2026-07-05
+- **Status da implementação:** ✅ Implementado — `shared/kernel/id.ts` (`newId()`) gera UUIDv7 via `uuid`; todas as PKs são geradas na aplicação.
 - **Contexto:** UUIDv4 é aleatório e, em escala de milhões de linhas, fragmenta índices B-tree e degrada inserção/locality.
 - **Decisão:** Usar **UUIDv7** (ordenável por tempo) como PK padrão. Mantém a vantagem de não-enumerável, com *locality* de índice próxima a um inteiro sequencial.
 - **Alternativas consideradas:** UUIDv4 (fragmentação); BIGSERIAL (enumerável, ruim para multi-tenant exposto); ULID (equivalente, porém UUIDv7 é padrão e nativo em ferramentas).
@@ -106,7 +125,8 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 
 ## ADR-0009 — Telemetria de posições em série temporal
 
-- **Status:** Aceito · **Data:** 2026-07-05
+- **Status:** Parcial · **Data:** 2026-07-05
+- **Status da implementação:** 🟡 Parcial. A tabela `driver_positions` existe (RLS + FORCE, índice `(tenant_id, driver_id, recorded_at DESC)`, grants ao role de runtime) e está **preparada** para virar hypertable, mas a extensão **TimescaleDB não está habilitada** — segue como tabela Postgres comum. Compressão, *retention* e *downsampling* são roadmap (Fase 2). Observação: a tabela real chama-se `driver_positions` (o esquema histórico em [database.md](./database.md) referia `vehicle_positions`).
 - **Contexto:** `vehicle_positions` é o maior volume do sistema (milhões de pontos/dia em escala) e tem perfil de escrita e retenção distinto do OLTP transacional.
 - **Decisão:** Armazenar posições em store de **série temporal** — **TimescaleDB** (extensão do próprio Postgres) com *hypertables*, compressão e *retention/downsampling* — separado das tabelas transacionais.
 - **Alternativas consideradas:** Tabela Postgres comum particionada (funciona, mas sem compressão/downsampling nativos); store dedicado externo (mais peças operacionais no MVP).
@@ -114,7 +134,8 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 
 ## ADR-0010 — Envelope encryption com chave por tenant
 
-- **Status:** Aceito · **Data:** 2026-07-05
+- **Status:** Planejado · **Data:** 2026-07-05
+- **Status da implementação:** ⬜ **Não implementado.** A variável `ENCRYPTION_KEK` é validada no `env.schema`, mas **não há nenhum uso de criptografia de campo** no código (sem AES-256-GCM, sem DEK por tenant, sem KMS, sem crypto-shredding). Dados de PII (telefone, nome, endereço completo, foto/assinatura de comprovante) estão **em texto puro** no banco. Enquanto este ADR não for implementado, a documentação **não deve** presumir cifragem em repouso.
 - **Contexto:** SaaS global com PII exige isolamento criptográfico forte e suporte a residência de dados e a "direito ao esquecimento".
 - **Decisão:** **Envelope encryption**: cada tenant tem uma **DEK** (Data Encryption Key) própria, protegida por uma **KEK** no KMS. Dados sensíveis são cifrados com AES-256-GCM usando a DEK do tenant. *Crypto-shredding* (destruir a DEK) permite exclusão lógica irreversível.
 - **Alternativas consideradas:** Chave única global (raio de exposição maior, sem crypto-shredding por tenant).
@@ -122,7 +143,8 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 
 ## ADR-0011 — CQRS leve com read models para relatórios
 
-- **Status:** Aceito · **Data:** 2026-07-05
+- **Status:** Planejado · **Data:** 2026-07-05
+- **Status da implementação:** ⬜ **Não implementado.** Não há read models, tabelas de leitura materializadas nem réplicas de leitura; dashboards e listagens consultam o OLTP diretamente. Depende do outbox (ADR-0006), também pendente.
 - **Contexto:** Dashboards e relatórios de eficiência (KPIs de [vision.md](./vision.md)) fazem agregações pesadas que competem com o OLTP e não escalam para milhares de tenants.
 - **Decisão:** **CQRS leve**: manter escrita normalizada e projetar **read models** (materializações/tabelas de leitura, alimentadas por eventos do outbox) para consultas analíticas, servidas por **réplicas de leitura**.
 - **Alternativas consideradas:** Consultar direto o OLTP (não escala); data warehouse completo (over-engineering para o estágio atual).
@@ -131,6 +153,7 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 ## ADR-0012 — RLS forçada + interceptor de tenant por transação
 
 - **Status:** Aceito · **Data:** 2026-07-06
+- **Status da implementação:** ✅ Implementado. `FORCE ROW LEVEL SECURITY` + política `tenant_isolation` (com `WITH CHECK`) em **todas** as tabelas de negócio (fleet, delivery, route_plans, imports, tracking, pod, user_settings, user_profiles); a aplicação conecta como o role não-superusuário `navix_app` (`CreateAppRole`); e o `TenantTransactionInterceptor` abre transação por request autenticado com `set_config('app.current_tenant', …, true)`. Coberto pelo e2e `test/tenant-isolation.e2e-spec.ts`.
 - **Contexto:** A RLS existia (ENABLE) mas o app conectava como owner das tabelas, que contorna RLS — o isolamento era só de aplicação (ADR-0003 pendente de enforcement).
 - **Decisão:** Três partes: (1) RLS + `FORCE` nas tabelas de **negócio** (vehicles, drivers, deliveries, route_plans); (2) a aplicação conecta com um **role de runtime não-superusuário** (`navix_app`) — **essencial**, pois superusuários/owners IGNORAM a RLS mesmo com FORCE (migrações/seed continuam com o owner); (3) um `TenantTransactionInterceptor` abre uma transação por request autenticado e faz `set_config('app.current_tenant', <tenant>, true)`; os repositórios resolvem o EntityManager da transação, então toda query passa pela RLS. As tabelas de **auth** (users, refresh_tokens) ficam **sem RLS** (login/refresh consultam usuários antes de haver tenant) — isolamento no nível de aplicação.
 - **Alternativas consideradas:** Só FORCE conectando como owner (FALHA — o owner era superusuário e ignorava a RLS; corrigido com o role de runtime). Enforcement só na aplicação (não protege contra bugs de código).
@@ -139,6 +162,7 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 ## ADR-0013 — Access token JWT RS256 com key ring e rotação
 
 - **Status:** Aceito · **Data:** 2026-07-06
+- **Status da implementação:** ✅ Implementado. `JwtTokenService` assina com **RS256** e `kid` no cabeçalho; a verificação seleciona a chave pública pelo `kid` via `KeyRing` (implementação local `LocalKeyRing`, com par efêmero gerado no boot em dev e chave pública anterior para rotação). Migração para KMS/HSM fica contida atrás da port.
 - **Contexto:** O access token usava HS256 (segredo simétrico), inadequado para produção e para futura verificação por terceiros.
 - **Decisão:** Migrar para **RS256** (assimétrico). Assinatura com chave privada e `kid` no cabeçalho; verificação seleciona a chave pública pelo `kid` (permite **rotação** sem invalidar tokens em voo). Tudo atrás de uma porta `KeyRing` — a implementação local (chaves em env, ou par efêmero em dev) troca por **KMS/HSM** no futuro sem alterar o serviço de tokens. Refresh tokens continuam opacos (inalterados).
 - **Alternativas consideradas:** Manter HS256 (inseguro para escala/externos); JWKS remoto já agora (over-engineering para o estágio).
@@ -147,10 +171,29 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 ## ADR-0014 — Rate limiting com @nestjs/throttler
 
 - **Status:** Aceito · **Data:** 2026-07-06
+- **Status da implementação:** ✅ Implementado. `@nestjs/throttler` global (120/min) ativo como `APP_GUARD`, com limites **estritos** por rota via `@Throttle` (`register` e `login` 5/min, `refresh` 20/min). O **storage agora é Redis** (`ThrottlerStorageRedis`, contagem atômica via script Lua `INCR`+`PEXPIRE`+`PTTL`), compartilhando o contador entre instâncias. Há **fallback automático para memória** quando o Redis está indisponível — então o comportamento em ambientes sem Redis é idêntico ao anterior (mesmos limites).
 - **Contexto:** A API não tinha proteção contra força bruta/abuso.
 - **Decisão:** `@nestjs/throttler` global (limite amplo) + limites **estritos** no `login` (5/min) e `refresh` (20/min). Armazenamento em memória no MVP.
 - **Alternativas consideradas:** Rate limit em proxy/gateway (válido, mas não protege por rota/tenant no app).
 - **Consequências:** Proteção imediata contra força bruta. Em produção, migrar o storage para **Redis** (já disponível) para funcionar com múltiplas instâncias.
+
+## ADR-0015 — Autenticação separada: Web (cookie) e Mobile (bearer) por endpoints dedicados
+
+- **Status:** Aceito · **Data:** 2026-07-13
+- **Status da implementação:** ✅ Implementado. Web usa `/api/v1/auth/*` (cookie HttpOnly, corpo sem refresh token); Mobile usa `/api/v1/auth/mobile/*` (refresh token no corpo, obrigatório). Os dois compartilham os mesmos casos de uso (`LoginUseCase`, `RegisterUseCase`, `RefreshTokenUseCase`, `LogoutUseCase`) e um resultado de aplicação client-agnostic (`AuthResult`); cada controller mapeia para o contrato do seu cliente (`WebAuthResponse` vs `MobileAuthResponse`). O header `X-Auth-Mode` foi **eliminado**.
+- **Contexto:** A primeira versão do fluxo de cookie usava um header `X-Auth-Mode: bearer` para, nos **mesmos** endpoints, decidir se o refresh token ia no cookie (web) ou no corpo (mobile). Isso criava acoplamento implícito e frágil: qualquer cliente/instância de Dio que esquecesse o header recebia login **sem** refresh token e quebrava em silêncio (risco #1 da análise do app Flutter).
+- **Decisão:** Separar por **endpoints dedicados**. `/auth/*` é exclusivamente web (cookie); `/auth/mobile/*` é exclusivamente mobile (bearer). Contratos explícitos por cliente. Endpoints de conta (`me`, troca/reset de senha) permanecem **compartilhados** — dependem do access token, não da forma de entrega do refresh.
+- **Alternativas consideradas:** Manter o header `X-Auth-Mode` (acoplamento implícito, footgun); negociação por `Accept`/User-Agent (mágica e frágil); um só endpoint sempre com refresh no corpo (perde a proteção XSS do cookie no web).
+- **Consequências:** Web e mobile ficam desacoplados e auto-documentados; o contrato mobile é explícito (refresh token sempre presente). Custo: um controller a mais e leve duplicação de rotas — compensado pela clareza e por eliminar o footgun. Supersede o mecanismo de header introduzido junto ao cookie (ADR-0013/hardening).
+
+## ADR-0016 — Login sem `tenantId`: tenant resolvido por e-mail (ou slug da empresa)
+
+- **Status:** Aceito · **Data:** 2026-07-13
+- **Status da implementação:** ✅ Implementado. `LoginRequest`/`ForgotPasswordRequest` passam a `{ email, password, organization? }` — sem `tenantId` (UUID). Resolução: se `organization` (slug da empresa) for informado, busca o usuário por e-mail dentro daquele tenant; senão resolve o tenant pelo **e-mail** (agora identidade **global**). A migração `TenantSlugAndEmailIdentity` adiciona `tenants.slug` (único) e um índice único global de e-mail em `users`; o register gera um slug único e rejeita e-mail duplicado.
+- **Contexto:** Exigir o `tenantId` (UUID) no login era um bloqueio de UX — especialmente para o app Flutter (motoristas não conhecem o UUID do tenant). Era o risco #2 da análise do app Flutter.
+- **Decisão:** O e-mail é a identidade primária e resolve o tenant automaticamente; o `slug` da empresa é uma alternativa opcional para desambiguar. Não se exige mais o `tenantId` no corpo.
+- **Alternativas consideradas:** Resolver por subdomínio/host (adia o problema para infra de DNS; não serve ao mobile); manter `tenantId` (UX ruim); permitir e-mail repetido entre tenants com desambiguação obrigatória (vaza existência de e-mail e complica o cliente).
+- **Consequências:** Login e recuperação de senha ficam com UX padrão de mercado (só e-mail + senha). Assume-se **e-mail globalmente único** — a associação de um mesmo usuário a múltiplos tenants (multi-org) passará a exigir uma tabela de *membership* dedicada quando/se for necessária. **Compatível com a RLS:** a resolução ocorre em `users`/`tenants` (sem RLS, fluxo público pré-tenant); o `tenant_id` continua vindo do JWT para todo o resto.
 
 ---
 
@@ -159,8 +202,9 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 ```markdown
 ## ADR-XXXX — <título curto>
 
-- **Status:** Proposto | Aceito | Rejeitado | Substituído por ADR-YYYY | Depreciado
+- **Status:** Proposto | Planejado | Parcial | Aceito | Rejeitado | Substituído por ADR-YYYY | Depreciado
 - **Data:** AAAA-MM-DD
+- **Status da implementação:** ✅/🟡/⬜ — o que existe hoje no código, com precisão.
 - **Contexto:** Qual problema/força motriz levou a esta decisão?
 - **Decisão:** O que foi decidido, de forma direta.
 - **Alternativas consideradas:** Opções avaliadas e por que foram preteridas.
@@ -176,3 +220,7 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 | 2026-07-05 | 0.1 | Engenharia | Estrutura inicial + ADRs 0000–0004 |
 | 2026-07-05 | 0.2 | CTO | Revisão: ADRs 0005–0011 (ORM, outbox, otimizador, UUIDv7, série temporal, envelope encryption, CQRS) |
 | 2026-07-06 | 0.3 | Engenharia | Hardening: ADRs 0012–0014 (RLS forçada, RS256, rate limiting) |
+| 2026-07-12 | 0.4 | Arquitetura | Alinhamento doc↔código: coluna "Status da implementação" por ADR; status ajustados para `Parcial`/`Planejado` onde ainda não implementado (0002, 0006, 0007, 0009, 0010, 0011, 0014) |
+| 2026-07-12 | 0.5 | Engenharia | Redis: conexão compartilhada resiliente + rate limiting em Redis com fallback (ADR-0014 → Aceito); abstrações de cache/fila prontas (ADR-0002 atualizado) |
+| 2026-07-13 | 0.6 | Arquitetura | ADR-0015: separação Web (cookie) × Mobile (bearer) por endpoints dedicados; header X-Auth-Mode eliminado |
+| 2026-07-13 | 0.7 | Arquitetura | ADR-0016: login sem tenantId — tenant resolvido por e-mail (ou slug da empresa); e-mail global único + tenants.slug |

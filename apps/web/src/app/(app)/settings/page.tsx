@@ -5,11 +5,11 @@ import { useEffect } from 'react';
 
 import { Spinner } from '@/components/ui/spinner';
 
-/** Configurações foram unificadas no Perfil — redireciona para lá. */
+/** Raiz de Configurações — abre na primeira aba (Perfil). */
 export default function SettingsRedirect() {
   const router = useRouter();
   useEffect(() => {
-    router.replace('/profile');
+    router.replace('/settings/profile');
   }, [router]);
   return (
     <div className="flex min-h-[40vh] items-center justify-center">

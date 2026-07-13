@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { LoginResponse } from '@navix/contracts';
+import type { AuthResult } from '@navix/contracts';
 
 import { AUDIT_LOG, type AuditLogPort } from '../../../shared/audit/audit-log.port';
 import { UnauthorizedError } from '../../../shared/kernel/domain-error';
@@ -16,9 +16,10 @@ import { PASSWORD_HASHER, type PasswordHasherPort } from './ports/password-hashe
 import { TOKEN_SERVICE, type TokenServicePort } from './ports/token-service.port';
 
 export interface LoginCommand {
-  tenantId: string;
   email: string;
   password: string;
+  /** Slug da empresa — opcional; se ausente, resolve o tenant pelo e-mail. */
+  organization?: string;
 }
 
 /**
@@ -36,8 +37,14 @@ export class LoginUseCase {
     @Inject(AUDIT_LOG) private readonly audit: AuditLogPort,
   ) {}
 
-  async execute(command: LoginCommand): Promise<LoginResponse> {
-    const user = await this.users.findByEmail(command.tenantId, command.email);
+  async execute(command: LoginCommand): Promise<AuthResult> {
+    const email = command.email.trim().toLowerCase();
+    const organization = command.organization?.trim();
+    // Resolve o tenant automaticamente: por organização (slug) se informada,
+    // senão pelo e-mail (identidade global). Ver ADR-0016.
+    const user = organization
+      ? await this.users.findByEmailAndOrganization(email, organization)
+      : await this.users.findByEmail(email);
     if (!user || user.status !== 'active') {
       await this.auditFailure(command, 'user_not_found_or_inactive');
       throw new UnauthorizedError('Credenciais inválidas.');
@@ -89,10 +96,10 @@ export class LoginUseCase {
 
   private auditFailure(command: LoginCommand, reason: string): Promise<void> {
     return this.audit.record({
-      tenantId: command.tenantId,
+      tenantId: null,
       actorId: null,
       action: 'auth.login.failed',
-      metadata: { email: command.email, reason },
+      metadata: { email: command.email, organization: command.organization ?? null, reason },
     });
   }
 }

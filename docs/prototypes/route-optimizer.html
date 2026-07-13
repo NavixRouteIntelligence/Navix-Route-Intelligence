@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Navix · Route Optimizer — Protótipo Mobile (Empresa)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;550;600;620;650;680;700;750&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --primary:#6D4AFF;
+    --primary-fg:#FFFFFF;
+    --accent:#22D3AA;
+    --success:#22C55E;
+    --warning:#F59E0B;
+    --danger:#EF4444;
+    --bg:#0B0B12;
+    --surface:#14141D;
+    --surface-alt:#1B1B27;
+    --line:#262636;
+    --text:#F3F3F7;
+    --muted:#9AA0B4;
+
+    --r-sm:8px; --r-md:12px; --r-lg:16px; --r-pill:999px;
+    --ease:cubic-bezier(0.33,1,0.68,1);
+    --fast:120ms; --base:200ms; --slow:320ms;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{background:#14141D;}
+  body{
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    color:var(--text);
+    -webkit-font-smoothing:antialiased;
+    display:flex;justify-content:center;
+    padding:40px 16px 64px;
+    min-height:100vh;
+  }
+  .num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum";}
+
+  /* ============ PHONE FRAME ============ */
+  .phone{
+    width:390px;max-width:100%;
+    background:var(--bg);
+    border:1px solid var(--line);
+    border-radius:40px;
+    overflow:hidden;
+    position:relative;
+    box-shadow:0 0 0 8px rgba(11,11,18,0.6), 0 24px 60px rgba(11,11,18,0.55);
+  }
+  .statusbar{
+    height:48px;display:flex;align-items:center;justify-content:space-between;
+    padding:0 24px 0 28px;font-size:13px;font-weight:600;letter-spacing:.2px;
+    background:var(--bg);
+  }
+  .statusbar .right{display:flex;align-items:center;gap:6px;}
+  .statusbar svg{display:block;}
+
+  .screen{padding:0 16px 32px;}
+
+  /* ============ APP HEADER ============ */
+  .app-header{
+    display:flex;align-items:center;gap:12px;
+    padding:8px 4px 16px;
+  }
+  .app-header .logo{
+    width:36px;height:36px;border-radius:var(--r-md);
+    background:linear-gradient(135deg,var(--primary) 0%, rgba(109,74,255,0.55) 100%);
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    border:1px solid rgba(109,74,255,0.5);
+  }
+  .app-header h1{font-size:18px;font-weight:650;letter-spacing:-.2px;}
+  .app-header p{font-size:11.5px;font-weight:500;color:var(--muted);margin-top:1px;}
+  .app-header .ai-chip{
+    margin-left:auto;display:flex;align-items:center;gap:5px;
+    font-size:11.5px;font-weight:500;color:var(--accent);
+    background:rgba(34,211,170,0.10);border:1px solid rgba(34,211,170,0.30);
+    padding:5px 10px;border-radius:var(--r-pill);
+  }
+  .ai-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:aidot 1.8s var(--ease) infinite;}
+  @keyframes aidot{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.45;transform:scale(.75);}}
+
+  /* ============ STEPPER ============ */
+  .stepper{
+    display:flex;align-items:flex-start;
+    background:var(--surface);border:1px solid var(--line);
+    border-radius:var(--r-lg);padding:14px 10px 12px;
+    margin-bottom:24px;
+  }
+  .step{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;position:relative;}
+  .step .bubble{
+    width:26px;height:26px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-size:11.5px;font-weight:600;
+    background:var(--surface-alt);border:1px solid var(--line);color:var(--muted);
+    transition:all var(--base) var(--ease);position:relative;z-index:1;
+  }
+  .step .lbl{font-size:11.5px;font-weight:500;color:var(--muted);}
+  .step.done .bubble{background:rgba(34,211,170,0.12);border-color:rgba(34,211,170,0.45);color:var(--accent);}
+  .step.done .lbl{color:var(--text);}
+  .step.active .bubble{
+    background:var(--primary);border-color:var(--primary);color:var(--primary-fg);
+    box-shadow:0 0 0 4px rgba(109,74,255,0.18);
+  }
+  .step.active .lbl{color:var(--text);font-weight:600;}
+  .step::after{
+    content:"";position:absolute;top:13px;left:calc(50% + 16px);right:calc(-50% + 16px);
+    height:1px;background:var(--line);
+  }
+  .step:last-child::after{display:none;}
+  .step.done::after{background:rgba(34,211,170,0.45);}
+
+  /* ============ SECTION LABELS ============ */
+  .flow-label{
+    display:flex;align-items:center;gap:8px;
+    margin:28px 2px 10px;
+  }
+  .flow-label:first-of-type{margin-top:0;}
+  .flow-label .tag{
+    font-size:11.5px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;
+    color:var(--primary-fg);background:var(--primary);
+    padding:3px 10px;border-radius:var(--r-pill);
+  }
+  .flow-label .tag.accent{background:rgba(34,211,170,0.14);color:var(--accent);border:1px solid rgba(34,211,170,0.35);}
+  .flow-label .state{font-size:11.5px;font-weight:500;color:var(--muted);}
+  .flow-label .rule{flex:1;height:1px;background:var(--line);}
+
+  /* ============ CARDS ============ */
+  .card{
+    background:var(--surface);border:1px solid var(--line);
+    border-radius:var(--r-lg);padding:16px;
+    margin-bottom:12px;
+  }
+  .card-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+  .card-h h2{font-size:15px;font-weight:620;letter-spacing:-.1px;}
+  .card-h .link{
+    display:flex;align-items:center;gap:4px;
+    font-size:12.5px;font-weight:500;color:var(--primary);
+    text-decoration:none;cursor:pointer;transition:opacity var(--fast) var(--ease);
+  }
+  .card-h .link:hover{opacity:.8;}
+
+  /* summary strip */
+  .summary-strip{
+    display:flex;align-items:center;gap:10px;
+    background:var(--surface-alt);border:1px solid var(--line);
+    border-radius:var(--r-md);padding:12px;margin-bottom:12px;
+  }
+  .summary-strip .ic{
+    width:34px;height:34px;border-radius:var(--r-sm);flex-shrink:0;
+    background:rgba(109,74,255,0.14);border:1px solid rgba(109,74,255,0.35);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .summary-strip b{font-size:14px;font-weight:620;display:block;}
+  .summary-strip span{font-size:11.5px;font-weight:500;color:var(--muted);}
+
+  /* delivery list */
+  .dlist{display:flex;flex-direction:column;gap:8px;}
+  .drow{
+    display:flex;align-items:center;gap:12px;
+    background:var(--surface-alt);border:1px solid var(--line);
+    border-radius:var(--r-md);padding:10px 12px;
+    transition:border-color var(--fast) var(--ease);
+  }
+  .drow.sel{border-color:rgba(109,74,255,0.5);}
+  .chk{
+    width:20px;height:20px;border-radius:6px;flex-shrink:0;
+    border:1.5px solid var(--line);background:var(--surface);
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;transition:all var(--fast) var(--ease);
+  }
+  .chk.on{background:var(--primary);border-color:var(--primary);}
+  .chk svg{opacity:0;transform:scale(.6);transition:all var(--fast) var(--ease);}
+  .chk.on svg{opacity:1;transform:scale(1);}
+  .drow .info{flex:1;min-width:0;}
+  .drow .name{font-size:14px;font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .drow .addr{font-size:11.5px;font-weight:500;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .chip{
+    font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:var(--r-pill);
+    display:inline-flex;align-items:center;gap:4px;flex-shrink:0;
+  }
+  .chip.urgent{color:var(--danger);background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.35);}
+  .chip.normal{color:var(--muted);background:rgba(154,160,180,0.10);border:1px solid rgba(154,160,180,0.28);}
+  .chip.warn{color:var(--warning);background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.35);}
+  .chip.pos{color:var(--success);background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.35);}
+  .chip.acc{color:var(--accent);background:rgba(34,211,170,0.12);border:1px solid rgba(34,211,170,0.35);}
+
+  .counter-line{
+    display:flex;align-items:center;gap:6px;
+    font-size:12.5px;font-weight:500;color:var(--muted);
+    margin:12px 2px;
+  }
+  .counter-line b{color:var(--text);font-weight:620;}
+  .counter-line .warn-t{color:var(--warning);}
+
+  /* buttons */
+  .btn{
+    width:100%;display:flex;align-items:center;justify-content:center;gap:8px;
+    font-family:inherit;font-size:14px;font-weight:620;
+    border-radius:var(--r-md);padding:14px 16px;border:none;cursor:pointer;
+    transition:transform var(--fast) var(--ease), filter var(--fast) var(--ease);
+  }
+  .btn:active{transform:scale(.985);}
+  .btn.primary{background:var(--primary);color:var(--primary-fg);}
+  .btn.primary:hover{filter:brightness(1.08);}
+  .btn.accent{background:var(--accent);color:#0B0B12;}
+  .btn.accent:hover{filter:brightness(1.06);}
+  .btn.ghost{
+    background:transparent;color:var(--text);
+    border:1px solid var(--line);
+  }
+  .btn.ghost:hover{background:var(--surface-alt);}
+
+  /* empty state */
+  .empty{
+    border:1px dashed var(--line);border-radius:var(--r-lg);
+    padding:24px 16px;text-align:center;
+    background:rgba(20,20,29,0.5);margin-bottom:12px;
+  }
+  .empty .eic{
+    width:44px;height:44px;border-radius:var(--r-md);margin:0 auto 10px;
+    background:var(--surface-alt);border:1px solid var(--line);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .empty h3{font-size:14px;font-weight:620;margin-bottom:4px;}
+  .empty p{font-size:12.5px;font-weight:500;color:var(--muted);margin-bottom:12px;}
+  .empty .mini-btn{
+    display:inline-flex;align-items:center;gap:6px;
+    font-size:12.5px;font-weight:600;color:var(--primary);
+    border:1px solid rgba(109,74,255,0.45);background:rgba(109,74,255,0.10);
+    padding:8px 14px;border-radius:var(--r-pill);cursor:pointer;
+    transition:background var(--fast) var(--ease);
+  }
+  .empty .mini-btn:hover{background:rgba(109,74,255,0.18);}
+
+  /* ============ STEP 2 — CONFIG ============ */
+  .field{margin-bottom:14px;}
+  .field:last-child{margin-bottom:0;}
+  .field > label{
+    display:block;font-size:12.5px;font-weight:500;color:var(--muted);
+    margin-bottom:8px;letter-spacing:.1px;
+  }
+  .segmented{
+    display:flex;background:var(--surface-alt);border:1px solid var(--line);
+    border-radius:var(--r-md);padding:3px;gap:3px;
+  }
+  .seg{
+    flex:1;text-align:center;font-size:12.5px;font-weight:550;color:var(--muted);
+    padding:9px 4px;border-radius:9px;cursor:pointer;
+    transition:all var(--base) var(--ease);border:1px solid transparent;
+    display:flex;flex-direction:column;align-items:center;gap:3px;
+  }
+  .seg svg{opacity:.7;}
+  .seg.on{background:var(--primary);color:var(--primary-fg);border-color:var(--primary);}
+  .seg.on svg{opacity:1;}
+
+  .setting-row{
+    display:flex;align-items:center;gap:12px;
+    background:var(--surface-alt);border:1px solid var(--line);
+    border-radius:var(--r-md);padding:12px;margin-bottom:8px;
+  }
+  .setting-row:last-child{margin-bottom:0;}
+  .setting-row .sic{
+    width:32px;height:32px;border-radius:var(--r-sm);flex-shrink:0;
+    background:rgba(109,74,255,0.12);border:1px solid rgba(109,74,255,0.30);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .setting-row .sic.teal{background:rgba(34,211,170,0.10);border-color:rgba(34,211,170,0.30);}
+  .setting-row .txt{flex:1;min-width:0;}
+  .setting-row .txt b{font-size:14px;font-weight:550;display:block;}
+  .setting-row .txt span{font-size:11.5px;font-weight:500;color:var(--muted);}
+  .setting-row .val{font-size:14px;font-weight:620;color:var(--text);}
+
+  .toggle{
+    width:44px;height:26px;border-radius:var(--r-pill);flex-shrink:0;
+    background:var(--line);position:relative;cursor:pointer;
+    transition:background var(--base) var(--ease);border:none;
+  }
+  .toggle::after{
+    content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;
+    border-radius:50%;background:var(--muted);
+    transition:all var(--base) var(--ease);
+  }
+  .toggle.on{background:var(--accent);}
+  .toggle.on::after{left:21px;background:#0B0B12;}
+
+  .config-summary{
+    display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+    background:rgba(109,74,255,0.08);border:1px solid rgba(109,74,255,0.30);
+    border-radius:var(--r-md);padding:12px;margin:14px 0 12px;
+    font-size:12.5px;font-weight:500;color:var(--text);
+  }
+  .config-summary .dotsep{width:3px;height:3px;border-radius:50%;background:var(--muted);}
+
+  /* ============ STEP 3 — AI PROCESSING ============ */
+  .ai-stage{
+    display:flex;flex-direction:column;align-items:center;
+    padding:28px 16px 20px;text-align:center;
+  }
+  .pulse-wrap{position:relative;width:120px;height:120px;margin-bottom:18px;}
+  .pulse-ring{
+    position:absolute;inset:0;border-radius:50%;
+    border:1.5px solid var(--accent);opacity:0;
+    animation:pulse 2.4s var(--ease) infinite;
+  }
+  .pulse-ring:nth-child(2){animation-delay:.8s;border-color:var(--primary);}
+  .pulse-ring:nth-child(3){animation-delay:1.6s;}
+  @keyframes pulse{
+    0%{transform:scale(.55);opacity:.7;}
+    100%{transform:scale(1.15);opacity:0;}
+  }
+  .ai-core{
+    position:absolute;inset:24px;border-radius:50%;
+    background:var(--surface-alt);border:1px solid var(--line);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .spin-arc{position:absolute;inset:16px;animation:spin 1.6s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .ai-stage h2{font-size:18px;font-weight:650;letter-spacing:-.2px;margin-bottom:4px;}
+  .ai-stage .sub{font-size:12.5px;font-weight:500;color:var(--muted);margin-bottom:20px;}
+
+  .micro-steps{width:100%;display:flex;flex-direction:column;gap:8px;text-align:left;margin-bottom:18px;}
+  .mstep{
+    display:flex;align-items:center;gap:10px;
+    font-size:12.5px;font-weight:500;color:var(--muted);
+    background:var(--surface-alt);border:1px solid var(--line);
+    border-radius:var(--r-md);padding:10px 12px;
+  }
+  .mstep .mic{
+    width:20px;height:20px;border-radius:50%;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .mstep.done{color:var(--text);}
+  .mstep.done .mic{background:rgba(34,211,170,0.14);border:1px solid rgba(34,211,170,0.45);}
+  .mstep.doing{color:var(--text);border-color:rgba(109,74,255,0.45);}
+  .mstep.doing .mic{border:1px solid rgba(109,74,255,0.45);}
+  .mstep.doing .mic svg{animation:spin 1.2s linear infinite;}
+  .mstep.wait .mic{border:1px dashed var(--line);}
+  .mstep .eta{margin-left:auto;font-size:11.5px;color:var(--muted);}
+
+  .prog-track{
+    width:100%;height:6px;border-radius:var(--r-pill);
+    background:var(--surface-alt);border:1px solid var(--line);
+    overflow:hidden;margin-bottom:8px;
+  }
+  .prog-fill{
+    height:100%;width:0;border-radius:var(--r-pill);
+    background:linear-gradient(90deg,var(--primary),var(--accent));
+    transition:width 1.4s var(--ease);position:relative;overflow:hidden;
+  }
+  .prog-fill::after{
+    content:"";position:absolute;inset:0;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,0.25),transparent);
+    animation:shimmer 1.6s linear infinite;
+  }
+  @keyframes shimmer{from{transform:translateX(-100%);}to{transform:translateX(100%);}}
+  .prog-meta{display:flex;justify-content:space-between;width:100%;font-size:11.5px;font-weight:500;color:var(--muted);}
+
+  /* ============ STEP 4 — RESULT ============ */
+  .kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
+  .kpi{
+    background:var(--surface);border:1px solid var(--line);
+    border-radius:var(--r-lg);padding:14px;
+    display:flex;flex-direction:column;gap:4px;position:relative;
+  }
+  .kpi .k-lbl{font-size:11.5px;font-weight:500;color:var(--muted);display:flex;align-items:center;gap:6px;}
+  .kpi .k-val{font-size:22px;font-weight:680;letter-spacing:-.4px;}
+  .kpi .k-val small{font-size:12.5px;font-weight:500;color:var(--muted);letter-spacing:0;}
+  .kpi .k-delta{font-size:11.5px;font-weight:600;color:var(--accent);display:flex;align-items:center;gap:3px;}
+  .kpi.score{flex-direction:row;align-items:center;gap:12px;}
+  .donut-wrap{position:relative;width:64px;height:64px;flex-shrink:0;}
+  .donut-wrap svg{transform:rotate(-90deg);}
+  .donut-num{
+    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font-size:18px;font-weight:680;letter-spacing:-.3px;
+  }
+  .score-txt .k-lbl{margin-bottom:2px;}
+  .score-txt .band{font-size:12.5px;font-weight:600;color:var(--accent);}
+
+  /* before/after compare */
+  .cmp-group{margin-bottom:14px;}
+  .cmp-group:last-child{margin-bottom:0;}
+  .cmp-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px;}
+  .cmp-head .t{font-size:12.5px;font-weight:500;color:var(--muted);}
+  .cmp-head .delta{
+    font-size:14px;font-weight:680;color:var(--accent);
+    background:rgba(34,211,170,0.10);border:1px solid rgba(34,211,170,0.35);
+    padding:2px 10px;border-radius:var(--r-pill);
+  }
+  .cmp-row{display:flex;align-items:center;gap:10px;margin-bottom:6px;}
+  .cmp-row:last-child{margin-bottom:0;}
+  .cmp-row .who{width:52px;font-size:11.5px;font-weight:500;color:var(--muted);flex-shrink:0;}
+  .cmp-row.after .who{color:var(--accent);font-weight:600;}
+  .bar-track{flex:1;height:14px;border-radius:var(--r-pill);background:var(--surface-alt);border:1px solid var(--line);overflow:hidden;}
+  .bar{
+    height:100%;width:0;border-radius:var(--r-pill);
+    transition:width 1s var(--ease);
+  }
+  .bar.before{background:rgba(154,160,180,0.55);}
+  .bar.before.bad{background:rgba(239,68,68,0.55);}
+  .bar.after{background:var(--accent);}
+  .cmp-row .v{width:72px;text-align:right;font-size:12.5px;font-weight:620;flex-shrink:0;}
+  .cmp-row.before-r .v{color:var(--muted);font-weight:500;}
+  .cmp-row.after .v{color:var(--accent);}
+
+  /* savings duo */
+  .save-duo{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
+  .save-card{
+    background:var(--surface);border:1px solid var(--line);
+    border-radius:var(--r-lg);padding:14px;position:relative;overflow:hidden;
+  }
+  .save-card::before{
+    content:"";position:absolute;top:0;left:0;right:0;height:2px;
+    background:linear-gradient(90deg,var(--accent),transparent);opacity:.7;
+  }
+  .save-card .s-lbl{font-size:11.5px;font-weight:500;color:var(--muted);display:flex;align-items:center;gap:6px;margin-bottom:6px;}
+  .save-card .s-val{font-size:18px;font-weight:680;letter-spacing:-.3px;}
+  .save-card .s-val small{font-size:12.5px;font-weight:550;color:var(--muted);}
+  .save-card .s-sub{margin-top:6px;}
+
+  /* map */
+  .map-card{padding:0;overflow:hidden;}
+  .map-card .map-head{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px 16px 10px;
+  }
+  .map-card .map-head h2{font-size:15px;font-weight:620;}
+  .map-legend{
+    display:flex;align-items:center;gap:12px;
+    padding:10px 16px 14px;font-size:11.5px;font-weight:500;color:var(--muted);
+    flex-wrap:wrap;
+  }
+  .map-legend .li{display:flex;align-items:center;gap:6px;}
+  .lg-line{width:18px;height:0;border-top:2.5px solid var(--accent);border-radius:2px;}
+  .lg-line.old{border-top:2px dashed rgba(154,160,180,0.6);}
+  .lg-dot{width:9px;height:9px;border-radius:50%;background:var(--primary);border:1.5px solid var(--primary-fg);}
+  .mapbox{position:relative;background:var(--surface-alt);border-top:1px solid var(--line);border-bottom:1px solid var(--line);}
+  .mapbox svg{display:block;width:100%;height:auto;}
+  .map-note{
+    position:absolute;top:10px;right:10px;
+    font-size:11.5px;font-weight:500;color:var(--muted);
+    background:rgba(11,11,18,0.75);border:1px solid var(--line);
+    padding:3px 9px;border-radius:var(--r-pill);backdrop-filter:blur(4px);
+  }
+  #routeNew{stroke-dasharray:620;stroke-dashoffset:620;}
+  #routeNew.draw{animation:draw 2.2s var(--ease) forwards .3s;}
+  @keyframes draw{to{stroke-dashoffset:0;}}
+  .stop-pin{opacity:0;animation:pinpop .32s var(--ease) forwards;}
+  @keyframes pinpop{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+
+  /* stops sequence */
+  .stops{display:flex;flex-direction:column;}
+  .stop-row{
+    display:flex;align-items:center;gap:12px;
+    padding:11px 2px;border-bottom:1px solid var(--line);
+  }
+  .stop-row:last-child{border-bottom:none;padding-bottom:2px;}
+  .stop-n{
+    width:26px;height:26px;border-radius:50%;flex-shrink:0;
+    background:rgba(34,211,170,0.12);border:1px solid rgba(34,211,170,0.40);
+    color:var(--accent);font-size:12.5px;font-weight:650;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .stop-n.cd{background:rgba(109,74,255,0.14);border-color:rgba(109,74,255,0.45);color:var(--primary-fg);}
+  .stop-row .s-info{flex:1;min-width:0;}
+  .stop-row .s-addr{font-size:14px;font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .stop-row .s-meta{font-size:11.5px;font-weight:500;color:var(--muted);margin-top:2px;}
+  .stop-row .eta{font-size:12.5px;font-weight:620;color:var(--text);flex-shrink:0;}
+  .stop-row .eta small{display:block;font-size:11.5px;font-weight:500;color:var(--muted);text-align:right;}
+  .stops-more{
+    text-align:center;font-size:12.5px;font-weight:550;color:var(--primary);
+    padding:12px 0 2px;cursor:pointer;
+  }
+
+  /* actions */
+  .actions{display:flex;flex-direction:column;gap:8px;margin-top:4px;}
+  .actions .row2{display:flex;gap:8px;}
+  .actions .row2 .btn{flex:1;}
+
+  /* toast */
+  .toast{
+    position:absolute;left:50%;bottom:28px;transform:translateX(-50%) translateY(16px);
+    background:var(--surface-alt);border:1px solid rgba(34,197,94,0.45);
+    color:var(--text);font-size:12.5px;font-weight:550;
+    padding:11px 16px;border-radius:var(--r-pill);
+    display:flex;align-items:center;gap:8px;
+    opacity:0;pointer-events:none;
+    transition:opacity var(--slow) var(--ease), transform var(--slow) var(--ease);
+    white-space:nowrap;z-index:50;
+    box-shadow:0 8px 24px rgba(11,11,18,0.6);
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  .footnote{
+    text-align:center;font-size:11.5px;font-weight:500;color:var(--muted);
+    margin-top:24px;line-height:1.6;
+  }
+
+  /* reveal on scroll */
+  .reveal{opacity:0;transform:translateY(10px);transition:opacity .5s var(--ease), transform .5s var(--ease);}
+  .reveal.in{opacity:1;transform:translateY(0);}
+</style>
+</head>
+<body>
+
+<div class="phone" id="phone">
+  <!-- STATUS BAR -->
+  <div class="statusbar num">
+    <span>09:41</span>
+    <div class="right">
+      <svg width="16" height="11" viewBox="0 0 16 11" fill="none"><rect x="0" y="7" width="3" height="4" rx="1" fill="#F3F3F7"/><rect x="4.5" y="4.5" width="3" height="6.5" rx="1" fill="#F3F3F7"/><rect x="9" y="2" width="3" height="9" rx="1" fill="#F3F3F7"/><rect x="13" y="0" width="3" height="11" rx="1" fill="#9AA0B4"/></svg>
+      <svg width="15" height="11" viewBox="0 0 15 11" fill="none"><path d="M7.5 9.5C8.3 9.5 9 10.2 9 11H6C6 10.2 6.7 9.5 7.5 9.5ZM4.3 7.8C5.2 7 6.3 6.5 7.5 6.5C8.7 6.5 9.8 7 10.7 7.8L9.6 9C9 8.4 8.3 8 7.5 8C6.7 8 6 8.4 5.4 9L4.3 7.8ZM1.2 4.7C2.9 3.1 5.1 2 7.5 2C9.9 2 12.1 3.1 13.8 4.7L12.7 5.9C11.3 4.5 9.5 3.5 7.5 3.5C5.5 3.5 3.7 4.5 2.3 5.9L1.2 4.7Z" fill="#F3F3F7"/></svg>
+      <svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x="0.5" y="0.5" width="21" height="11" rx="3" stroke="#9AA0B4"/><rect x="2" y="2" width="15" height="8" rx="1.5" fill="#22C55E"/><path d="M23 4V8C23.8 7.7 24.3 6.9 24.3 6C24.3 5.1 23.8 4.3 23 4Z" fill="#9AA0B4"/></svg>
+    </div>
+  </div>
+
+  <div class="screen">
+    <!-- APP HEADER -->
+    <header class="app-header">
+      <div class="logo">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M3 15L3 6L9 12L15 3V13" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div>
+        <h1>Route Optimizer</h1>
+        <p>Navix · CD Lapa — São Paulo</p>
+      </div>
+      <div class="ai-chip"><span class="ai-dot"></span>IA ativa</div>
+    </header>
+
+    <!-- STEPPER -->
+    <nav class="stepper" aria-label="Etapas do fluxo">
+      <div class="step done">
+        <div class="bubble"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.8 9L10 3.5" stroke="#22D3AA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <span class="lbl">Entregas</span>
+      </div>
+      <div class="step done">
+        <div class="bubble"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.8 9L10 3.5" stroke="#22D3AA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <span class="lbl">Configurar</span>
+      </div>
+      <div class="step active">
+        <div class="bubble num">3</div>
+        <span class="lbl">Resultado</span>
+      </div>
+    </nav>
+
+    <!-- ============================================================ -->
+    <!-- PASSO 1 — ENTREGAS -->
+    <!-- ============================================================ -->
+    <div class="flow-label">
+      <span class="tag">Passo 1</span>
+      <span class="state">Importação e seleção das entregas</span>
+      <span class="rule"></span>
+    </div>
+
+    <section class="card reveal">
+      <div class="card-h">
+        <h2>Entregas de hoje</h2>
+        <a class="link">
+          <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M7 9V1.5M7 1.5L4 4.5M7 1.5L10 4.5" stroke="#6D4AFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M1.5 9.5V11.5C1.5 12.05 1.95 12.5 2.5 12.5H11.5C12.05 12.5 12.5 12.05 12.5 11.5V9.5" stroke="#6D4AFF" stroke-width="1.6" stroke-linecap="round"/></svg>
+          Importar
+        </a>
+      </div>
+
+      <div class="summary-strip">
+        <div class="ic">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="4" width="9" height="8" rx="1.5" stroke="#6D4AFF" stroke-width="1.5"/><path d="M10.5 6.5H12.6L14.5 9V12H10.5" stroke="#6D4AFF" stroke-width="1.5" stroke-linejoin="round"/><circle cx="4.5" cy="12" r="1.4" fill="#14141D" stroke="#6D4AFF" stroke-width="1.3"/><circle cx="12" cy="12" r="1.4" fill="#14141D" stroke="#6D4AFF" stroke-width="1.3"/></svg>
+        </div>
+        <div>
+          <b class="num">42 entregas prontas</b>
+          <span>Sincronizadas do Import Center · hoje, 07:52</span>
+        </div>
+      </div>
+
+      <div class="dlist">
+        <div class="drow sel">
+          <button class="chk on" aria-label="Selecionada"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.8 9L10 3.5" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          <div class="info">
+            <div class="name">Mariana Duarte</div>
+            <div class="addr">R. Clélia, 1140 · Lapa</div>
+          </div>
+          <span class="chip urgent">
+            <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M5 1V5.5M5 8V8.2" stroke="#EF4444" stroke-width="1.8" stroke-linecap="round"/></svg>
+            Urgente
+          </span>
+        </div>
+        <div class="drow sel">
+          <button class="chk on" aria-label="Selecionada"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.8 9L10 3.5" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          <div class="info">
+            <div class="name">Empório Vila Romana</div>
+            <div class="addr">R. Fábia, 522 · Vila Romana</div>
+          </div>
+          <span class="chip normal">Normal</span>
+        </div>
+        <div class="drow sel">
+          <button class="chk on" aria-label="Selecionada"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.8 9L10 3.5" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          <div class="info">
+            <div class="name">Carlos Yoshida</div>
+            <div class="addr">Av. Pompeia, 88 · Pompeia</div>
+          </div>
+          <span class="chip urgent">
+            <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M5 1V5.5M5 8V8.2" stroke="#EF4444" stroke-width="1.8" stroke-linecap="round"/></svg>
+            Urgente
+          </span>
+        </div>
+        <div class="drow">
+          <button class="chk" aria-label="Não selecionada"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.8 9L10 3.5" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          <div class="info">
+            <div class="name">Studio Anagrama</div>
+            <div class="addr">R. Turiassu, s/n · endereço incompleto</div>
+          </div>
+          <span class="chip warn">
+            <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><circle cx="5" cy="5" r="3.6" stroke="#F59E0B" stroke-width="1.4"/><path d="M5 3.4V5.2" stroke="#F59E0B" stroke-width="1.4" stroke-linecap="round"/></svg>
+            Sem geo
+          </span>
+        </div>
+      </div>
+
+      <div class="counter-line num">
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><rect x="1.5" y="1.5" width="11" height="11" rx="3" stroke="#22D3AA" stroke-width="1.5"/><path d="M4.4 7.2L6.2 9L9.6 5.2" stroke="#22D3AA" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span><b>38 selecionadas</b> · <span class="warn-t">4 sem geocodificação (ignoradas)</span></span>
+      </div>
+
+      <button class="btn primary">
+        Continuar
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 7H11M11 7L7.5 3.5M11 7L7.5 10.5" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </section>
+
+    <!-- Empty state (variação do DS) -->
+    <div class="flow-label">
+      <span class="tag" style="background:var(--surface-alt);color:var(--muted);border:1px solid var(--line);">Estado do DS</span>
+      <span class="state">Empty — sem entregas importadas</span>
+      <span class="rule"></span>
+    </div>
+    <div class="empty reveal">
+      <div class="eic">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="4.5" width="14" height="10" rx="2" stroke="#9AA0B4" stroke-width="1.5"/><path d="M2 7.5H16" stroke="#9AA0B4" stroke-width="1.5"/><path d="M6 4.5V3" stroke="#9AA0B4" stroke-width="1.5" stroke-linecap="round"/><path d="M12 4.5V3" stroke="#9AA0B4" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </div>
+      <h3>Nenhuma entrega para otimizar</h3>
+      <p>Importe suas entregas primeiro para gerar uma rota com IA.</p>
+      <button class="mini-btn">
+        <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M7 9V1.5M7 1.5L4 4.5M7 1.5L10 4.5" stroke="#6D4AFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M1.5 9.5V11.5C1.5 12.05 1.95 12.5 2.5 12.5H11.5C12.05 12.5 12.5 12.05 12.5 11.5V9.5" stroke="#6D4AFF" stroke-width="1.6" stroke-linecap="round"/></svg>
+        Ir ao Import Center
+      </button>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- PASSO 2 — CONFIGURAÇÃO -->
+    <!-- ============================================================ -->
+    <div class="flow-label">
+      <span class="tag">Passo 2</span>
+      <span class="state">Configuração da otimização</span>
+      <span class="rule"></span>
+    </div>
+
+    <section class="card reveal">
+      <div class="card-h"><h2>Como otimizar?</h2></div>
+
+      <div class="field">
+        <label>Objetivo da rota</label>
+        <div class="segmented" role="tablist">
+          <div class="seg" role="tab">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 12C2 7 5 3.5 12 2C11 8.5 7.5 11.5 2 12Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+            Menor distância
+          </div>
+          <div class="seg" role="tab">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.2" stroke="currentColor" stroke-width="1.5"/><path d="M7 4.2V7L9 8.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            Menor tempo
+          </div>
+          <div class="seg on" role="tab" aria-selected="true">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2V12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M3 5L7 2L11 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="3.2" cy="9.5" r="1.9" stroke="currentColor" stroke-width="1.4"/><circle cx="10.8" cy="9.5" r="1.9" stroke="currentColor" stroke-width="1.4"/></svg>
+            Equilíbrio
+          </div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Ponto de partida e retorno</label>
+        <div class="setting-row">
+          <div class="sic">
+            <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M2 6.2L7.5 2L13 6.2V12.4C13 12.95 12.55 13.4 12 13.4H3C2.45 13.4 2 12.95 2 12.4V6.2Z" stroke="#6D4AFF" stroke-width="1.5" stroke-linejoin="round"/><path d="M5.6 13.4V9H9.4V13.4" stroke="#6D4AFF" stroke-width="1.5" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="txt">
+            <b>CD Lapa</b>
+            <span>R. Guaicurus, 1000 · ponto de partida</span>
+          </div>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 3.5L9 7L5 10.5" stroke="#9AA0B4" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="setting-row">
+          <div class="sic teal">
+            <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M12.5 6.5C12.5 4 10.4 2.2 8 2.2C5.4 2.2 3.4 4 3 6.2M2.5 8.5C2.9 11 5 12.8 7.5 12.8C10 12.8 12 11 12.4 8.8" stroke="#22D3AA" stroke-width="1.5" stroke-linecap="round"/><path d="M12.8 3.2V6.5H9.5" stroke="#22D3AA" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M2.2 11.8V8.5H5.5" stroke="#22D3AA" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="txt">
+            <b>Retornar à origem</b>
+            <span>Rota termina no CD Lapa</span>
+          </div>
+          <button class="toggle on" aria-label="Retornar à origem: ativado" onclick="this.classList.toggle('on')"></button>
+        </div>
+        <div class="setting-row">
+          <div class="sic teal">
+            <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="7.5" r="5.5" stroke="#22D3AA" stroke-width="1.5"/><path d="M7.5 4.6V7.5L9.6 9.2" stroke="#22D3AA" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </div>
+          <div class="txt">
+            <b>Respeitar janelas de horário</b>
+            <span>12 entregas com janela definida</span>
+          </div>
+          <button class="toggle on" aria-label="Respeitar janelas: ativado" onclick="this.classList.toggle('on')"></button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Veículo e início</label>
+        <div class="setting-row">
+          <div class="sic">
+            <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><rect x="1.2" y="4" width="8.3" height="7" rx="1.2" stroke="#6D4AFF" stroke-width="1.5"/><path d="M9.5 6H11.6L13.6 8.6V11H9.5" stroke="#6D4AFF" stroke-width="1.5" stroke-linejoin="round"/><circle cx="4" cy="11" r="1.4" fill="#14141D" stroke="#6D4AFF" stroke-width="1.3"/><circle cx="11.2" cy="11" r="1.4" fill="#14141D" stroke="#6D4AFF" stroke-width="1.3"/></svg>
+          </div>
+          <div class="txt">
+            <b>Fiorino · PLK-4D21</b>
+            <span class="num">Capacidade 650 kg · 82% usada</span>
+          </div>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 3.5L9 7L5 10.5" stroke="#9AA0B4" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="setting-row">
+          <div class="sic">
+            <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><rect x="2" y="3" width="11" height="10" rx="1.5" stroke="#6D4AFF" stroke-width="1.5"/><path d="M2 6.2H13" stroke="#6D4AFF" stroke-width="1.5"/><path d="M5 3V1.8M10 3V1.8" stroke="#6D4AFF" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </div>
+          <div class="txt">
+            <b>Horário de início</b>
+            <span>Hoje, sexta-feira</span>
+          </div>
+          <span class="val num">08:00</span>
+        </div>
+      </div>
+
+      <div class="config-summary num">
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M7 1.2L8.6 5.2L12.8 5.5L9.6 8.2L10.6 12.3L7 10.1L3.4 12.3L4.4 8.2L1.2 5.5L5.4 5.2L7 1.2Z" stroke="#6D4AFF" stroke-width="1.3" stroke-linejoin="round"/></svg>
+        <b>38 paradas</b><span class="dotsep"></span>início <b>08:00</b><span class="dotsep"></span>retorno ao CD
+      </div>
+
+      <button class="btn primary">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 1.5L9.4 5.4L13.5 6L10.5 8.8L11.3 13L8 10.9L4.7 13L5.5 8.8L2.5 6L6.6 5.4L8 1.5Z" fill="#FFFFFF" fill-opacity="0.25" stroke="#FFFFFF" stroke-width="1.4" stroke-linejoin="round"/></svg>
+        Otimizar rota com IA
+      </button>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- PASSO 3 — RESULTADO -->
+    <!-- ============================================================ -->
+    <div class="flow-label">
+      <span class="tag accent">Passo 3</span>
+      <span class="state">Resultado da otimização</span>
+      <span class="rule"></span>
+    </div>
+
+    <!-- KPIs -->
+    <div class="kpi-grid reveal">
+      <div class="kpi">
+        <span class="k-lbl">
+          <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M2 12C2 7 5 3.5 12 2C11 8.5 7.5 11.5 2 12Z" stroke="#9AA0B4" stroke-width="1.4" stroke-linejoin="round"/></svg>
+          Distância otimizada
+        </span>
+        <span class="k-val num"><span data-count="64.3" data-dec="1" data-locale="1">0,0</span> <small>km</small></span>
+        <span class="k-delta num">
+          <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M5 8.5V1.8M5 8.5L2.4 5.9M5 8.5L7.6 5.9" stroke="#22D3AA" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          −14,1 km vs. atual
+        </span>
+      </div>
+      <div class="kpi">
+        <span class="k-lbl">
+          <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.4" stroke="#9AA0B4" stroke-width="1.4"/><path d="M7 4V7L9.1 8.7" stroke="#9AA0B4" stroke-width="1.4" stroke-linecap="round"/></svg>
+          Tempo estimado
+        </span>
+        <span class="k-val num">4h 45<small>min</small></span>
+        <span class="k-delta num">
+          <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M5 8.5V1.8M5 8.5L2.4 5.9M5 8.5L7.6 5.9" stroke="#22D3AA" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          −1h 20min vs. atual
+        </span>
+      </div>
+      <div class="kpi">
+        <span class="k-lbl">
+          <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M7 12.6C7 12.6 11.6 9 11.6 5.6C11.6 3.05 9.55 1 7 1C4.45 1 2.4 3.05 2.4 5.6C2.4 9 7 12.6 7 12.6Z" stroke="#9AA0B4" stroke-width="1.4" stroke-linejoin="round"/><circle cx="7" cy="5.6" r="1.7" stroke="#9AA0B4" stroke-width="1.3"/></svg>
+          Paradas
+        </span>
+        <span class="k-val num"><span data-count="38" data-dec="0">0</span></span>
+        <span class="k-delta num" style="color:var(--muted);font-weight:500;">+ retorno ao CD Lapa</span>
+      </div>
+      <div class="kpi score">
+        <div class="donut-wrap">
+          <svg width="64" height="64" viewBox="0 0 64 64">
+            <circle cx="32" cy="32" r="26" fill="none" stroke="#262636" stroke-width="7"/>
+            <circle id="donutArc" cx="32" cy="32" r="26" fill="none" stroke="#22D3AA" stroke-width="7"
+              stroke-linecap="round" stroke-dasharray="163.36" stroke-dashoffset="163.36"
+              style="transition:stroke-dashoffset 1.6s cubic-bezier(0.33,1,0.68,1);"/>
+          </svg>
+          <span class="donut-num num" data-count="87" data-dec="0">0</span>
+        </div>
+        <div class="score-txt">
+          <span class="k-lbl">Score de eficiência</span>
+          <span class="band">
+            <svg width="10" height="10" viewBox="0 0 12 12" fill="none" style="vertical-align:-1px;"><path d="M2 6.5L4.8 9L10 3.5" stroke="#22D3AA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Excelente
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ANTES × DEPOIS -->
+    <section class="card reveal" id="cmpCard">
+      <div class="card-h">
+        <h2>Antes × Depois</h2>
+        <span class="chip acc">IA · Equilíbrio</span>
+      </div>
+
+      <div class="cmp-group">
+        <div class="cmp-head">
+          <span class="t">Distância total</span>
+          <span class="delta num">−18%</span>
+        </div>
+        <div class="cmp-row before-r">
+          <span class="who">Antes</span>
+          <div class="bar-track"><div class="bar before bad" data-w="100"></div></div>
+          <span class="v num">78,4 km</span>
+        </div>
+        <div class="cmp-row after">
+          <span class="who">Depois</span>
+          <div class="bar-track"><div class="bar after" data-w="82"></div></div>
+          <span class="v num">64,3 km</span>
+        </div>
+      </div>
+
+      <div class="cmp-group">
+        <div class="cmp-head">
+          <span class="t">Tempo em rota</span>
+          <span class="delta num">−22%</span>
+        </div>
+        <div class="cmp-row before-r">
+          <span class="who">Antes</span>
+          <div class="bar-track"><div class="bar before" data-w="100"></div></div>
+          <span class="v num">6h 05min</span>
+        </div>
+        <div class="cmp-row after">
+          <span class="who">Depois</span>
+          <div class="bar-track"><div class="bar after" data-w="78"></div></div>
+          <span class="v num">4h 45min</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ECONOMIAS -->
+    <div class="save-duo reveal">
+      <div class="save-card">
+        <span class="s-lbl">
+          <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M3 12.5V3C3 2.2 3.6 1.5 4.5 1.5H8C8.8 1.5 9.5 2.2 9.5 3V12.5" stroke="#9AA0B4" stroke-width="1.4"/><path d="M2 12.5H10.5" stroke="#9AA0B4" stroke-width="1.4" stroke-linecap="round"/><path d="M9.5 5.5H11C11.8 5.5 12.4 6.1 12.4 7V9.4C12.4 10 12.9 10.4 13.4 10.2" stroke="#9AA0B4" stroke-width="1.3" stroke-linecap="round"/><path d="M4.8 4H7.8" stroke="#9AA0B4" stroke-width="1.4" stroke-linecap="round"/></svg>
+          Combustível economizado
+        </span>
+        <div class="s-val num">12,4 L <small>· R$ 78</small></div>
+        <div class="s-sub">
+          <span class="chip pos num">
+            <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M5 1.5V8.2M5 1.5L2.4 4.1M5 1.5L7.6 4.1" stroke="#22C55E" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            R$ 1.716/mês proj.
+          </span>
+        </div>
+      </div>
+      <div class="save-card">
+        <span class="s-lbl">
+          <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7.6" r="4.9" stroke="#9AA0B4" stroke-width="1.4"/><path d="M7 5.4V7.6L8.6 8.8" stroke="#9AA0B4" stroke-width="1.4" stroke-linecap="round"/><path d="M5.4 1.4H8.6" stroke="#9AA0B4" stroke-width="1.4" stroke-linecap="round"/><path d="M7 1.4V2.7" stroke="#9AA0B4" stroke-width="1.4" stroke-linecap="round"/></svg>
+          Tempo economizado
+        </span>
+        <div class="s-val num">1h 12min</div>
+        <div class="s-sub">
+          <span class="chip acc num">
+            <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M5 1.5V8.2M5 1.5L2.4 4.1M5 1.5L7.6 4.1" stroke="#22D3AA" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            +3 entregas viáveis
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAPA -->
+    <section class="card map-card reveal">
+      <div class="map-head">
+        <h2>Rota otimizada</h2>
+        <span class="chip acc">
+          <svg width="9" height="9" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.8 9L10 3.5" stroke="#22D3AA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Otimizada
+        </span>
+      </div>
+      <div class="mapbox">
+        <span class="map-note">Mapa ilustrativo</span>
+        <svg viewBox="0 0 358 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Mapa ilustrativo da rota otimizada">
+          <!-- fundo -->
+          <rect width="358" height="240" fill="#1B1B27"/>
+          <!-- quadras / ruas -->
+          <g stroke="#262636" stroke-width="1">
+            <path d="M0 40H358"/><path d="M0 92H358"/><path d="M0 148H358"/><path d="M0 200H358"/>
+            <path d="M52 0V240"/><path d="M118 0V240"/><path d="M186 0V240"/><path d="M252 0V240"/><path d="M312 0V240"/>
+          </g>
+          <g stroke="rgba(38,38,54,0.55)" stroke-width="1">
+            <path d="M0 66H358"/><path d="M0 120H358"/><path d="M0 174H358"/>
+            <path d="M85 0V240"/><path d="M152 0V240"/><path d="M219 0V240"/><path d="M282 0V240"/>
+          </g>
+          <!-- avenida diagonal -->
+          <path d="M0 210 L140 120 L358 30" stroke="rgba(38,38,54,0.9)" stroke-width="5" fill="none"/>
+          <!-- parque -->
+          <rect x="262" y="152" width="72" height="52" rx="8" fill="rgba(34,197,94,0.07)" stroke="rgba(34,197,94,0.18)"/>
+          <!-- rota antiga (esmaecida, tracejada) -->
+          <path d="M52 200 L118 66 L252 174 L152 40 L312 92 L219 200 L312 148"
+            fill="none" stroke="rgba(154,160,180,0.35)" stroke-width="2" stroke-dasharray="5 6" stroke-linecap="round" stroke-linejoin="round"/>
+          <!-- rota nova (accent, traçando) -->
+          <path id="routeNew" d="M52 200 L118 148 L152 92 L219 66 L282 92 L312 148 L252 174 L186 200 L52 200"
+            fill="none" stroke="#22D3AA" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          <!-- origem CD -->
+          <g class="stop-pin" style="animation-delay:.2s;">
+            <circle cx="52" cy="200" r="11" fill="#6D4AFF" stroke="#FFFFFF" stroke-width="2"/>
+            <path d="M47.5 200.5 L50.5 196.5 L52 199 L54 195.5 L56.5 200.5 Z" fill="#FFFFFF" transform="translate(0,1)"/>
+            <text x="52" y="224" text-anchor="middle" font-family="Inter,sans-serif" font-size="9.5" font-weight="600" fill="#F3F3F7">CD Lapa</text>
+          </g>
+          <!-- paradas numeradas -->
+          <g font-family="Inter,sans-serif" font-size="9.5" font-weight="650" text-anchor="middle">
+            <g class="stop-pin" style="animation-delay:.55s;"><circle cx="118" cy="148" r="9" fill="#14141D" stroke="#22D3AA" stroke-width="2"/><text x="118" y="151.5" fill="#22D3AA">1</text></g>
+            <g class="stop-pin" style="animation-delay:.8s;"><circle cx="152" cy="92" r="9" fill="#14141D" stroke="#22D3AA" stroke-width="2"/><text x="152" y="95.5" fill="#22D3AA">2</text></g>
+            <g class="stop-pin" style="animation-delay:1.05s;"><circle cx="219" cy="66" r="9" fill="#14141D" stroke="#22D3AA" stroke-width="2"/><text x="219" y="69.5" fill="#22D3AA">3</text></g>
+            <g class="stop-pin" style="animation-delay:1.3s;"><circle cx="282" cy="92" r="9" fill="#14141D" stroke="#22D3AA" stroke-width="2"/><text x="282" y="95.5" fill="#22D3AA">4</text></g>
+            <g class="stop-pin" style="animation-delay:1.55s;"><circle cx="312" cy="148" r="9" fill="#14141D" stroke="#22D3AA" stroke-width="2"/><text x="312" y="151.5" fill="#22D3AA">5</text></g>
+            <g class="stop-pin" style="animation-delay:1.8s;"><circle cx="252" cy="174" r="9" fill="#14141D" stroke="#22D3AA" stroke-width="2"/><text x="252" y="177.5" fill="#22D3AA">6</text></g>
+            <g class="stop-pin" style="animation-delay:2.05s;"><circle cx="186" cy="200" r="9" fill="#14141D" stroke="#22D3AA" stroke-width="2"/><text x="186" y="203.5" fill="#22D3AA">7</text></g>
+          </g>
+        </svg>
+      </div>
+      <div class="map-legend">
+        <span class="li"><span class="lg-line"></span>Rota otimizada</span>
+        <span class="li"><span class="lg-line old"></span>Rota anterior</span>
+        <span class="li"><span class="lg-dot"></span>Origem (CD)</span>
+      </div>
+    </section>
+
+    <!-- SEQUÊNCIA -->
+    <section class="card reveal">
+      <div class="card-h">
+        <h2>Sequência de paradas</h2>
+        <span class="chip normal num">38 + CD</span>
+      </div>
+      <div class="stops">
+        <div class="stop-row">
+          <span class="stop-n cd">
+            <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M1.5 5L6 1.5L10.5 5V10C10.5 10.3 10.3 10.5 10 10.5H2C1.7 10.5 1.5 10.3 1.5 10V5Z" stroke="#FFFFFF" stroke-width="1.4" stroke-linejoin="round"/></svg>
+          </span>
+          <div class="s-info">
+            <div class="s-addr">CD Lapa — saída</div>
+            <div class="s-meta">R. Guaicurus, 1000</div>
+          </div>
+          <span class="eta num">08:00</span>
+        </div>
+        <div class="stop-row">
+          <span class="stop-n num">1</span>
+          <div class="s-info">
+            <div class="s-addr">R. Clélia, 1140 · Lapa</div>
+            <div class="s-meta">Mariana Duarte · urgente</div>
+          </div>
+          <span class="eta num">08:14<small>ETA</small></span>
+        </div>
+        <div class="stop-row">
+          <span class="stop-n num">2</span>
+          <div class="s-info">
+            <div class="s-addr">Av. Pompeia, 88 · Pompeia</div>
+            <div class="s-meta">Carlos Yoshida · urgente</div>
+          </div>
+          <span class="eta num">08:29<small>ETA</small></span>
+        </div>
+        <div class="stop-row">
+          <span class="stop-n num">3</span>
+          <div class="s-info">
+            <div class="s-addr">R. Fábia, 522 · Vila Romana</div>
+            <div class="s-meta">Empório Vila Romana · janela 08–12h</div>
+          </div>
+          <span class="eta num">08:41<small>ETA</small></span>
+        </div>
+        <div class="stop-row">
+          <span class="stop-n num">4</span>
+          <div class="s-info">
+            <div class="s-addr">R. Coriolano, 970 · Vila Romana</div>
+            <div class="s-meta">Bazar Coriolano · normal</div>
+          </div>
+          <span class="eta num">08:53<small>ETA</small></span>
+        </div>
+        <div class="stop-row">
+          <span class="stop-n num">5</span>
+          <div class="s-info">
+            <div class="s-addr">R. Caio Graco, 300 · Lapa</div>
+            <div class="s-meta">Helena Prado · janela 09–11h</div>
+          </div>
+          <span class="eta num">09:07<small>ETA</small></span>
+        </div>
+      </div>
+      <div class="stops-more">Ver todas as 38 paradas
+        <svg width="11" height="11" viewBox="0 0 12 12" fill="none" style="vertical-align:-1px;"><path d="M3 4.5L6 7.5L9 4.5" stroke="#6D4AFF" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+    </section>
+
+    <!-- AÇÕES -->
+    <div class="actions reveal">
+      <button class="btn accent" id="applyBtn">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2.5 8.5L6.2 12L13.5 4.5" stroke="#0B0B12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Aplicar rota
+      </button>
+      <div class="row2">
+        <button class="btn primary" id="sendBtn">
+          <svg width="14" height="14" viewBox="0 0 15 15" fill="none"><path d="M13.5 1.5L7 8M13.5 1.5L9.2 13.5L7 8M13.5 1.5L1.5 5.8L7 8" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Enviar ao motorista
+        </button>
+        <button class="btn ghost">
+          <svg width="14" height="14" viewBox="0 0 15 15" fill="none"><path d="M12.5 6.5C12.5 4 10.4 2.2 8 2.2C5.4 2.2 3.4 4 3 6.2M2.5 8.5C2.9 11 5 12.8 7.5 12.8C10 12.8 12 11 12.4 8.8" stroke="#F3F3F7" stroke-width="1.5" stroke-linecap="round"/><path d="M12.8 3.2V6.5H9.5" stroke="#F3F3F7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M2.2 11.8V8.5H5.5" stroke="#F3F3F7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Reotimizar
+        </button>
+      </div>
+    </div>
+
+    <p class="footnote">Protótipo visual · Navix Route Intelligence · visão Empresa (mobile)<br>Dados fictícios para demonstração do fluxo de otimização.</p>
+  </div>
+
+  <!-- TOAST -->
+  <div class="toast num" id="toast" role="status">
+    <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" fill="rgba(34,197,94,0.15)" stroke="#22C55E" stroke-width="1.4"/><path d="M4.4 7.2L6.2 9L9.6 5.2" stroke="#22C55E" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    Rota aplicada ✓ · 38 paradas
+  </div>
+</div>
+
+<script>
+(function(){
+  var ease = function(t){ return 1 - Math.pow(1 - t, 3); };
+
+  /* ---- count-up numbers ---- */
+  function countUp(el){
+    var target = parseFloat(el.getAttribute('data-count'));
+    var dec = parseInt(el.getAttribute('data-dec') || '0', 10);
+    var locale = el.getAttribute('data-locale') === '1';
+    var dur = 1400, t0 = null;
+    function frame(ts){
+      if(!t0) t0 = ts;
+      var p = Math.min((ts - t0) / dur, 1);
+      var v = target * ease(p);
+      var s = v.toFixed(dec);
+      if(locale) s = s.replace('.', ',');
+      el.textContent = s;
+      if(p < 1) requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  }
+
+  /* ---- reveal + trigger animations on view ---- */
+  var seen = new WeakSet();
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if(!e.isIntersecting || seen.has(e.target)) return;
+      seen.add(e.target);
+      e.target.classList.add('in');
+
+      /* count-ups within */
+      e.target.querySelectorAll('[data-count]').forEach(countUp);
+
+      /* bars within */
+      e.target.querySelectorAll('.bar').forEach(function(b, i){
+        setTimeout(function(){ b.style.width = b.getAttribute('data-w') + '%'; }, 150 + i * 120);
+      });
+
+      /* donut */
+      var donut = e.target.querySelector('#donutArc');
+      if(donut){
+        var C = 2 * Math.PI * 26;               /* 163.36 */
+        var score = 87;
+        setTimeout(function(){
+          donut.style.strokeDashoffset = (C * (1 - score / 100)).toFixed(2);
+        }, 200);
+      }
+
+      /* map route draw */
+      var route = e.target.querySelector('#routeNew');
+      if(route){ route.classList.add('draw'); }
+
+    });
+  }, { threshold: 0.25 });
+
+  document.querySelectorAll('.reveal, .card').forEach(function(el){ io.observe(el); });
+
+  /* ---- toast ---- */
+  var toast = document.getElementById('toast');
+  var toastTimer = null;
+  function showToast(msg){
+    if(msg) toast.lastChild.textContent = ' ' + msg;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ toast.classList.remove('show'); }, 2600);
+  }
+  document.getElementById('applyBtn').addEventListener('click', function(){
+    showToast('Rota aplicada ✓ · 38 paradas');
+  });
+  document.getElementById('sendBtn').addEventListener('click', function(){
+    showToast('Rota enviada ao motorista ✓');
+  });
+
+  /* ---- delivery row checkbox toggle ---- */
+  document.querySelectorAll('.drow').forEach(function(row){
+    var chk = row.querySelector('.chk');
+    if(!chk) return;
+    chk.addEventListener('click', function(){
+      chk.classList.toggle('on');
+      row.classList.toggle('sel', chk.classList.contains('on'));
+    });
+  });
+
+  /* ---- segmented control ---- */
+  document.querySelectorAll('.segmented').forEach(function(seg){
+    seg.querySelectorAll('.seg').forEach(function(opt){
+      opt.addEventListener('click', function(){
+        seg.querySelectorAll('.seg').forEach(function(o){ o.classList.remove('on'); o.removeAttribute('aria-selected'); });
+        opt.classList.add('on');
+        opt.setAttribute('aria-selected','true');
+      });
+    });
+  });
+})();
+</script>
+</body>
+</html>

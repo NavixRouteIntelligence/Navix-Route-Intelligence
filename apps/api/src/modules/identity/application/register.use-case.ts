@@ -1,11 +1,24 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
-import type { RegisterRequest, RegisterResponse } from '@navix/contracts';
+import type { AuthResultWithAccount, RegisterRequest } from '@navix/contracts';
 import { DataSource } from 'typeorm';
 
 import { AUDIT_LOG, type AuditLogPort } from '../../../shared/audit/audit-log.port';
-import { ValidationError } from '../../../shared/kernel/domain-error';
+import { ConflictError, ValidationError } from '../../../shared/kernel/domain-error';
 import { newId } from '../../../shared/kernel/id';
+
+/** Slug base a partir de um nome (sem o sufixo de unicidade). */
+function slugify(value: string): string {
+  const base = value
+    .normalize('NFKD')
+    // Remove as marcas de acento (combining diacritical marks U+0300–U+036F) do NFKD.
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-+|-+$)/g, '')
+    .slice(0, 40);
+  return base || 'org';
+}
 import {
   REFRESH_TOKEN_REPOSITORY,
   type RefreshTokenRepositoryPort,
@@ -36,7 +49,7 @@ export class RegisterUseCase {
     @Inject(AUDIT_LOG) private readonly audit: AuditLogPort,
   ) {}
 
-  async execute(command: RegisterRequest): Promise<RegisterResponse> {
+  async execute(command: RegisterRequest): Promise<AuthResultWithAccount> {
     const accountType = command.accountType;
     const name = command.name.trim();
     const email = command.email.trim().toLowerCase();
@@ -56,11 +69,23 @@ export class RegisterUseCase {
     const passwordHash = await this.hasher.hash(command.password);
     const tenantId = newId();
     const userId = newId();
+    // Slug único da organização (identificador de login alternativo — ADR-0016).
+    // Sufixo do id garante unicidade sem consulta extra nem corrida.
+    const slug = `${slugify(organizationName)}-${tenantId.replace(/-/g, '').slice(0, 6)}`;
 
     await this.dataSource.transaction(async (manager) => {
+      // E-mail é identidade global: rejeita duplicata com erro amigável (o índice
+      // único do banco é a rede de segurança contra corrida).
+      const existing = (await manager.query(
+        `SELECT 1 FROM users WHERE LOWER(email) = LOWER($1) LIMIT 1`,
+        [email],
+      )) as unknown[];
+      if (existing.length > 0) {
+        throw new ConflictError('E-mail já cadastrado.');
+      }
       await manager.query(
-        `INSERT INTO tenants (id, name, account_type) VALUES ($1, $2, $3)`,
-        [tenantId, organizationName, accountType],
+        `INSERT INTO tenants (id, name, account_type, slug) VALUES ($1, $2, $3, $4)`,
+        [tenantId, organizationName, accountType, slug],
       );
       await manager.query(
         `INSERT INTO users (id, tenant_id, email, password_hash, status, roles)
