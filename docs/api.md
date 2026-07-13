@@ -50,17 +50,18 @@ Convenções e contrato da API. Toda mudança de contrato deve atualizar este do
 
 ## 5.1 Operações assíncronas (jobs)
 
-> **Status:** ⬜ **Planejado (Fase 2).** Não implementado. **Hoje a otimização é síncrona:** `POST /api/v1/route-plans` (e `POST /api/v1/route-plans/mine` para o motorista) respondem **`201 Created`** com o Route Plan pronto (ver §14). Não há recurso de job nem `GET /jobs/{jobId}`. O modelo abaixo é o alvo para quando a fila (BullMQ) existir.
-
-Operações pesadas (otimização de rotas, importação em massa) **não** são síncronas. O servidor responde **`202 Accepted`** com um recurso de **job**; o cliente acompanha por *polling* ou webhook.
+> **Status:** ✅ **Implementado para a otimização de rotas (ADR-0007).** O `POST /route-plans` (e `/route-plans/mine`) **enfileira** e responde **`202 Accepted` + `jobId`**; o cliente acompanha por **polling** em `GET /route-plans/jobs/:jobId` (WebSocket é o próximo passo). A fila atual é **in-process** (BullMQ/durável é roadmap). A **importação em massa** continua síncrona (ver §5.2).
 
 ```
-POST /api/v1/route-plans/{id}:optimize      -> 202 { "data": { "jobId": "...", "status": "queued" } }
-GET  /api/v1/jobs/{jobId}                    -> 200 { "status": "queued|running|succeeded|failed", "result": { } }
+POST /api/v1/route-plans            -> 202 { "data": { "jobId": "...", "status": "queued" } }
+POST /api/v1/route-plans/mine       -> 202 { "data": { "jobId": "...", "status": "queued" } }
+GET  /api/v1/route-plans/jobs/:id   -> 200 { "data": { "jobId", "status": "queued|running|succeeded|failed",
+                                                        "routePlanId": "…|null", "error": "…|null" } }
+GET  /api/v1/route-plans/:id        -> 200 { "data": <RoutePlan> }   # quando o job conclui (succeeded)
 ```
 
-- Aceita `Idempotency-Key` para evitar duplicidade.
-- Falhas retornam `status: failed` com erro padronizado (ver §7).
+- Aceita `Idempotency-Key` (o reenvio replica o mesmo `jobId` — ver §10).
+- Validação **estrutural** do corpo continua síncrona (`400` na borda); erros do solver viram `status: failed` no job.
 
 ## 5.2 Importação em massa
 
@@ -351,3 +352,4 @@ GET  /api/v1/pod/{deliveryId}     # comprovante de uma entrega
 | 2026-07-13 | 0.11 | Arquitetura | Auth Web (cookie) × Mobile (bearer) por endpoints dedicados `/auth/mobile/*` (ADR-0015); header X-Auth-Mode removido |
 | 2026-07-13 | 0.12 | Arquitetura | Login sem tenantId: `{ email, password, organization? }` — tenant por e-mail/slug (ADR-0016) |
 | 2026-07-13 | 0.13 | Arquitetura | Idempotency-Key implementado em POD, tracking, import/confirm e otimização (ADR-0017) |
+| 2026-07-13 | 0.14 | Arquitetura | Otimização assíncrona: POST /route-plans → 202 + jobId; GET /route-plans/jobs/:id (ADR-0007) |

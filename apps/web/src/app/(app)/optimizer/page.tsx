@@ -31,7 +31,7 @@ export default function OptimizerPage() {
   const history = useQuery({ queryKey: ['route-plans', 'history'], queryFn: () => optimizerApi.listPlans({ pageSize: 5 }) });
 
   const optimize = useMutation({
-    mutationFn: () => optimizerApi.optimize({ deliveryIds: [...selected] }),
+    mutationFn: () => optimizerApi.optimizeAndWait({ deliveryIds: [...selected] }),
     onSuccess: (res) => {
       setResult(res.data);
       qc.invalidateQueries({ queryKey: ['route-plans'] });

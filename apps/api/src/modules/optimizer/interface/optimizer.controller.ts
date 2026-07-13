@@ -14,6 +14,8 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type {
   AuthenticatedUser,
   CollectionResponse,
+  OptimizationJob,
+  OptimizationJobAccepted,
   ResourceResponse,
   RoutePlan as RoutePlanView,
 } from '@navix/contracts';
@@ -24,9 +26,10 @@ import { JwtAuthGuard } from '../../../shared/security/jwt-auth.guard';
 import { Idempotent } from '../../../shared/idempotency/idempotency.decorator';
 import { Roles } from '../../../shared/security/roles.decorator';
 import { RolesGuard } from '../../../shared/security/roles.guard';
+import { EnqueueOptimizationUseCase } from '../application/enqueue-optimization.use-case';
+import { GetOptimizationJobUseCase } from '../application/get-optimization-job.use-case';
 import { GetRoutePlanUseCase } from '../application/get-route-plan.use-case';
 import { ListRoutePlansUseCase } from '../application/list-route-plans.use-case';
-import { OptimizeRouteUseCase } from '../application/optimize-route.use-case';
 import { ListRoutePlansQueryDto } from './dto/list-query.dto';
 import { OptimizeRouteDto } from './dto/optimize-route.dto';
 
@@ -38,21 +41,22 @@ const BASE_PATH = '/api/v1/route-plans';
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class OptimizerController {
   constructor(
-    private readonly optimize: OptimizeRouteUseCase,
+    private readonly enqueue: EnqueueOptimizationUseCase,
+    private readonly getJob: GetOptimizationJobUseCase,
     private readonly getPlan: GetRoutePlanUseCase,
     private readonly listPlans: ListRoutePlansUseCase,
   ) {}
 
   @Post()
   @Roles('admin', 'dispatcher')
-  @HttpCode(HttpStatus.CREATED)
+  @HttpCode(HttpStatus.ACCEPTED)
   @Idempotent()
-  @ApiOperation({ summary: 'Otimiza uma rota e persiste o Route Plan' })
+  @ApiOperation({ summary: 'Enfileira a otimização de uma rota (assíncrono) → 202 + jobId' })
   async create(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: OptimizeRouteDto,
-  ): Promise<ResourceResponse<RoutePlanView>> {
-    const data = await this.optimize.execute({
+  ): Promise<ResourceResponse<OptimizationJobAccepted>> {
+    const data = await this.enqueue.execute({
       ...dto,
       tenantId: user.tenantId,
       actorId: user.id,
@@ -67,18 +71,28 @@ export class OptimizerController {
    */
   @Post('mine')
   @Roles('driver')
-  @HttpCode(HttpStatus.CREATED)
+  @HttpCode(HttpStatus.ACCEPTED)
   @Idempotent()
-  @ApiOperation({ summary: 'Motorista otimiza a própria rota (mesmo motor de IA)' })
+  @ApiOperation({ summary: 'Motorista enfileira a otimização da própria rota → 202 + jobId' })
   async optimizeMine(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: OptimizeRouteDto,
-  ): Promise<ResourceResponse<RoutePlanView>> {
-    const data = await this.optimize.execute({
+  ): Promise<ResourceResponse<OptimizationJobAccepted>> {
+    const data = await this.enqueue.execute({
       ...dto,
       tenantId: user.tenantId,
       actorId: user.id,
     });
+    return { data };
+  }
+
+  @Get('jobs/:jobId')
+  @ApiOperation({ summary: 'Consulta o status de um job de otimização (polling)' })
+  async job(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('jobId', ParseUUIDPipe) jobId: string,
+  ): Promise<ResourceResponse<OptimizationJob>> {
+    const data = await this.getJob.execute(user.tenantId, jobId);
     return { data };
   }
 

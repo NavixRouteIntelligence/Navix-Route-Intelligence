@@ -30,7 +30,7 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 | ADR-0004 | Autenticação com JWT + Refresh Token | Aceito | ✅ Núcleo implementado; blacklist Redis e MFA/M2M pendentes | 2026-07-05 |
 | ADR-0005 | ORM: TypeORM (compatível com RLS) | Aceito | ✅ Implementado | 2026-07-05 |
 | ADR-0006 | Transactional Outbox para eventos de domínio | Parcial | 🟡 Só a tabela `outbox`; sem producer/relay/consumer | 2026-07-05 |
-| ADR-0007 | Motor de otimização como serviço isolável (port) | Parcial | 🟡 Port + estratégia isoladas; execução **síncrona**, sem fila | 2026-07-05 |
+| ADR-0007 | Motor de otimização como serviço isolável (port) | Parcial | 🟡 Assíncrono via job (202 + jobId, status endpoint, port de fila); fila **in-process** (BullMQ/durável pendente) | 2026-07-05 |
 | ADR-0008 | Chaves primárias UUIDv7 (ordenáveis) | Aceito | ✅ Implementado (`newId()` via `uuid` v7) | 2026-07-05 |
 | ADR-0009 | Telemetria de posições em série temporal | Parcial | 🟡 Tabela `driver_positions` pronta; TimescaleDB **não** habilitado | 2026-07-05 |
 | ADR-0010 | Envelope encryption com chave por tenant | Planejado | ⬜ Não implementado; PII em texto puro; `ENCRYPTION_KEK` sem uso | 2026-07-05 |
@@ -109,7 +109,7 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 ## ADR-0007 — Motor de otimização como serviço isolável (port)
 
 - **Status:** Parcial · **Data:** 2026-07-05
-- **Status da implementação:** 🟡 Parcial. A **port** (`RouteOptimizationStrategy`/`DistanceProvider`) e a estratégia **nearest-neighbor + 2-opt** stateless estão implementadas e isoladas atrás de interfaces, e o Optimizer só acessa o Delivery por um gateway anti-corrupção — logo, a **extração futura está preservada**. Porém a execução é **síncrona e in-process** (o endpoint responde `201` com o plano pronto), **sem BullMQ/fila e sem o `202 Accepted` + recurso de job** previstos. A parte assíncrona é roadmap (Fase 2).
+- **Status da implementação:** 🟡 Parcial (avançado). A otimização agora é **assíncrona por jobs**: `POST /route-plans` (e `/mine`) **enfileira** e responde **`202 Accepted` + `jobId`**; o status é consultado em `GET /route-plans/jobs/:jobId` (polling). Um processador reusa o solver (`OptimizeRouteUseCase`) fora da requisição, atualizando o job (`queued→running→succeeded/failed`) e emitindo transições por uma `JobEventsPort` — **base pronta para WebSocket/SSE**. A **port de fila** (`OptimizationJobQueuePort`) isola o transporte. **Pendente:** a fila é **in-process** (`setTimeout`, não-durável a reinícios) — a troca por **BullMQ**/worker dedicado é o próximo passo, sem alterar os casos de uso. A estratégia (nearest-neighbor + 2-opt) e o gateway anti-corrupção para o Delivery seguem isolados.
 - **Contexto:** A resolução do VRP é CPU-intensiva, tem perfil de escala diferente da API e pode exigir linguagem/solver especializados. Embutir a lógica no request bloquearia o processo e dificultaria a extração futura.
 - **Decisão:** Definir o otimizador atrás de uma **port** (`RouteOptimizer`) desde o início, executado de forma **assíncrona via fila** e **stateless**. Começa in-process/worker no MVP, mas com contrato que permite extrair para microserviço com escala horizontal sem reescrita.
 - **Alternativas consideradas:** Solver acoplado ao caso de uso (mais simples, porém difícil de escalar/extrair).

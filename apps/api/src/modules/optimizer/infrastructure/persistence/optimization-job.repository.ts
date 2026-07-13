@@ -1,0 +1,61 @@
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+
+import { scopedRepository } from '../../../../shared/database/transaction-context';
+import type {
+  OptimizationJobRecord,
+  OptimizationJobRepositoryPort,
+  OptimizationJobUpdate,
+} from '../../domain/ports/optimization-job-repository.port';
+import { OptimizationJobOrmEntity } from './optimization-job.orm-entity';
+
+/** Repositório TypeORM de jobs de otimização (escopo de tenant via RLS). */
+@Injectable()
+export class OptimizationJobRepository implements OptimizationJobRepositoryPort {
+  constructor(
+    @InjectRepository(OptimizationJobOrmEntity)
+    private readonly base: Repository<OptimizationJobOrmEntity>,
+  ) {}
+
+  private get repo(): Repository<OptimizationJobOrmEntity> {
+    return scopedRepository(this.base);
+  }
+
+  async create(record: Omit<OptimizationJobRecord, 'createdAt' | 'updatedAt'>): Promise<void> {
+    const now = new Date();
+    await this.repo.save(
+      this.repo.create({
+        id: record.id,
+        tenantId: record.tenantId,
+        status: record.status,
+        request: record.request,
+        routePlanId: record.routePlanId,
+        error: record.error,
+        createdAt: now,
+        updatedAt: now,
+      }),
+    );
+  }
+
+  async findById(tenantId: string, id: string): Promise<OptimizationJobRecord | null> {
+    const row = await this.repo
+      .createQueryBuilder('j')
+      .where('j.tenant_id = :tenantId', { tenantId })
+      .andWhere('j.id = :id', { id })
+      .getOne();
+    return row ? { ...row } : null;
+  }
+
+  async update(id: string, patch: OptimizationJobUpdate): Promise<void> {
+    await this.repo.update(
+      { id },
+      {
+        status: patch.status,
+        ...(patch.routePlanId !== undefined ? { routePlanId: patch.routePlanId } : {}),
+        ...(patch.error !== undefined ? { error: patch.error } : {}),
+        updatedAt: new Date(),
+      },
+    );
+  }
+}

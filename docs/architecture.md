@@ -153,7 +153,7 @@ Contratos de evento são versionados e tratados como parte pública do módulo (
 
 ## 8.2 Motor de otimização (boundary isolável — ADR-0007)
 
-> **Status:** 🟡 **Parcial.** A port e a estratégia (nearest-neighbor + 2-opt) stateless já estão isoladas e o solver não é acessado diretamente pelos casos de uso — a extração futura está preservada. **Porém a execução é síncrona:** o endpoint responde **`201 Created`** com o plano pronto. A fila e o `202 Accepted` + recurso de job descritos abaixo são **roadmap** (Fase 2).
+> **Status:** 🟡 **Parcial (avançado).** A otimização é **assíncrona**: o `POST /route-plans` enfileira e responde **`202 Accepted` + `jobId`**; o status vem por `GET /route-plans/jobs/:id` (polling; WebSocket é o próximo passo via `JobEventsPort`). Um processador reusa o solver fora da requisição. A **port de fila** isola o transporte; a implementação atual é **in-process** (não-durável) — a troca por **BullMQ**/worker dedicado é o passo pendente, sem alterar os casos de uso.
 
 O solver de VRP fica atrás da **port `RouteOptimizer`**, é **stateless** e roda de forma **assíncrona via fila**. No MVP executa como worker in-process; o contrato permite extrair para um **microserviço com escala horizontal** (e até outra linguagem/solver) sem reescrever os casos de uso. A API responde `202 Accepted` com um recurso de job (ver [api.md](./api.md)).
 
