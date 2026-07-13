@@ -9,6 +9,7 @@ import { ToastProvider } from '@/components/ui/toast';
 import { AuthProvider } from '@/lib/auth/auth-provider';
 import { LocaleProvider } from '@/lib/i18n/locale-provider';
 import { PreferencesProvider } from '@/lib/preferences/preferences-provider';
+import { RealtimeProvider } from '@/lib/realtime/realtime-provider';
 import { SettingsSyncProvider } from '@/lib/settings/settings-sync';
 
 export function Providers({ children }: { children: ReactNode }) {
@@ -28,7 +29,9 @@ export function Providers({ children }: { children: ReactNode }) {
           <QueryClientProvider client={queryClient}>
             <ToastProvider>
               <AuthProvider>
-                <SettingsSyncProvider>{children}</SettingsSyncProvider>
+                <RealtimeProvider>
+                  <SettingsSyncProvider>{children}</SettingsSyncProvider>
+                </RealtimeProvider>
               </AuthProvider>
               <OfflineOverlay />
             </ToastProvider>

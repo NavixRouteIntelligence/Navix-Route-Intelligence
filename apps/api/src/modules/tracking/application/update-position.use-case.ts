@@ -8,6 +8,10 @@ import {
   POSITION_REPOSITORY,
   type PositionRepositoryPort,
 } from '../domain/ports/position-repository.port';
+import {
+  TRACKING_EVENTS,
+  type TrackingEventsPort,
+} from '../domain/ports/tracking-events.port';
 import { toPositionView } from './position.mapper';
 
 export interface UpdatePositionCommand extends PositionUpdateRequest {
@@ -21,6 +25,7 @@ export interface UpdatePositionCommand extends PositionUpdateRequest {
 export class UpdatePositionUseCase {
   constructor(
     @Inject(POSITION_REPOSITORY) private readonly positions: PositionRepositoryPort,
+    @Inject(TRACKING_EVENTS) private readonly events: TrackingEventsPort,
   ) {}
 
   async execute(command: UpdatePositionCommand): Promise<DriverPositionView> {
@@ -48,6 +53,9 @@ export class UpdatePositionUseCase {
     };
 
     await this.positions.save(position);
-    return toPositionView(position);
+    const view = toPositionView(position);
+    // Publica em tempo real (SSE); o polling permanece como fallback.
+    this.events.positionUpdated(command.tenantId, view);
+    return view;
   }
 }

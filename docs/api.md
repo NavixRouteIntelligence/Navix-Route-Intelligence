@@ -74,6 +74,29 @@ POST /api/v1/deliveries:bulk   (CSV ou JSON)  -> 202 { "jobId": "..." }
 GET  /api/v1/jobs/{jobId}                      -> relatório: aceitas, rejeitadas, erros por linha
 ```
 
+## 5.3 Tempo real (SSE — ADR-0018)
+
+✅ **Implementado.** Transporte **servidor → cliente** por **Server-Sent Events**; o **polling** dos recursos permanece apenas como *fallback*. Contrato (vale para **Web** e **Flutter**):
+
+```
+POST /api/v1/realtime/ticket        (Bearer)  -> 200 { "ticket": "…", "expiresIn": 60 }
+GET  /api/v1/realtime/stream?ticket=<ticket>  -> text/event-stream (EventSource)
+```
+
+- O `EventSource` não envia `Authorization`; por isso a conexão usa um **ticket** curto (obtido no `/ticket` autenticado e passado na query). O ticket expira em 60s e é reutilizável dentro do TTL (tolera reconexões).
+- Cada mensagem SSE é um JSON no campo `data`, uma **união discriminada por `type`**:
+
+```jsonc
+{ "type": "tracking.position", "data": { /* DriverPositionView */ } }
+{ "type": "optimization.job",  "data": { /* OptimizationJob (status do job) */ } }
+{ "type": "ping",              "data": { "at": "2026-07-13T…Z" } }   // keep-alive (~25s)
+```
+
+- **Escopo por tenant:** o stream só entrega eventos do tenant do ticket.
+- **Fluxo de consumo:** obter ticket → abrir `EventSource` → tratar `onmessage` por `type` → em `onerror`, **fechar, obter novo ticket e reconectar com backoff** (o web já faz isso no `RealtimeProvider`).
+- **Flutter:** consumir `GET /realtime/stream?ticket=…` como stream HTTP (`http`/`dio` com resposta em streaming ou pacote SSE), aplicando o mesmo fluxo de ticket + reconexão.
+- **Escala:** o hub é *in-process* (single-instance); multi-réplica exige Redis pub/sub (roadmap) — até lá, o *fallback* de polling cobre.
+
 ## 6. Formato de resposta
 
 Sucesso — recurso único:
@@ -353,3 +376,4 @@ GET  /api/v1/pod/{deliveryId}     # comprovante de uma entrega
 | 2026-07-13 | 0.12 | Arquitetura | Login sem tenantId: `{ email, password, organization? }` — tenant por e-mail/slug (ADR-0016) |
 | 2026-07-13 | 0.13 | Arquitetura | Idempotency-Key implementado em POD, tracking, import/confirm e otimização (ADR-0017) |
 | 2026-07-13 | 0.14 | Arquitetura | Otimização assíncrona: POST /route-plans → 202 + jobId; GET /route-plans/jobs/:id (ADR-0007) |
+| 2026-07-13 | 0.15 | Arquitetura | Tempo real por SSE: /realtime/ticket + /realtime/stream; eventos tracking.position e optimization.job (ADR-0018) |

@@ -46,6 +46,8 @@ Segurança é requisito de primeira classe, não uma etapa final. Nenhuma featur
 - Senhas com **Argon2id** (ou bcrypt com custo adequado); nunca em texto claro.
 - MFA previsto para contas administrativas (fase futura).
 
+- **Conexão em tempo real (SSE):** como o `EventSource` não envia `Authorization`, o stream `/realtime/stream` é autenticado por um **ticket** curto (60s, emitido no `/realtime/ticket` autenticado e passado na query). Evita expor o access token em URL/logs; o stream é escopado ao tenant do ticket (ADR-0018).
+
 ### 2.1 Autenticação máquina-a-máquina (M2M)
 
 > **Status:** ⬜ **Planejado.** Não há autenticação M2M implementada. A tabela `api_keys` existe no schema, mas não há emissão/validação de API keys nem OAuth2 por dispositivo; o app do motorista usa o mesmo fluxo JWT dos demais usuários.

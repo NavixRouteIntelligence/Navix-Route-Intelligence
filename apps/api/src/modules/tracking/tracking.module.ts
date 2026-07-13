@@ -4,6 +4,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { QueryPositionsUseCase } from './application/query-positions.use-case';
 import { UpdatePositionUseCase } from './application/update-position.use-case';
 import { POSITION_REPOSITORY } from './domain/ports/position-repository.port';
+import { TRACKING_EVENTS } from './domain/ports/tracking-events.port';
+import { RealtimeTrackingEvents } from './infrastructure/events/realtime-tracking-events';
 import { DriverPositionOrmEntity } from './infrastructure/persistence/driver-position.orm-entity';
 import { PositionRepository } from './infrastructure/persistence/position.repository';
 import { TrackingController } from './interface/tracking.controller';
@@ -20,6 +22,7 @@ import { TrackingController } from './interface/tracking.controller';
     UpdatePositionUseCase,
     QueryPositionsUseCase,
     { provide: POSITION_REPOSITORY, useClass: PositionRepository },
+    { provide: TRACKING_EVENTS, useClass: RealtimeTrackingEvents },
   ],
 })
 export class TrackingModule {}
