@@ -25,6 +25,23 @@ export interface PositionUpdateRequest {
   status?: Exclude<TrackingStatus, 'offline'>;
 }
 
+/**
+ * Envio **em lote** de posições (sincronização offline): o dispositivo acumula
+ * posições sem sinal e as envia numa única requisição ao reconectar. Ver
+ * `POST /tracking/positions/batch`. O endpoint unitário permanece por
+ * compatibilidade.
+ */
+export interface PositionBatchRequest {
+  positions: PositionUpdateRequest[];
+}
+
+/** Resposta do envio em lote. */
+export interface PositionBatchResponse {
+  /** Quantidade de posições registradas. */
+  accepted: number;
+  positions: DriverPositionView[];
+}
+
 /** Posição de um motorista (última conhecida ou ponto do histórico). */
 export interface DriverPositionView {
   driverId: string;

@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
+import { BatchUpdatePositionsUseCase } from './application/batch-update-positions.use-case';
 import { QueryPositionsUseCase } from './application/query-positions.use-case';
 import { UpdatePositionUseCase } from './application/update-position.use-case';
 import { POSITION_REPOSITORY } from './domain/ports/position-repository.port';
@@ -20,6 +21,7 @@ import { TrackingController } from './interface/tracking.controller';
   controllers: [TrackingController],
   providers: [
     UpdatePositionUseCase,
+    BatchUpdatePositionsUseCase,
     QueryPositionsUseCase,
     { provide: POSITION_REPOSITORY, useClass: PositionRepository },
     { provide: TRACKING_EVENTS, useClass: RealtimeTrackingEvents },

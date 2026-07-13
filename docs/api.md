@@ -321,6 +321,7 @@ Rastreamento de posição de motoristas. Isolado por tenant (RLS) e com RBAC. Es
 
 ```
 POST /api/v1/tracking/positions          # motorista envia sua posição (role driver)
+POST /api/v1/tracking/positions/batch    # motorista envia VÁRIAS posições (sync offline)
 GET  /api/v1/tracking/me/latest          # última posição do próprio motorista
 GET  /api/v1/tracking/me/history         # histórico do próprio motorista
 GET  /api/v1/tracking/positions/latest   # frota: última posição de cada motorista (empresa)
@@ -328,9 +329,10 @@ GET  /api/v1/tracking/drivers/{id}/history  # histórico de um motorista (empres
 ```
 
 - **Payload de posição**: `{ latitude, longitude, recordedAt?, speed?, heading?, status? }`. `status` reportável: `en_route` | `finished`; `offline` é calculado pelo servidor quando não há atualização recente.
+- **Envio em lote** (`positions/batch`): corpo `{ positions: [ …payload… ] }` (1 a 500), resposta `{ accepted, positions }` (`201`). Um único INSERT + publicação em tempo real de cada ponto; ideal para o dispositivo **reenviar a fila offline** numa requisição só. Aceita `Idempotency-Key`. O endpoint **unitário** permanece por compatibilidade.
 - **Perfis**: os endpoints `me/*` servem tanto o Motorista Autônomo quanto o motorista de empresa (veem só a si). A **visão de frota** (`positions/latest`, `drivers/:id/history`) é hoje restrita a `admin`/`dispatcher`/`fleet_manager` (empresa) — o ponto único para liberá-la ao Autônomo no futuro é o `@Roles` desses dois endpoints.
 - **Persistência**: tabela `driver_positions` (append-only) com RLS FORCE por tenant, **preparada para virar hypertable do TimescaleDB** (fase de telemetria).
-- **Tempo real**: o frontend faz *polling* (isolado num hook), com a arquitetura pronta para trocar por WebSocket/SSE sem alterar a UI.
+- **Tempo real**: cada posição (unitária ou em lote) é publicada por **SSE** (`optimization.job`/`tracking.position` — §5.3); o frontend consome em tempo real e faz *polling* só como fallback (ADR-0018).
 - **Extensível** para ETA, otimização dinâmica e notificações.
 
 ### 14.6 Proof of Delivery (POD) — implementado
@@ -377,3 +379,4 @@ GET  /api/v1/pod/{deliveryId}     # comprovante de uma entrega
 | 2026-07-13 | 0.13 | Arquitetura | Idempotency-Key implementado em POD, tracking, import/confirm e otimização (ADR-0017) |
 | 2026-07-13 | 0.14 | Arquitetura | Otimização assíncrona: POST /route-plans → 202 + jobId; GET /route-plans/jobs/:id (ADR-0007) |
 | 2026-07-13 | 0.15 | Arquitetura | Tempo real por SSE: /realtime/ticket + /realtime/stream; eventos tracking.position e optimization.job (ADR-0018) |
+| 2026-07-13 | 0.16 | Arquitetura | Tracking em lote: POST /tracking/positions/batch (1–500) para sincronização offline; unitário mantido |

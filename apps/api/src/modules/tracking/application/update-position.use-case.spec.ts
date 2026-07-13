@@ -8,6 +8,7 @@ function build() {
   const saved: DriverPosition[] = [];
   const repo: PositionRepositoryPort = {
     save: async (p) => void saved.push(p),
+    saveMany: async (ps) => void saved.push(...ps),
     findLatestForDriver: async () => null,
     findLatestPerDriver: async () => [],
     findHistory: async () => [],

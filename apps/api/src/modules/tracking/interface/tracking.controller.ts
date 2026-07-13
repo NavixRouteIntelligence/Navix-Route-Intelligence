@@ -13,6 +13,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type {
   AuthenticatedUser,
   DriverPositionView,
+  PositionBatchResponse,
   PositionHistoryResponse,
 } from '@navix/contracts';
 
@@ -21,8 +22,10 @@ import { JwtAuthGuard } from '../../../shared/security/jwt-auth.guard';
 import { Idempotent } from '../../../shared/idempotency/idempotency.decorator';
 import { Roles } from '../../../shared/security/roles.decorator';
 import { RolesGuard } from '../../../shared/security/roles.guard';
+import { BatchUpdatePositionsUseCase } from '../application/batch-update-positions.use-case';
 import { QueryPositionsUseCase } from '../application/query-positions.use-case';
 import { UpdatePositionUseCase } from '../application/update-position.use-case';
+import { PositionBatchDto } from './dto/position-batch.dto';
 import { UpdatePositionDto } from './dto/update-position.dto';
 
 /**
@@ -38,6 +41,7 @@ import { UpdatePositionDto } from './dto/update-position.dto';
 export class TrackingController {
   constructor(
     private readonly updatePosition: UpdatePositionUseCase,
+    private readonly batchUpdate: BatchUpdatePositionsUseCase,
     private readonly queries: QueryPositionsUseCase,
   ) {}
 
@@ -56,6 +60,23 @@ export class TrackingController {
       driverId: user.id,
     });
     return { data };
+  }
+
+  @Post('positions/batch')
+  @Roles('driver')
+  @HttpCode(HttpStatus.CREATED)
+  @Idempotent()
+  @ApiOperation({ summary: 'Motorista envia várias posições (sincronização offline)' })
+  async updateBatch(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: PositionBatchDto,
+  ): Promise<{ data: PositionBatchResponse }> {
+    const positions = await this.batchUpdate.execute({
+      positions: dto.positions,
+      tenantId: user.tenantId,
+      driverId: user.id,
+    });
+    return { data: { accepted: positions.length, positions } };
   }
 
   @Get('me/latest')

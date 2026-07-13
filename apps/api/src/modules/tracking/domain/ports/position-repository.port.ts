@@ -7,6 +7,8 @@ import type { DriverPosition } from '../driver-position';
 export interface PositionRepositoryPort {
   /** Grava uma nova posição (append-only). */
   save(position: DriverPosition): Promise<void>;
+  /** Grava várias posições em uma única operação (envio em lote / offline). */
+  saveMany(positions: DriverPosition[]): Promise<void>;
   /** Última posição de um motorista específico. */
   findLatestForDriver(tenantId: string, driverId: string): Promise<DriverPosition | null>;
   /** Última posição de cada motorista do tenant (visão de frota). */

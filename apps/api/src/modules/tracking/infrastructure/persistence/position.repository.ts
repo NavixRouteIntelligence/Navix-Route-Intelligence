@@ -19,6 +19,16 @@ export class PositionRepository implements PositionRepositoryPort {
   }
 
   async save(position: DriverPosition): Promise<void> {
+    await this.repo.insert(this.toRow(position));
+  }
+
+  async saveMany(positions: DriverPosition[]): Promise<void> {
+    if (positions.length === 0) return;
+    // Um único INSERT multi-linha (append-only de série temporal).
+    await this.repo.insert(positions.map((p) => this.toRow(p)));
+  }
+
+  private toRow(position: DriverPosition): DriverPositionOrmEntity {
     const row = new DriverPositionOrmEntity();
     row.id = position.id;
     row.tenantId = position.tenantId;
@@ -29,7 +39,7 @@ export class PositionRepository implements PositionRepositoryPort {
     row.heading = position.heading;
     row.status = position.status;
     row.recordedAt = position.recordedAt;
-    await this.repo.insert(row);
+    return row;
   }
 
   async findLatestForDriver(tenantId: string, driverId: string): Promise<DriverPosition | null> {

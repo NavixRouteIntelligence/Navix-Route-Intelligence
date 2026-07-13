@@ -1,9 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { DriverPositionView, PositionUpdateRequest } from '@navix/contracts';
 
-import { ValidationError } from '../../../shared/kernel/domain-error';
-import { newId } from '../../../shared/kernel/id';
-import type { DriverPosition } from '../domain/driver-position';
 import {
   POSITION_REPOSITORY,
   type PositionRepositoryPort,
@@ -12,6 +9,7 @@ import {
   TRACKING_EVENTS,
   type TrackingEventsPort,
 } from '../domain/ports/tracking-events.port';
+import { createDriverPosition } from './create-driver-position';
 import { toPositionView } from './position.mapper';
 
 export interface UpdatePositionCommand extends PositionUpdateRequest {
@@ -29,29 +27,7 @@ export class UpdatePositionUseCase {
   ) {}
 
   async execute(command: UpdatePositionCommand): Promise<DriverPositionView> {
-    if (
-      !Number.isFinite(command.latitude) ||
-      command.latitude < -90 ||
-      command.latitude > 90 ||
-      !Number.isFinite(command.longitude) ||
-      command.longitude < -180 ||
-      command.longitude > 180
-    ) {
-      throw new ValidationError('Coordenadas inválidas.');
-    }
-
-    const position: DriverPosition = {
-      id: newId(),
-      tenantId: command.tenantId,
-      driverId: command.driverId,
-      latitude: command.latitude,
-      longitude: command.longitude,
-      speed: command.speed ?? null,
-      heading: command.heading ?? null,
-      status: command.status ?? 'en_route',
-      recordedAt: command.recordedAt ? new Date(command.recordedAt) : new Date(),
-    };
-
+    const position = createDriverPosition(command);
     await this.positions.save(position);
     const view = toPositionView(position);
     // Publica em tempo real (SSE); o polling permanece como fallback.
