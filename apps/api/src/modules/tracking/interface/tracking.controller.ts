@@ -18,6 +18,7 @@ import type {
 
 import { CurrentUser } from '../../../shared/interface/current-user.decorator';
 import { JwtAuthGuard } from '../../../shared/security/jwt-auth.guard';
+import { Idempotent } from '../../../shared/idempotency/idempotency.decorator';
 import { Roles } from '../../../shared/security/roles.decorator';
 import { RolesGuard } from '../../../shared/security/roles.guard';
 import { QueryPositionsUseCase } from '../application/query-positions.use-case';
@@ -43,6 +44,7 @@ export class TrackingController {
   @Post('positions')
   @Roles('driver')
   @HttpCode(HttpStatus.CREATED)
+  @Idempotent()
   @ApiOperation({ summary: 'Motorista envia sua posição atual' })
   async update(
     @CurrentUser() user: AuthenticatedUser,

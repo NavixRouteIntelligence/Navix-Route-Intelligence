@@ -21,6 +21,7 @@ import type {
 import { CurrentUser } from '../../../shared/interface/current-user.decorator';
 import { buildCollection } from '../../../shared/kernel/pagination';
 import { JwtAuthGuard } from '../../../shared/security/jwt-auth.guard';
+import { Idempotent } from '../../../shared/idempotency/idempotency.decorator';
 import { Roles } from '../../../shared/security/roles.decorator';
 import { RolesGuard } from '../../../shared/security/roles.guard';
 import { GetRoutePlanUseCase } from '../application/get-route-plan.use-case';
@@ -45,6 +46,7 @@ export class OptimizerController {
   @Post()
   @Roles('admin', 'dispatcher')
   @HttpCode(HttpStatus.CREATED)
+  @Idempotent()
   @ApiOperation({ summary: 'Otimiza uma rota e persiste o Route Plan' })
   async create(
     @CurrentUser() user: AuthenticatedUser,
@@ -66,6 +68,7 @@ export class OptimizerController {
   @Post('mine')
   @Roles('driver')
   @HttpCode(HttpStatus.CREATED)
+  @Idempotent()
   @ApiOperation({ summary: 'Motorista otimiza a própria rota (mesmo motor de IA)' })
   async optimizeMine(
     @CurrentUser() user: AuthenticatedUser,

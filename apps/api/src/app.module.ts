@@ -8,6 +8,7 @@ import { LoggerModule } from './shared/observability/logger.module';
 import { QueueModule } from './shared/queue/queue.module';
 import { RedisModule } from './shared/redis/redis.module';
 import { TenancyModule } from './shared/tenancy/tenancy.module';
+import { IdempotencyModule } from './shared/idempotency/idempotency.module';
 import { ThrottlingModule } from './shared/security/throttling.module';
 import { DeliveryModule } from './modules/delivery/delivery.module';
 import { FleetModule } from './modules/fleet/fleet.module';
@@ -34,6 +35,8 @@ import { UserSettingsModule } from './modules/user-settings/user-settings.module
     DatabaseModule,
     AuditModule,
     TenancyModule,
+    // Depois de Tenancy: o interceptor de idempotência roda dentro da tx de tenant.
+    IdempotencyModule,
     ThrottlingModule,
     HealthModule,
     IdentityModule,

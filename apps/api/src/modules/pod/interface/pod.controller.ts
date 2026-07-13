@@ -21,6 +21,7 @@ import type {
 import { CurrentUser } from '../../../shared/interface/current-user.decorator';
 import { buildCollection } from '../../../shared/kernel/pagination';
 import { JwtAuthGuard } from '../../../shared/security/jwt-auth.guard';
+import { Idempotent } from '../../../shared/idempotency/idempotency.decorator';
 import { Roles } from '../../../shared/security/roles.decorator';
 import { RolesGuard } from '../../../shared/security/roles.guard';
 import { QueryPodUseCase } from '../application/query-pod.use-case';
@@ -47,6 +48,7 @@ export class PodController {
   @Post()
   @Roles('driver', 'admin', 'dispatcher')
   @HttpCode(HttpStatus.CREATED)
+  @Idempotent()
   @ApiOperation({ summary: 'Registra o comprovante de entrega e aplica o desfecho' })
   submitHandler(
     @CurrentUser() user: AuthenticatedUser,

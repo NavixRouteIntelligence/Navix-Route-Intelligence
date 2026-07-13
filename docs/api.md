@@ -134,8 +134,12 @@ Formato padronizado (nunca vaza detalhes internos):
 
 ## 10. Idempotência
 
-- Operações sensíveis a duplicidade aceitam header `Idempotency-Key`.
-- A resposta é cacheada por chave (Redis) por uma janela definida.
+✅ **Implementado (ADR-0017).** Operações **críticas** aceitam o header `Idempotency-Key` (opcional). O reenvio com a mesma chave **replica** a resposta da primeira execução (mesmo status e corpo, com o header `Idempotency-Replayed: true`), sem duplicar o efeito — essencial para re-sincronização offline.
+
+- **Aplicado em:** `POST /pod`, `POST /tracking/positions`, `POST /imports/:id/confirm`, `POST /route-plans` e `POST /route-plans/mine`.
+- **Escopo da chave:** `(tenant, Idempotency-Key, método, rota)`. A gravação é **atômica** com a operação (mesma transação de tenant). Chave entre 8 e 200 caracteres.
+- **Sem o header**, o comportamento é o normal (idempotência é opt-in por request).
+- Armazenamento em `idempotency_keys` (Postgres, escopado por RLS). Um TTL/limpeza das chaves é roadmap.
 
 ## 11. Datas, unidades e i18n
 
@@ -346,3 +350,4 @@ GET  /api/v1/pod/{deliveryId}     # comprovante de uma entrega
 | 2026-07-12 | 0.10 | Arquitetura | Alinhamento doc↔código: marcado que jobs assíncronos (202, §5.1/§5.2) e M2M por API key **não** existem; otimização/importação são síncronas |
 | 2026-07-13 | 0.11 | Arquitetura | Auth Web (cookie) × Mobile (bearer) por endpoints dedicados `/auth/mobile/*` (ADR-0015); header X-Auth-Mode removido |
 | 2026-07-13 | 0.12 | Arquitetura | Login sem tenantId: `{ email, password, organization? }` — tenant por e-mail/slug (ADR-0016) |
+| 2026-07-13 | 0.13 | Arquitetura | Idempotency-Key implementado em POD, tracking, import/confirm e otimização (ADR-0017) |
