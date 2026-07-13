@@ -42,11 +42,14 @@ describe('Isolamento multi-tenant via RLS (integração)', () => {
 
   beforeAll(async () => {
     ds = await makeDataSource().initialize();
-    await ds.query(`INSERT INTO tenants (id, name) VALUES ($1,$2),($3,$4)`, [
+    // `slug` é NOT NULL desde ADR-0016; deriva do id para garantir unicidade.
+    await ds.query(`INSERT INTO tenants (id, name, slug) VALUES ($1,$2,$3),($4,$5,$6)`, [
       TENANT_A,
       `iso-A-${TENANT_A}`,
+      `iso-a-${TENANT_A.slice(0, 8)}`,
       TENANT_B,
       `iso-B-${TENANT_B}`,
+      `iso-b-${TENANT_B.slice(0, 8)}`,
     ]);
     // Insere uma entrega para o tenant A, dentro de uma transação com o tenant setado.
     await ds.transaction(async (m) => {
