@@ -67,7 +67,7 @@ class AuthInterceptor extends Interceptor {
           return;
         }
         final res = await authDio.post<dynamic>(
-          '/auth/refresh',
+          '/auth/mobile/refresh',
           data: {'refreshToken': refreshToken},
         );
         final data = res.data as Map<String, dynamic>;

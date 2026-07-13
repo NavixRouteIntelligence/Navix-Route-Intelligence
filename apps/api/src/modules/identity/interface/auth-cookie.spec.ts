@@ -4,9 +4,7 @@ import {
   REFRESH_COOKIE_NAME,
   REFRESH_COOKIE_PATH,
   clearRefreshCookie,
-  isBearerMode,
   readRefreshCookie,
-  resolveRefreshToken,
   setRefreshCookie,
   type RefreshCookieConfig,
 } from './auth-cookie';
@@ -35,33 +33,6 @@ describe('auth-cookie', () => {
     it('decodifica valores percent-encoded', () => {
       const r = req({ cookie: `${REFRESH_COOKIE_NAME}=a%20b` });
       expect(readRefreshCookie(r)).toBe('a b');
-    });
-  });
-
-  describe('isBearerMode', () => {
-    it('true quando X-Auth-Mode: bearer (case-insensitive)', () => {
-      expect(isBearerMode(req({ 'x-auth-mode': 'bearer' }))).toBe(true);
-      expect(isBearerMode(req({ 'x-auth-mode': 'Bearer' }))).toBe(true);
-    });
-
-    it('false quando ausente ou diferente (fluxo web/cookie)', () => {
-      expect(isBearerMode(req({}))).toBe(false);
-      expect(isBearerMode(req({ 'x-auth-mode': 'cookie' }))).toBe(false);
-    });
-  });
-
-  describe('resolveRefreshToken', () => {
-    it('prioriza o cookie sobre o corpo', () => {
-      const r = req({ cookie: `${REFRESH_COOKIE_NAME}=from-cookie` });
-      expect(resolveRefreshToken(r, 'from-body')).toBe('from-cookie');
-    });
-
-    it('cai para o corpo quando não há cookie (modo bearer)', () => {
-      expect(resolveRefreshToken(req({}), 'from-body')).toBe('from-body');
-    });
-
-    it('retorna null quando não há nem cookie nem corpo', () => {
-      expect(resolveRefreshToken(req({}), undefined)).toBeNull();
     });
   });
 

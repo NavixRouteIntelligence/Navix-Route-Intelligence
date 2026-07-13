@@ -39,7 +39,10 @@ Convenções e contrato da API. Toda mudança de contrato deve atualizar este do
 ## 5. Autenticação
 
 - `Authorization: Bearer <access_token>` em endpoints protegidos.
-- Fluxo de refresh: `POST /api/v1/auth/refresh` com o refresh token.
+- **Dois fluxos dedicados, sem acoplamento (ADR-0015):**
+  - **Web** — `POST /api/v1/auth/{register,login,refresh,logout}`. Refresh token entregue/lido via **cookie HttpOnly**; o corpo **nunca** o expõe. `refresh`/`logout` não recebem corpo (usam o cookie).
+  - **Mobile** — `POST /api/v1/auth/mobile/{register,login,refresh,logout}`. Modelo **bearer**: `login`/`register` retornam `tokens` **com `refreshToken`** no corpo; `refresh`/`logout` recebem `{ "refreshToken": "..." }` no corpo. Sem cookie e **sem header de modo** (o antigo `X-Auth-Mode` foi eliminado).
+- Endpoints de conta (`/auth/me`, `change-password`, `forgot/reset-password`) são **compartilhados** (dependem do access token).
 - Detalhes de tokens em [security.md](./security.md).
 
 - ⬜ *Planejado:* integrações máquina-a-máquina usarão **API key** (`X-Api-Key`) ou OAuth2 client credentials, com escopo mínimo (ver [security.md](./security.md)). *Ainda não implementado — hoje só há o fluxo JWT.*
@@ -154,10 +157,18 @@ Formato padronizado (nunca vaza detalhes internos):
 ## 14. Exemplos de endpoints (preliminar)
 
 ```
+# Web (cookie HttpOnly)
 POST   /api/v1/auth/register
 POST   /api/v1/auth/login
 POST   /api/v1/auth/refresh
 POST   /api/v1/auth/logout
+# Mobile (bearer token no corpo) — ADR-0015
+POST   /api/v1/auth/mobile/register
+POST   /api/v1/auth/mobile/login
+POST   /api/v1/auth/mobile/refresh
+POST   /api/v1/auth/mobile/logout
+# Conta (compartilhado, via access token)
+GET    /api/v1/auth/me
 
 GET    /api/v1/deliveries
 POST   /api/v1/deliveries
@@ -332,3 +343,4 @@ GET  /api/v1/pod/{deliveryId}     # comprovante de uma entrega
 | 2026-07-08 | 0.8 | Engenharia | Otimização IA para Motorista Autônomo: POST /route-plans/mine (aditivo), painel de rentabilidade, integração com tracking |
 | 2026-07-09 | 0.9 | Engenharia | Proof of Delivery: comprovante (foto/assinatura/GPS/status), integração Delivery+Tracking+Dashboard |
 | 2026-07-12 | 0.10 | Arquitetura | Alinhamento doc↔código: marcado que jobs assíncronos (202, §5.1/§5.2) e M2M por API key **não** existem; otimização/importação são síncronas |
+| 2026-07-13 | 0.11 | Arquitetura | Auth Web (cookie) × Mobile (bearer) por endpoints dedicados `/auth/mobile/*` (ADR-0015); header X-Auth-Mode removido |

@@ -69,20 +69,3 @@ export function readRefreshCookie(req: Request): string | null {
   }
   return null;
 }
-
-/**
- * Um cliente está em modo *bearer* (token no corpo, ex.: app mobile) quando envia
- * `X-Auth-Mode: bearer`. Sem o header, assume-se o fluxo web via cookie (padrão
- * seguro). Resolve o refresh token efetivo: cookie tem precedência; no modo
- * bearer cai para o corpo.
- */
-export function isBearerMode(req: Request): boolean {
-  const header = req.headers['x-auth-mode'];
-  const value = Array.isArray(header) ? header[0] : header;
-  return value?.toLowerCase() === 'bearer';
-}
-
-/** Refresh token efetivo da requisição: cookie primeiro, depois corpo (bearer). */
-export function resolveRefreshToken(req: Request, bodyToken?: string): string | null {
-  return readRefreshCookie(req) ?? (bodyToken ? bodyToken : null);
-}

@@ -23,11 +23,11 @@ class DioClient {
           connectTimeout: const Duration(seconds: 15),
           receiveTimeout: const Duration(seconds: 20),
           contentType: 'application/json',
-          // Modo *bearer*: o backend (padrão de produção) usa cookie HttpOnly para
-          // o refresh token no cliente web. Clientes nativos não têm cookie jar
-          // compartilhado, então pedem o token no corpo via este header e o
-          // guardam no armazenamento seguro (secure_session_store).
-          headers: {'X-Auth-Mode': 'bearer'},
+          // Autenticação por bearer token nos endpoints dedicados /auth/mobile/*:
+          // o refresh token vem no corpo e é guardado no armazenamento seguro
+          // (secure_session_store). Sem cookies e sem headers especiais — web e
+          // mobile são totalmente desacoplados (ver ADR-0015).
+          //
           // Status padrão: Dio lança DioException em não-2xx; os repositórios
           // mapeiam para Failure (incl. 401, que o AuthInterceptor intercepta).
         ),

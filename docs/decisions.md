@@ -38,6 +38,7 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 | ADR-0012 | RLS forçada + interceptor de tenant por transação | Aceito | ✅ Implementado (FORCE + role `navix_app` + interceptor) | 2026-07-06 |
 | ADR-0013 | Access token JWT RS256 com key ring e rotação | Aceito | ✅ Implementado | 2026-07-06 |
 | ADR-0014 | Rate limiting com @nestjs/throttler | Aceito | ✅ Throttler global + login/refresh estritos; storage **Redis** (multi-instância) com fallback em memória | 2026-07-06 |
+| ADR-0015 | Autenticação separada: Web (cookie) e Mobile (bearer) por endpoints dedicados | Aceito | ✅ `/auth/*` cookie (web) e `/auth/mobile/*` bearer (mobile); header `X-Auth-Mode` eliminado | 2026-07-13 |
 
 ---
 
@@ -175,6 +176,15 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 - **Alternativas consideradas:** Rate limit em proxy/gateway (válido, mas não protege por rota/tenant no app).
 - **Consequências:** Proteção imediata contra força bruta. Em produção, migrar o storage para **Redis** (já disponível) para funcionar com múltiplas instâncias.
 
+## ADR-0015 — Autenticação separada: Web (cookie) e Mobile (bearer) por endpoints dedicados
+
+- **Status:** Aceito · **Data:** 2026-07-13
+- **Status da implementação:** ✅ Implementado. Web usa `/api/v1/auth/*` (cookie HttpOnly, corpo sem refresh token); Mobile usa `/api/v1/auth/mobile/*` (refresh token no corpo, obrigatório). Os dois compartilham os mesmos casos de uso (`LoginUseCase`, `RegisterUseCase`, `RefreshTokenUseCase`, `LogoutUseCase`) e um resultado de aplicação client-agnostic (`AuthResult`); cada controller mapeia para o contrato do seu cliente (`WebAuthResponse` vs `MobileAuthResponse`). O header `X-Auth-Mode` foi **eliminado**.
+- **Contexto:** A primeira versão do fluxo de cookie usava um header `X-Auth-Mode: bearer` para, nos **mesmos** endpoints, decidir se o refresh token ia no cookie (web) ou no corpo (mobile). Isso criava acoplamento implícito e frágil: qualquer cliente/instância de Dio que esquecesse o header recebia login **sem** refresh token e quebrava em silêncio (risco #1 da análise do app Flutter).
+- **Decisão:** Separar por **endpoints dedicados**. `/auth/*` é exclusivamente web (cookie); `/auth/mobile/*` é exclusivamente mobile (bearer). Contratos explícitos por cliente. Endpoints de conta (`me`, troca/reset de senha) permanecem **compartilhados** — dependem do access token, não da forma de entrega do refresh.
+- **Alternativas consideradas:** Manter o header `X-Auth-Mode` (acoplamento implícito, footgun); negociação por `Accept`/User-Agent (mágica e frágil); um só endpoint sempre com refresh no corpo (perde a proteção XSS do cookie no web).
+- **Consequências:** Web e mobile ficam desacoplados e auto-documentados; o contrato mobile é explícito (refresh token sempre presente). Custo: um controller a mais e leve duplicação de rotas — compensado pela clareza e por eliminar o footgun. Supersede o mecanismo de header introduzido junto ao cookie (ADR-0013/hardening).
+
 ---
 
 ## Template
@@ -202,3 +212,4 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 | 2026-07-06 | 0.3 | Engenharia | Hardening: ADRs 0012–0014 (RLS forçada, RS256, rate limiting) |
 | 2026-07-12 | 0.4 | Arquitetura | Alinhamento doc↔código: coluna "Status da implementação" por ADR; status ajustados para `Parcial`/`Planejado` onde ainda não implementado (0002, 0006, 0007, 0009, 0010, 0011, 0014) |
 | 2026-07-12 | 0.5 | Engenharia | Redis: conexão compartilhada resiliente + rate limiting em Redis com fallback (ADR-0014 → Aceito); abstrações de cache/fila prontas (ADR-0002 atualizado) |
+| 2026-07-13 | 0.6 | Arquitetura | ADR-0015: separação Web (cookie) × Mobile (bearer) por endpoints dedicados; header X-Auth-Mode eliminado |

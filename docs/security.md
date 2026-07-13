@@ -37,9 +37,10 @@ Segurança é requisito de primeira classe, não uma etapa final. Nenhuma featur
 - **JWT (access token)** de curta duração + **Refresh Token** de longa duração.
 - Access token: expiração curta (15 min), assinado com **RS256** (chave assimétrica do KeyRing, `kid` no cabeçalho para rotação — ADR-0013). Em dev, par efêmero é gerado no boot; em produção, chaves via secret manager/KMS.
 - Refresh token: armazenado com **hash** no banco, rotacionado a cada uso (*refresh token rotation*) e revogável.
-- **Entrega/armazenamento dos tokens (padrão de produção):**
-  - **Web:** access token **apenas em memória** (nunca em `localStorage`/`sessionStorage`); refresh token em **cookie `HttpOnly` + `Secure` (produção) + `SameSite=Lax`**, com `Path=/api/v1/auth` (enviado só às rotas de auth). O refresh token **nunca** é acessível por JavaScript — mitiga exfiltração por XSS. O refresh automático em `401` e a restauração de sessão no boot usam o cookie (requisições com `credentials: 'include'`).
-  - **Clientes nativos (mobile):** operam em modo *bearer* (header `X-Auth-Mode: bearer`); recebem o refresh token no corpo e o guardam em **armazenamento seguro** do dispositivo. Backend aceita o refresh token via cookie **ou** corpo (cookie tem precedência).
+- **Entrega/armazenamento dos tokens (padrão de produção) — Web e Mobile são separados por endpoints dedicados (ADR-0015), sem acoplamento nem header de modo:**
+  - **Web** (`/api/v1/auth/*`): access token **apenas em memória** (nunca em `localStorage`/`sessionStorage`); refresh token em **cookie `HttpOnly` + `Secure` (produção) + `SameSite=Lax`**, com `Path=/api/v1/auth`. O refresh token **nunca** aparece no corpo nem é acessível por JavaScript (mitiga XSS). Refresh em `401` e restauração de sessão usam o cookie (`credentials: 'include'`).
+  - **Mobile** (`/api/v1/auth/mobile/*`): modelo **bearer token** — o refresh token trafega no **corpo** (request e response) e é guardado em **armazenamento seguro** do dispositivo. Sem cookie e **sem header especial**. Os dois fluxos reaproveitam os mesmos casos de uso; muda só a forma de entrega do refresh token.
+  - **Endpoints de conta compartilhados** (`/auth/me`, `change-password`, `forgot/reset-password`): dependem do access token (Bearer), não da forma de entrega do refresh — servem web e mobile igualmente.
 - Detecção de reuso de refresh token → revogar toda a família de tokens.
 - Logout revoga o refresh token e **limpa o cookie** no servidor; blacklist de tokens no Redis quando necessário (⬜ roadmap).
 - Senhas com **Argon2id** (ou bcrypt com custo adequado); nunca em texto claro.

@@ -1,29 +1,32 @@
 import type {
+  AccessToken,
   AuthenticatedUser,
-  AuthTokens,
   ChangePasswordRequest,
   ForgotPasswordRequest,
   ForgotPasswordResponse,
   LoginRequest,
-  LoginResponse,
   RegisterRequest,
-  RegisterResponse,
   ResetPasswordRequest,
   ResourceResponse,
+  WebAuthResponse,
+  WebRegisterResponse,
 } from '@navix/contracts';
 
 import { apiRequest } from './client';
 
+// Cliente WEB: autenticação por cookie HttpOnly (endpoints /auth/*). O refresh
+// token nunca aparece no corpo — o navegador envia/recebe o cookie. Clientes
+// nativos usam /auth/mobile/* (ver ADR-0015).
 export const authApi = {
   login: (payload: LoginRequest) =>
-    apiRequest<LoginResponse>('/auth/login', { method: 'POST', body: payload, auth: false }),
+    apiRequest<WebAuthResponse>('/auth/login', { method: 'POST', body: payload, auth: false }),
 
   register: (payload: RegisterRequest) =>
-    apiRequest<RegisterResponse>('/auth/register', { method: 'POST', body: payload, auth: false }),
+    apiRequest<WebRegisterResponse>('/auth/register', { method: 'POST', body: payload, auth: false }),
 
   // O refresh token viaja no cookie HttpOnly; o corpo vai vazio (fluxo web).
   refresh: () =>
-    apiRequest<AuthTokens>('/auth/refresh', { method: 'POST', auth: false }),
+    apiRequest<AccessToken>('/auth/refresh', { method: 'POST', auth: false }),
 
   logout: () => apiRequest<void>('/auth/logout', { method: 'POST', auth: false }),
 

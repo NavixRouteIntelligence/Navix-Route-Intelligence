@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { LoginResponse } from '@navix/contracts';
+import type { AuthResult } from '@navix/contracts';
 
 import { AUDIT_LOG, type AuditLogPort } from '../../../shared/audit/audit-log.port';
 import { UnauthorizedError } from '../../../shared/kernel/domain-error';
@@ -36,7 +36,7 @@ export class LoginUseCase {
     @Inject(AUDIT_LOG) private readonly audit: AuditLogPort,
   ) {}
 
-  async execute(command: LoginCommand): Promise<LoginResponse> {
+  async execute(command: LoginCommand): Promise<AuthResult> {
     const user = await this.users.findByEmail(command.tenantId, command.email);
     if (!user || user.status !== 'active') {
       await this.auditFailure(command, 'user_not_found_or_inactive');

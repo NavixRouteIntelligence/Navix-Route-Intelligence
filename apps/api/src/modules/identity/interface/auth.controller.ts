@@ -11,12 +11,12 @@ import {
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import type {
+  AccessToken,
   AuthenticatedUser,
-  AuthTokens,
   ForgotPasswordResponse,
-  LoginResponse,
-  RegisterResponse,
   ResourceResponse,
+  WebAuthResponse,
+  WebRegisterResponse,
 } from '@navix/contracts';
 import type { Request, Response } from 'express';
 
@@ -26,8 +26,7 @@ import { CurrentUser } from '../../../shared/interface/current-user.decorator';
 import { JwtAuthGuard } from '../../../shared/security/jwt-auth.guard';
 import {
   clearRefreshCookie,
-  isBearerMode,
-  resolveRefreshToken,
+  readRefreshCookie,
   setRefreshCookie,
   type RefreshCookieConfig,
 } from './auth-cookie';
@@ -42,12 +41,17 @@ import { ResetPasswordUseCase } from '../application/reset-password.use-case';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { ForgotPasswordDto, ResetPasswordDto } from './dto/forgot-password.dto';
 import { LoginDto } from './dto/login.dto';
-import { RefreshDto } from './dto/refresh.dto';
 import { RegisterDto } from './dto/register.dto';
 
 /**
- * Endpoints de autenticação e conta (ver docs/api.md §14 e docs/security.md §2).
- * Rota base: /api/v1/auth
+ * Endpoints de autenticação e conta do cliente **WEB** (ver docs/api.md §14 e
+ * docs/security.md §2). Rota base: `/api/v1/auth`.
+ *
+ * Modelo **cookie**: o refresh token é entregue e lido via **cookie HttpOnly**;
+ * o corpo das respostas nunca o expõe. Clientes **mobile** usam os endpoints
+ * dedicados em `/api/v1/auth/mobile` (bearer token no corpo — ver ADR-0015).
+ * Endpoints de conta (`me`, `change-password`, `forgot/reset-password`) são
+ * compartilhados: dependem do access token, não da forma de entrega do refresh.
  */
 @Controller({ path: 'auth', version: '1' })
 export class AuthController {
@@ -72,47 +76,32 @@ export class AuthController {
     };
   }
 
-  /**
-   * Entrega a sessão: grava o refresh token no cookie HttpOnly e, salvo em modo
-   * *bearer* (mobile), remove o refresh token do corpo da resposta (fluxo web).
-   */
-  private withSession<T extends { tokens: AuthTokens }>(
-    req: Request,
-    res: Response,
-    payload: T,
-  ): T {
-    const { refreshToken } = payload.tokens;
-    if (refreshToken) setRefreshCookie(res, refreshToken, this.cookieConfig());
-    if (isBearerMode(req)) return payload;
-    // Fluxo web: nunca expõe o refresh token no corpo (fica só no cookie).
-    return {
-      ...payload,
-      tokens: { accessToken: payload.tokens.accessToken, expiresIn: payload.tokens.expiresIn },
-    };
-  }
-
   @Post('register')
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @HttpCode(HttpStatus.CREATED)
   async registerHandler(
-    @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
     @Body() dto: RegisterDto,
-  ): Promise<RegisterResponse> {
-    const result = await this.register.execute(dto);
-    return this.withSession(req, res, result);
+  ): Promise<WebRegisterResponse> {
+    const { user, tokens, accountType } = await this.register.execute(dto);
+    setRefreshCookie(res, tokens.refreshToken, this.cookieConfig());
+    return {
+      user,
+      tokens: { accessToken: tokens.accessToken, expiresIn: tokens.expiresIn },
+      accountType,
+    };
   }
 
   @Post('login')
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @HttpCode(HttpStatus.OK)
   async loginHandler(
-    @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
     @Body() dto: LoginDto,
-  ): Promise<LoginResponse> {
-    const result = await this.login.execute(dto);
-    return this.withSession(req, res, result);
+  ): Promise<WebAuthResponse> {
+    const { user, tokens } = await this.login.execute(dto);
+    setRefreshCookie(res, tokens.refreshToken, this.cookieConfig());
+    return { user, tokens: { accessToken: tokens.accessToken, expiresIn: tokens.expiresIn } };
   }
 
   @Post('refresh')
@@ -121,15 +110,13 @@ export class AuthController {
   async refreshHandler(
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
-    @Body() dto: RefreshDto,
-  ): Promise<AuthTokens> {
-    const presented = resolveRefreshToken(req, dto.refreshToken);
+  ): Promise<AccessToken> {
+    // Web: o refresh token vem SOMENTE do cookie HttpOnly (sem corpo, sem header).
+    const presented = readRefreshCookie(req);
     if (!presented) throw new UnauthorizedError('Sessão inválida.');
 
     const tokens = await this.refresh.execute(presented);
-    if (tokens.refreshToken) setRefreshCookie(res, tokens.refreshToken, this.cookieConfig());
-    if (isBearerMode(req)) return tokens;
-    // Fluxo web: só access token no corpo; o novo refresh token vai no cookie.
+    setRefreshCookie(res, tokens.refreshToken, this.cookieConfig());
     return { accessToken: tokens.accessToken, expiresIn: tokens.expiresIn };
   }
 
@@ -138,9 +125,8 @@ export class AuthController {
   async logoutHandler(
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
-    @Body() dto: RefreshDto,
   ): Promise<void> {
-    const presented = resolveRefreshToken(req, dto.refreshToken);
+    const presented = readRefreshCookie(req);
     if (presented) await this.logout.execute(presented);
     clearRefreshCookie(res, this.cookieConfig());
   }

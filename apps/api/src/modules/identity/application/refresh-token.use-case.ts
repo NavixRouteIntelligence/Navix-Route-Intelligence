@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { AuthTokens } from '@navix/contracts';
+import type { SessionTokens } from '@navix/contracts';
 
 import { AUDIT_LOG, type AuditLogPort } from '../../../shared/audit/audit-log.port';
 import { UnauthorizedError } from '../../../shared/kernel/domain-error';
@@ -30,7 +30,7 @@ export class RefreshTokenUseCase {
     @Inject(AUDIT_LOG) private readonly audit: AuditLogPort,
   ) {}
 
-  async execute(presentedToken: string): Promise<AuthTokens> {
+  async execute(presentedToken: string): Promise<SessionTokens> {
     const hash = this.tokens.hashRefreshToken(presentedToken);
     const stored = await this.refreshTokens.findByHash(hash);
 

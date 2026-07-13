@@ -12,7 +12,7 @@ class AuthApi {
   final Dio apiDio;
 
   Future<Map<String, dynamic>> login(LoginParams p) async {
-    final res = await authDio.post<dynamic>('/auth/login', data: {
+    final res = await authDio.post<dynamic>('/auth/mobile/login', data: {
       'tenantId': p.tenantId,
       'email': p.email,
       'password': p.password,
@@ -21,7 +21,7 @@ class AuthApi {
   }
 
   Future<Map<String, dynamic>> register(RegisterParams p) async {
-    final res = await authDio.post<dynamic>('/auth/register', data: {
+    final res = await authDio.post<dynamic>('/auth/mobile/register', data: {
       'accountType': p.accountType == AccountType.company ? 'company' : 'driver',
       'name': p.name,
       'email': p.email,
@@ -31,12 +31,13 @@ class AuthApi {
     return res.data as Map<String, dynamic>;
   }
 
+  // Endpoint de conta compartilhado (usa o access token), não específico do mobile.
   Future<Map<String, dynamic>> me() async {
     final res = await apiDio.get<dynamic>('/auth/me');
     return res.data as Map<String, dynamic>;
   }
 
   Future<void> logout(String refreshToken) async {
-    await apiDio.post<dynamic>('/auth/logout', data: {'refreshToken': refreshToken});
+    await apiDio.post<dynamic>('/auth/mobile/logout', data: {'refreshToken': refreshToken});
   }
 }

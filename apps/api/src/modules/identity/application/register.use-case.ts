@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
-import type { RegisterRequest, RegisterResponse } from '@navix/contracts';
+import type { AuthResultWithAccount, RegisterRequest } from '@navix/contracts';
 import { DataSource } from 'typeorm';
 
 import { AUDIT_LOG, type AuditLogPort } from '../../../shared/audit/audit-log.port';
@@ -36,7 +36,7 @@ export class RegisterUseCase {
     @Inject(AUDIT_LOG) private readonly audit: AuditLogPort,
   ) {}
 
-  async execute(command: RegisterRequest): Promise<RegisterResponse> {
+  async execute(command: RegisterRequest): Promise<AuthResultWithAccount> {
     const accountType = command.accountType;
     const name = command.name.trim();
     const email = command.email.trim().toLowerCase();

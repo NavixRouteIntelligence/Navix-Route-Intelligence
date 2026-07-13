@@ -37,6 +37,7 @@ import { KEY_RING } from '../../shared/security/keys/key-ring.port';
 import { LocalKeyRing } from '../../shared/security/keys/local-key-ring';
 // Interface
 import { AuthController } from './interface/auth.controller';
+import { MobileAuthController } from './interface/mobile-auth.controller';
 import { ProfileController } from './interface/profile.controller';
 import { JwtStrategy } from './interface/jwt.strategy';
 
@@ -55,7 +56,7 @@ import { JwtStrategy } from './interface/jwt.strategy';
     PassportModule,
     JwtModule.register({}),
   ],
-  controllers: [AuthController, ProfileController],
+  controllers: [AuthController, MobileAuthController, ProfileController],
   providers: [
     LoginUseCase,
     RegisterUseCase,

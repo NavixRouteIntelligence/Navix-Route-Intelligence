@@ -35,38 +35,6 @@ export interface RegisterRequest {
   organizationName?: string;
 }
 
-/** Resposta do cadastro: já autentica (mesmo shape do login) + tipo de conta. */
-export interface RegisterResponse {
-  user: AuthenticatedUser;
-  tokens: AuthTokens;
-  accountType: AccountType;
-}
-
-/**
- * Corpo da requisição de refresh de token.
- *
- * No fluxo web (padrão de produção) o refresh token viaja em **cookie HttpOnly**
- * e o corpo fica vazio. Clientes nativos (mobile) que operam em modo *bearer*
- * (header `X-Auth-Mode: bearer`) enviam o token aqui.
- */
-export interface RefreshRequest {
-  refreshToken?: string;
-}
-
-/**
- * Par de tokens retornado no login/refresh.
- *
- * `refreshToken` é **opcional**: só é incluído no corpo para clientes em modo
- * *bearer* (mobile). No fluxo web ele é entregue via **cookie HttpOnly** e nunca
- * aparece no corpo nem é acessível por JavaScript (ver docs/security.md §2).
- */
-export interface AuthTokens {
-  accessToken: string;
-  /** Segundos até a expiração do access token. */
-  expiresIn: number;
-  refreshToken?: string;
-}
-
 /** Representação pública e segura do usuário autenticado (sem dados sensíveis). */
 export interface AuthenticatedUser {
   id: string;
@@ -75,10 +43,83 @@ export interface AuthenticatedUser {
   roles: string[];
 }
 
-/** Resposta do login: usuário + tokens. */
-export interface LoginResponse {
+// ===========================================================================
+// Tokens
+// ===========================================================================
+
+/** Access token entregue no corpo da resposta (comum a web e mobile). */
+export interface AccessToken {
+  accessToken: string;
+  /** Segundos até a expiração do access token. */
+  expiresIn: number;
+}
+
+/**
+ * Conjunto completo de tokens — inclui o **refresh token no corpo**. É a resposta
+ * dos endpoints **mobile** (`/auth/mobile/*`), que operam em modo *bearer* e
+ * guardam o refresh token em armazenamento seguro do dispositivo.
+ */
+export interface SessionTokens extends AccessToken {
+  refreshToken: string;
+}
+
+// ===========================================================================
+// Camada de aplicação (client-agnostic) — SEMPRE contém o refresh token.
+// Cada controller mapeia este resultado para o contrato do seu cliente.
+// ===========================================================================
+
+/** Resultado de autenticação da aplicação (login/refresh). */
+export interface AuthResult {
   user: AuthenticatedUser;
-  tokens: AuthTokens;
+  tokens: SessionTokens;
+}
+
+/** Resultado de cadastro da aplicação (login + tipo de conta). */
+export interface AuthResultWithAccount extends AuthResult {
+  accountType: AccountType;
+}
+
+// ===========================================================================
+// WEB — autenticação por COOKIE HttpOnly. O corpo NUNCA traz o refresh token
+// (ele vai no cookie `Set-Cookie`, inacessível a JavaScript). Rotas: /auth/*.
+// ===========================================================================
+
+/** Resposta de login web: usuário + apenas o access token no corpo. */
+export interface WebAuthResponse {
+  user: AuthenticatedUser;
+  tokens: AccessToken;
+}
+
+/** Resposta de cadastro web (+ tipo de conta). */
+export interface WebRegisterResponse extends WebAuthResponse {
+  accountType: AccountType;
+}
+
+// ===========================================================================
+// MOBILE — autenticação por BEARER TOKEN. Rotas dedicadas: /auth/mobile/*.
+// O refresh token trafega no corpo (request e response); não há cookie nem
+// dependência de header algum (ex.: o antigo `X-Auth-Mode`). Ver ADR-0015.
+// ===========================================================================
+
+/** Resposta de login mobile: usuário + tokens completos (com refresh token). */
+export interface MobileAuthResponse {
+  user: AuthenticatedUser;
+  tokens: SessionTokens;
+}
+
+/** Resposta de cadastro mobile (+ tipo de conta). */
+export interface MobileRegisterResponse extends MobileAuthResponse {
+  accountType: AccountType;
+}
+
+/** Corpo do refresh mobile: o refresh token é **obrigatório**. */
+export interface MobileRefreshRequest {
+  refreshToken: string;
+}
+
+/** Corpo do logout mobile: revoga o refresh token apresentado. */
+export interface MobileLogoutRequest {
+  refreshToken: string;
 }
 
 /** Claims mínimas carregadas no access token (payload do JWT). */
