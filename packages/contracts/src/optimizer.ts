@@ -83,3 +83,29 @@ export interface RoutePlan {
   explanation: string;
   createdAt: string;
 }
+
+// ===========================================================================
+// Otimização assíncrona por Jobs (ADR-0007). O POST enfileira e responde 202;
+// o cliente acompanha por polling (GET .../jobs/:jobId) — e, futuramente, por
+// WebSocket. Ver docs/api.md §5.1.
+// ===========================================================================
+
+export type OptimizationJobStatus = 'queued' | 'running' | 'succeeded' | 'failed';
+
+/** Recurso de job de otimização. */
+export interface OptimizationJob {
+  jobId: string;
+  status: OptimizationJobStatus;
+  /** ID do Route Plan resultante — preenchido quando `succeeded`. */
+  routePlanId: string | null;
+  /** Mensagem de erro — preenchida quando `failed`. */
+  error: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Resposta `202 Accepted` do enfileiramento da otimização. */
+export interface OptimizationJobAccepted {
+  jobId: string;
+  status: OptimizationJobStatus;
+}

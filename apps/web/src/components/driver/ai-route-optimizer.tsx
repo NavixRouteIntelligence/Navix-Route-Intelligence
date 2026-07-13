@@ -103,7 +103,7 @@ export function AiRouteOptimizer({
       if (ids.length < 2) {
         throw new Error('São necessárias ao menos 2 entregas ativas para otimizar.');
       }
-      const res = await optimizerApi.optimizeMine({ deliveryIds: ids });
+      const res = await optimizerApi.optimizeAndWait({ deliveryIds: ids }, { mine: true });
       return res.data;
     },
     onSuccess: (result) => {
