@@ -48,6 +48,23 @@ export const envSchema = z.object({
   // Geocodificação do Import Center (Mapbox). Opcional: sem token, o geocoder
   // retorna nulo e linhas sem lat/lng ficam inválidas.
   MAPBOX_TOKEN: z.string().optional(),
+
+  // --- Object storage (mídia do POD — ADR-0019) ---
+  // `local` (padrão, dev): grava em disco e serve por /api/v1/files.
+  // `s3`: bucket S3-compatível (AWS S3, Cloudflare R2, Google GCS).
+  STORAGE_DRIVER: z.enum(['local', 's3']).default('local'),
+  STORAGE_LOCAL_DIR: z.string().default('./storage'),
+  STORAGE_PUBLIC_BASE_URL: z.string().default('http://localhost:3001/api/v1/files'),
+  S3_ENDPOINT: z.string().optional(),
+  S3_REGION: z.string().default('auto'),
+  S3_BUCKET: z.string().optional(),
+  S3_ACCESS_KEY_ID: z.string().optional(),
+  S3_SECRET_ACCESS_KEY: z.string().optional(),
+  S3_PUBLIC_BASE_URL: z.string().optional(),
+  S3_FORCE_PATH_STYLE: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((v) => v === 'true'),
 });
 
 export type Env = z.infer<typeof envSchema>;

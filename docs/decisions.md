@@ -42,6 +42,7 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 | ADR-0016 | Login sem `tenantId`: tenant resolvido por e-mail (ou slug da empresa) | Aceito | ✅ `LoginRequest { email, password, organization? }`; e-mail global único + `tenants.slug` | 2026-07-13 |
 | ADR-0017 | Idempotency-Key nas operações críticas (offline) | Aceito | ✅ Interceptor `@Idempotent()` + tabela `idempotency_keys`; aplicado em POD, tracking, import/confirm e otimização | 2026-07-13 |
 | ADR-0018 | Transporte em tempo real por SSE (ticket de conexão) | Aceito | ✅ `RealtimeHub` + `/realtime/ticket` + `/realtime/stream`; tracking e jobs publicam; polling só como fallback | 2026-07-13 |
+| ADR-0019 | Mídia do Proof of Delivery em object storage (StorageService) | Aceito | ✅ `StoragePort` + drivers `local`/`s3` (S3/R2/GCS); banco guarda só a URL; aceita data URL por compatibilidade temporária | 2026-07-13 |
 
 ---
 
@@ -217,6 +218,17 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 
 ---
 
+## ADR-0019 — Mídia do Proof of Delivery em object storage (StorageService)
+
+- **Status:** Aceito · **Data:** 2026-07-13
+- **Status da implementação:** ✅ Implementado. Um `StoragePort` (`STORAGE`) com dois drivers selecionáveis por `STORAGE_DRIVER`: `local` (grava em disco e serve via `GET /api/v1/files/:scope/:tenant/:name`, para dev) e `s3` (`@aws-sdk/client-s3`, compatível com **AWS S3, Cloudflare R2 e Google Cloud Storage** pela API S3). O `SubmitPodUseCase` decodifica a data URL recebida, envia os bytes ao storage sob a chave `pod/<tenantId>/<podId>-<field>.<ext>` e persiste **apenas a URL** em `proof_of_delivery.photo`/`signature`. Um guardrail de ~4 MB por mídia continua valendo.
+- **Contexto:** O POD recebia foto/assinatura como **data URL base64** e as gravava em colunas `text` do Postgres (risco #7 da análise Flutter): incha as linhas, estoura o WAL/backup, degrada as queries e não usa CDN. O app Flutter agrava o volume de mídia.
+- **Decisão:** Introduzir um **StorageService** (port + adapters) e mover a mídia para **object storage**, guardando no banco só a URL. O adapter `s3` cobre S3/R2/GCS variando `S3_ENDPOINT`/`S3_FORCE_PATH_STYLE`, sem acoplar a um provedor. **Compatibilidade temporária:** o contrato do cliente segue enviando data URL (o backend faz o offload); se o valor já for uma URL (upload direto futuro), passa direto sem reprocessar.
+- **Alternativas consideradas:** **Manter base64 no Postgres** (o problema); **BYTEA** (ainda no banco, sem CDN); **upload direto do cliente via URL pré-assinada** (melhor a longo prazo, mas muda o contrato do app — fica como evolução, já acomodada pelo passthrough de URL).
+- **Consequências:** Linhas do POD enxutas; mídia servível por CDN; troca de provedor por configuração. **Pendências:** o driver `local` serve por **capability URL** não-adivinhável mas **sem autenticação** (adequado a dev; produção usa `s3` + CDN, idealmente com URLs assinadas); migração dos PODs já gravados em base64 (se houver) não é retroativa; upload direto pré-assinado continua como evolução futura.
+
+---
+
 ## Template
 
 ```markdown
@@ -244,3 +256,4 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 | 2026-07-12 | 0.5 | Engenharia | Redis: conexão compartilhada resiliente + rate limiting em Redis com fallback (ADR-0014 → Aceito); abstrações de cache/fila prontas (ADR-0002 atualizado) |
 | 2026-07-13 | 0.6 | Arquitetura | ADR-0015: separação Web (cookie) × Mobile (bearer) por endpoints dedicados; header X-Auth-Mode eliminado |
 | 2026-07-13 | 0.7 | Arquitetura | ADR-0016: login sem tenantId — tenant resolvido por e-mail (ou slug da empresa); e-mail global único + tenants.slug |
+| 2026-07-13 | 0.8 | Arquitetura | ADR-0017 (Idempotency-Key), ADR-0018 (tempo real por SSE) e ADR-0019 (mídia do POD em object storage) |

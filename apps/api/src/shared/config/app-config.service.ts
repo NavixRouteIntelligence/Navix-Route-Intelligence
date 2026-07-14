@@ -84,4 +84,21 @@ export class AppConfigService {
   get mapboxToken(): string | undefined {
     return this.get('MAPBOX_TOKEN');
   }
+
+  get storage() {
+    return {
+      driver: this.get('STORAGE_DRIVER'),
+      localDir: this.get('STORAGE_LOCAL_DIR'),
+      publicBaseUrl: this.get('STORAGE_PUBLIC_BASE_URL'),
+      s3: {
+        endpoint: this.get('S3_ENDPOINT'),
+        region: this.get('S3_REGION'),
+        bucket: this.get('S3_BUCKET'),
+        accessKeyId: this.get('S3_ACCESS_KEY_ID'),
+        secretAccessKey: this.get('S3_SECRET_ACCESS_KEY'),
+        publicBaseUrl: this.get('S3_PUBLIC_BASE_URL'),
+        forcePathStyle: this.get('S3_FORCE_PATH_STYLE'),
+      },
+    };
+  }
 }

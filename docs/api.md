@@ -346,11 +346,11 @@ GET  /api/v1/pod/summary          # resumo por status (Dashboard)
 GET  /api/v1/pod/{deliveryId}     # comprovante de uma entrega
 ```
 
-- **Payload**: `{ deliveryId, status, note?, latitude?, longitude?, photo?, signature? }`. `status`: `delivered` | `absent` | `refused`. `photo`/`signature` são **data URLs** (foto reduzida no cliente; assinatura em canvas). Comprovante `delivered` exige foto **ou** assinatura.
+- **Payload**: `{ deliveryId, status, note?, latitude?, longitude?, photo?, signature? }`. `status`: `delivered` | `absent` | `refused`. O cliente envia `photo`/`signature` como **data URLs** (foto reduzida no cliente; assinatura em canvas); o backend faz o **offload para object storage** e o campo aceita passar direto uma **URL** já hospedada (upload direto futuro). Comprovante `delivered` exige foto **ou** assinatura.
 - **Integração com Delivery**: ao registrar, o POD aplica o desfecho na entrega na **mesma transação** — `delivered`→`delivered`, `absent`/`refused`→`failed` — respeitando a máquina de estados (passa por `in_route`). Um comprovante por entrega (índice único).
 - **Integração com Tracking**: o cliente também registra a posição do desfecho (`finished`).
 - **Dashboard**: card de resumo (entregues/ausentes/recusados) + últimos comprovantes; nas **Entregas**, ícone para visualizar foto/assinatura/GPS/observação.
-- **Persistência**: `proof_of_delivery` (RLS FORCE por tenant). Fotos em base64 no banco no MVP — produção usaria object storage (S3). Limite de body de 8 MB para as mídias.
+- **Persistência**: `proof_of_delivery` (RLS FORCE por tenant). Mídia **fora do Postgres**: enviada a um **object storage** (`StorageService` — driver `local` em dev, `s3`/R2/GCS em produção) e o banco guarda **apenas a URL** em `photo`/`signature` (ADR-0019). O cliente ainda envia data URL por compatibilidade; limite de body de 8 MB para as mídias.
 - **Web e Mobile**: componentes responsivos, câmera via `capture` e assinatura por toque (PWA). App nativo fora do escopo desta fase.
 
 ## 15. Documentação viva
@@ -380,3 +380,4 @@ GET  /api/v1/pod/{deliveryId}     # comprovante de uma entrega
 | 2026-07-13 | 0.14 | Arquitetura | Otimização assíncrona: POST /route-plans → 202 + jobId; GET /route-plans/jobs/:id (ADR-0007) |
 | 2026-07-13 | 0.15 | Arquitetura | Tempo real por SSE: /realtime/ticket + /realtime/stream; eventos tracking.position e optimization.job (ADR-0018) |
 | 2026-07-13 | 0.16 | Arquitetura | Tracking em lote: POST /tracking/positions/batch (1–500) para sincronização offline; unitário mantido |
+| 2026-07-13 | 0.17 | Arquitetura | POD: mídia em object storage (StorageService, driver local/s3); banco guarda só a URL; data URL aceita por compatibilidade (ADR-0019) |
