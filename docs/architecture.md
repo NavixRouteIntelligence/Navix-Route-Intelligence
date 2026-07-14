@@ -173,10 +173,13 @@ Escrita permanece normalizada; **read models** (materializações alimentadas po
 
 ## 10. Observabilidade
 
-- **Logs** estruturados (JSON) com `tenant_id`, `request_id` e correlação.
-- **Métricas** de negócio (rotas otimizadas, latência do VRP) e de sistema.
-- **Tracing** distribuído nos fluxos assíncronos.
-- **Health checks** e *readiness/liveness* por serviço.
+> ✅ **Implementado (ADR-0021).** Detalhes e stack local em [observability.md](./observability.md).
+
+- **Logs** estruturados (JSON, pino) com `requestId`, redaction de segredos e correlação `trace_id`/`span_id` quando o tracing está ativo.
+- **Métricas** de sistema/HTTP expostas em **`GET /metrics`** (Prometheus): RED metrics (`http_server_requests_total`, `http_server_request_duration_seconds`) + métricas de processo. Métricas de negócio (rotas otimizadas, latência do VRP) podem ser adicionadas via `MetricsService`.
+- **Tracing** distribuído com **OpenTelemetry** (auto-instrumentação http/pg/ioredis), **opt-in** por `OTEL_ENABLED`, exportando OTLP para Jaeger/Tempo.
+- **Health checks**: `GET /api/v1/health/live` (liveness) e `/health/ready` (readiness — Postgres é dependência dura; Redis é reportado, porém não fatal).
+- **Prometheus + Grafana + Jaeger** provisionados em `docker/observability/`.
 
 ## 11. Qualidade e testes
 

@@ -1,0 +1,20 @@
+# Configuração de scrape do Prometheus para a Navix API (ADR-0021).
+# A API expõe métricas em /metrics (fora do prefixo /api).
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: navix-api
+    metrics_path: /metrics
+    static_configs:
+      # A API roda no host em dev (porta 3001). Em Docker, host.docker.internal
+      # alcança o host (no Linux, o extra_hosts host-gateway do compose habilita isso).
+      # Em produção/K8s, troque pelo service/endpoint da API.
+      - targets: ['host.docker.internal:3001']
+        labels:
+          service: navix-api
+
+  - job_name: prometheus
+    static_configs:
+      - targets: ['localhost:9090']

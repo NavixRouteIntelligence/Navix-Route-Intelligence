@@ -44,6 +44,7 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 | ADR-0018 | Transporte em tempo real por SSE (ticket de conexão) | Aceito | ✅ `RealtimeHub` + `/realtime/ticket` + `/realtime/stream`; tracking e jobs publicam; polling só como fallback | 2026-07-13 |
 | ADR-0019 | Mídia do Proof of Delivery em object storage (StorageService) | Aceito | ✅ `StoragePort` + drivers `local`/`s3` (S3/R2/GCS); banco guarda só a URL; aceita data URL por compatibilidade temporária | 2026-07-13 |
 | ADR-0020 | Sincronização incremental offline-first (updatedSince + cursor de keyset) | Aceito | ✅ `GET /deliveries/sync` (delta + tombstones, keyset `(updated_at,id)`, índice dedicado); contratos `SyncParams`/`SyncResponse<T>` genéricos | 2026-07-14 |
+| ADR-0021 | Observabilidade de produção (OpenTelemetry + Prometheus + health) | Aceito | ✅ Logs pino c/ correlação de trace; métricas `prom-client` em `/metrics`; tracing OTel opt-in (http/pg/ioredis); `/health/{live,ready}` (Redis não fatal); stack Grafana/Jaeger | 2026-07-14 |
 
 ---
 
@@ -241,6 +242,17 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 
 ---
 
+## ADR-0021 — Observabilidade de produção (OpenTelemetry + Prometheus + health)
+
+- **Status:** Aceito · **Data:** 2026-07-14
+- **Status da implementação:** ✅ Implementado. **Logs estruturados** (pino, já existentes) ganham correlação `trace_id`/`span_id`. **Métricas Prometheus** via `prom-client` (Registry dedicado) expostas em **`GET /metrics`** (fora do prefixo `/api`), com métricas padrão de processo + histograma/contador de HTTP (label de rota por **template**, baixa cardinalidade) alimentados por um `HttpMetricsInterceptor` global e observacional. **Tracing distribuído** com OpenTelemetry NodeSDK + auto-instrumentação (http/express/pg/ioredis), **opt-in** por `OTEL_ENABLED` e inicializado por efeito colateral (`observability/instrument`) antes do `AppModule`. **Health checks** `GET /api/v1/health/{live,ready}`: Postgres é dependência dura; **Redis é reportado mas não fatal** (degradável). Stack local **Prometheus + Grafana + Jaeger** com datasources/dashboard provisionados. Ver [observability.md](./observability.md).
+- **Contexto:** Rumo à produção, faltavam métricas, tracing e prontidão/liveness padronizados. Sem eles, diagnosticar latência/erros em multi-tenant e escalar com segurança é inviável.
+- **Decisão:** Adotar os três pilares com ferramentas idiomáticas e **sem alterar regra de negócio** (tudo transversal): pino (logs) + `prom-client`/Prometheus (métricas) + OpenTelemetry (tracing) + terminus (health). Tracing **opt-in** para não impor um coletor em dev/test; métricas sempre expostas (overhead desprezível).
+- **Alternativas consideradas:** **Métricas via OTel Metrics + exporter Prometheus** (unifica no OTel, porém abre outra porta e é mais verboso — `prom-client` é mais simples e padrão para o endpoint de scrape); **APM proprietário** (Datadog/New Relic — lock-in e custo; OTel é neutro e exportável para qualquer backend); **StatsD** (push, menos rico que o modelo pull do Prometheus).
+- **Consequências:** RED metrics + traces correlacionados a logs prontos para Grafana; probes para K8s. **Pendências:** `/metrics` deve ser restringido por rede em produção; **OTel Collector** (fan-out) e regras de alerta/SLO ficam para o deploy; métricas de negócio (ex.: entregas/hora) podem ser adicionadas via `MetricsService` conforme necessidade.
+
+---
+
 ## Template
 
 ```markdown
@@ -270,3 +282,4 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 | 2026-07-13 | 0.7 | Arquitetura | ADR-0016: login sem tenantId — tenant resolvido por e-mail (ou slug da empresa); e-mail global único + tenants.slug |
 | 2026-07-13 | 0.8 | Arquitetura | ADR-0017 (Idempotency-Key), ADR-0018 (tempo real por SSE) e ADR-0019 (mídia do POD em object storage) |
 | 2026-07-14 | 0.9 | Arquitetura | ADR-0020: sincronização incremental offline-first (updatedSince + cursor de keyset, tombstones) para entregas |
+| 2026-07-14 | 1.0 | Arquitetura | ADR-0021: observabilidade de produção (OpenTelemetry, métricas Prometheus em /metrics, health checks, stack Grafana/Jaeger) |
