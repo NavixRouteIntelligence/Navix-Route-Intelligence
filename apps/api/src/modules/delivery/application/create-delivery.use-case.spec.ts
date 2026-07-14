@@ -1,4 +1,5 @@
 import type { AuditLogPort } from '../../../shared/audit/audit-log.port';
+import { DomainEventBus } from '../../../shared/events/domain-event-bus';
 import { NotFoundError } from '../../../shared/kernel/domain-error';
 import type { DeliveryRepositoryPort } from '../domain/ports/delivery-repository.port';
 import { CreateDeliveryUseCase } from './create-delivery.use-case';
@@ -34,7 +35,8 @@ function build(fleet: Partial<FleetGatewayPort> = {}) {
     ...fleet,
   };
   const audit: AuditLogPort = { record: jest.fn().mockResolvedValue(undefined) };
-  return { repo, gateway, audit, useCase: new CreateDeliveryUseCase(repo, gateway, audit) };
+  const events = new DomainEventBus();
+  return { repo, gateway, audit, useCase: new CreateDeliveryUseCase(repo, gateway, audit, events) };
 }
 
 describe('CreateDeliveryUseCase', () => {

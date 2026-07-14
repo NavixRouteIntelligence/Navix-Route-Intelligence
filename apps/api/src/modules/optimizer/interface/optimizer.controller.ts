@@ -30,6 +30,7 @@ import { EnqueueOptimizationUseCase } from '../application/enqueue-optimization.
 import { GetOptimizationJobUseCase } from '../application/get-optimization-job.use-case';
 import { GetRoutePlanUseCase } from '../application/get-route-plan.use-case';
 import { ListRoutePlansUseCase } from '../application/list-route-plans.use-case';
+import { ReoptimizeActiveUseCase } from '../application/reoptimize-active.use-case';
 import { ListRoutePlansQueryDto } from './dto/list-query.dto';
 import { OptimizeRouteDto } from './dto/optimize-route.dto';
 
@@ -45,6 +46,7 @@ export class OptimizerController {
     private readonly getJob: GetOptimizationJobUseCase,
     private readonly getPlan: GetRoutePlanUseCase,
     private readonly listPlans: ListRoutePlansUseCase,
+    private readonly reoptimizeActive: ReoptimizeActiveUseCase,
   ) {}
 
   @Post()
@@ -80,6 +82,24 @@ export class OptimizerController {
   ): Promise<ResourceResponse<OptimizationJobAccepted>> {
     const data = await this.enqueue.execute({
       ...dto,
+      tenantId: user.tenantId,
+      actorId: user.id,
+    });
+    return { data };
+  }
+
+  @Post('reoptimize')
+  @Roles('admin', 'dispatcher')
+  @HttpCode(HttpStatus.ACCEPTED)
+  @Idempotent()
+  @ApiOperation({
+    summary:
+      'Reotimiza as entregas ativas do tenant (trânsito/evento externo) → 202 + jobId (ou data: null se < 2 ativas)',
+  })
+  async reoptimize(
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<ResourceResponse<OptimizationJobAccepted | null>> {
+    const data = await this.reoptimizeActive.execute({
       tenantId: user.tenantId,
       actorId: user.id,
     });

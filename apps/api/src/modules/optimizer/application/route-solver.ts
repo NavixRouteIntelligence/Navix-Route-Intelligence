@@ -8,11 +8,8 @@ import type {
 } from '@navix/contracts';
 
 import { assessCapacity, totalDemand } from '../domain/capacity';
-import {
-  priorityWeight,
-  type Demand,
-  type OptimizationStop,
-} from '../domain/optimization-stop';
+import { type Demand, type OptimizationStop } from '../domain/optimization-stop';
+import { slaPriorityWeight } from '../domain/sla-priority';
 import {
   DISTANCE_PROVIDER,
   type DistanceProviderPort,
@@ -69,7 +66,11 @@ export class RouteSolver {
     const { nodes, hasOrigin, speed, service, profile } = input;
     const { distanceMatrix, timeMatrix } = this.buildMatrices(nodes, speed);
     const windows = this.buildWindows(nodes);
-    const priorities = nodes.map((n, i) => (hasOrigin && i === 0 ? 0 : priorityWeight(n.priority)));
+    // Priorização dinâmica por SLA: o peso cresce conforme o fim da janela se
+    // aproxima (ADR-0022 Fase 3). Sem janela, é o peso base (retrocompatível).
+    const priorities = nodes.map((n, i) =>
+      hasOrigin && i === 0 ? 0 : slaPriorityWeight(n.priority, windows[i]?.endMinutes ?? null),
+    );
     const perNodeServiceMinutes = nodes.map((n) => n.serviceTimeMinutes ?? service);
 
     const ctx: StrategyContext = {

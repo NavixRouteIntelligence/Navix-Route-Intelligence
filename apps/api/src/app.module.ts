@@ -4,6 +4,7 @@ import { AppConfigModule } from './shared/config/config.module';
 import { AuditModule } from './shared/audit/audit.module';
 import { CacheModule } from './shared/cache/cache.module';
 import { DatabaseModule } from './database/database.module';
+import { EventsModule } from './shared/events/events.module';
 import { LoggerModule } from './shared/observability/logger.module';
 import { MetricsModule } from './observability/metrics/metrics.module';
 import { QueueModule } from './shared/queue/queue.module';
@@ -33,6 +34,7 @@ import { UserSettingsModule } from './modules/user-settings/user-settings.module
     AppConfigModule,
     LoggerModule,
     MetricsModule,
+    EventsModule,
     RedisModule,
     RealtimeModule,
     StorageModule,
