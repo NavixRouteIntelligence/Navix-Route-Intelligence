@@ -319,6 +319,10 @@ Corpo do POST: `origin?` (depósito), **uma** das fontes `deliveryIds[]` (busca 
 - `vehicles?: OptimizationVehicleInput[]` — uma **frota** (mutuamente exclusivo com `vehicle`). As paradas são **agrupadas por proximidade** (sweep angular em torno da origem/centroide) e **distribuídas entre os veículos respeitando capacidade** (peso/volume), balanceando a contagem.
 - Resposta ganha `routes[]` (`{ vehicleIndex, vehicleType?, stops, metrics, capacity? }` por veículo), `params.vehicleCount` e, se houver, `unassignedStops` (IDs que não couberam) + `params.unassignedCount`. O topo (`stops`/`metrics`) é a **agregação** das rotas (retrocompatível para consumidores existentes).
 
+**Estratégia e sobretaxas (ADR-0024 — Fase 4):**
+- `strategy?`: `nearest-neighbor-2opt` (padrão) ou **`or-opt-2opt`** (metaheurística VND — Or-opt + 2-opt, melhor qualidade; **nunca pior** que a padrão). Um adaptador OR-Tools nativo entraria pela mesma port, sem mudar a API.
+- **Zonas de risco:** paradas dentro de zonas configuradas (`OPTIMIZER_RISK_ZONES`) recebem **sobretaxa de custo** — o otimizador tende a evitá-las/priorizá-las. **Pedágio** usa o mesmo *seam* de custo (`edgeSurcharge`) e a preferência `vehicle.avoidTolls`; o provedor de dados de rede é roadmap (hoje sem efeito). Default: sem zonas → sem sobretaxa (retrocompatível).
+
 **Reotimização automática + priorização dinâmica por SLA (ADR-0023 — Fase 3):**
 - **Priorização por SLA:** a ordenação leva em conta a **proximidade do fim da janela** de cada parada — quanto mais perto (ou estourado) o prazo, mais cedo a parada entra na rota. Sem janela, é a prioridade base (retrocompatível).
 - **`POST /route-plans/reoptimize`** (admin/dispatcher, idempotente) reenfileira a otimização das **entregas ativas** (pendente/em rota) do tenant → `202 { data: { jobId, status } }`, ou `202 { data: null }` se houver < 2 ativas. Use para **trânsito/eventos externos**.
@@ -326,7 +330,7 @@ Corpo do POST: `origin?` (depósito), **uma** das fontes `deliveryIds[]` (busca 
 
 `/route-plans/mine` é **aditivo** (não altera o fluxo de Empresa): usa o **mesmo motor** com o papel `driver`, escopado ao tenant do motorista pela RLS. O painel de rentabilidade (lucro, custos de combustível/energia e portagens, ganho líquido) é calculado no cliente a partir das métricas do plano + parâmetros configuráveis. Fatores de **trânsito em tempo real, acidentes e estradas fechadas** ficam como integração futura (arquitetura de estratégias/distância pronta para recebê-los; o custo já tem *seam* de sobretaxa por aresta/nó para pedágio/zona de risco — ADR-0022).
 
-Resposta (Route Plan): `stops` (ordem ideal), `metrics` (distância/tempo/nº paradas), `baseline`, `savings` (km, min, %), `score` (0–100), `explanation`, `params`, `capacity?`, `createdAt`. Algoritmo MVP: **Nearest Neighbor + 2-opt** com distância Haversine e **função de custo compartilhada** (Strategy Pattern — extensível para OR-Tools/IA sem alterar a API). Métricas de performance do solver em `/metrics` (`optimizer_solve_duration_seconds`, `optimizer_route_stops`, `optimizer_capacity_infeasible_total`).
+Resposta (Route Plan): `stops` (ordem ideal), `metrics` (distância/tempo/nº paradas), `baseline`, `savings` (km, min, %), `score` (0–100), `explanation`, `params`, `capacity?`, `routes?`, `createdAt`. Estratégias: **Nearest Neighbor + 2-opt** (padrão) e **VND `or-opt-2opt`** (metaheurística), com distância Haversine e **função de custo compartilhada** (Strategy Pattern — um adaptador OR-Tools nativo entra pela mesma port sem alterar a API). Métricas de performance do solver em `/metrics` (`optimizer_solve_duration_seconds`, `optimizer_route_stops`, `optimizer_capacity_infeasible_total`).
 
 ### 14.4 Import Center — implementado (Fase 2)
 
@@ -435,3 +439,4 @@ GET /api/v1/health/ready     -> 200 | 503 (Postgres duro; Redis reportado, não 
 | 2026-07-14 | 0.20 | Arquitetura | Optimizer Fase 1: stops com weightKg/volumeM3/serviceTimeMinutes, `vehicle` (tipo/capacidade), resposta com `capacity` (§14.3, ADR-0022) |
 | 2026-07-14 | 0.21 | Arquitetura | Optimizer Fase 2: `vehicles[]` (frota) → roteirização multi-veículo por clustering; resposta com `routes[]` + `unassignedStops` (§14.3, ADR-0022) |
 | 2026-07-14 | 0.22 | Arquitetura | Optimizer Fase 3: POST /route-plans/reoptimize (ativas), reotimização automática por eventos (opt-in) e priorização dinâmica por SLA (§14.3, ADR-0023) |
+| 2026-07-14 | 0.23 | Arquitetura | Optimizer Fase 4: estratégia `or-opt-2opt` (metaheurística VND) e sobretaxas de zona de risco/pedágio no custo (§14.3, ADR-0024) |

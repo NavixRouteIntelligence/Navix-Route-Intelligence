@@ -23,6 +23,7 @@ import {
   type OptimizationJobRepositoryPort,
   type OptimizationJobUpdate,
 } from '../src/modules/optimizer/domain/ports/optimization-job-repository.port';
+import { COST_AUGMENTATION } from '../src/modules/optimizer/domain/ports/cost-augmentation.port';
 import { OPTIMIZATION_STRATEGIES } from '../src/modules/optimizer/domain/ports/route-optimization-strategy.port';
 import { ROUTE_PLAN_REPOSITORY } from '../src/modules/optimizer/domain/ports/route-plan-repository.port';
 import type { RoutePlanRepositoryPort } from '../src/modules/optimizer/domain/ports/route-plan-repository.port';
@@ -32,6 +33,7 @@ import { RouteSolver } from '../src/modules/optimizer/application/route-solver';
 import { HaversineDistanceProvider } from '../src/modules/optimizer/infrastructure/distance/haversine-distance.provider';
 import { OptimizerMetrics } from '../src/modules/optimizer/infrastructure/observability/optimizer-metrics';
 import { NearestNeighbor2OptStrategy } from '../src/modules/optimizer/infrastructure/strategies/nearest-neighbor-2opt.strategy';
+import { OrOpt2OptStrategy } from '../src/modules/optimizer/infrastructure/strategies/or-opt-2opt.strategy';
 import { OptimizerController } from '../src/modules/optimizer/interface/optimizer.controller';
 
 class InMemoryRoutePlanRepository implements RoutePlanRepositoryPort {
@@ -99,12 +101,14 @@ describe('Optimizer (e2e, assíncrono)', () => {
         StrategyRegistry,
         RouteSolver,
         NearestNeighbor2OptStrategy,
+        OrOpt2OptStrategy,
         {
           provide: OPTIMIZATION_STRATEGIES,
-          useFactory: (nn: NearestNeighbor2OptStrategy) => [nn],
-          inject: [NearestNeighbor2OptStrategy],
+          useFactory: (nn: NearestNeighbor2OptStrategy, orOpt: OrOpt2OptStrategy) => [nn, orOpt],
+          inject: [NearestNeighbor2OptStrategy, OrOpt2OptStrategy],
         },
         { provide: DISTANCE_PROVIDER, useClass: HaversineDistanceProvider },
+        { provide: COST_AUGMENTATION, useValue: { augment: () => ({}) } },
         { provide: ROUTE_PLAN_REPOSITORY, useClass: InMemoryRoutePlanRepository },
         { provide: OPTIMIZATION_JOB_REPOSITORY, useClass: InMemoryJobRepository },
         // Fila imediata: processa em microtask (sem DataSource), suficiente p/ e2e.
@@ -261,5 +265,23 @@ describe('Optimizer (e2e, assíncrono)', () => {
 
     const job = await pollJob(app, res.body.data.jobId);
     expect(job.status).toBe('succeeded');
+  });
+
+  it('estratégia metaheurística or-opt-2opt otimiza e persiste (ADR-0024)', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/api/v1/route-plans')
+      .send({ stops, strategy: 'or-opt-2opt' })
+      .expect(202);
+
+    const job = await pollJob(app, res.body.data.jobId);
+    expect(job.status).toBe('succeeded');
+
+    const plan = await request(app.getHttpServer())
+      .get(`/api/v1/route-plans/${job.routePlanId}`)
+      .expect(200);
+    expect(plan.body.data.strategy).toBe('or-opt-2opt');
+    expect(plan.body.data.metrics.totalDistanceKm).toBeLessThanOrEqual(
+      plan.body.data.baseline.totalDistanceKm + 1e-6,
+    );
   });
 });

@@ -8,6 +8,33 @@ function normalizePem(value: string | undefined): string | undefined {
   return value ? value.replace(/\\n/g, '\n') : undefined;
 }
 
+export interface RiskZoneConfig {
+  latitude: number;
+  longitude: number;
+  radiusKm: number;
+  penalty: number;
+}
+
+/** Parseia com segurança o JSON de zonas de risco (ADR-0024); inválido → []. */
+function parseRiskZones(raw: string): RiskZoneConfig[] {
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((z): z is RiskZoneConfig => {
+      if (!z || typeof z !== 'object') return false;
+      const r = z as Record<string, unknown>;
+      return (
+        typeof r.latitude === 'number' &&
+        typeof r.longitude === 'number' &&
+        typeof r.radiusKm === 'number' &&
+        typeof r.penalty === 'number'
+      );
+    });
+  } catch {
+    return [];
+  }
+}
+
 /**
  * Acesso tipado à configuração. Encapsula o ConfigService do Nest para que o
  * resto da aplicação não dependa de strings de chave nem de `process.env`.
@@ -115,6 +142,7 @@ export class AppConfigService {
     return {
       autoReoptimize: this.get('OPTIMIZER_AUTO_REOPTIMIZE'),
       reoptimizeDebounceMs: this.get('OPTIMIZER_REOPTIMIZE_DEBOUNCE_MS'),
+      riskZones: parseRiskZones(this.get('OPTIMIZER_RISK_ZONES')),
     };
   }
 }
