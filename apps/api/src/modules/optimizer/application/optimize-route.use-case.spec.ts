@@ -17,7 +17,10 @@ function build() {
     findById: async () => null,
     findAll: async (): Promise<PagedResult<RoutePlan>> => ({ items: [], total: 0 }),
   };
-  const gateway: DeliveryGatewayPort = { getStops: async () => [] };
+  const gateway: DeliveryGatewayPort = {
+    getStops: async () => [],
+    listActiveStops: async () => [],
+  };
   const audit: AuditLogPort = { record: async () => undefined };
   const registry = new StrategyRegistry([new NearestNeighbor2OptStrategy()]);
   const metrics = {

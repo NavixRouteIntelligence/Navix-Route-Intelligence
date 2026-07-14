@@ -18,13 +18,26 @@ export class DeliveryGateway implements DeliveryGatewayPort {
   constructor(@Inject(DELIVERY_LOOKUP) private readonly lookup: DeliveryLookupPort) {}
 
   async getStops(tenantId: string, ids: string[]): Promise<OptimizerDeliveryStop[]> {
-    const stops = await this.lookup.getStops(tenantId, ids);
-    return stops.map((s) => ({
-      id: s.id,
-      latitude: s.latitude,
-      longitude: s.longitude,
-      priority: s.priority,
-      timeWindow: s.timeWindow,
-    }));
+    return (await this.lookup.getStops(tenantId, ids)).map(toStop);
   }
+
+  async listActiveStops(tenantId: string): Promise<OptimizerDeliveryStop[]> {
+    return (await this.lookup.listActive(tenantId)).map(toStop);
+  }
+}
+
+function toStop(s: {
+  id: string;
+  latitude: number;
+  longitude: number;
+  priority: OptimizerDeliveryStop['priority'];
+  timeWindow: OptimizerDeliveryStop['timeWindow'];
+}): OptimizerDeliveryStop {
+  return {
+    id: s.id,
+    latitude: s.latitude,
+    longitude: s.longitude,
+    priority: s.priority,
+    timeWindow: s.timeWindow,
+  };
 }

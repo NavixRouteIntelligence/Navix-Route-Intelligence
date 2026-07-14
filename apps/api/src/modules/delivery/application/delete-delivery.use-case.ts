@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 
 import { AUDIT_LOG, type AuditLogPort } from '../../../shared/audit/audit-log.port';
+import { DomainEventBus } from '../../../shared/events/domain-event-bus';
 import { NotFoundError } from '../../../shared/kernel/domain-error';
 import {
   DELIVERY_REPOSITORY,
@@ -13,6 +14,7 @@ export class DeleteDeliveryUseCase {
   constructor(
     @Inject(DELIVERY_REPOSITORY) private readonly deliveries: DeliveryRepositoryPort,
     @Inject(AUDIT_LOG) private readonly audit: AuditLogPort,
+    private readonly events: DomainEventBus,
   ) {}
 
   async execute(tenantId: string, id: string, actorId: string): Promise<void> {
@@ -30,5 +32,6 @@ export class DeleteDeliveryUseCase {
       action: 'delivery.deleted',
       resource: `delivery:${id}`,
     });
+    this.events.publish(tenantId, { type: 'delivery.deleted', aggregateId: id });
   }
 }

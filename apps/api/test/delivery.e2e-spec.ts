@@ -3,6 +3,7 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 
 import { AUDIT_LOG } from '../src/shared/audit/audit-log.port';
+import { DomainEventBus } from '../src/shared/events/domain-event-bus';
 import { DomainExceptionFilter } from '../src/shared/interface/domain-exception.filter';
 import { JwtAuthGuard } from '../src/shared/security/jwt-auth.guard';
 import { RolesGuard } from '../src/shared/security/roles.guard';
@@ -120,6 +121,7 @@ describe('Delivery (e2e)', () => {
           useValue: { vehicleExists: async () => true, driverExists: async () => true },
         },
         { provide: AUDIT_LOG, useValue: { record: async () => undefined } },
+        DomainEventBus,
       ],
     })
       .overrideGuard(JwtAuthGuard)

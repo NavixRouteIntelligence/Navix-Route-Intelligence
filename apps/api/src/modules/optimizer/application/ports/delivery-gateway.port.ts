@@ -14,6 +14,8 @@ export interface OptimizerDeliveryStop {
  */
 export interface DeliveryGatewayPort {
   getStops(tenantId: string, ids: string[]): Promise<OptimizerDeliveryStop[]>;
+  /** Entregas ativas do tenant (para reotimização automática — ADR-0023). */
+  listActiveStops(tenantId: string): Promise<OptimizerDeliveryStop[]>;
 }
 
 export const DELIVERY_GATEWAY = Symbol('DELIVERY_GATEWAY');

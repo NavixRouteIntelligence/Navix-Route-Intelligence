@@ -303,6 +303,7 @@ Autenticado; otimização exige `admin`/`dispatcher`. Escopado ao tenant.
 ```
 POST   /api/v1/route-plans          # otimiza e persiste um Route Plan (201) — admin/dispatcher
 POST   /api/v1/route-plans/mine      # Motorista Autônomo otimiza a própria rota (201) — role driver
+POST   /api/v1/route-plans/reoptimize # reotimiza as entregas ativas do tenant (202 + jobId) — admin/dispatcher
 GET    /api/v1/route-plans          # histórico (paginado)
 GET    /api/v1/route-plans/{id}     # consulta um Route Plan
 ```
@@ -317,6 +318,11 @@ Corpo do POST: `origin?` (depósito), **uma** das fontes `deliveryIds[]` (busca 
 **Roteirização multi-veículo (ADR-0022 — Fase 2):**
 - `vehicles?: OptimizationVehicleInput[]` — uma **frota** (mutuamente exclusivo com `vehicle`). As paradas são **agrupadas por proximidade** (sweep angular em torno da origem/centroide) e **distribuídas entre os veículos respeitando capacidade** (peso/volume), balanceando a contagem.
 - Resposta ganha `routes[]` (`{ vehicleIndex, vehicleType?, stops, metrics, capacity? }` por veículo), `params.vehicleCount` e, se houver, `unassignedStops` (IDs que não couberam) + `params.unassignedCount`. O topo (`stops`/`metrics`) é a **agregação** das rotas (retrocompatível para consumidores existentes).
+
+**Reotimização automática + priorização dinâmica por SLA (ADR-0023 — Fase 3):**
+- **Priorização por SLA:** a ordenação leva em conta a **proximidade do fim da janela** de cada parada — quanto mais perto (ou estourado) o prazo, mais cedo a parada entra na rota. Sem janela, é a prioridade base (retrocompatível).
+- **`POST /route-plans/reoptimize`** (admin/dispatcher, idempotente) reenfileira a otimização das **entregas ativas** (pendente/em rota) do tenant → `202 { data: { jobId, status } }`, ou `202 { data: null }` se houver < 2 ativas. Use para **trânsito/eventos externos**.
+- **Automática (opt-in):** com `OPTIMIZER_AUTO_REOPTIMIZE=true`, mudanças de entrega (criar/editar/status/excluir) disparam a reotimização com **debounce por tenant** (coalesce rajadas), pela mesma fila+SSE. Default **off** (não altera o comportamento atual).
 
 `/route-plans/mine` é **aditivo** (não altera o fluxo de Empresa): usa o **mesmo motor** com o papel `driver`, escopado ao tenant do motorista pela RLS. O painel de rentabilidade (lucro, custos de combustível/energia e portagens, ganho líquido) é calculado no cliente a partir das métricas do plano + parâmetros configuráveis. Fatores de **trânsito em tempo real, acidentes e estradas fechadas** ficam como integração futura (arquitetura de estratégias/distância pronta para recebê-los; o custo já tem *seam* de sobretaxa por aresta/nó para pedágio/zona de risco — ADR-0022).
 
@@ -428,3 +434,4 @@ GET /api/v1/health/ready     -> 200 | 503 (Postgres duro; Redis reportado, não 
 | 2026-07-14 | 0.19 | Arquitetura | Observabilidade: GET /metrics (Prometheus), /health/{live,ready} com Redis não-fatal, tracing OTel opt-in (§16, ADR-0021) |
 | 2026-07-14 | 0.20 | Arquitetura | Optimizer Fase 1: stops com weightKg/volumeM3/serviceTimeMinutes, `vehicle` (tipo/capacidade), resposta com `capacity` (§14.3, ADR-0022) |
 | 2026-07-14 | 0.21 | Arquitetura | Optimizer Fase 2: `vehicles[]` (frota) → roteirização multi-veículo por clustering; resposta com `routes[]` + `unassignedStops` (§14.3, ADR-0022) |
+| 2026-07-14 | 0.22 | Arquitetura | Optimizer Fase 3: POST /route-plans/reoptimize (ativas), reotimização automática por eventos (opt-in) e priorização dinâmica por SLA (§14.3, ADR-0023) |

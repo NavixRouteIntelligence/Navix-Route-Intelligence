@@ -1,4 +1,5 @@
 import type { AuditLogPort } from '../../../shared/audit/audit-log.port';
+import { DomainEventBus } from '../../../shared/events/domain-event-bus';
 import { ConflictError, NotFoundError } from '../../../shared/kernel/domain-error';
 import { Delivery } from '../domain/delivery';
 import type { DeliveryRepositoryPort } from '../domain/ports/delivery-repository.port';
@@ -30,7 +31,8 @@ function build(delivery: Delivery | null) {
     findChangedSince: jest.fn().mockResolvedValue({ items: [], hasMore: false }),
   };
   const audit: AuditLogPort = { record: jest.fn().mockResolvedValue(undefined) };
-  return { repo, audit, useCase: new ChangeDeliveryStatusUseCase(repo, audit) };
+  const events = new DomainEventBus();
+  return { repo, audit, useCase: new ChangeDeliveryStatusUseCase(repo, audit, events) };
 }
 
 describe('ChangeDeliveryStatusUseCase', () => {

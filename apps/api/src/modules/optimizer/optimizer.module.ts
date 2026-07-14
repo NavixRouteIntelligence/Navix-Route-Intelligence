@@ -9,7 +9,12 @@ import { ListRoutePlansUseCase } from './application/list-route-plans.use-case';
 import { OptimizeRouteUseCase } from './application/optimize-route.use-case';
 import { OPTIMIZER_SERVICE, OptimizerService } from './application/optimizer.service';
 import { ProcessOptimizationJobUseCase } from './application/process-optimization-job.use-case';
+import { ReoptimizeActiveUseCase } from './application/reoptimize-active.use-case';
 import { RouteSolver } from './application/route-solver';
+import {
+  AutoReoptimizationService,
+  REOPTIMIZATION_TRIGGER,
+} from './application/auto-reoptimization.service';
 import { StrategyRegistry } from './application/strategy-registry';
 import { DELIVERY_GATEWAY } from './application/ports/delivery-gateway.port';
 import { DISTANCE_PROVIDER } from './domain/ports/distance-provider.port';
@@ -27,6 +32,7 @@ import { RoutePlanOrmEntity } from './infrastructure/persistence/route-plan.orm-
 import { RoutePlanRepository } from './infrastructure/persistence/route-plan.repository';
 import { OptimizerMetrics } from './infrastructure/observability/optimizer-metrics';
 import { InProcessOptimizationJobQueue } from './infrastructure/queue/in-process-optimization-job.queue';
+import { TenantScopedReoptimizationTrigger } from './infrastructure/reoptimization/tenant-scoped-reoptimization.trigger';
 import { NearestNeighbor2OptStrategy } from './infrastructure/strategies/nearest-neighbor-2opt.strategy';
 import { OptimizerController } from './interface/optimizer.controller';
 
@@ -47,6 +53,9 @@ import { OptimizerController } from './interface/optimizer.controller';
     GetOptimizationJobUseCase,
     GetRoutePlanUseCase,
     ListRoutePlansUseCase,
+    ReoptimizeActiveUseCase,
+    AutoReoptimizationService,
+    { provide: REOPTIMIZATION_TRIGGER, useClass: TenantScopedReoptimizationTrigger },
     StrategyRegistry,
     RouteSolver,
     OptimizerMetrics,

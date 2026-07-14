@@ -45,7 +45,8 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 | ADR-0019 | Mídia do Proof of Delivery em object storage (StorageService) | Aceito | ✅ `StoragePort` + drivers `local`/`s3` (S3/R2/GCS); banco guarda só a URL; aceita data URL por compatibilidade temporária | 2026-07-13 |
 | ADR-0020 | Sincronização incremental offline-first (updatedSince + cursor de keyset) | Aceito | ✅ `GET /deliveries/sync` (delta + tombstones, keyset `(updated_at,id)`, índice dedicado); contratos `SyncParams`/`SyncResponse<T>` genéricos | 2026-07-14 |
 | ADR-0021 | Observabilidade de produção (OpenTelemetry + Prometheus + health) | Aceito | ✅ Logs pino c/ correlação de trace; métricas `prom-client` em `/metrics`; tracing OTel opt-in (http/pg/ioredis); `/health/{live,ready}` (Redis não fatal); stack Grafana/Jaeger | 2026-07-14 |
-| ADR-0022 | Motor de otimização: modelo rico de restrições + perfil por veículo | Parcial | 🟡 Fases 1–2: demanda/capacidade, serviço por parada, `VehicleProfile` por tipo; **multi-veículo** por clustering de sweep (`routes[]` + não atribuídas). Reotimização automática e OR-Tools nas Fases 3–4 | 2026-07-14 |
+| ADR-0022 | Motor de otimização: modelo rico de restrições + perfil por veículo | Parcial | 🟡 Fases 1–2: demanda/capacidade, serviço por parada, `VehicleProfile` por tipo; **multi-veículo** por clustering de sweep (`routes[]` + não atribuídas). OR-Tools na Fase 4 | 2026-07-14 |
+| ADR-0023 | Reotimização automática por eventos + priorização dinâmica por SLA | Aceito | ✅ `DomainEventBus` in-process; Delivery publica eventos; `AutoReoptimizationService` (debounce por tenant, opt-in) + `POST /route-plans/reoptimize`; peso de prioridade por proximidade do prazo | 2026-07-14 |
 
 ---
 
@@ -267,6 +268,19 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 
 ---
 
+## ADR-0023 — Reotimização automática por eventos + priorização dinâmica por SLA
+
+- **Status:** Aceito · **Data:** 2026-07-14
+- **Status da implementação:** ✅ Implementado (Fase 3 do motor, ADR-0022). Dois pilares, **reutilizando** a fila de jobs (ADR-0007), o SSE (ADR-0018) e o `RouteSolver` (ADR-0022):
+  - **Priorização dinâmica por SLA:** `slaPriorityWeight(base, windowEndMinutes)` aumenta o peso de prioridade conforme o **fim da janela** se aproxima (ou estoura), aplicado no `RouteSolver` ao montar as prioridades. Sem janela, é o peso base (retrocompatível) — uma entrega comum com prazo apertado passa à frente de uma urgente folgada.
+  - **Reotimização automática:** um `DomainEventBus` **in-process** (mesmo padrão do `RealtimeHub`) propaga eventos de domínio entre módulos. Os casos de uso do Delivery publicam `delivery.created/updated/status-changed/deleted`. O `AutoReoptimizationService` (Optimizer) assina o bus, faz **debounce por tenant** (coalesce rajadas — ex.: import em massa) e dispara o `ReoptimizeActiveUseCase`, que enfileira a reotimização das entregas **ativas** (pendente/em rota) via o pipeline existente (job → SSE). É **opt-in** (`OPTIMIZER_AUTO_REOPTIMIZE`, default off). O gatilho automático estabelece a transação de tenant (mesmo padrão da fila in-process). Um endpoint **manual** `POST /route-plans/reoptimize` cobre **trânsito/eventos externos** com o mesmo caso de uso.
+- **Contexto:** O plano de rota ficava obsoleto quando entregas eram criadas/canceladas/alteradas ou o trânsito mudava — exigindo reotimização manual. E a prioridade era estática, ignorando o quão perto do prazo cada entrega estava (SLA).
+- **Decisão:** Introduzir um **barramento de eventos de domínio in-process** (desacopla Delivery→Optimizer sem dependência direta) + um serviço de reotimização **debounced e opt-in**, e tornar a prioridade **sensível ao SLA** no cálculo de custo. Reusar a fila/SSE/solver existentes — nada de novo pipeline. Eventos externos (trânsito) entram pelo endpoint manual (ou publicando no mesmo bus no futuro).
+- **Alternativas consideradas:** **`@nestjs/event-emitter`** (dependência extra; um `Subject` RxJS espelhando o `RealtimeHub` é suficiente e consistente); **Transactional Outbox** (ADR-0006 — durável, porém sem relay/consumer ainda; o bus in-process é o passo pragmático, evoluível para outbox/Redis pub/sub); **reotimização síncrona no request da entrega** (acopla latência e falha do request à otimização; o debounce assíncrono é melhor); **priorização por ML** (Fase futura — a função por SLA é determinística e explicável).
+- **Consequências:** Rota se mantém atualizada automaticamente (quando ligada) e prioriza por urgência real de prazo. **Pendências:** o bus é in-process (multi-instância exige **Redis pub/sub**, igual ao SSE); a reotimização automática reotimiza **todas** as ativas do tenant (não há ainda o conceito de "rota corrente" por veículo/motorista — granularidade fina é evolução); dedup/So idempotência entre reoptimizações concorrentes; provedores de trânsito publicando no bus (Fase 4).
+
+---
+
 ## Template
 
 ```markdown
@@ -299,3 +313,4 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 | 2026-07-14 | 1.0 | Arquitetura | ADR-0021: observabilidade de produção (OpenTelemetry, métricas Prometheus em /metrics, health checks, stack Grafana/Jaeger) |
 | 2026-07-14 | 1.1 | Arquitetura | ADR-0022 (Fase 1): motor de otimização com demanda/capacidade, tempo de serviço por parada, VehicleProfile por tipo e custo compartilhado (seam pedágio/risco) |
 | 2026-07-14 | 1.2 | Arquitetura | ADR-0022 (Fase 2): roteirização multi-veículo — RouteSolver reutilizável + FleetPartitioner (sweep capacitado); request `vehicles[]`, resposta `routes[]` + não atribuídas |
+| 2026-07-14 | 1.3 | Arquitetura | ADR-0023 (Fase 3): reotimização automática por eventos (DomainEventBus + debounce, opt-in) + endpoint manual; priorização dinâmica por SLA |

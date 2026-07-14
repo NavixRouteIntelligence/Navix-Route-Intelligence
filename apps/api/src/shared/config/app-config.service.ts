@@ -110,4 +110,11 @@ export class AppConfigService {
       metricsEnabled: this.get('METRICS_ENABLED'),
     };
   }
+
+  get optimizer() {
+    return {
+      autoReoptimize: this.get('OPTIMIZER_AUTO_REOPTIMIZE'),
+      reoptimizeDebounceMs: this.get('OPTIMIZER_REOPTIMIZE_DEBOUNCE_MS'),
+    };
+  }
 }

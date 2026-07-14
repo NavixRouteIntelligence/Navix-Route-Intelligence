@@ -27,6 +27,7 @@ import { OPTIMIZATION_STRATEGIES } from '../src/modules/optimizer/domain/ports/r
 import { ROUTE_PLAN_REPOSITORY } from '../src/modules/optimizer/domain/ports/route-plan-repository.port';
 import type { RoutePlanRepositoryPort } from '../src/modules/optimizer/domain/ports/route-plan-repository.port';
 import type { RoutePlan } from '../src/modules/optimizer/domain/route-plan';
+import { ReoptimizeActiveUseCase } from '../src/modules/optimizer/application/reoptimize-active.use-case';
 import { RouteSolver } from '../src/modules/optimizer/application/route-solver';
 import { HaversineDistanceProvider } from '../src/modules/optimizer/infrastructure/distance/haversine-distance.provider';
 import { OptimizerMetrics } from '../src/modules/optimizer/infrastructure/observability/optimizer-metrics';
@@ -94,6 +95,7 @@ describe('Optimizer (e2e, assíncrono)', () => {
         GetOptimizationJobUseCase,
         GetRoutePlanUseCase,
         ListRoutePlansUseCase,
+        ReoptimizeActiveUseCase,
         StrategyRegistry,
         RouteSolver,
         NearestNeighbor2OptStrategy,
@@ -116,7 +118,18 @@ describe('Optimizer (e2e, assíncrono)', () => {
           inject: [ProcessOptimizationJobUseCase],
         },
         { provide: JOB_EVENTS, useValue: { optimizationJobUpdated: () => undefined } },
-        { provide: DELIVERY_GATEWAY, useValue: { getStops: async () => [] } },
+        {
+          provide: DELIVERY_GATEWAY,
+          useValue: {
+            getStops: async (_tenantId: string, ids: string[]) =>
+              stops
+                .filter((s) => ids.includes(s.id))
+                .map((s) => ({ ...s, priority: 'normal', timeWindow: null })),
+            // Reotimização: devolve as 4 paradas ativas do tenant.
+            listActiveStops: async () =>
+              stops.map((s) => ({ ...s, priority: 'normal', timeWindow: null })),
+          },
+        },
         { provide: AUDIT_LOG, useValue: { record: async () => undefined } },
         {
           provide: OptimizerMetrics,
@@ -238,5 +251,15 @@ describe('Optimizer (e2e, assíncrono)', () => {
     );
     expect(total).toBe(4);
     expect(plan.body.data.stops).toHaveLength(4);
+  });
+
+  it('POST /route-plans/reoptimize enfileira a reotimização das ativas (ADR-0023)', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/api/v1/route-plans/reoptimize')
+      .expect(202);
+    expect(res.body.data.jobId).toEqual(expect.any(String));
+
+    const job = await pollJob(app, res.body.data.jobId);
+    expect(job.status).toBe('succeeded');
   });
 });

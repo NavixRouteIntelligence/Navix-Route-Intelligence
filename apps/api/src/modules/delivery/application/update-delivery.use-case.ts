@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import type { Delivery as DeliveryView, UpdateDeliveryRequest } from '@navix/contracts';
 
 import { AUDIT_LOG, type AuditLogPort } from '../../../shared/audit/audit-log.port';
+import { DomainEventBus } from '../../../shared/events/domain-event-bus';
 import { NotFoundError } from '../../../shared/kernel/domain-error';
 import {
   DELIVERY_REPOSITORY,
@@ -23,6 +24,7 @@ export class UpdateDeliveryUseCase {
     @Inject(DELIVERY_REPOSITORY) private readonly deliveries: DeliveryRepositoryPort,
     @Inject(FLEET_GATEWAY) private readonly fleet: FleetGatewayPort,
     @Inject(AUDIT_LOG) private readonly audit: AuditLogPort,
+    private readonly events: DomainEventBus,
   ) {}
 
   async execute(command: UpdateDeliveryCommand): Promise<DeliveryView> {
@@ -43,6 +45,7 @@ export class UpdateDeliveryUseCase {
       action: 'delivery.updated',
       resource: `delivery:${view.id}`,
     });
+    this.events.publish(command.tenantId, { type: 'delivery.updated', aggregateId: view.id });
     return view;
   }
 }

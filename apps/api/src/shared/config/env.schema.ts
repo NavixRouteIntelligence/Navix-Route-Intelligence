@@ -79,6 +79,15 @@ export const envSchema = z.object({
     .enum(['true', 'false'])
     .default('true')
     .transform((v) => v === 'true'),
+
+  // --- Otimização (ADR-0023) ---
+  // Reotimização automática ao mudar entregas. Opt-in (default off): quando
+  // ligada, o Optimizer reage a eventos do Delivery e reenfileira jobs.
+  OPTIMIZER_AUTO_REOPTIMIZE: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
+  OPTIMIZER_REOPTIMIZE_DEBOUNCE_MS: z.coerce.number().int().positive().default(2000),
 });
 
 export type Env = z.infer<typeof envSchema>;
