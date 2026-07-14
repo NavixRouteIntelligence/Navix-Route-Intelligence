@@ -62,7 +62,7 @@ Este documento é a fonte de verdade da arquitetura **alvo**. Toda contribuiçã
 | **Delivery** | Pedidos/entregas, janelas de tempo, prioridades, depósitos |
 | **Routing / Optimization** | Motor VRP, matriz de distância, planos de rota |
 | **Realtime Tracking** | Posição, telemetria, reotimização dinâmica, ETA |
-| **Intelligence** | Modelos de ML, features, previsões, aprendizado contínuo |
+| **Intelligence** | Predição e IA logística: cronograma/ETA, atrasos, combustível, melhor saída, trânsito, perfil de motorista. 🟡 *1ª camada implementada — heurísticas atrás de ports, ML-ready (ADR-0025)* |
 | **Billing** | Planos, assinaturas, uso, faturamento |
 | **Notifications** | E-mails, push, webhooks, eventos externos |
 

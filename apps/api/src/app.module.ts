@@ -17,6 +17,7 @@ import { ThrottlingModule } from './shared/security/throttling.module';
 import { DeliveryModule } from './modules/delivery/delivery.module';
 import { FleetModule } from './modules/fleet/fleet.module';
 import { ImportModule } from './modules/import/import.module';
+import { IntelligenceModule } from './modules/intelligence/intelligence.module';
 import { OptimizerModule } from './modules/optimizer/optimizer.module';
 import { PodModule } from './modules/pod/pod.module';
 import { TrackingModule } from './modules/tracking/tracking.module';
@@ -52,6 +53,7 @@ import { UserSettingsModule } from './modules/user-settings/user-settings.module
     FleetModule,
     DeliveryModule,
     OptimizerModule,
+    IntelligenceModule,
     ImportModule,
     TrackingModule,
     PodModule,
