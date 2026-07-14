@@ -1,4 +1,5 @@
 import type {
+  CapacityUsage,
   OptimizationStrategyName,
   RouteMetrics,
   RoutePlanParams,
@@ -20,6 +21,8 @@ export interface RoutePlanProps {
   savings: RouteSavings;
   score: number;
   explanation: string;
+  /** Uso de capacidade vs. veículo (ADR-0022). Ausente sem veículo/demanda. */
+  capacity?: CapacityUsage;
   createdAt: Date;
 }
 

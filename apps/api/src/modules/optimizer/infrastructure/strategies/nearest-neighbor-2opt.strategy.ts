@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { OptimizationStrategyName } from '@navix/contracts';
 
+import { compositeCost } from '../../domain/route-cost-model';
 import type {
   RouteOptimizationStrategy,
   StrategyContext,
@@ -48,7 +49,7 @@ export class NearestNeighbor2OptStrategy implements RouteOptimizationStrategy {
 
   private twoOpt(ctx: StrategyContext, initial: number[]): number[] {
     let best = initial.slice();
-    let bestCost = this.routeCost(ctx, best);
+    let bestCost = compositeCost(ctx, best);
     const n = best.length;
     const deadline = Date.now() + TIME_BUDGET_MS;
     let improved = true;
@@ -58,7 +59,7 @@ export class NearestNeighbor2OptStrategy implements RouteOptimizationStrategy {
       for (let i = 1; i < n - 1; i++) {
         for (let j = i + 1; j < n; j++) {
           const candidate = this.reverseSegment(best, i, j);
-          const cost = this.routeCost(ctx, candidate);
+          const cost = compositeCost(ctx, candidate);
           if (cost + 1e-9 < bestCost) {
             best = candidate;
             bestCost = cost;
@@ -73,34 +74,5 @@ export class NearestNeighbor2OptStrategy implements RouteOptimizationStrategy {
 
   private reverseSegment(order: number[], i: number, j: number): number[] {
     return [...order.slice(0, i), ...order.slice(i, j + 1).reverse(), ...order.slice(j + 1)];
-  }
-
-  /** Custo composto de uma ordenação (distância + atraso + inversão de prioridade). */
-  private routeCost(ctx: StrategyContext, order: number[]): number {
-    let distance = 0;
-    for (let i = 1; i < order.length; i++) {
-      distance += ctx.distanceMatrix[order[i - 1]][order[i]];
-    }
-
-    let clock = 0;
-    let lateness = 0;
-    let priorityPenalty = 0;
-    let position = 0;
-    for (let i = 0; i < order.length; i++) {
-      if (i > 0) clock += ctx.timeMatrix[order[i - 1]][order[i]];
-      const isOrigin = ctx.hasOrigin && i === 0;
-      if (isOrigin) continue;
-      const window = ctx.windows[order[i]];
-      if (window && clock > window.endMinutes) lateness += clock - window.endMinutes;
-      priorityPenalty += ctx.priorities[order[i]] * position;
-      position += 1;
-      clock += ctx.serviceTimeMinutes;
-    }
-
-    return (
-      ctx.weights.distance * distance +
-      ctx.weights.timeWindow * lateness +
-      ctx.weights.priority * priorityPenalty
-    );
   }
 }

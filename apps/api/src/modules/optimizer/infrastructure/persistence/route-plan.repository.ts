@@ -34,6 +34,7 @@ export class RoutePlanRepository implements RoutePlanRepositoryPort {
     row.savings = s.savings;
     row.score = s.score;
     row.explanation = s.explanation;
+    row.capacity = s.capacity ?? null;
     row.createdAt = s.createdAt;
     await this.repo.save(row);
   }
@@ -66,6 +67,7 @@ export class RoutePlanRepository implements RoutePlanRepositoryPort {
       savings: row.savings,
       score: row.score,
       explanation: row.explanation,
+      capacity: row.capacity ?? undefined,
       createdAt: row.createdAt,
     });
   }

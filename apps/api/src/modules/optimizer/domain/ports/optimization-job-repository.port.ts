@@ -2,6 +2,7 @@ import type {
   OptimizationJobStatus,
   OptimizationStopInput,
   OptimizationStrategyName,
+  OptimizationVehicleInput,
   OriginInput,
 } from '@navix/contracts';
 
@@ -14,6 +15,7 @@ export interface OptimizationJobRequest {
   strategy?: OptimizationStrategyName;
   averageSpeedKmh?: number;
   serviceTimeMinutes?: number;
+  vehicle?: OptimizationVehicleInput;
 }
 
 /** Registro de um job de otimização. */

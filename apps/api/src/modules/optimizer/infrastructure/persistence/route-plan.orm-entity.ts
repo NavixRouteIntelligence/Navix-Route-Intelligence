@@ -1,4 +1,5 @@
 import type {
+  CapacityUsage,
   OptimizationStrategyName,
   RouteMetrics,
   RoutePlanParams,
@@ -47,6 +48,10 @@ export class RoutePlanOrmEntity {
 
   @Column('text')
   explanation!: string;
+
+  /** Uso de capacidade vs. veículo (ADR-0022). Null sem veículo/demanda. */
+  @Column('jsonb', { nullable: true })
+  capacity!: CapacityUsage | null;
 
   @Column('timestamptz', { name: 'created_at' })
   createdAt!: Date;

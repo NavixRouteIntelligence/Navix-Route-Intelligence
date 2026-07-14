@@ -45,6 +45,7 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 | ADR-0019 | Mídia do Proof of Delivery em object storage (StorageService) | Aceito | ✅ `StoragePort` + drivers `local`/`s3` (S3/R2/GCS); banco guarda só a URL; aceita data URL por compatibilidade temporária | 2026-07-13 |
 | ADR-0020 | Sincronização incremental offline-first (updatedSince + cursor de keyset) | Aceito | ✅ `GET /deliveries/sync` (delta + tombstones, keyset `(updated_at,id)`, índice dedicado); contratos `SyncParams`/`SyncResponse<T>` genéricos | 2026-07-14 |
 | ADR-0021 | Observabilidade de produção (OpenTelemetry + Prometheus + health) | Aceito | ✅ Logs pino c/ correlação de trace; métricas `prom-client` em `/metrics`; tracing OTel opt-in (http/pg/ioredis); `/health/{live,ready}` (Redis não fatal); stack Grafana/Jaeger | 2026-07-14 |
+| ADR-0022 | Motor de otimização: modelo rico de restrições + perfil por veículo | Parcial | 🟡 Fase 1: demanda (peso/volume), tempo de serviço por parada, `VehicleProfile` por tipo (moto/carro/carrinha/camião) e viabilidade de capacidade; custo compartilhado c/ seam de pedágio/risco. Clustering/multi-veículo, reotimização e OR-Tools nas Fases 2–4 | 2026-07-14 |
 
 ---
 
@@ -253,6 +254,17 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 
 ---
 
+## ADR-0022 — Motor de otimização: modelo rico de restrições + perfil por veículo
+
+- **Status:** Parcial · **Data:** 2026-07-14
+- **Status da implementação:** 🟡 **Fase 1 de 4.** Estende o motor **reutilizando o Strategy Pattern** existente (`RouteOptimizationStrategy` + `StrategyRegistry`) e o `StrategyContext`, **sem quebrar a API pública** (todos os campos novos são opcionais). Implementado: (1) **demanda por parada** (`weightKg`/`volumeM3`) e **tempo de serviço por parada**; (2) **`VehicleProfile`** com defaults por tipo — **moto/bicicleta** (ágeis, baixa capacidade, evitam pedágio), **carro**, **carrinha/van**, **camião/truck** (alta capacidade, acesso urbano restrito) — com overrides; (3) **viabilidade de capacidade** (`CapacityUsage`) reportada no plano e penalizada no score; (4) **função de custo compartilhada** (`route-cost-model`, extraída da NN+2-opt para reuso por futuras estratégias) com **seam de sobretaxa por aresta/nó** (pedágio/zona de risco) — mecanismo testado, provedor de dados na Fase 4; (5) **métricas de performance** do solver reusando o `MetricsService` (ADR-0021). Persistência: coluna `route_plans.capacity` (JSONB nullable); os demais campos viajam nos JSONB existentes.
+- **Contexto:** O motor resolvia um caminho aberto de 1 veículo só com distância + janelas + prioridade. Faltavam capacidade/peso/volume, tempo de parada, restrições por tipo de veículo e a base para pedágio/zona de risco — requisitos de uma plataforma logística de classe mundial (Uber/OnFleet/Routific).
+- **Decisão:** Evoluir **por extensão, não reescrita**: enriquecer o `StrategyContext` (campos opcionais, retrocompatíveis), modelar o veículo como *value object* com defaults por tipo, e tratar **capacidade como viabilidade** (numa rota de 1 veículo a viabilidade é independente da ordem — a divisão por veículo é a Fase 2). Custo extraído para um modelo compartilhado, garantindo semântica idêntica entre algoritmos (NN+2-opt hoje, OR-Tools/metaheurística depois).
+- **Alternativas consideradas:** **Reescrever o solver com OR-Tools já** (dependência pesada nativa; preferimos primeiro estabelecer o modelo de restrições e só então plugar um solver mais forte via a mesma port — Fase 4); **capacidade como termo de custo** (não faz sentido em rota de 1 veículo, ordem-independente); **fabricar custos de pedágio/risco sem dados** (descartado — modelamos o *seam* honesto e deixamos o provedor para a Fase 4); **estender o agregado Delivery com peso/volume agora** (é mudança do contexto Delivery — a demanda por `deliveryIds` fica 0 até lá; via `stops` inline já funciona).
+- **Consequências:** Base sólida e testada para VRP real. **Pendências (Fases 2–4):** clustering inteligente + atribuição multi-veículo por capacidade (`routes[]`); reotimização automática por eventos (nova/cancelada entrega, trânsito) reusando fila + SSE; priorização dinâmica por SLA; provedores de pedágio/zona de risco; estratégia OR-Tools/metaheurística; demanda no agregado Delivery.
+
+---
+
 ## Template
 
 ```markdown
@@ -283,3 +295,4 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 | 2026-07-13 | 0.8 | Arquitetura | ADR-0017 (Idempotency-Key), ADR-0018 (tempo real por SSE) e ADR-0019 (mídia do POD em object storage) |
 | 2026-07-14 | 0.9 | Arquitetura | ADR-0020: sincronização incremental offline-first (updatedSince + cursor de keyset, tombstones) para entregas |
 | 2026-07-14 | 1.0 | Arquitetura | ADR-0021: observabilidade de produção (OpenTelemetry, métricas Prometheus em /metrics, health checks, stack Grafana/Jaeger) |
+| 2026-07-14 | 1.1 | Arquitetura | ADR-0022 (Fase 1): motor de otimização com demanda/capacidade, tempo de serviço por parada, VehicleProfile por tipo e custo compartilhado (seam pedágio/risco) |

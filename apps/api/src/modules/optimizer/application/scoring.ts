@@ -1,7 +1,13 @@
-import type { DeliveryPriority, RouteMetrics, RouteSavings, RouteStopView } from '@navix/contracts';
+import type {
+  CapacityUsage,
+  DeliveryPriority,
+  RouteMetrics,
+  RouteSavings,
+  RouteStopView,
+} from '@navix/contracts';
 
 import type { NodeWindow } from '../domain/ports/route-optimization-strategy.port';
-import { priorityWeight } from '../domain/optimization-stop';
+import { priorityWeight, type Demand } from '../domain/optimization-stop';
 
 export interface ScoringNode {
   id: string;
@@ -9,6 +15,16 @@ export interface ScoringNode {
   longitude: number;
   priority: DeliveryPriority;
   window: NodeWindow | null;
+  /** Demanda da parada (ADR-0022). Ausente ⇒ tratada como zero e omitida da view. */
+  demand?: Demand;
+  /** Tempo de serviço específico do nó (min); null/ausente usa o global. */
+  serviceMinutes?: number | null;
+}
+
+/** Tempo de serviço efetivo do nó: o específico, se houver; senão o global. */
+function serviceOf(node: ScoringNode | undefined, globalService: number): number {
+  const s = node?.serviceMinutes;
+  return s === undefined || s === null ? globalService : s;
 }
 
 const round = (n: number, d = 2): number => {
@@ -18,27 +34,48 @@ const round = (n: number, d = 2): number => {
 
 const clamp01 = (n: number): number => Math.max(0, Math.min(1, n));
 
-/** Métricas agregadas de uma ordenação de nós. */
+/** Métricas agregadas de uma ordenação de nós.
+ * Com `nodes`, usa tempo de serviço por nó e soma peso/volume transportados. */
 export function computeMetrics(
   order: number[],
   distance: number[][],
   time: number[][],
   serviceMinutes: number,
   hasOrigin: boolean,
+  nodes?: ScoringNode[],
 ): RouteMetrics {
   let totalDistance = 0;
-  let totalTime = 0;
+  let travelTime = 0;
   for (let i = 1; i < order.length; i++) {
     totalDistance += distance[order[i - 1]][order[i]];
-    totalTime += time[order[i - 1]][order[i]];
+    travelTime += time[order[i - 1]][order[i]];
   }
+
+  let serviceTotal = 0;
+  let totalWeight = 0;
+  let totalVolume = 0;
+  let hasDemand = false;
+  for (let i = hasOrigin ? 1 : 0; i < order.length; i++) {
+    const node = nodes?.[order[i]];
+    serviceTotal += serviceOf(node, serviceMinutes);
+    if (node?.demand) {
+      hasDemand = true;
+      totalWeight += node.demand.weightKg;
+      totalVolume += node.demand.volumeM3;
+    }
+  }
+
   const deliveryStops = hasOrigin ? order.length - 1 : order.length;
-  totalTime += serviceMinutes * deliveryStops;
-  return {
+  const metrics: RouteMetrics = {
     totalDistanceKm: round(totalDistance),
-    totalTimeMinutes: round(totalTime),
+    totalTimeMinutes: round(travelTime + serviceTotal),
     stops: deliveryStops,
   };
+  if (hasDemand) {
+    metrics.totalWeightKg = round(totalWeight);
+    metrics.totalVolumeM3 = round(totalVolume);
+  }
+  return metrics;
 }
 
 /** Constrói a visão por parada (exclui a origem, se houver). */
@@ -67,7 +104,7 @@ export function buildStops(
       const n = nodes[node];
       const respected = n.window === null ? null : clock <= n.window.endMinutes + 1e-6;
       sequence += 1;
-      views.push({
+      const view: RouteStopView = {
         sequence,
         deliveryId: n.id,
         latitude: n.latitude,
@@ -77,8 +114,13 @@ export function buildStops(
         cumulativeDistanceKm: round(cumulativeDistance),
         etaMinutes: round(clock, 1),
         timeWindowRespected: respected,
-      });
-      clock += serviceMinutes; // tempo de serviço na parada
+      };
+      if (n.demand) {
+        view.weightKg = round(n.demand.weightKg);
+        view.volumeM3 = round(n.demand.volumeM3);
+      }
+      views.push(view);
+      clock += serviceOf(n, serviceMinutes); // tempo de serviço na parada (por nó)
     }
   }
   return views;
@@ -123,6 +165,7 @@ export function computeScore(
   stops: RouteStopView[],
   savings: RouteSavings,
   strategyLabel: string,
+  capacity?: CapacityUsage,
 ): ScoreResult {
   const windowStops = stops.filter((s) => s.timeWindowRespected !== null);
   const respected = windowStops.filter((s) => s.timeWindowRespected === true).length;
@@ -130,7 +173,9 @@ export function computeScore(
   const prioScore = priorityScore(stops);
   const savingsScore = clamp01(savings.distancePct / 25); // 25%+ de economia = nota cheia
 
-  const score = Math.round(100 * (0.5 * windowScore + 0.3 * prioScore + 0.2 * savingsScore));
+  let score = Math.round(100 * (0.5 * windowScore + 0.3 * prioScore + 0.2 * savingsScore));
+  // Capacidade excedida é penalizada no score (rota inviável para o veículo).
+  if (capacity && !capacity.feasible) score = Math.round(score * 0.5);
 
   const parts = [
     `${strategyLabel}: ${stops.length} paradas`,
@@ -140,6 +185,13 @@ export function computeScore(
     parts.push(`${respected}/${windowStops.length} janelas respeitadas`);
   }
   parts.push('prioridades mais altas atendidas primeiro');
+  if (capacity) {
+    parts.push(
+      capacity.feasible
+        ? 'capacidade do veículo respeitada'
+        : `capacidade excedida (+${capacity.overWeightKg}kg / +${capacity.overVolumeM3}m³)`,
+    );
+  }
 
-  return { score, explanation: parts.join('; ') + '.' };
+  return { score: Math.max(0, score), explanation: parts.join('; ') + '.' };
 }
