@@ -27,7 +27,7 @@ function build() {
     observeSolve: jest.fn(),
     markInfeasible: jest.fn(),
   } as unknown as OptimizerMetrics;
-  const solver = new RouteSolver(new HaversineDistanceProvider(), registry);
+  const solver = new RouteSolver(new HaversineDistanceProvider(), { augment: () => ({}) }, registry);
   const uc = new OptimizeRouteUseCase(plans, gateway, audit, solver, metrics);
   return { uc, saved, metrics };
 }

@@ -11,6 +11,10 @@ import { assessCapacity, totalDemand } from '../domain/capacity';
 import { type Demand, type OptimizationStop } from '../domain/optimization-stop';
 import { slaPriorityWeight } from '../domain/sla-priority';
 import {
+  COST_AUGMENTATION,
+  type CostAugmentationPort,
+} from '../domain/ports/cost-augmentation.port';
+import {
   DISTANCE_PROVIDER,
   type DistanceProviderPort,
 } from '../domain/ports/distance-provider.port';
@@ -59,6 +63,7 @@ export interface SolvedRoute {
 export class RouteSolver {
   constructor(
     @Inject(DISTANCE_PROVIDER) private readonly distance: DistanceProviderPort,
+    @Inject(COST_AUGMENTATION) private readonly augmentation: CostAugmentationPort,
     private readonly registry: StrategyRegistry,
   ) {}
 
@@ -73,6 +78,12 @@ export class RouteSolver {
     );
     const perNodeServiceMinutes = nodes.map((n) => n.serviceTimeMinutes ?? service);
 
+    // Sobretaxas de pedágio/zona de risco (ADR-0024). No-op por padrão.
+    const { edgeSurcharge, nodeSurcharge } = this.augmentation.augment({
+      points: nodes.map((n) => ({ latitude: n.point.latitude, longitude: n.point.longitude })),
+      avoidTolls: profile.avoidTolls,
+    });
+
     const ctx: StrategyContext = {
       size: nodes.length,
       distanceMatrix,
@@ -83,6 +94,8 @@ export class RouteSolver {
       hasOrigin,
       weights: WEIGHTS,
       perNodeServiceMinutes,
+      ...(edgeSurcharge ? { edgeSurcharge } : {}),
+      ...(nodeSurcharge ? { nodeSurcharge } : {}),
     };
 
     const strategy = this.registry.get(input.strategyName);

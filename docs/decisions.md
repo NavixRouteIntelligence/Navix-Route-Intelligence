@@ -45,8 +45,9 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 | ADR-0019 | Mídia do Proof of Delivery em object storage (StorageService) | Aceito | ✅ `StoragePort` + drivers `local`/`s3` (S3/R2/GCS); banco guarda só a URL; aceita data URL por compatibilidade temporária | 2026-07-13 |
 | ADR-0020 | Sincronização incremental offline-first (updatedSince + cursor de keyset) | Aceito | ✅ `GET /deliveries/sync` (delta + tombstones, keyset `(updated_at,id)`, índice dedicado); contratos `SyncParams`/`SyncResponse<T>` genéricos | 2026-07-14 |
 | ADR-0021 | Observabilidade de produção (OpenTelemetry + Prometheus + health) | Aceito | ✅ Logs pino c/ correlação de trace; métricas `prom-client` em `/metrics`; tracing OTel opt-in (http/pg/ioredis); `/health/{live,ready}` (Redis não fatal); stack Grafana/Jaeger | 2026-07-14 |
-| ADR-0022 | Motor de otimização: modelo rico de restrições + perfil por veículo | Parcial | 🟡 Fases 1–2: demanda/capacidade, serviço por parada, `VehicleProfile` por tipo; **multi-veículo** por clustering de sweep (`routes[]` + não atribuídas). OR-Tools na Fase 4 | 2026-07-14 |
+| ADR-0022 | Motor de otimização: modelo rico de restrições + perfil por veículo | Aceito | ✅ Fases 1–2: demanda/capacidade, serviço por parada, `VehicleProfile` por tipo; **multi-veículo** por clustering de sweep (`routes[]` + não atribuídas) | 2026-07-14 |
 | ADR-0023 | Reotimização automática por eventos + priorização dinâmica por SLA | Aceito | ✅ `DomainEventBus` in-process; Delivery publica eventos; `AutoReoptimizationService` (debounce por tenant, opt-in) + `POST /route-plans/reoptimize`; peso de prioridade por proximidade do prazo | 2026-07-14 |
+| ADR-0024 | Estratégia metaheurística (VND) + sobretaxas de pedágio/zona de risco | Aceito | ✅ Estratégia `or-opt-2opt` (Or-opt + 2-opt) pela mesma port; `CostAugmentationPort` alimenta o *seam* de custo — zonas de risco configuráveis (no-op default); path aberto para OR-Tools nativo e provedor de pedágio | 2026-07-14 |
 
 ---
 
@@ -281,6 +282,19 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 
 ---
 
+## ADR-0024 — Estratégia metaheurística (VND) + sobretaxas de pedágio/zona de risco
+
+- **Status:** Aceito · **Data:** 2026-07-14
+- **Status da implementação:** ✅ Implementado (Fase 4 do motor). Dois itens, ambos **pela mesma port/seam** já existentes:
+  - **Metaheurística `or-opt-2opt`:** buscas locais extraídas para `domain/local-search` (`nearestNeighbor`, `twoOptImprove`, `orOptImprove`) e reusadas pela NN+2-opt e por uma nova estratégia **VND** (Variable Neighborhood Descent) que alterna **2-opt** e **Or-opt** até nenhuma vizinhança melhorar (com orçamento de tempo). Determinística e sem dependências; **nunca pior** que a NN+2-opt. Entra na `OPTIMIZATION_STRATEGIES` (multi-provider); selecionável por `strategy: 'or-opt-2opt'`.
+  - **Sobretaxas (pedágio/zona de risco):** `CostAugmentationPort` preenche o *seam* `edgeSurcharge`/`nodeSurcharge` do `StrategyContext`/`route-cost-model` (criado na ADR-0022). O `ConfigurableCostAugmentation` aplica **zonas de risco** (círculos lat/long/raio/penalidade, de `OPTIMIZER_RISK_ZONES`) como sobretaxa de nó; sem zonas, é **no-op** (retrocompatível). O `RouteSolver` consulta a port e injeta as sobretaxas no contexto — as estratégias passam a **evitar** trechos/paradas penalizados sem qualquer alteração nelas.
+- **Contexto:** Faltava (a) um solver mais forte que o NN+2-opt e (b) fazer o motor **considerar pedágios e zonas de risco** — os requisitos finais da evolução (ADR-0022, Fase 4).
+- **Decisão:** Entregar uma **metaheurística real (VND)** — determinística, testável e sem dependências nativas — em vez de acoplar o **OR-Tools nativo** agora (binding C++ frágil/instável de instalar e verificar). Como é apenas outra implementação da `RouteOptimizationStrategy`, um **adaptador OR-Tools é drop-in** no futuro, sem tocar API/domínio. Para pedágio/risco, ativar o *seam* de custo já projetado com uma **port de aumento de custo** e um provedor configurável de zonas de risco; o pedágio real depende de dados de grafo de um provedor de mapas (port aberta, no-op hoje) e a preferência `avoidTolls` do veículo já é propagada.
+- **Alternativas consideradas:** **OR-Tools nativo já** (dependência C++ pesada, instalação/verificação frágil no ambiente; adiado, com path drop-in pela port); **Simulated Annealing** (bom, mas estocástico → testes instáveis; o VND determinístico é mais adequado a testes/reprodutibilidade); **custos de pedágio fixos fabricados** (enganoso sem dados de rede — mantido como port no-op honesta).
+- **Consequências:** Rotas de melhor qualidade sob demanda (`or-opt-2opt`) e um mecanismo real e testado para **penalizar zonas de risco** (e pedágio quando houver provedor). **Pendências:** adaptador OR-Tools nativo; provedor de **dados de pedágio** (grafo/rede) para preencher `edgeSurcharge`; fonte de zonas de risco por tenant (hoje via env global); *tuning* de pesos por tenant.
+
+---
+
 ## Template
 
 ```markdown
@@ -314,3 +328,4 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 | 2026-07-14 | 1.1 | Arquitetura | ADR-0022 (Fase 1): motor de otimização com demanda/capacidade, tempo de serviço por parada, VehicleProfile por tipo e custo compartilhado (seam pedágio/risco) |
 | 2026-07-14 | 1.2 | Arquitetura | ADR-0022 (Fase 2): roteirização multi-veículo — RouteSolver reutilizável + FleetPartitioner (sweep capacitado); request `vehicles[]`, resposta `routes[]` + não atribuídas |
 | 2026-07-14 | 1.3 | Arquitetura | ADR-0023 (Fase 3): reotimização automática por eventos (DomainEventBus + debounce, opt-in) + endpoint manual; priorização dinâmica por SLA |
+| 2026-07-14 | 1.4 | Arquitetura | ADR-0024 (Fase 4): estratégia metaheurística `or-opt-2opt` (VND) + `CostAugmentationPort` (zonas de risco no seam de custo); ADR-0022 → Aceito |

@@ -5,10 +5,13 @@
 import type { VehicleType } from './fleet';
 import type { DeliveryPriority, TimeWindow } from './delivery';
 
-export type OptimizationStrategyName = 'nearest-neighbor-2opt';
+export type OptimizationStrategyName = 'nearest-neighbor-2opt' | 'or-opt-2opt';
 
 export const OPTIMIZATION_STRATEGIES: readonly OptimizationStrategyName[] = [
   'nearest-neighbor-2opt',
+  // Metaheurística mais forte (VND: Or-opt + 2-opt) — melhor qualidade, mesmo
+  // contrato (ADR-0024). Um adaptador OR-Tools nativo entraria pela mesma port.
+  'or-opt-2opt',
 ];
 
 export interface OriginInput {

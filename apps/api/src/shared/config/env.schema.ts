@@ -88,6 +88,9 @@ export const envSchema = z.object({
     .default('false')
     .transform((v) => v === 'true'),
   OPTIMIZER_REOPTIMIZE_DEBOUNCE_MS: z.coerce.number().int().positive().default(2000),
+  // Zonas de risco (ADR-0024): JSON de [{latitude,longitude,radiusKm,penalty}].
+  // Default vazio → sem efeito (no-op). Parseado/validado em AppConfigService.
+  OPTIMIZER_RISK_ZONES: z.string().default('[]'),
 });
 
 export type Env = z.infer<typeof envSchema>;

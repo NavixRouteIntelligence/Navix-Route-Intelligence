@@ -17,12 +17,14 @@ import {
 } from './application/auto-reoptimization.service';
 import { StrategyRegistry } from './application/strategy-registry';
 import { DELIVERY_GATEWAY } from './application/ports/delivery-gateway.port';
+import { COST_AUGMENTATION } from './domain/ports/cost-augmentation.port';
 import { DISTANCE_PROVIDER } from './domain/ports/distance-provider.port';
 import { JOB_EVENTS } from './domain/ports/job-events.port';
 import { OPTIMIZATION_JOB_QUEUE } from './domain/ports/optimization-job-queue.port';
 import { OPTIMIZATION_JOB_REPOSITORY } from './domain/ports/optimization-job-repository.port';
 import { OPTIMIZATION_STRATEGIES } from './domain/ports/route-optimization-strategy.port';
 import { ROUTE_PLAN_REPOSITORY } from './domain/ports/route-plan-repository.port';
+import { ConfigurableCostAugmentation } from './infrastructure/augmentation/configurable-cost-augmentation';
 import { HaversineDistanceProvider } from './infrastructure/distance/haversine-distance.provider';
 import { RealtimeJobEvents } from './infrastructure/events/realtime-job-events';
 import { DeliveryGateway } from './infrastructure/gateways/delivery.gateway';
@@ -34,6 +36,7 @@ import { OptimizerMetrics } from './infrastructure/observability/optimizer-metri
 import { InProcessOptimizationJobQueue } from './infrastructure/queue/in-process-optimization-job.queue';
 import { TenantScopedReoptimizationTrigger } from './infrastructure/reoptimization/tenant-scoped-reoptimization.trigger';
 import { NearestNeighbor2OptStrategy } from './infrastructure/strategies/nearest-neighbor-2opt.strategy';
+import { OrOpt2OptStrategy } from './infrastructure/strategies/or-opt-2opt.strategy';
 import { OptimizerController } from './interface/optimizer.controller';
 
 /**
@@ -60,12 +63,14 @@ import { OptimizerController } from './interface/optimizer.controller';
     RouteSolver,
     OptimizerMetrics,
     NearestNeighbor2OptStrategy,
+    OrOpt2OptStrategy,
     {
       provide: OPTIMIZATION_STRATEGIES,
-      useFactory: (nn: NearestNeighbor2OptStrategy) => [nn],
-      inject: [NearestNeighbor2OptStrategy],
+      useFactory: (nn: NearestNeighbor2OptStrategy, orOpt: OrOpt2OptStrategy) => [nn, orOpt],
+      inject: [NearestNeighbor2OptStrategy, OrOpt2OptStrategy],
     },
     { provide: DISTANCE_PROVIDER, useClass: HaversineDistanceProvider },
+    { provide: COST_AUGMENTATION, useClass: ConfigurableCostAugmentation },
     { provide: ROUTE_PLAN_REPOSITORY, useClass: RoutePlanRepository },
     { provide: OPTIMIZATION_JOB_REPOSITORY, useClass: OptimizationJobRepository },
     { provide: OPTIMIZATION_JOB_QUEUE, useClass: InProcessOptimizationJobQueue },
