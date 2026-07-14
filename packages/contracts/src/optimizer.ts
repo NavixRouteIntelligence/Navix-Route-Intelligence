@@ -56,8 +56,14 @@ export interface OptimizeRouteRequest {
   strategy?: OptimizationStrategyName;
   averageSpeedKmh?: number;
   serviceTimeMinutes?: number;
-  /** Perfil do veículo (capacidade/velocidade por tipo). Opcional (ADR-0022). */
+  /** Perfil do veículo único (capacidade/velocidade por tipo). Opcional (ADR-0022). */
   vehicle?: OptimizationVehicleInput;
+  /**
+   * Frota para **roteirização multi-veículo** (ADR-0022, Fase 2). Quando presente,
+   * as paradas são agrupadas por proximidade/capacidade e distribuídas entre os
+   * veículos; a resposta traz `routes[]`. Mutuamente exclusivo com `vehicle`.
+   */
+  vehicles?: OptimizationVehicleInput[];
 }
 
 export interface RouteStopView {
@@ -116,6 +122,20 @@ export interface RoutePlanParams {
   vehicleType?: VehicleType;
   /** Preferência de evitar pedágios (ADR-0022). Presente quando informada. */
   avoidTolls?: boolean;
+  /** Nº de veículos com rota atribuída (ADR-0022, Fase 2). Presente no multi-veículo. */
+  vehicleCount?: number;
+  /** Nº de paradas não atribuídas por falta de capacidade (ADR-0022, Fase 2). */
+  unassignedCount?: number;
+}
+
+/** Rota de um veículo dentro de um plano multi-veículo (ADR-0022, Fase 2). */
+export interface VehicleRouteView {
+  /** Índice do veículo na frota informada (0-based). */
+  vehicleIndex: number;
+  vehicleType?: VehicleType;
+  stops: RouteStopView[];
+  metrics: RouteMetrics;
+  capacity?: CapacityUsage;
 }
 
 export interface RoutePlan {
@@ -124,7 +144,9 @@ export interface RoutePlan {
   strategy: OptimizationStrategyName;
   status: 'completed';
   params: RoutePlanParams;
+  /** Paradas na ordem final. Em plano multi-veículo, é a concatenação de `routes`. */
   stops: RouteStopView[];
+  /** Métricas agregadas (soma entre veículos, no caso multi-veículo). */
   metrics: RouteMetrics;
   baseline: RouteMetrics;
   savings: RouteSavings;
@@ -133,6 +155,10 @@ export interface RoutePlan {
   explanation: string;
   /** Uso de capacidade vs. o veículo (ADR-0022). Presente quando há veículo/demanda. */
   capacity?: CapacityUsage;
+  /** Rotas por veículo (ADR-0022, Fase 2). Presente quando `vehicles` foi informado. */
+  routes?: VehicleRouteView[];
+  /** IDs de paradas que não couberam em nenhum veículo (frota insuficiente). */
+  unassignedStops?: string[];
   createdAt: string;
 }
 

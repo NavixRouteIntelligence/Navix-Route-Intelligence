@@ -5,6 +5,7 @@ import type {
   RoutePlanParams,
   RouteSavings,
   RouteStopView,
+  VehicleRouteView,
 } from '@navix/contracts';
 import { Column, Entity, Index, PrimaryColumn } from 'typeorm';
 
@@ -52,6 +53,14 @@ export class RoutePlanOrmEntity {
   /** Uso de capacidade vs. veículo (ADR-0022). Null sem veículo/demanda. */
   @Column('jsonb', { nullable: true })
   capacity!: CapacityUsage | null;
+
+  /** Rotas por veículo (ADR-0022, Fase 2). Null no plano de veículo único. */
+  @Column('jsonb', { nullable: true })
+  routes!: VehicleRouteView[] | null;
+
+  /** Paradas não atribuídas por capacidade (ADR-0022, Fase 2). */
+  @Column('jsonb', { name: 'unassigned_stops', nullable: true })
+  unassignedStops!: string[] | null;
 
   @Column('timestamptz', { name: 'created_at' })
   createdAt!: Date;

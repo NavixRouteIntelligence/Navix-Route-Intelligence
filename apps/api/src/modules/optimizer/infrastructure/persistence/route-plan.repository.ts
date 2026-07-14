@@ -35,6 +35,8 @@ export class RoutePlanRepository implements RoutePlanRepositoryPort {
     row.score = s.score;
     row.explanation = s.explanation;
     row.capacity = s.capacity ?? null;
+    row.routes = s.routes ?? null;
+    row.unassignedStops = s.unassignedStops ?? null;
     row.createdAt = s.createdAt;
     await this.repo.save(row);
   }
@@ -68,6 +70,8 @@ export class RoutePlanRepository implements RoutePlanRepositoryPort {
       score: row.score,
       explanation: row.explanation,
       capacity: row.capacity ?? undefined,
+      routes: row.routes ?? undefined,
+      unassignedStops: row.unassignedStops ?? undefined,
       createdAt: row.createdAt,
     });
   }

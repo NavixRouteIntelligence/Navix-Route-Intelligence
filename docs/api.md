@@ -312,7 +312,11 @@ Corpo do POST: `origin?` (depósito), **uma** das fontes `deliveryIds[]` (busca 
 **Restrições ricas (ADR-0022 — Fase 1, tudo opcional/retrocompatível):**
 - Por parada (`stops[]`): `weightKg?`, `volumeM3?` (demanda de carga) e `serviceTimeMinutes?` (tempo de parada específico, sobrepõe o global).
 - `vehicle?`: `{ type?, capacityKg?, capacityVolumeM3?, avoidTolls? }`. O `type` (moto/carro/carrinha/camião — `motorcycle|car|van|truck|bicycle`) define **velocidade e capacidade padrão**; os numéricos sobrepõem. Sem `averageSpeedKmh` explícito, usa-se a velocidade do perfil.
-- Resposta ganha `capacity` (`{ feasible, weightKg, volumeM3, capacityKg, capacityVolumeM3, overWeightKg, overVolumeM3 }`) quando há veículo/demanda; `metrics.totalWeightKg`/`totalVolumeM3` e `stops[].weightKg`/`volumeM3` quando há demanda; `params.vehicleType`/`avoidTolls`. Capacidade excedida **penaliza o score** (rota inviável). Demanda por `deliveryIds` é 0 até o agregado Delivery ganhar peso/volume (Fase 2).
+- Resposta ganha `capacity` (`{ feasible, weightKg, volumeM3, capacityKg, capacityVolumeM3, overWeightKg, overVolumeM3 }`) quando há veículo/demanda; `metrics.totalWeightKg`/`totalVolumeM3` e `stops[].weightKg`/`volumeM3` quando há demanda; `params.vehicleType`/`avoidTolls`. Capacidade excedida **penaliza o score** (rota inviável). Demanda por `deliveryIds` é 0 até o agregado Delivery ganhar peso/volume.
+
+**Roteirização multi-veículo (ADR-0022 — Fase 2):**
+- `vehicles?: OptimizationVehicleInput[]` — uma **frota** (mutuamente exclusivo com `vehicle`). As paradas são **agrupadas por proximidade** (sweep angular em torno da origem/centroide) e **distribuídas entre os veículos respeitando capacidade** (peso/volume), balanceando a contagem.
+- Resposta ganha `routes[]` (`{ vehicleIndex, vehicleType?, stops, metrics, capacity? }` por veículo), `params.vehicleCount` e, se houver, `unassignedStops` (IDs que não couberam) + `params.unassignedCount`. O topo (`stops`/`metrics`) é a **agregação** das rotas (retrocompatível para consumidores existentes).
 
 `/route-plans/mine` é **aditivo** (não altera o fluxo de Empresa): usa o **mesmo motor** com o papel `driver`, escopado ao tenant do motorista pela RLS. O painel de rentabilidade (lucro, custos de combustível/energia e portagens, ganho líquido) é calculado no cliente a partir das métricas do plano + parâmetros configuráveis. Fatores de **trânsito em tempo real, acidentes e estradas fechadas** ficam como integração futura (arquitetura de estratégias/distância pronta para recebê-los; o custo já tem *seam* de sobretaxa por aresta/nó para pedágio/zona de risco — ADR-0022).
 
@@ -423,3 +427,4 @@ GET /api/v1/health/ready     -> 200 | 503 (Postgres duro; Redis reportado, não 
 | 2026-07-14 | 0.18 | Arquitetura | Sincronização incremental offline-first: GET /deliveries/sync (updatedSince + cursor de keyset, tombstones via deletedAt) — §8.1, ADR-0020 |
 | 2026-07-14 | 0.19 | Arquitetura | Observabilidade: GET /metrics (Prometheus), /health/{live,ready} com Redis não-fatal, tracing OTel opt-in (§16, ADR-0021) |
 | 2026-07-14 | 0.20 | Arquitetura | Optimizer Fase 1: stops com weightKg/volumeM3/serviceTimeMinutes, `vehicle` (tipo/capacidade), resposta com `capacity` (§14.3, ADR-0022) |
+| 2026-07-14 | 0.21 | Arquitetura | Optimizer Fase 2: `vehicles[]` (frota) → roteirização multi-veículo por clustering; resposta com `routes[]` + `unassignedStops` (§14.3, ADR-0022) |
