@@ -84,6 +84,7 @@ CREATE POLICY tenant_isolation ON deliveries
 
 - Índices **GiST** nas colunas `geography`/`geometry` (PostGIS) para consultas espaciais.
 - Índices compostos iniciados por `tenant_id` nas tabelas mais consultadas.
+- **Sincronização incremental (ADR-0020):** índice `idx_deliveries_tenant_sync (tenant_id, updated_at, id)` — **sem** o predicado parcial `WHERE deleted_at IS NULL` dos demais índices de `deliveries`, pois o feed de sync (`GET /deliveries/sync`) precisa também das linhas **soft-deletadas** (tombstones). Suporta o *keyset scan* estável por `(updated_at, id)` sem `OFFSET`.
 - **Particionamento** por tempo (e/ou por tenant) para tabelas de alto volume; posições via hypertables TimescaleDB.
 - Consultas analíticas pesadas isoladas do OLTP via **réplicas de leitura** + **read models** (CQRS — ADR-0011).
 - **PgBouncer** (transaction pooling) para suportar milhares de tenants sem esgotar conexões; mitiga *noisy neighbor*.

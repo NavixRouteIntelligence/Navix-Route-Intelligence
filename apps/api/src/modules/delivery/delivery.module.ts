@@ -7,6 +7,7 @@ import { CreateDeliveryUseCase } from './application/create-delivery.use-case';
 import { DeleteDeliveryUseCase } from './application/delete-delivery.use-case';
 import { GetDeliveryUseCase } from './application/get-delivery.use-case';
 import { ListDeliveriesUseCase } from './application/list-deliveries.use-case';
+import { SyncDeliveriesUseCase } from './application/sync-deliveries.use-case';
 import { UpdateDeliveryUseCase } from './application/update-delivery.use-case';
 import { DELIVERY_LOOKUP, DeliveryLookupService } from './application/delivery-lookup.service';
 import { DELIVERY_WRITER, DeliveryWriterService } from './application/delivery-writer.service';
@@ -28,6 +29,7 @@ import { DeliveryController } from './interface/delivery.controller';
     CreateDeliveryUseCase,
     GetDeliveryUseCase,
     ListDeliveriesUseCase,
+    SyncDeliveriesUseCase,
     UpdateDeliveryUseCase,
     ChangeDeliveryStatusUseCase,
     DeleteDeliveryUseCase,
