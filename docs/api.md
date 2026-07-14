@@ -393,6 +393,24 @@ GET  /api/v1/pod/{deliveryId}     # comprovante de uma entrega
 - **Persistência**: `proof_of_delivery` (RLS FORCE por tenant). Mídia **fora do Postgres**: enviada a um **object storage** (`StorageService` — driver `local` em dev, `s3`/R2/GCS em produção) e o banco guarda **apenas a URL** em `photo`/`signature` (ADR-0019). O cliente ainda envia data URL por compatibilidade; limite de body de 8 MB para as mídias.
 - **Web e Mobile**: componentes responsivos, câmera via `capture` e assinatura por toque (PWA). App nativo fora do escopo desta fase.
 
+### 14.7 Navix Intelligence — implementado (1ª camada, ADR-0025)
+
+Camada de IA/predição. Serviços de domínio desacoplados atrás de *ports* prontas para ML/LLM. Autenticado; escopo do tenant.
+
+```
+POST /api/v1/intelligence/route-forecast   # relatório de previsão de rota
+```
+
+- **Payload**: `{ stops[] (id, lat, lng, timeWindow?, serviceTimeMinutes?), vehicleType?, origin?, earliestDeparture?, averageSpeedKmh?, driverId?, driver? (override de perfil), currentFuelPercent? }`.
+- **Resposta** (`RouteIntelligenceReport`):
+  - `schedule` — **ETA por parada** (`etaMinutes`, `arrivalAt`) + **conclusão** da rota (`completionAt`, `totalMinutes`, `totalDistanceKm`).
+  - `delays` — paradas em **risco de atraso** com `severity` (low/medium/high) e **mitigação** sugerida.
+  - `fuel` — consumo estimado + **recomendação preventiva** de abastecimento (autonomia vs. rota).
+  - `departure` — **melhor horário de saída** (minimiza atrasos considerando trânsito previsto + janelas).
+  - `traffic` — multiplicador de congestionamento na partida + janela (`off_peak`/`moderate`/`peak`).
+  - `driver` — perfil aplicado (`speedFactor`, `serviceTimeMinutes`, `punctuality`) e `source` (`default`/`learned`/`override`).
+- **IA personalizada por motorista**: `DriverProfile` aprendido do histórico (estatístico hoje; **modelo de ML** pela mesma port depois). **Previsão de trânsito**: heurística por hora/dia (`TrafficModelPort`), evoluível para modelo por região/histórico. Nada de acoplamento a framework de ML nesta camada.
+
 ## 15. Documentação viva
 
 - OpenAPI/Swagger exposto em ambiente não-produtivo.
@@ -440,3 +458,4 @@ GET /api/v1/health/ready     -> 200 | 503 (Postgres duro; Redis reportado, não 
 | 2026-07-14 | 0.21 | Arquitetura | Optimizer Fase 2: `vehicles[]` (frota) → roteirização multi-veículo por clustering; resposta com `routes[]` + `unassignedStops` (§14.3, ADR-0022) |
 | 2026-07-14 | 0.22 | Arquitetura | Optimizer Fase 3: POST /route-plans/reoptimize (ativas), reotimização automática por eventos (opt-in) e priorização dinâmica por SLA (§14.3, ADR-0023) |
 | 2026-07-14 | 0.23 | Arquitetura | Optimizer Fase 4: estratégia `or-opt-2opt` (metaheurística VND) e sobretaxas de zona de risco/pedágio no custo (§14.3, ADR-0024) |
+| 2026-07-14 | 0.24 | AI Eng. | Navix Intelligence (1ª camada): POST /intelligence/route-forecast — cronograma/ETA, atrasos, combustível, melhor saída, trânsito (§14.7, ADR-0025) |

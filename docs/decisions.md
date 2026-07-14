@@ -48,6 +48,7 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 | ADR-0022 | Motor de otimização: modelo rico de restrições + perfil por veículo | Aceito | ✅ Fases 1–2: demanda/capacidade, serviço por parada, `VehicleProfile` por tipo; **multi-veículo** por clustering de sweep (`routes[]` + não atribuídas) | 2026-07-14 |
 | ADR-0023 | Reotimização automática por eventos + priorização dinâmica por SLA | Aceito | ✅ `DomainEventBus` in-process; Delivery publica eventos; `AutoReoptimizationService` (debounce por tenant, opt-in) + `POST /route-plans/reoptimize`; peso de prioridade por proximidade do prazo | 2026-07-14 |
 | ADR-0024 | Estratégia metaheurística (VND) + sobretaxas de pedágio/zona de risco | Aceito | ✅ Estratégia `or-opt-2opt` (Or-opt + 2-opt) pela mesma port; `CostAugmentationPort` alimenta o *seam* de custo — zonas de risco configuráveis (no-op default); path aberto para OR-Tools nativo e provedor de pedágio | 2026-07-14 |
+| ADR-0025 | Navix Intelligence — 1ª camada (heurísticas atrás de ports, ML-ready) | Aceito | ✅ `POST /intelligence/route-forecast`: cronograma/ETA + conclusão, atrasos+mitigação, combustível, melhor horário de saída, trânsito por contexto temporal e perfil de motorista; tudo em serviços de domínio + ports (`TrafficModelPort`/`DriverProfileSourcePort`) prontos para ML/LLM | 2026-07-14 |
 
 ---
 
@@ -295,6 +296,17 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 
 ---
 
+## ADR-0025 — Navix Intelligence: primeira camada (heurísticas atrás de ports, ML-ready)
+
+- **Status:** Aceito · **Data:** 2026-07-14
+- **Status da implementação:** ✅ Implementado. Módulo `intelligence` (Clean Architecture) expondo **`POST /api/v1/intelligence/route-forecast`**, que retorna um relatório com: **cronograma** (ETA por parada + previsão de conclusão), **atrasos** (identificação antecipada + severidade + mitigação), **combustível** (consumo estimado + recomendação preventiva de abastecimento), **melhor horário de saída** (varredura minimizando atrasos), **contexto de trânsito** e **perfil do motorista**. Cada capacidade é um **serviço de domínio puro** (`route-scheduler`, `delay-risk`, `fuel-advisor`, `departure-planner`) e as duas fontes "inteligentes" são **ports**: `TrafficModelPort` (heurística por hora/dia — `TimeContextTrafficModel`) e `DriverProfileSourcePort` (perfil aprendido; adaptador padrão sem histórico + `learnDriverProfile` estatístico). Reusa `haversineKm` (kernel), `VehicleType` e as janelas do Delivery.
+- **Contexto:** Faltava a camada de IA/predição da plataforma (a visão "Navix Intelligence"). O requisito-chave: **desacoplada e reutilizável**, preparada para **evoluir para ML/LLM** sem reescrever consumidores.
+- **Decisão:** Entregar a **primeira camada como heurísticas determinísticas atrás de ports** — os mesmos *seams* por onde entrarão modelos de ML depois (previsão de trânsito por região/hora; perfil de motorista por ML; ETA por modelo). Serviços de domínio puros e testáveis; nenhuma dependência de framework de ML agora. A personalização por motorista é o `DriverProfile` (aprendido por estatística hoje, por modelo amanhã) consumido pelo scheduler.
+- **Alternativas consideradas:** **Integrar um modelo de ML/serviço externo já** (sem dados históricos suficientes e sem pipeline de features/treino — prematuro; a port deixa isso plugável); **acoplar a inteligência dentro do Optimizer** (viola coesão — predição ≠ otimização; mantidos separados, o Optimizer resolve *ordem*, a Intelligence prevê *tempo/risco/recursos*); **LLM para recomendações** (útil para explicações em linguagem natural — evolução futura sobre os mesmos dados estruturados).
+- **Consequências:** Base coesa e testada para inteligência logística, com contratos estáveis e *seams* de ML explícitos. **Pendências:** adaptador de `DriverProfileSourcePort` sobre `driver_positions`/POD (dados reais de aprendizado); modelo de trânsito por dados históricos/região; ETA por modelo preditivo; pipeline de features/treino; explicações via LLM; persistência/telemetria dos relatórios.
+
+---
+
 ## Template
 
 ```markdown
@@ -329,3 +341,4 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 | 2026-07-14 | 1.2 | Arquitetura | ADR-0022 (Fase 2): roteirização multi-veículo — RouteSolver reutilizável + FleetPartitioner (sweep capacitado); request `vehicles[]`, resposta `routes[]` + não atribuídas |
 | 2026-07-14 | 1.3 | Arquitetura | ADR-0023 (Fase 3): reotimização automática por eventos (DomainEventBus + debounce, opt-in) + endpoint manual; priorização dinâmica por SLA |
 | 2026-07-14 | 1.4 | Arquitetura | ADR-0024 (Fase 4): estratégia metaheurística `or-opt-2opt` (VND) + `CostAugmentationPort` (zonas de risco no seam de custo); ADR-0022 → Aceito |
+| 2026-07-14 | 1.5 | AI Eng. | ADR-0025: Navix Intelligence (1ª camada) — route-forecast com cronograma/ETA, atrasos, combustível, melhor saída; heurísticas atrás de ports prontas para ML/LLM |

@@ -8,3 +8,4 @@ export * from './tracking';
 export * from './pod';
 export * from './settings';
 export * from './realtime';
+export * from './intelligence';
