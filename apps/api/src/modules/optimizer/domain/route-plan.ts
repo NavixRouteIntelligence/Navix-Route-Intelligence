@@ -5,6 +5,7 @@ import type {
   RoutePlanParams,
   RouteSavings,
   RouteStopView,
+  VehicleRouteView,
 } from '@navix/contracts';
 
 import { newId } from '../../../shared/kernel/id';
@@ -23,6 +24,10 @@ export interface RoutePlanProps {
   explanation: string;
   /** Uso de capacidade vs. veículo (ADR-0022). Ausente sem veículo/demanda. */
   capacity?: CapacityUsage;
+  /** Rotas por veículo (ADR-0022, Fase 2). Ausente no plano de veículo único. */
+  routes?: VehicleRouteView[];
+  /** Paradas não atribuídas por falta de capacidade (ADR-0022, Fase 2). */
+  unassignedStops?: string[];
   createdAt: Date;
 }
 

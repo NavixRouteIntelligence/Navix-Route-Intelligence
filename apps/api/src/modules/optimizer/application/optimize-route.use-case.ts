@@ -4,45 +4,38 @@ import type {
   OptimizationStrategyName,
   OptimizationVehicleInput,
   OriginInput,
+  RouteMetrics,
   RoutePlan as RoutePlanView,
+  RouteStopView,
+  VehicleRouteView,
 } from '@navix/contracts';
 
 import { AUDIT_LOG, type AuditLogPort } from '../../../shared/audit/audit-log.port';
 import { NotFoundError, ValidationError } from '../../../shared/kernel/domain-error';
-import { assessCapacity, totalDemand } from '../domain/capacity';
+import { partitionByCapacity } from '../domain/fleet-partitioner';
 import { GeoPoint } from '../domain/geo-point';
-import {
-  priorityWeight,
-  ZERO_DEMAND,
-  type OptimizationStop,
-} from '../domain/optimization-stop';
-import {
-  DISTANCE_PROVIDER,
-  type DistanceProviderPort,
-} from '../domain/ports/distance-provider.port';
+import { ZERO_DEMAND, type OptimizationStop } from '../domain/optimization-stop';
 import {
   ROUTE_PLAN_REPOSITORY,
   type RoutePlanRepositoryPort,
 } from '../domain/ports/route-plan-repository.port';
-import type {
-  NodeWindow,
-  OptimizationWeights,
-  StrategyContext,
-} from '../domain/ports/route-optimization-strategy.port';
 import { RoutePlan } from '../domain/route-plan';
 import { VehicleProfile } from '../domain/vehicle-profile';
 import { OptimizerMetrics } from '../infrastructure/observability/optimizer-metrics';
 import { DELIVERY_GATEWAY, type DeliveryGatewayPort } from './ports/delivery-gateway.port';
-import { buildStops, computeMetrics, computeSavings, computeScore, type ScoringNode } from './scoring';
+import { RouteSolver, type SolvedRoute } from './route-solver';
+import { computeSavings } from './scoring';
 import { toRoutePlanView } from './route-plan.mapper';
-import { StrategyRegistry } from './strategy-registry';
 
 const DEFAULT_SPEED_KMH = 30;
 const DEFAULT_SERVICE_MIN = 5;
 const MAX_STOPS = 500; // guardrail síncrono (ver plano — acima disso, fila assíncrona)
+const MAX_VEHICLES = 50;
 
-// Pesos da função de custo composta (tunáveis; no futuro, aprendidos por tenant).
-const WEIGHTS: OptimizationWeights = { distance: 1, timeWindow: 0.1, priority: 0.05 };
+const round = (n: number, d = 2): number => {
+  const f = 10 ** d;
+  return Math.round(n * f) / f;
+};
 
 export interface OptimizeRouteCommand {
   tenantId: string;
@@ -54,28 +47,25 @@ export interface OptimizeRouteCommand {
   averageSpeedKmh?: number;
   serviceTimeMinutes?: number;
   vehicle?: OptimizationVehicleInput;
+  vehicles?: OptimizationVehicleInput[];
 }
 
 @Injectable()
 export class OptimizeRouteUseCase {
   constructor(
     @Inject(ROUTE_PLAN_REPOSITORY) private readonly plans: RoutePlanRepositoryPort,
-    @Inject(DISTANCE_PROVIDER) private readonly distance: DistanceProviderPort,
     @Inject(DELIVERY_GATEWAY) private readonly delivery: DeliveryGatewayPort,
     @Inject(AUDIT_LOG) private readonly audit: AuditLogPort,
-    private readonly registry: StrategyRegistry,
+    private readonly solver: RouteSolver,
     private readonly metrics: OptimizerMetrics,
   ) {}
 
   async execute(command: OptimizeRouteCommand): Promise<RoutePlanView> {
     const service = command.serviceTimeMinutes ?? DEFAULT_SERVICE_MIN;
     if (service < 0) throw new ValidationError('Tempo de serviço não pode ser negativo.');
-
-    // Perfil do veículo (ADR-0022): define velocidade/capacidade por tipo; o
-    // `averageSpeedKmh` explícito, quando dado, tem precedência sobre o do perfil.
-    const profile = VehicleProfile.resolve(command.vehicle, DEFAULT_SPEED_KMH);
-    const speed = command.averageSpeedKmh ?? profile.averageSpeedKmh;
-    if (speed <= 0) throw new ValidationError('Velocidade média deve ser positiva.');
+    if (command.vehicle && command.vehicles?.length) {
+      throw new ValidationError('Forneça "vehicle" (único) OU "vehicles" (frota), não ambos.');
+    }
 
     const rawStops = await this.resolveStops(command);
     if (rawStops.length < 2) {
@@ -85,82 +75,53 @@ export class OptimizeRouteUseCase {
       throw new ValidationError(`Máximo de ${MAX_STOPS} paradas por otimização síncrona.`);
     }
 
-    const hasOrigin = command.origin != null;
-    const nodes: OptimizationStop[] = hasOrigin
-      ? [
-          {
-            id: 'origin',
-            point: GeoPoint.create(command.origin!.latitude, command.origin!.longitude),
-            priority: 'normal',
-            timeWindow: null,
-            demand: ZERO_DEMAND,
-            serviceTimeMinutes: 0,
-          },
-          ...rawStops,
-        ]
-      : rawStops;
+    const plan = command.vehicles?.length
+      ? this.planFleet(command, rawStops, service)
+      : this.planSingle(command, rawStops, service);
 
-    const { distanceMatrix, timeMatrix } = this.buildMatrices(nodes, speed);
-    const windows = this.buildWindows(nodes);
-    const priorities = nodes.map((n, i) =>
-      hasOrigin && i === 0 ? 0 : priorityWeight(n.priority),
-    );
-    const perNodeServiceMinutes = nodes.map((n) => n.serviceTimeMinutes ?? service);
-
-    const ctx: StrategyContext = {
-      size: nodes.length,
-      distanceMatrix,
-      timeMatrix,
-      priorities,
-      windows,
-      serviceTimeMinutes: service,
-      hasOrigin,
-      weights: WEIGHTS,
-      perNodeServiceMinutes,
-    };
-
-    const strategy = this.registry.get(command.strategy);
-    const startedAt = process.hrtime.bigint();
-    const { order } = strategy.optimize(ctx);
-    const solveSeconds = Number(process.hrtime.bigint() - startedAt) / 1e9;
-
-    const baselineOrder = nodes.map((_, i) => i);
-
-    // Demanda de carga: só materializa nas paradas/métricas quando há demanda
-    // real (>0) — mantém a saída idêntica ao legado sem peso/volume.
-    const deliveryDemands = nodes
-      .filter((_, i) => !(hasOrigin && i === 0))
-      .map((n) => n.demand);
-    const anyDemand = deliveryDemands.some((d) => d.weightKg > 0 || d.volumeM3 > 0);
-
-    const scoringNodes: ScoringNode[] = nodes.map((n, i) => ({
-      id: n.id,
-      latitude: n.point.latitude,
-      longitude: n.point.longitude,
-      priority: n.priority,
-      window: windows[i],
-      demand: anyDemand && !(hasOrigin && i === 0) ? n.demand : undefined,
-      serviceMinutes: n.serviceTimeMinutes,
-    }));
-
-    const optimized = computeMetrics(order, distanceMatrix, timeMatrix, service, hasOrigin, scoringNodes);
-    const baseline = computeMetrics(baselineOrder, distanceMatrix, timeMatrix, service, hasOrigin, scoringNodes);
-    const stops = buildStops(order, scoringNodes, distanceMatrix, timeMatrix, service, hasOrigin);
-    const savings = computeSavings(baseline, optimized);
-
-    // Viabilidade de capacidade (independente da ordem numa rota de 1 veículo).
-    // Presente quando há veículo com capacidade OU demanda real informada.
-    const capacity =
-      anyDemand || profile.capacity !== null
-        ? assessCapacity(totalDemand(deliveryDemands), profile.capacity)
-        : undefined;
-    if (capacity && !capacity.feasible) this.metrics.markInfeasible();
-
-    const { score, explanation } = computeScore(stops, savings, 'Nearest Neighbor + 2-opt', capacity);
-
-    const plan = RoutePlan.create({
+    await this.plans.save(plan);
+    await this.audit.record({
       tenantId: command.tenantId,
-      strategy: strategy.name,
+      actorId: command.actorId,
+      action: 'route.optimized',
+      resource: `route-plan:${plan.id}`,
+      metadata: {
+        stops: plan.snapshot().stops.length,
+        score: plan.snapshot().score,
+        strategy: plan.snapshot().strategy,
+        vehicles: command.vehicles?.length ?? 1,
+        unassigned: plan.snapshot().params.unassignedCount ?? 0,
+      },
+    });
+    return toRoutePlanView(plan);
+  }
+
+  /** Caminho de veículo único (comportamento legado + ADR-0022 Fase 1). */
+  private planSingle(
+    command: OptimizeRouteCommand,
+    rawStops: OptimizationStop[],
+    service: number,
+  ): RoutePlan {
+    const profile = VehicleProfile.resolve(command.vehicle, DEFAULT_SPEED_KMH);
+    const speed = command.averageSpeedKmh ?? profile.averageSpeedKmh;
+    if (speed <= 0) throw new ValidationError('Velocidade média deve ser positiva.');
+
+    const hasOrigin = command.origin != null;
+    const nodes = this.withOrigin(command.origin, rawStops);
+    const solved = this.solver.solve({
+      nodes,
+      hasOrigin,
+      speed,
+      service,
+      profile,
+      strategyName: command.strategy,
+    });
+    this.metrics.observeSolve(solved.strategyName, solved.solveSeconds, solved.stops.length);
+    if (solved.capacity && !solved.capacity.feasible) this.metrics.markInfeasible();
+
+    return RoutePlan.create({
+      tenantId: command.tenantId,
+      strategy: solved.strategyName,
       status: 'completed',
       params: {
         averageSpeedKmh: speed,
@@ -169,32 +130,172 @@ export class OptimizeRouteUseCase {
         ...(profile.type ? { vehicleType: profile.type } : {}),
         ...(command.vehicle ? { avoidTolls: profile.avoidTolls } : {}),
       },
+      stops: solved.stops,
+      metrics: solved.metrics,
+      baseline: solved.baseline,
+      savings: solved.savings,
+      score: solved.score,
+      explanation: solved.explanation,
+      ...(solved.capacity ? { capacity: solved.capacity } : {}),
+    });
+  }
+
+  /** Caminho multi-veículo (ADR-0022 Fase 2): clustering + rota por veículo. */
+  private planFleet(
+    command: OptimizeRouteCommand,
+    rawStops: OptimizationStop[],
+    service: number,
+  ): RoutePlan {
+    const vehicles = command.vehicles!;
+    if (vehicles.length > MAX_VEHICLES) {
+      throw new ValidationError(`Máximo de ${MAX_VEHICLES} veículos por plano.`);
+    }
+    const profiles = vehicles.map((v) => VehicleProfile.resolve(v, DEFAULT_SPEED_KMH));
+    const origin = command.origin ? GeoPoint.create(command.origin.latitude, command.origin.longitude) : null;
+    const hasOrigin = origin != null;
+
+    const partition = partitionByCapacity(
+      rawStops.map((s) => ({ point: s.point, demand: s.demand })),
+      profiles.map((p) => ({ capacity: p.capacity })),
+      origin,
+    );
+
+    const routes: VehicleRouteView[] = [];
+    const solvedRoutes: SolvedRoute[] = [];
+    let strategyName: OptimizationStrategyName = 'nearest-neighbor-2opt';
+    for (let v = 0; v < profiles.length; v++) {
+      const clusterIdx = partition.clusters[v];
+      if (!clusterIdx || clusterIdx.length === 0) continue;
+
+      const profile = profiles[v];
+      const speed = command.averageSpeedKmh ?? profile.averageSpeedKmh;
+      if (speed <= 0) throw new ValidationError('Velocidade média deve ser positiva.');
+
+      const clusterStops = clusterIdx.map((i) => rawStops[i]);
+      const nodes = this.withOrigin(command.origin, clusterStops);
+      const solved = this.solver.solve({
+        nodes,
+        hasOrigin,
+        speed,
+        service,
+        profile,
+        strategyName: command.strategy,
+      });
+      strategyName = solved.strategyName;
+      this.metrics.observeSolve(solved.strategyName, solved.solveSeconds, solved.stops.length);
+      if (solved.capacity && !solved.capacity.feasible) this.metrics.markInfeasible();
+
+      solvedRoutes.push(solved);
+      routes.push({
+        vehicleIndex: v,
+        ...(profile.type ? { vehicleType: profile.type } : {}),
+        stops: solved.stops,
+        metrics: solved.metrics,
+        ...(solved.capacity ? { capacity: solved.capacity } : {}),
+      });
+    }
+
+    const unassignedStops = partition.unassigned.map((i) => rawStops[i].id);
+    if (unassignedStops.length > 0) this.metrics.markInfeasible();
+
+    return this.aggregatePlan(command, service, hasOrigin, routes, solvedRoutes, unassignedStops, strategyName);
+  }
+
+  /** Agrega as rotas por veículo em um único RoutePlan (métricas somadas). */
+  private aggregatePlan(
+    command: OptimizeRouteCommand,
+    service: number,
+    hasOrigin: boolean,
+    routes: VehicleRouteView[],
+    solvedRoutes: SolvedRoute[],
+    unassignedStops: string[],
+    strategyName: OptimizationStrategyName,
+  ): RoutePlan {
+    let seq = 0;
+    const stops: RouteStopView[] = routes.flatMap((r) =>
+      r.stops.map((s) => ({ ...s, sequence: ++seq })),
+    );
+
+    const metrics = this.sumMetrics(solvedRoutes.map((r) => r.metrics));
+    const baseline = this.sumMetrics(solvedRoutes.map((r) => r.baseline));
+    const savings = computeSavings(baseline, metrics);
+
+    const totalStops = stops.length || 1;
+    const score = Math.round(
+      solvedRoutes.reduce((acc, r) => acc + r.stops.length * r.score, 0) / totalStops,
+    );
+
+    const parts = [
+      `Frota: ${routes.length} veículo(s), ${stops.length} paradas`,
+      `${savings.distancePct >= 0 ? '−' : '+'}${Math.abs(savings.distancePct)}% de distância vs. ordem original`,
+      ...(unassignedStops.length > 0
+        ? [`${unassignedStops.length} parada(s) não atribuída(s) por capacidade`]
+        : []),
+    ];
+
+    return RoutePlan.create({
+      tenantId: command.tenantId,
+      strategy: strategyName,
+      status: 'completed',
+      params: {
+        averageSpeedKmh: command.averageSpeedKmh ?? DEFAULT_SPEED_KMH,
+        serviceTimeMinutes: service,
+        hasOrigin,
+        vehicleCount: routes.length,
+        ...(unassignedStops.length > 0 ? { unassignedCount: unassignedStops.length } : {}),
+      },
       stops,
-      metrics: optimized,
+      metrics,
       baseline,
       savings,
       score,
-      explanation,
-      ...(capacity ? { capacity } : {}),
+      explanation: parts.join('; ') + '.',
+      routes,
+      ...(unassignedStops.length > 0 ? { unassignedStops } : {}),
     });
-    await this.plans.save(plan);
-    this.metrics.observeSolve(strategy.name, solveSeconds, stops.length);
+  }
 
-    await this.audit.record({
-      tenantId: command.tenantId,
-      actorId: command.actorId,
-      action: 'route.optimized',
-      resource: `route-plan:${plan.id}`,
-      metadata: {
-        stops: stops.length,
-        score,
-        strategy: strategy.name,
-        vehicleType: profile.type ?? null,
-        capacityFeasible: capacity?.feasible ?? null,
+  private sumMetrics(list: RouteMetrics[]): RouteMetrics {
+    const acc: RouteMetrics = { totalDistanceKm: 0, totalTimeMinutes: 0, stops: 0 };
+    let weight = 0;
+    let volume = 0;
+    let hasDemand = false;
+    for (const m of list) {
+      acc.totalDistanceKm += m.totalDistanceKm;
+      acc.totalTimeMinutes += m.totalTimeMinutes;
+      acc.stops += m.stops;
+      if (m.totalWeightKg !== undefined || m.totalVolumeM3 !== undefined) {
+        hasDemand = true;
+        weight += m.totalWeightKg ?? 0;
+        volume += m.totalVolumeM3 ?? 0;
+      }
+    }
+    acc.totalDistanceKm = round(acc.totalDistanceKm);
+    acc.totalTimeMinutes = round(acc.totalTimeMinutes);
+    if (hasDemand) {
+      acc.totalWeightKg = round(weight);
+      acc.totalVolumeM3 = round(volume);
+    }
+    return acc;
+  }
+
+  /** Adiciona (ou não) a origem como primeiro nó. */
+  private withOrigin(
+    origin: OriginInput | null | undefined,
+    stops: OptimizationStop[],
+  ): OptimizationStop[] {
+    if (!origin) return stops;
+    return [
+      {
+        id: 'origin',
+        point: GeoPoint.create(origin.latitude, origin.longitude),
+        priority: 'normal',
+        timeWindow: null,
+        demand: ZERO_DEMAND,
+        serviceTimeMinutes: 0,
       },
-    });
-
-    return toRoutePlanView(plan);
+      ...stops,
+    ];
   }
 
   private async resolveStops(command: OptimizeRouteCommand): Promise<OptimizationStop[]> {
@@ -238,38 +339,5 @@ export class OptimizeRouteUseCase {
     }
 
     throw new ValidationError('Forneça "deliveryIds" ou "stops".');
-  }
-
-  private buildMatrices(
-    nodes: OptimizationStop[],
-    speedKmh: number,
-  ): { distanceMatrix: number[][]; timeMatrix: number[][] } {
-    const size = nodes.length;
-    const distanceMatrix: number[][] = Array.from({ length: size }, () => new Array(size).fill(0));
-    const timeMatrix: number[][] = Array.from({ length: size }, () => new Array(size).fill(0));
-    for (let i = 0; i < size; i++) {
-      for (let j = i + 1; j < size; j++) {
-        const km = this.distance.distanceKm(nodes[i].point, nodes[j].point);
-        const minutes = (km / speedKmh) * 60;
-        distanceMatrix[i][j] = distanceMatrix[j][i] = km;
-        timeMatrix[i][j] = timeMatrix[j][i] = minutes;
-      }
-    }
-    return { distanceMatrix, timeMatrix };
-  }
-
-  private buildWindows(nodes: OptimizationStop[]): (NodeWindow | null)[] {
-    const starts = nodes
-      .map((n) => n.timeWindow?.start.getTime())
-      .filter((t): t is number => t !== undefined);
-    const departure = starts.length > 0 ? Math.min(...starts) : Date.now();
-    return nodes.map((n) =>
-      n.timeWindow
-        ? {
-            startMinutes: (n.timeWindow.start.getTime() - departure) / 60000,
-            endMinutes: (n.timeWindow.end.getTime() - departure) / 60000,
-          }
-        : null,
-    );
   }
 }

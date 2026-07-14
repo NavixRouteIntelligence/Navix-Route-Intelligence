@@ -160,4 +160,15 @@ export class OptimizeRouteDto implements OptimizeRouteRequest {
   @ValidateNested()
   @Type(() => OptimizationVehicleDto)
   vehicle?: OptimizationVehicleDto;
+
+  @ApiPropertyOptional({
+    type: [OptimizationVehicleDto],
+    description: 'Frota para roteirização multi-veículo (ADR-0022, Fase 2).',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMinSize(1)
+  @ValidateNested({ each: true })
+  @Type(() => OptimizationVehicleDto)
+  vehicles?: OptimizationVehicleDto[];
 }

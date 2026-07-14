@@ -64,7 +64,7 @@ CREATE POLICY tenant_isolation ON deliveries
 - **deliveries** — `id`, `tenant_id`, `address`, `location geography(Point,4326)`, `time_window_start`, `time_window_end`, `priority`, `demand`, `status`.
 
 ### Routing / Optimization
-- **route_plans** — `id`, `tenant_id`, `status`, `created_by`, `metrics (jsonb)`, `capacity (jsonb, nullable)`, timestamps. ✅ *Existe; as paradas otimizadas são persistidas no próprio plano (JSONB), não em tabelas separadas. A demanda por parada (peso/volume), o tempo de serviço e o tipo de veículo viajam nos JSONB de `stops`/`params`; `capacity` guarda o uso de capacidade vs. o veículo (ADR-0022).*
+- **route_plans** — `id`, `tenant_id`, `status`, `created_by`, `metrics (jsonb)`, `capacity (jsonb, nullable)`, `routes (jsonb, nullable)`, `unassigned_stops (jsonb, nullable)`, timestamps. ✅ *Existe; as paradas otimizadas são persistidas no próprio plano (JSONB), não em tabelas separadas. A demanda por parada (peso/volume), o tempo de serviço e o tipo de veículo viajam nos JSONB de `stops`/`params`; `capacity` guarda o uso de capacidade vs. o veículo; `routes`/`unassigned_stops` guardam a roteirização multi-veículo (ADR-0022 Fases 1–2).*
 - **routes** — `id`, `route_plan_id`, `vehicle_id`, `driver_id`, `total_distance`, `total_duration`. ⬜ *Planejado — tabela ainda não criada.*
 - **route_stops** — `id`, `route_id`, `delivery_id`, `sequence`, `eta`, `status`. ⬜ *Planejado — tabela ainda não criada.*
 

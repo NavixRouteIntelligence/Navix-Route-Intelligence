@@ -16,6 +16,7 @@ export interface OptimizationJobRequest {
   averageSpeedKmh?: number;
   serviceTimeMinutes?: number;
   vehicle?: OptimizationVehicleInput;
+  vehicles?: OptimizationVehicleInput[];
 }
 
 /** Registro de um job de otimização. */

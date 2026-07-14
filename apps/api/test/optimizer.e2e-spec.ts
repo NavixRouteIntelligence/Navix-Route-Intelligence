@@ -27,6 +27,7 @@ import { OPTIMIZATION_STRATEGIES } from '../src/modules/optimizer/domain/ports/r
 import { ROUTE_PLAN_REPOSITORY } from '../src/modules/optimizer/domain/ports/route-plan-repository.port';
 import type { RoutePlanRepositoryPort } from '../src/modules/optimizer/domain/ports/route-plan-repository.port';
 import type { RoutePlan } from '../src/modules/optimizer/domain/route-plan';
+import { RouteSolver } from '../src/modules/optimizer/application/route-solver';
 import { HaversineDistanceProvider } from '../src/modules/optimizer/infrastructure/distance/haversine-distance.provider';
 import { OptimizerMetrics } from '../src/modules/optimizer/infrastructure/observability/optimizer-metrics';
 import { NearestNeighbor2OptStrategy } from '../src/modules/optimizer/infrastructure/strategies/nearest-neighbor-2opt.strategy';
@@ -94,6 +95,7 @@ describe('Optimizer (e2e, assíncrono)', () => {
         GetRoutePlanUseCase,
         ListRoutePlansUseCase,
         StrategyRegistry,
+        RouteSolver,
         NearestNeighbor2OptStrategy,
         {
           provide: OPTIMIZATION_STRATEGIES,
@@ -214,5 +216,27 @@ describe('Optimizer (e2e, assíncrono)', () => {
     expect(plan.body.data.metrics.totalWeightKg).toBe(40);
     expect(plan.body.data.capacity.feasible).toBe(false);
     expect(plan.body.data.capacity.overWeightKg).toBe(10);
+  });
+
+  it('frota multi-veículo: plano com routes[] por veículo (ADR-0022 Fase 2)', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/api/v1/route-plans')
+      .send({ vehicles: [{ type: 'van' }, { type: 'van' }], stops })
+      .expect(202);
+
+    const job = await pollJob(app, res.body.data.jobId);
+    expect(job.status).toBe('succeeded');
+
+    const plan = await request(app.getHttpServer())
+      .get(`/api/v1/route-plans/${job.routePlanId}`)
+      .expect(200);
+    expect(plan.body.data.params.vehicleCount).toBe(2);
+    expect(plan.body.data.routes).toHaveLength(2);
+    const total = plan.body.data.routes.reduce(
+      (n: number, r: { stops: unknown[] }) => n + r.stops.length,
+      0,
+    );
+    expect(total).toBe(4);
+    expect(plan.body.data.stops).toHaveLength(4);
   });
 });

@@ -9,6 +9,7 @@ import { ListRoutePlansUseCase } from './application/list-route-plans.use-case';
 import { OptimizeRouteUseCase } from './application/optimize-route.use-case';
 import { OPTIMIZER_SERVICE, OptimizerService } from './application/optimizer.service';
 import { ProcessOptimizationJobUseCase } from './application/process-optimization-job.use-case';
+import { RouteSolver } from './application/route-solver';
 import { StrategyRegistry } from './application/strategy-registry';
 import { DELIVERY_GATEWAY } from './application/ports/delivery-gateway.port';
 import { DISTANCE_PROVIDER } from './domain/ports/distance-provider.port';
@@ -47,6 +48,7 @@ import { OptimizerController } from './interface/optimizer.controller';
     GetRoutePlanUseCase,
     ListRoutePlansUseCase,
     StrategyRegistry,
+    RouteSolver,
     OptimizerMetrics,
     NearestNeighbor2OptStrategy,
     {
