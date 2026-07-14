@@ -4,6 +4,12 @@ export interface OptimizationWeights {
   distance: number;
   timeWindow: number;
   priority: number;
+  /**
+   * Peso das sobretaxas por aresta/nó (pedágio, zona de risco). Opcional; quando
+   * ausente, vale 1. As sobretaxas só entram no custo se `edgeSurcharge`/
+   * `nodeSurcharge` forem fornecidos (ADR-0022; provedor de dados é roadmap).
+   */
+  surcharge?: number;
 }
 
 /** Janela por nó, já em minutos relativos ao horário de partida. */
@@ -17,6 +23,11 @@ export interface NodeWindow {
  * custo de qualquer ordenação — mas nada de framework/persistência.
  *   - node 0 é a origem (depósito) quando `hasOrigin` é true.
  *   - a rota é um CAMINHO aberto (não retorna à origem).
+ *
+ * Campos opcionais (ADR-0022) são retrocompatíveis: ausentes, o custo é idêntico
+ * ao legado. `perNodeServiceMinutes[i]` sobrepõe `serviceTimeMinutes` no nó `i`;
+ * `edgeSurcharge[a][b]`/`nodeSurcharge[i]` modelam pedágio/risco (seam para o
+ * provedor de dados da Fase 4).
  */
 export interface StrategyContext {
   size: number;
@@ -27,6 +38,12 @@ export interface StrategyContext {
   serviceTimeMinutes: number;
   hasOrigin: boolean;
   weights: OptimizationWeights;
+  /** Tempo de serviço por nó (min); sobrepõe `serviceTimeMinutes` quando presente. */
+  perNodeServiceMinutes?: number[];
+  /** Sobretaxa por aresta (ex.: pedágio) somada ao custo ao percorrê-la. */
+  edgeSurcharge?: number[][];
+  /** Sobretaxa por nó visitado (ex.: zona de risco). */
+  nodeSurcharge?: number[];
 }
 
 export interface StrategyResult {

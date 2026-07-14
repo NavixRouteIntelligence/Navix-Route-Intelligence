@@ -7,12 +7,29 @@ export interface StopTimeWindow {
   end: Date;
 }
 
+/** Demanda de carga (peso + volume). Zerada por padrão (ADR-0022). */
+export interface Demand {
+  weightKg: number;
+  volumeM3: number;
+}
+
+export const ZERO_DEMAND: Demand = { weightKg: 0, volumeM3: 0 };
+
+/** Soma duas demandas dimensão a dimensão. */
+export function addDemand(a: Demand, b: Demand): Demand {
+  return { weightKg: a.weightKg + b.weightKg, volumeM3: a.volumeM3 + b.volumeM3 };
+}
+
 /** Parada normalizada usada internamente pelo motor de otimização. */
 export interface OptimizationStop {
   id: string;
   point: GeoPoint;
   priority: DeliveryPriority;
   timeWindow: StopTimeWindow | null;
+  /** Demanda de carga da parada (ADR-0022). Default: {0,0}. */
+  demand: Demand;
+  /** Tempo de parada específico (min); null usa o service time global. */
+  serviceTimeMinutes: number | null;
 }
 
 /** Peso numérico de prioridade (maior = mais urgente). */

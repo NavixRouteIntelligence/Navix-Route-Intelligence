@@ -16,6 +16,7 @@ export function toRoutePlanView(plan: RoutePlan): RoutePlanView {
     savings: s.savings,
     score: s.score,
     explanation: s.explanation,
+    ...(s.capacity ? { capacity: s.capacity } : {}),
     createdAt: s.createdAt.toISOString(),
   };
 }

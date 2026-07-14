@@ -28,6 +28,7 @@ import { ROUTE_PLAN_REPOSITORY } from '../src/modules/optimizer/domain/ports/rou
 import type { RoutePlanRepositoryPort } from '../src/modules/optimizer/domain/ports/route-plan-repository.port';
 import type { RoutePlan } from '../src/modules/optimizer/domain/route-plan';
 import { HaversineDistanceProvider } from '../src/modules/optimizer/infrastructure/distance/haversine-distance.provider';
+import { OptimizerMetrics } from '../src/modules/optimizer/infrastructure/observability/optimizer-metrics';
 import { NearestNeighbor2OptStrategy } from '../src/modules/optimizer/infrastructure/strategies/nearest-neighbor-2opt.strategy';
 import { OptimizerController } from '../src/modules/optimizer/interface/optimizer.controller';
 
@@ -115,6 +116,10 @@ describe('Optimizer (e2e, assíncrono)', () => {
         { provide: JOB_EVENTS, useValue: { optimizationJobUpdated: () => undefined } },
         { provide: DELIVERY_GATEWAY, useValue: { getStops: async () => [] } },
         { provide: AUDIT_LOG, useValue: { record: async () => undefined } },
+        {
+          provide: OptimizerMetrics,
+          useValue: { observeSolve: () => undefined, markInfeasible: () => undefined },
+        },
       ],
     })
       .overrideGuard(JwtAuthGuard)
@@ -185,5 +190,29 @@ describe('Optimizer (e2e, assíncrono)', () => {
       .post('/api/v1/route-plans')
       .send({ stops: [stops[0]] })
       .expect(400);
+  });
+
+  it('veículo + peso: plano reporta capacidade excedida (ADR-0022)', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/api/v1/route-plans')
+      .send({
+        vehicle: { type: 'motorcycle' }, // capacidade 30 kg
+        stops: [
+          { ...stops[0], weightKg: 20 },
+          { ...stops[1], weightKg: 20 },
+        ],
+      })
+      .expect(202);
+
+    const job = await pollJob(app, res.body.data.jobId);
+    expect(job.status).toBe('succeeded');
+
+    const plan = await request(app.getHttpServer())
+      .get(`/api/v1/route-plans/${job.routePlanId}`)
+      .expect(200);
+    expect(plan.body.data.params.vehicleType).toBe('motorcycle');
+    expect(plan.body.data.metrics.totalWeightKg).toBe(40);
+    expect(plan.body.data.capacity.feasible).toBe(false);
+    expect(plan.body.data.capacity.overWeightKg).toBe(10);
   });
 });

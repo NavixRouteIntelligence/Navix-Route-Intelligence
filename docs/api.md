@@ -307,11 +307,16 @@ GET    /api/v1/route-plans          # histórico (paginado)
 GET    /api/v1/route-plans/{id}     # consulta um Route Plan
 ```
 
-Corpo do POST: `origin?` (depósito), **uma** das fontes `deliveryIds[]` (busca no Delivery) **ou** `stops[]` (inline: id, lat, lng, priority?, timeWindow?), `strategy?`, `averageSpeedKmh?`, `serviceTimeMinutes?`.
+Corpo do POST: `origin?` (depósito), **uma** das fontes `deliveryIds[]` (busca no Delivery) **ou** `stops[]` (inline: id, lat, lng, priority?, timeWindow?), `strategy?`, `averageSpeedKmh?`, `serviceTimeMinutes?`, `vehicle?`.
 
-`/route-plans/mine` é **aditivo** (não altera o fluxo de Empresa): usa o **mesmo motor** com o papel `driver`, escopado ao tenant do motorista pela RLS. O painel de rentabilidade (lucro, custos de combustível/energia e portagens, ganho líquido) é calculado no cliente a partir das métricas do plano + parâmetros configuráveis. Fatores de **trânsito em tempo real, acidentes e estradas fechadas** ficam como integração futura (arquitetura de estratégias/distância pronta para recebê-los).
+**Restrições ricas (ADR-0022 — Fase 1, tudo opcional/retrocompatível):**
+- Por parada (`stops[]`): `weightKg?`, `volumeM3?` (demanda de carga) e `serviceTimeMinutes?` (tempo de parada específico, sobrepõe o global).
+- `vehicle?`: `{ type?, capacityKg?, capacityVolumeM3?, avoidTolls? }`. O `type` (moto/carro/carrinha/camião — `motorcycle|car|van|truck|bicycle`) define **velocidade e capacidade padrão**; os numéricos sobrepõem. Sem `averageSpeedKmh` explícito, usa-se a velocidade do perfil.
+- Resposta ganha `capacity` (`{ feasible, weightKg, volumeM3, capacityKg, capacityVolumeM3, overWeightKg, overVolumeM3 }`) quando há veículo/demanda; `metrics.totalWeightKg`/`totalVolumeM3` e `stops[].weightKg`/`volumeM3` quando há demanda; `params.vehicleType`/`avoidTolls`. Capacidade excedida **penaliza o score** (rota inviável). Demanda por `deliveryIds` é 0 até o agregado Delivery ganhar peso/volume (Fase 2).
 
-Resposta (Route Plan): `stops` (ordem ideal), `metrics` (distância/tempo/nº paradas), `baseline`, `savings` (km, min, %), `score` (0–100), `explanation`, `params`, `createdAt`. Algoritmo MVP: **Nearest Neighbor + 2-opt** com distância Haversine (Strategy Pattern — extensível para OR-Tools/IA sem alterar a API).
+`/route-plans/mine` é **aditivo** (não altera o fluxo de Empresa): usa o **mesmo motor** com o papel `driver`, escopado ao tenant do motorista pela RLS. O painel de rentabilidade (lucro, custos de combustível/energia e portagens, ganho líquido) é calculado no cliente a partir das métricas do plano + parâmetros configuráveis. Fatores de **trânsito em tempo real, acidentes e estradas fechadas** ficam como integração futura (arquitetura de estratégias/distância pronta para recebê-los; o custo já tem *seam* de sobretaxa por aresta/nó para pedágio/zona de risco — ADR-0022).
+
+Resposta (Route Plan): `stops` (ordem ideal), `metrics` (distância/tempo/nº paradas), `baseline`, `savings` (km, min, %), `score` (0–100), `explanation`, `params`, `capacity?`, `createdAt`. Algoritmo MVP: **Nearest Neighbor + 2-opt** com distância Haversine e **função de custo compartilhada** (Strategy Pattern — extensível para OR-Tools/IA sem alterar a API). Métricas de performance do solver em `/metrics` (`optimizer_solve_duration_seconds`, `optimizer_route_stops`, `optimizer_capacity_infeasible_total`).
 
 ### 14.4 Import Center — implementado (Fase 2)
 
@@ -417,3 +422,4 @@ GET /api/v1/health/ready     -> 200 | 503 (Postgres duro; Redis reportado, não 
 | 2026-07-13 | 0.17 | Arquitetura | POD: mídia em object storage (StorageService, driver local/s3); banco guarda só a URL; data URL aceita por compatibilidade (ADR-0019) |
 | 2026-07-14 | 0.18 | Arquitetura | Sincronização incremental offline-first: GET /deliveries/sync (updatedSince + cursor de keyset, tombstones via deletedAt) — §8.1, ADR-0020 |
 | 2026-07-14 | 0.19 | Arquitetura | Observabilidade: GET /metrics (Prometheus), /health/{live,ready} com Redis não-fatal, tracing OTel opt-in (§16, ADR-0021) |
+| 2026-07-14 | 0.20 | Arquitetura | Optimizer Fase 1: stops com weightKg/volumeM3/serviceTimeMinutes, `vehicle` (tipo/capacidade), resposta com `capacity` (§14.3, ADR-0022) |

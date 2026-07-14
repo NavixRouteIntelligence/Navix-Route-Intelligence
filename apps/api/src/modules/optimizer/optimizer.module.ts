@@ -24,6 +24,7 @@ import { OptimizationJobOrmEntity } from './infrastructure/persistence/optimizat
 import { OptimizationJobRepository } from './infrastructure/persistence/optimization-job.repository';
 import { RoutePlanOrmEntity } from './infrastructure/persistence/route-plan.orm-entity';
 import { RoutePlanRepository } from './infrastructure/persistence/route-plan.repository';
+import { OptimizerMetrics } from './infrastructure/observability/optimizer-metrics';
 import { InProcessOptimizationJobQueue } from './infrastructure/queue/in-process-optimization-job.queue';
 import { NearestNeighbor2OptStrategy } from './infrastructure/strategies/nearest-neighbor-2opt.strategy';
 import { OptimizerController } from './interface/optimizer.controller';
@@ -46,6 +47,7 @@ import { OptimizerController } from './interface/optimizer.controller';
     GetRoutePlanUseCase,
     ListRoutePlansUseCase,
     StrategyRegistry,
+    OptimizerMetrics,
     NearestNeighbor2OptStrategy,
     {
       provide: OPTIMIZATION_STRATEGIES,
