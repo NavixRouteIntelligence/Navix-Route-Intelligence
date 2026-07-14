@@ -1,0 +1,18 @@
+apiVersion: 1
+
+# Datasources provisionados automaticamente (ADR-0021).
+datasources:
+  - name: Prometheus
+    uid: navix-prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: true
+
+  - name: Jaeger
+    uid: navix-jaeger
+    type: jaeger
+    access: proxy
+    url: http://jaeger:16686
+    editable: true

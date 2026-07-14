@@ -5,6 +5,7 @@ import { AuditModule } from './shared/audit/audit.module';
 import { CacheModule } from './shared/cache/cache.module';
 import { DatabaseModule } from './database/database.module';
 import { LoggerModule } from './shared/observability/logger.module';
+import { MetricsModule } from './observability/metrics/metrics.module';
 import { QueueModule } from './shared/queue/queue.module';
 import { RealtimeModule } from './shared/realtime/realtime.module';
 import { RedisModule } from './shared/redis/redis.module';
@@ -31,6 +32,7 @@ import { UserSettingsModule } from './modules/user-settings/user-settings.module
   imports: [
     AppConfigModule,
     LoggerModule,
+    MetricsModule,
     RedisModule,
     RealtimeModule,
     StorageModule,

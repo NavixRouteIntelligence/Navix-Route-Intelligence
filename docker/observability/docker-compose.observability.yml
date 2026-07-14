@@ -1,0 +1,63 @@
+name: navix-observability
+
+# Stack de observabilidade para desenvolvimento/prep (ADR-0021).
+# Sobe: Prometheus (métricas), Grafana (dashboards) e Jaeger (traces OTLP).
+# A API precisa apontar OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 e
+# OTEL_ENABLED=true para enviar traces ao Jaeger. As métricas são "puxadas"
+# pelo Prometheus em /metrics (nada a configurar na API).
+#
+#   docker compose -f docker/observability/docker-compose.observability.yml up -d
+#
+# Grafana:    http://localhost:3002   (admin/admin, anon habilitado)
+# Prometheus: http://localhost:9090
+# Jaeger UI:  http://localhost:16686
+
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: navix-prometheus
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=15d'
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - '9090:9090'
+    extra_hosts:
+      # Permite ao Prometheus (container) alcançar a API rodando no host (Linux).
+      - 'host.docker.internal:host-gateway'
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: navix-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_AUTH_ANONYMOUS_ENABLED: 'true'
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - '3002:3000'
+    depends_on:
+      - prometheus
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: navix-jaeger
+    restart: unless-stopped
+    environment:
+      COLLECTOR_OTLP_ENABLED: 'true'
+    ports:
+      - '16686:16686' # UI
+      - '4318:4318' # OTLP HTTP (endpoint do OTEL_EXPORTER_OTLP_ENDPOINT)
+      - '4317:4317' # OTLP gRPC
+
+volumes:
+  prometheus_data:
+  grafana_data:

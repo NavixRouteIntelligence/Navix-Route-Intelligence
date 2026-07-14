@@ -379,6 +379,19 @@ GET  /api/v1/pod/{deliveryId}     # comprovante de uma entrega
 - OpenAPI/Swagger exposto em ambiente não-produtivo.
 - SDKs/clients podem ser gerados a partir do contrato.
 
+## 16. Observabilidade (ADR-0021)
+
+Endpoints operacionais (não versionados, públicos — restringir por rede em produção). Detalhes em [observability.md](./observability.md).
+
+```
+GET /metrics                 -> text/plain (Prometheus): métricas de processo + HTTP (RED)
+GET /api/v1/health/live      -> 200 { "status": "ok" }              # liveness
+GET /api/v1/health/ready     -> 200 | 503 (Postgres duro; Redis reportado, não fatal)  # readiness
+```
+
+- Cada resposta traz `x-request-id` (correlaciona com os logs; ecoa o header de entrada se houver).
+- Com `OTEL_ENABLED=true`, as requisições geram **traces** OpenTelemetry (propaga `traceparent`) e os logs carregam `trace_id`/`span_id`.
+
 ---
 
 ### Histórico
@@ -403,3 +416,4 @@ GET  /api/v1/pod/{deliveryId}     # comprovante de uma entrega
 | 2026-07-13 | 0.16 | Arquitetura | Tracking em lote: POST /tracking/positions/batch (1–500) para sincronização offline; unitário mantido |
 | 2026-07-13 | 0.17 | Arquitetura | POD: mídia em object storage (StorageService, driver local/s3); banco guarda só a URL; data URL aceita por compatibilidade (ADR-0019) |
 | 2026-07-14 | 0.18 | Arquitetura | Sincronização incremental offline-first: GET /deliveries/sync (updatedSince + cursor de keyset, tombstones via deletedAt) — §8.1, ADR-0020 |
+| 2026-07-14 | 0.19 | Arquitetura | Observabilidade: GET /metrics (Prometheus), /health/{live,ready} com Redis não-fatal, tracing OTel opt-in (§16, ADR-0021) |

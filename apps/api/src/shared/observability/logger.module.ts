@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import { Global, Module } from '@nestjs/common';
+import { trace } from '@opentelemetry/api';
 import { LoggerModule as PinoLoggerModule } from 'nestjs-pino';
 
 /**
@@ -19,7 +20,16 @@ import { LoggerModule as PinoLoggerModule } from 'nestjs-pino';
           res.setHeader('x-request-id', id);
           return id;
         },
-        customProps: (req) => ({ requestId: (req as { id?: string }).id }),
+        // Correlação com o tracing: quando o OTel está ativo, anexa
+        // trace_id/span_id para casar logs ↔ traces (Grafana/Tempo/Jaeger).
+        // Sem tracing, `getActiveSpan()` é undefined e nada é adicionado.
+        customProps: (req) => {
+          const requestId = (req as { id?: string }).id;
+          const span = trace.getActiveSpan()?.spanContext();
+          return span
+            ? { requestId, trace_id: span.traceId, span_id: span.spanId }
+            : { requestId };
+        },
         // Nunca logar segredos/PII (ver docs/security.md).
         redact: {
           paths: [

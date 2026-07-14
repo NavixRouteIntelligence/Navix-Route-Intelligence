@@ -101,4 +101,13 @@ export class AppConfigService {
       },
     };
   }
+
+  get observability() {
+    return {
+      tracingEnabled: this.get('OTEL_ENABLED'),
+      serviceName: this.get('OTEL_SERVICE_NAME'),
+      otlpEndpoint: this.get('OTEL_EXPORTER_OTLP_ENDPOINT'),
+      metricsEnabled: this.get('METRICS_ENABLED'),
+    };
+  }
 }

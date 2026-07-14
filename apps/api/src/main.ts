@@ -1,5 +1,10 @@
 import 'reflect-metadata';
-import { ValidationPipe, VersioningType } from '@nestjs/common';
+// Instrumentação por efeito colateral: inicializa o OpenTelemetry ANTES de
+// qualquer módulo instrumentado (AppModule, http, pg, ioredis) ser carregado.
+// No-op quando OTEL_ENABLED != 'true'. Mantê-lo como PRIMEIRO import é essencial.
+import './observability/instrument';
+
+import { RequestMethod, ValidationPipe, VersioningType } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { json, urlencoded } from 'express';
@@ -7,6 +12,7 @@ import { Logger } from 'nestjs-pino';
 import helmet from 'helmet';
 
 import { AppModule } from './app.module';
+import { shutdownTracing } from './observability/tracing';
 import { AppConfigService } from './shared/config/app-config.service';
 import { DomainExceptionFilter } from './shared/interface/domain-exception.filter';
 
@@ -36,7 +42,10 @@ async function bootstrap(): Promise<void> {
   });
 
   // Prefixo e versionamento de URL: /api/v1/... (ver docs/api.md §2).
-  app.setGlobalPrefix(globalPrefix);
+  // `/metrics` fica FORA do prefixo (caminho de scrape padrão do Prometheus).
+  app.setGlobalPrefix(globalPrefix, {
+    exclude: [{ path: 'metrics', method: RequestMethod.GET }],
+  });
   app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
 
   // Validação de entrada global (whitelist + rejeição de campos desconhecidos).
@@ -64,6 +73,10 @@ async function bootstrap(): Promise<void> {
   }
 
   app.enableShutdownHooks();
+  // Flush dos spans pendentes no encerramento (no-op se tracing desligado).
+  process.on('beforeExit', () => {
+    void shutdownTracing();
+  });
 
   await app.listen(port);
   const logger = app.get(Logger);

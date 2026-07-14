@@ -65,6 +65,20 @@ export const envSchema = z.object({
     .enum(['true', 'false'])
     .default('true')
     .transform((v) => v === 'true'),
+
+  // --- Observabilidade (ADR-0021) ---
+  // Tracing distribuído é opt-in (precisa de um coletor OTLP). Métricas
+  // Prometheus ficam sempre expostas em /metrics (overhead desprezível).
+  OTEL_ENABLED: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
+  OTEL_SERVICE_NAME: z.string().default('navix-api'),
+  OTEL_EXPORTER_OTLP_ENDPOINT: z.string().optional(),
+  METRICS_ENABLED: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((v) => v === 'true'),
 });
 
 export type Env = z.infer<typeof envSchema>;
