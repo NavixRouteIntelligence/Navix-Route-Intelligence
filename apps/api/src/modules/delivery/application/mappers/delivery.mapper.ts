@@ -21,5 +21,7 @@ export function toDeliveryView(delivery: Delivery): DeliveryView {
     notes: s.notes,
     createdAt: s.createdAt.toISOString(),
     updatedAt: s.updatedAt.toISOString(),
+    // Tombstone: null em leituras normais; preenchido no feed de sync (ADR-0020).
+    deletedAt: s.deletedAt ? s.deletedAt.toISOString() : null,
   };
 }

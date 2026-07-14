@@ -5,6 +5,8 @@ import type {
   DeliveryPriority,
   DeliveryStatus,
   ResourceResponse,
+  SyncParams,
+  SyncResponse,
   UpdateDeliveryRequest,
 } from '@navix/contracts';
 
@@ -21,6 +23,12 @@ export interface DeliveryListParams {
 export const deliveriesApi = {
   list: (params: DeliveryListParams = {}) =>
     apiRequest<CollectionResponse<Delivery>>(`/deliveries${toQuery({ ...params })}`),
+  /**
+   * Sincronização incremental (offline-first, ADR-0020). Devolve só o que mudou
+   * desde `updatedSince` (mais tombstones via `deletedAt`), paginado por `cursor`.
+   */
+  sync: (params: SyncParams = {}) =>
+    apiRequest<SyncResponse<Delivery>>(`/deliveries/sync${toQuery({ ...params })}`),
   get: (id: string) => apiRequest<ResourceResponse<Delivery>>(`/deliveries/${id}`),
   create: (body: CreateDeliveryRequest) =>
     apiRequest<ResourceResponse<Delivery>>('/deliveries', { method: 'POST', body }),

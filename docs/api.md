@@ -150,6 +150,27 @@ Formato padronizado (nunca vaza detalhes internos):
 - Filtro: `?status=planned&priority=high`.
 - Ordenação: `?sort=-created_at,priority` (`-` = desc).
 
+## 8.1 Sincronização incremental (offline-first — ADR-0020)
+
+> **Status:** ✅ **Implementado para entregas** (`GET /api/v1/deliveries/sync`). Base genérica reutilizável (contratos `SyncParams`/`SyncResponse<T>` + cursor de keyset) preparada para outros recursos (fleet, pod) adotarem.
+
+Clientes offline (Flutter, PWA) **não devem re-baixar a coleção inteira** a cada abertura. O feed de sincronização entrega **apenas o que mudou** desde a última sincronização, incluindo **exclusões** (tombstones), com **paginação por cursor de keyset** (estável e barata mesmo em grandes volumes).
+
+```
+GET /api/v1/deliveries/sync?updatedSince=<ISO>&cursor=<opaco>&limit=<1..500>
+-> 200 {
+     "data": [ <Delivery com deletedAt: string|null> ],
+     "meta": { "syncedAt": "<ISO>", "nextCursor": "<opaco>|null", "hasMore": true|false, "limit": 100 }
+   }
+```
+
+- **Rodada de sync:** a **primeira** página usa `updatedSince` (a marca d'água que o cliente guardou do `syncedAt` anterior); as **páginas seguintes** usam o `nextCursor` opaco (tem precedência sobre `updatedSince`). Sem nenhum dos dois, é um **sync completo inicial** (tudo, paginado).
+- **Tombstones:** entregas excluídas (soft delete) voltam com `deletedAt != null` — o cache local as **remove**. Em leituras normais (`list`/`get`) `deletedAt` é sempre `null`.
+- **Ordenação canônica:** `(updated_at ASC, id ASC)` — keyset, não offset. Índice dedicado `idx_deliveries_tenant_sync` (inclui tombstones).
+- **Marca d'água:** o cliente persiste `meta.syncedAt` e o envia como `updatedSince` na próxima rodada. O limite `>=` tolera sobreposição mínima; os *upserts* do cliente devem ser **idempotentes** por `id` (combina com o `Idempotency-Key` do §10 no caminho de escrita).
+- **Cursor** é **opaco** (base64url de `(updatedAt, id)`); cursor malformado → `400`.
+- **Fluxo Flutter/PWA:** `updatedSince = last syncedAt` → seguir `nextCursor` até `hasMore=false` → aplicar upserts/deletes por `id` → salvar o novo `syncedAt`.
+
 ## 9. Validação e limites
 
 - Todos os corpos validados por DTO (ver [security.md](./security.md)).
@@ -381,3 +402,4 @@ GET  /api/v1/pod/{deliveryId}     # comprovante de uma entrega
 | 2026-07-13 | 0.15 | Arquitetura | Tempo real por SSE: /realtime/ticket + /realtime/stream; eventos tracking.position e optimization.job (ADR-0018) |
 | 2026-07-13 | 0.16 | Arquitetura | Tracking em lote: POST /tracking/positions/batch (1–500) para sincronização offline; unitário mantido |
 | 2026-07-13 | 0.17 | Arquitetura | POD: mídia em object storage (StorageService, driver local/s3); banco guarda só a URL; data URL aceita por compatibilidade (ADR-0019) |
+| 2026-07-14 | 0.18 | Arquitetura | Sincronização incremental offline-first: GET /deliveries/sync (updatedSince + cursor de keyset, tombstones via deletedAt) — §8.1, ADR-0020 |

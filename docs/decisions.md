@@ -43,6 +43,7 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 | ADR-0017 | Idempotency-Key nas operações críticas (offline) | Aceito | ✅ Interceptor `@Idempotent()` + tabela `idempotency_keys`; aplicado em POD, tracking, import/confirm e otimização | 2026-07-13 |
 | ADR-0018 | Transporte em tempo real por SSE (ticket de conexão) | Aceito | ✅ `RealtimeHub` + `/realtime/ticket` + `/realtime/stream`; tracking e jobs publicam; polling só como fallback | 2026-07-13 |
 | ADR-0019 | Mídia do Proof of Delivery em object storage (StorageService) | Aceito | ✅ `StoragePort` + drivers `local`/`s3` (S3/R2/GCS); banco guarda só a URL; aceita data URL por compatibilidade temporária | 2026-07-13 |
+| ADR-0020 | Sincronização incremental offline-first (updatedSince + cursor de keyset) | Aceito | ✅ `GET /deliveries/sync` (delta + tombstones, keyset `(updated_at,id)`, índice dedicado); contratos `SyncParams`/`SyncResponse<T>` genéricos | 2026-07-14 |
 
 ---
 
@@ -229,6 +230,17 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 
 ---
 
+## ADR-0020 — Sincronização incremental offline-first (updatedSince + cursor de keyset)
+
+- **Status:** Aceito · **Data:** 2026-07-14
+- **Status da implementação:** ✅ Implementado para entregas. `GET /api/v1/deliveries/sync` devolve apenas o **delta** desde a marca d'água do cliente (`updatedSince`), **incluindo tombstones** (soft delete → `deletedAt != null`), paginado por **cursor de keyset** opaco sobre `(updated_at, id)`. Índice dedicado `idx_deliveries_tenant_sync` (sem o predicado parcial `deleted_at IS NULL`, para cobrir tombstones). Contratos genéricos `SyncParams`/`SyncResponse<T>` + helpers de kernel (`encodeCursor`/`decodeCursor`/`normalizeSync`/`buildSyncMeta`) prontos para outros recursos (fleet, pod) adotarem.
+- **Contexto:** O cliente offline (Flutter/PWA) fazia **full refetch** paginado por **offset** a cada abertura — caro em rede/bateria, instável sob escrita concorrente (linhas deslizam entre páginas) e sem como saber o que foi **excluído**. Era o risco de retrabalho do offline-first da análise Flutter.
+- **Decisão:** Feed incremental por **marca d'água + cursor de keyset**. A primeira página de uma rodada usa `updatedSince`; as seguintes usam o `nextCursor` opaco (precedência). A ordenação canônica `(updated_at ASC, id ASC)` torna a paginação **estável e barata** (keyset, não offset). Exclusões viram **tombstones** para o cache local remover. O cliente guarda `meta.syncedAt` como próxima marca d'água; *upserts* idempotentes por `id` toleram a sobreposição do limite `>=`.
+- **Alternativas consideradas:** **Offset** (`page/pageSize`) — mantido para telas web, mas instável/O(n) para sync; **replicação estilo CouchDB `_changes`** (poderosa, porém pesada e invasiva no modelo); **hard delete** (impossível sincronizar exclusões — daí o soft delete + tombstone); **WebSocket/SSE** (complementar, para push em tempo real — ADR-0018 —, não substitui o *catch-up* em massa após ficar offline).
+- **Consequências:** Sync barato e escalável; sem re-baixar a coleção; exclusões propagadas. **Pendências:** adoção do mesmo padrão em fleet/pod (base já pronta); a marca d'água depende de `updated_at` confiável (todo mutador de domínio faz `touch()`); *purge* de tombstones antigos (retenção) é roadmap; compactação/limite de payload por página já coberto pelo `limit` (máx. 500).
+
+---
+
 ## Template
 
 ```markdown
@@ -257,3 +269,4 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 | 2026-07-13 | 0.6 | Arquitetura | ADR-0015: separação Web (cookie) × Mobile (bearer) por endpoints dedicados; header X-Auth-Mode eliminado |
 | 2026-07-13 | 0.7 | Arquitetura | ADR-0016: login sem tenantId — tenant resolvido por e-mail (ou slug da empresa); e-mail global único + tenants.slug |
 | 2026-07-13 | 0.8 | Arquitetura | ADR-0017 (Idempotency-Key), ADR-0018 (tempo real por SSE) e ADR-0019 (mídia do POD em object storage) |
+| 2026-07-14 | 0.9 | Arquitetura | ADR-0020: sincronização incremental offline-first (updatedSince + cursor de keyset, tombstones) para entregas |

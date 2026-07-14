@@ -27,6 +27,7 @@ function build(delivery: Delivery | null) {
     findById: jest.fn().mockResolvedValue(delivery),
     findByIds: jest.fn().mockResolvedValue([]),
     findAll: jest.fn(),
+    findChangedSince: jest.fn().mockResolvedValue({ items: [], hasMore: false }),
   };
   const audit: AuditLogPort = { record: jest.fn().mockResolvedValue(undefined) };
   return { repo, audit, useCase: new ChangeDeliveryStatusUseCase(repo, audit) };

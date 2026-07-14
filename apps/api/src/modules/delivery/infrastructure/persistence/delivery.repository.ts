@@ -3,10 +3,14 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, SelectQueryBuilder } from 'typeorm';
 
 import type { PagedResult } from '../../../../shared/kernel/pagination';
+import type { NormalizedSync } from '../../../../shared/kernel/sync';
 import { scopedRepository } from '../../../../shared/database/transaction-context';
 import type { ListDeliveriesQuery } from '../../application/queries/list-deliveries.query';
 import { Delivery } from '../../domain/delivery';
-import type { DeliveryRepositoryPort } from '../../domain/ports/delivery-repository.port';
+import type {
+  DeliveryChanges,
+  DeliveryRepositoryPort,
+} from '../../domain/ports/delivery-repository.port';
 import { Address } from '../../domain/value-objects/address';
 import { TimeWindow } from '../../domain/value-objects/time-window';
 import { DeliveryOrmEntity } from './delivery.orm-entity';
@@ -95,6 +99,33 @@ export class DeliveryRepository implements DeliveryRepositoryPort {
 
     const [rows, total] = await qb.getManyAndCount();
     return { items: rows.map((r) => this.toDomain(r)), total };
+  }
+
+  async findChangedSince(tenantId: string, params: NormalizedSync): Promise<DeliveryChanges> {
+    // Feed de sync: keyset por (updated_at, id), INCLUINDO tombstones (sem o
+    // filtro deleted_at IS NULL), para o cache offline remover o que sumiu.
+    const qb = this.repo
+      .createQueryBuilder('delivery')
+      .where('delivery.tenant_id = :tenantId', { tenantId })
+      .orderBy('delivery.updated_at', 'ASC')
+      .addOrderBy('delivery.id', 'ASC')
+      // Busca uma linha a mais para saber se há próxima página sem um COUNT.
+      .take(params.limit + 1);
+
+    if (params.cursor) {
+      // Comparação por row value: (updated_at, id) > (cursor). Estável e usa o índice.
+      qb.andWhere('(delivery.updated_at, delivery.id) > (:curT, :curId)', {
+        curT: params.cursor.updatedAt.toISOString(),
+        curId: params.cursor.id,
+      });
+    } else if (params.since) {
+      qb.andWhere('delivery.updated_at >= :since', { since: params.since.toISOString() });
+    }
+
+    const rows = await qb.getMany();
+    const hasMore = rows.length > params.limit;
+    const page = hasMore ? rows.slice(0, params.limit) : rows;
+    return { items: page.map((r) => this.toDomain(r)), hasMore };
   }
 
   private applyFilters(qb: SelectQueryBuilder<DeliveryOrmEntity>, query: ListDeliveriesQuery): void {

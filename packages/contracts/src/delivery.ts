@@ -53,6 +53,12 @@ export interface Delivery {
   notes: string | null;
   createdAt: string;
   updatedAt: string;
+  /**
+   * Tombstone de sincronização: `null` em leituras normais; preenchido apenas no
+   * feed de sync incremental quando a entrega foi excluída (soft delete), para o
+   * cache offline removê-la localmente. Ver ADR-0020.
+   */
+  deletedAt: string | null;
 }
 
 export interface AddressInput {

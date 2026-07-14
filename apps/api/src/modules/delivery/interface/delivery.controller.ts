@@ -18,6 +18,7 @@ import type {
   CollectionResponse,
   Delivery as DeliveryView,
   ResourceResponse,
+  SyncResponse,
 } from '@navix/contracts';
 
 import { CurrentUser } from '../../../shared/interface/current-user.decorator';
@@ -30,12 +31,14 @@ import { CreateDeliveryUseCase } from '../application/create-delivery.use-case';
 import { DeleteDeliveryUseCase } from '../application/delete-delivery.use-case';
 import { GetDeliveryUseCase } from '../application/get-delivery.use-case';
 import { ListDeliveriesUseCase } from '../application/list-deliveries.use-case';
+import { SyncDeliveriesUseCase } from '../application/sync-deliveries.use-case';
 import { UpdateDeliveryUseCase } from '../application/update-delivery.use-case';
 import type { DeliverySort } from '../application/queries/list-deliveries.query';
 import { ALLOWED_SORT_FIELDS } from '../application/queries/list-deliveries.query';
 import { ChangeStatusDto } from './dto/change-status.dto';
 import { CreateDeliveryDto } from './dto/create-delivery.dto';
 import { ListDeliveriesQueryDto } from './dto/list-deliveries.query.dto';
+import { SyncDeliveriesQueryDto } from './dto/sync-deliveries.query.dto';
 import { UpdateDeliveryDto } from './dto/update-delivery.dto';
 
 const BASE_PATH = '/api/v1/deliveries';
@@ -49,6 +52,7 @@ export class DeliveryController {
     private readonly createDelivery: CreateDeliveryUseCase,
     private readonly getDelivery: GetDeliveryUseCase,
     private readonly listDeliveries: ListDeliveriesUseCase,
+    private readonly syncDeliveries: SyncDeliveriesUseCase,
     private readonly updateDelivery: UpdateDeliveryUseCase,
     private readonly changeStatus: ChangeDeliveryStatusUseCase,
     private readonly deleteDelivery: DeleteDeliveryUseCase,
@@ -91,6 +95,21 @@ export class DeliveryController {
       sort: this.parseSort(query.sort),
     });
     return buildCollection(result.items, result.total, result.page, BASE_PATH);
+  }
+
+  @Get('sync')
+  @ApiOperation({
+    summary: 'Sincronização incremental (offline-first): mudanças + tombstones desde a marca d’água',
+  })
+  async sync(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: SyncDeliveriesQueryDto,
+  ): Promise<SyncResponse<DeliveryView>> {
+    return this.syncDeliveries.execute(user.tenantId, {
+      updatedSince: query.updatedSince,
+      cursor: query.cursor,
+      limit: query.limit,
+    });
   }
 
   @Get(':id')
