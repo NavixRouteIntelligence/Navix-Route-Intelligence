@@ -49,6 +49,7 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 | ADR-0023 | Reotimização automática por eventos + priorização dinâmica por SLA | Aceito | ✅ `DomainEventBus` in-process; Delivery publica eventos; `AutoReoptimizationService` (debounce por tenant, opt-in) + `POST /route-plans/reoptimize`; peso de prioridade por proximidade do prazo | 2026-07-14 |
 | ADR-0024 | Estratégia metaheurística (VND) + sobretaxas de pedágio/zona de risco | Aceito | ✅ Estratégia `or-opt-2opt` (Or-opt + 2-opt) pela mesma port; `CostAugmentationPort` alimenta o *seam* de custo — zonas de risco configuráveis (no-op default); path aberto para OR-Tools nativo e provedor de pedágio | 2026-07-14 |
 | ADR-0025 | Navix Intelligence — 1ª camada (heurísticas atrás de ports, ML-ready) | Aceito | ✅ `POST /intelligence/route-forecast`: cronograma/ETA + conclusão, atrasos+mitigação, combustível, melhor horário de saída, trânsito por contexto temporal e perfil de motorista; tudo em serviços de domínio + ports (`TrafficModelPort`/`DriverProfileSourcePort`) prontos para ML/LLM | 2026-07-14 |
+| ADR-0026 | Modo Economia — otimizar por tempo/combustível/pedágio/CO₂ | Aceito | ✅ `economyMode` mapeia preset de pesos sobre o motor existente (reuso ADR-0022/24); estimativa de CO₂ na métrica; seletor no web (DS + i18n 4 locales + a11y). Diferenciação fina de tempo/pedágio real depende do provedor de mapas (próximo PR) | 2026-07-14 |
 
 ---
 
@@ -307,6 +308,17 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 
 ---
 
+## ADR-0026 — Modo Economia (tempo · combustível · pedágio · CO₂)
+
+- **Status:** Aceito · **Data:** 2026-07-14
+- **Status da implementação:** ✅ Implementado (Fase A da camada de experiência do motorista). `OptimizeRouteRequest.economyMode ∈ {time,fuel,tolls,co2}` mapeia um **preset de `OptimizationWeights`** sobre a função de custo compartilhada (sem algoritmo novo): `time` valoriza janelas; `fuel`/`co2` minimizam distância; `tolls` amplifica a sobretaxa do `CostAugmentationPort` (ADR-0024). A resposta ganha `metrics.estimatedCo2Kg` (consumo por tipo × fator de emissão) e `params.economyMode`. No **web**: `EconomyModeSelector` (radiogroup acessível, tokens do DS, i18n PT-BR/PT-PT/EN/ES) no Otimizador + card de CO₂ no plano. Tudo aditivo/retrocompatível.
+- **Contexto:** Primeiro recurso da "camada de experiência do motorista" (proposta aprovada). O motorista/operador quer escolher **o objetivo** da otimização, com o trade-off explícito.
+- **Decisão:** Entregar o Modo Economia como **preset de pesos sobre o motor que já existe**, não um novo algoritmo — máximo reuso, risco zero de regressão, transparente. CO₂ é derivado do consumo (reuso da tabela por tipo de veículo). A **diferenciação fina** entre `time` (duração real ≠ distância) e `tolls` (custo de pedágio por trecho) depende de um **provedor de mapas real** (rotas/pedágio), sequenciado como o próximo PR da Fase A (exige credencial `MAPBOX_TOKEN` e refactor síncrono→assíncrono do provedor de distância — isolado para revisão segura).
+- **Alternativas consideradas:** **Algoritmos separados por modo** (duplicação desnecessária — o mesmo motor com pesos resolve); **integrar o provedor de mapas no mesmo PR** (acopla credenciais + refactor async ao recurso — preferimos isolar); **CO₂ por API externa** (desnecessário nesta camada; a estimativa por consumo é suficiente e explicável).
+- **Consequências:** Objetivo de otimização selecionável e um indicador de sustentabilidade (CO₂), em compatibilidade total com o DS. **Pendências:** provedor de mapas real para tempo/pedágio fiéis; navegação contextual (2º recurso da Fase A); *tuning* de pesos por tenant.
+
+---
+
 ## Template
 
 ```markdown
@@ -342,3 +354,4 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 | 2026-07-14 | 1.3 | Arquitetura | ADR-0023 (Fase 3): reotimização automática por eventos (DomainEventBus + debounce, opt-in) + endpoint manual; priorização dinâmica por SLA |
 | 2026-07-14 | 1.4 | Arquitetura | ADR-0024 (Fase 4): estratégia metaheurística `or-opt-2opt` (VND) + `CostAugmentationPort` (zonas de risco no seam de custo); ADR-0022 → Aceito |
 | 2026-07-14 | 1.5 | AI Eng. | ADR-0025: Navix Intelligence (1ª camada) — route-forecast com cronograma/ETA, atrasos, combustível, melhor saída; heurísticas atrás de ports prontas para ML/LLM |
+| 2026-07-15 | 1.6 | Design+Arch | ADR-0026: Modo Economia (tempo/combustível/pedágio/CO₂) — preset de pesos + CO₂ + seletor no web (DS/i18n/a11y); Fase A da experiência do motorista |

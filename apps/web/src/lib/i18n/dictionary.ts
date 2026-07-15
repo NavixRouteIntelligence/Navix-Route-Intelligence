@@ -106,6 +106,19 @@ const pt_BR = {
   'insights.title': 'AI Insights',
   'insights.subtitle': 'Análises automáticas da sua operação.',
   'insights.empty': 'Sem dados suficientes para gerar insights ainda.',
+
+  'economy.label': 'Modo Economia',
+  'economy.hint': 'Escolha o que priorizar na rota.',
+  'economy.balanced': 'Balanceado',
+  'economy.time': 'Tempo',
+  'economy.fuel': 'Combustível',
+  'economy.tolls': 'Pedágios',
+  'economy.co2': 'CO₂',
+  'economy.time.desc': 'Prioriza cumprir os prazos.',
+  'economy.fuel.desc': 'Minimiza distância e consumo.',
+  'economy.tolls.desc': 'Evita trechos com pedágio.',
+  'economy.co2.desc': 'Minimiza as emissões.',
+  'optimizer.co2': 'Emissão de CO₂',
 };
 
 type Keys = typeof pt_BR;
@@ -217,6 +230,19 @@ const en: Keys = {
   'insights.title': 'AI Insights',
   'insights.subtitle': 'Automatic analysis of your operation.',
   'insights.empty': 'Not enough data to generate insights yet.',
+
+  'economy.label': 'Economy Mode',
+  'economy.hint': 'Choose what to prioritize on the route.',
+  'economy.balanced': 'Balanced',
+  'economy.time': 'Time',
+  'economy.fuel': 'Fuel',
+  'economy.tolls': 'Tolls',
+  'economy.co2': 'CO₂',
+  'economy.time.desc': 'Prioritizes meeting deadlines.',
+  'economy.fuel.desc': 'Minimizes distance and consumption.',
+  'economy.tolls.desc': 'Avoids toll segments.',
+  'economy.co2.desc': 'Minimizes emissions.',
+  'optimizer.co2': 'CO₂ emissions',
 };
 
 const es: Keys = {
@@ -306,6 +332,19 @@ const es: Keys = {
   'insights.title': 'AI Insights',
   'insights.subtitle': 'Análisis automático de tu operación.',
   'insights.empty': 'Aún no hay datos suficientes para generar insights.',
+
+  'economy.label': 'Modo Ahorro',
+  'economy.hint': 'Elige qué priorizar en la ruta.',
+  'economy.balanced': 'Equilibrado',
+  'economy.time': 'Tiempo',
+  'economy.fuel': 'Combustible',
+  'economy.tolls': 'Peajes',
+  'economy.co2': 'CO₂',
+  'economy.time.desc': 'Prioriza cumplir los plazos.',
+  'economy.fuel.desc': 'Minimiza distancia y consumo.',
+  'economy.tolls.desc': 'Evita tramos con peaje.',
+  'economy.co2.desc': 'Minimiza las emisiones.',
+  'optimizer.co2': 'Emisiones de CO₂',
 };
 
 export const DICTIONARY: Record<Locale, Keys> = {

@@ -1,11 +1,12 @@
 'use client';
 
-import type { RoutePlan } from '@navix/contracts';
+import type { EconomyMode, RoutePlan } from '@navix/contracts';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Package, Route } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 
+import { EconomyModeSelector } from '@/components/optimizer/economy-mode-selector';
 import { RoutePlanView } from '@/components/optimizer/route-plan-view';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,6 +23,7 @@ export default function OptimizerPage() {
   const qc = useQueryClient();
   const { toast } = useToast();
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [economyMode, setEconomyMode] = useState<EconomyMode | undefined>(undefined);
   const [result, setResult] = useState<RoutePlan | null>(null);
 
   const deliveries = useQuery({
@@ -31,7 +33,7 @@ export default function OptimizerPage() {
   const history = useQuery({ queryKey: ['route-plans', 'history'], queryFn: () => optimizerApi.listPlans({ pageSize: 5 }) });
 
   const optimize = useMutation({
-    mutationFn: () => optimizerApi.optimizeAndWait({ deliveryIds: [...selected] }),
+    mutationFn: () => optimizerApi.optimizeAndWait({ deliveryIds: [...selected], economyMode }),
     onSuccess: (res) => {
       setResult(res.data);
       qc.invalidateQueries({ queryKey: ['route-plans'] });
@@ -97,6 +99,7 @@ export default function OptimizerPage() {
                     </li>
                   ))}
                 </ul>
+                <EconomyModeSelector value={economyMode} onChange={setEconomyMode} />
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">{selected.size} selecionada(s)</span>
                   <Button

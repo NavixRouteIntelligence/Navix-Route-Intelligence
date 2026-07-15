@@ -1,7 +1,7 @@
 'use client';
 
 import type { RoutePlan } from '@navix/contracts';
-import { Clock, Gauge, MapPin, Route, TrendingDown } from 'lucide-react';
+import { Clock, Gauge, Leaf, MapPin, Route, TrendingDown } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -83,6 +83,15 @@ export function RoutePlanView({ plan }: { plan: RoutePlan }) {
           hint={`−${formatNumber(plan.savings.distancePct, 1)}% vs. ordem original`}
         />
         <StatCard label="Score da rota" value={`${plan.score}/100`} icon={Gauge} tone="warning" hint={`${plan.metrics.stops} paradas`} />
+        {plan.metrics.estimatedCo2Kg !== undefined && (
+          <StatCard
+            label="Emissão de CO₂"
+            value={`${formatNumber(plan.metrics.estimatedCo2Kg, 1)} kg`}
+            icon={Leaf}
+            tone="success"
+            hint={plan.params.economyMode ? `Modo: ${plan.params.economyMode}` : undefined}
+          />
+        )}
       </div>
 
       {/* Antes × Depois + economia */}

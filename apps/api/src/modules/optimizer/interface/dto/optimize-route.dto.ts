@@ -1,8 +1,10 @@
 import {
   DELIVERY_PRIORITIES,
+  ECONOMY_MODES,
   OPTIMIZATION_STRATEGIES,
   VEHICLE_TYPES,
   type DeliveryPriority,
+  type EconomyMode,
   type OptimizationStopInput,
   type OptimizationStrategyName,
   type OptimizationVehicleInput,
@@ -140,6 +142,11 @@ export class OptimizeRouteDto implements OptimizeRouteRequest {
   @IsOptional()
   @IsIn(OPTIMIZATION_STRATEGIES as readonly string[])
   strategy?: OptimizationStrategyName;
+
+  @ApiPropertyOptional({ enum: ECONOMY_MODES, description: 'Modo Economia (ADR-0026).' })
+  @IsOptional()
+  @IsIn(ECONOMY_MODES as readonly string[])
+  economyMode?: EconomyMode;
 
   @ApiPropertyOptional({ example: 30, description: 'Velocidade média (km/h).' })
   @IsOptional()

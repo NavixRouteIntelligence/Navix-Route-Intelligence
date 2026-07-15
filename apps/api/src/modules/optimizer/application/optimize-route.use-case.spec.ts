@@ -71,6 +71,21 @@ describe('OptimizeRouteUseCase (restrições ricas — ADR-0022)', () => {
     expect(view.stops[0].weightKg).toBeDefined();
   });
 
+  it('Modo Economia: registra o modo e estima CO₂ com o veículo (ADR-0026)', async () => {
+    const { uc } = build();
+    const view = await uc.execute({
+      ...base,
+      vehicle: { type: 'car' },
+      economyMode: 'co2',
+      stops: [
+        { id: S1, latitude: 0, longitude: 0 },
+        { id: S2, latitude: 0.1, longitude: 0.1 },
+      ],
+    });
+    expect(view.params.economyMode).toBe('co2');
+    expect(view.metrics.estimatedCo2Kg).toBeGreaterThan(0);
+  });
+
   it('sem veículo nem demanda: retrocompatível (sem bloco de capacidade)', async () => {
     const { uc } = build();
     const view = await uc.execute({

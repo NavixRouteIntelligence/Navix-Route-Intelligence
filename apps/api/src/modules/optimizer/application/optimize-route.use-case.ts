@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type {
+  EconomyMode,
   OptimizationStopInput,
   OptimizationStrategyName,
   OptimizationVehicleInput,
@@ -8,10 +9,12 @@ import type {
   RoutePlan as RoutePlanView,
   RouteStopView,
   VehicleRouteView,
+  VehicleType,
 } from '@navix/contracts';
 
 import { AUDIT_LOG, type AuditLogPort } from '../../../shared/audit/audit-log.port';
 import { NotFoundError, ValidationError } from '../../../shared/kernel/domain-error';
+import { estimateCo2Kg, weightsFor } from '../domain/economy';
 import { partitionByCapacity } from '../domain/fleet-partitioner';
 import { GeoPoint } from '../domain/geo-point';
 import { ZERO_DEMAND, type OptimizationStop } from '../domain/optimization-stop';
@@ -46,6 +49,7 @@ export interface OptimizeRouteCommand {
   strategy?: OptimizationStrategyName;
   averageSpeedKmh?: number;
   serviceTimeMinutes?: number;
+  economyMode?: EconomyMode;
   vehicle?: OptimizationVehicleInput;
   vehicles?: OptimizationVehicleInput[];
 }
@@ -115,6 +119,7 @@ export class OptimizeRouteUseCase {
       service,
       profile,
       strategyName: command.strategy,
+      weights: weightsFor(command.economyMode),
     });
     this.metrics.observeSolve(solved.strategyName, solved.solveSeconds, solved.stops.length);
     if (solved.capacity && !solved.capacity.feasible) this.metrics.markInfeasible();
@@ -129,15 +134,26 @@ export class OptimizeRouteUseCase {
         hasOrigin,
         ...(profile.type ? { vehicleType: profile.type } : {}),
         ...(command.vehicle ? { avoidTolls: profile.avoidTolls } : {}),
+        ...(command.economyMode ? { economyMode: command.economyMode } : {}),
       },
       stops: solved.stops,
-      metrics: solved.metrics,
+      metrics: this.withCo2(solved.metrics, profile.type, solved.metrics.totalDistanceKm),
       baseline: solved.baseline,
       savings: solved.savings,
       score: solved.score,
       explanation: solved.explanation,
       ...(solved.capacity ? { capacity: solved.capacity } : {}),
     });
+  }
+
+  /** Anexa a emissão de CO₂ estimada às métricas quando há tipo de veículo. */
+  private withCo2(
+    metrics: RouteMetrics,
+    vehicleType: VehicleType | null,
+    distanceKm: number,
+  ): RouteMetrics {
+    if (!vehicleType) return metrics;
+    return { ...metrics, estimatedCo2Kg: estimateCo2Kg(vehicleType, distanceKm) };
   }
 
   /** Caminho multi-veículo (ADR-0022 Fase 2): clustering + rota por veículo. */
@@ -180,6 +196,7 @@ export class OptimizeRouteUseCase {
         service,
         profile,
         strategyName: command.strategy,
+        weights: weightsFor(command.economyMode),
       });
       strategyName = solved.strategyName;
       this.metrics.observeSolve(solved.strategyName, solved.solveSeconds, solved.stops.length);
@@ -190,7 +207,7 @@ export class OptimizeRouteUseCase {
         vehicleIndex: v,
         ...(profile.type ? { vehicleType: profile.type } : {}),
         stops: solved.stops,
-        metrics: solved.metrics,
+        metrics: this.withCo2(solved.metrics, profile.type, solved.metrics.totalDistanceKm),
         ...(solved.capacity ? { capacity: solved.capacity } : {}),
       });
     }
@@ -216,7 +233,7 @@ export class OptimizeRouteUseCase {
       r.stops.map((s) => ({ ...s, sequence: ++seq })),
     );
 
-    const metrics = this.sumMetrics(solvedRoutes.map((r) => r.metrics));
+    const metrics = this.sumMetrics(routes.map((r) => r.metrics));
     const baseline = this.sumMetrics(solvedRoutes.map((r) => r.baseline));
     const savings = computeSavings(baseline, metrics);
 
@@ -243,6 +260,7 @@ export class OptimizeRouteUseCase {
         hasOrigin,
         vehicleCount: routes.length,
         ...(unassignedStops.length > 0 ? { unassignedCount: unassignedStops.length } : {}),
+        ...(command.economyMode ? { economyMode: command.economyMode } : {}),
       },
       stops,
       metrics,
@@ -259,7 +277,9 @@ export class OptimizeRouteUseCase {
     const acc: RouteMetrics = { totalDistanceKm: 0, totalTimeMinutes: 0, stops: 0 };
     let weight = 0;
     let volume = 0;
+    let co2 = 0;
     let hasDemand = false;
+    let hasCo2 = false;
     for (const m of list) {
       acc.totalDistanceKm += m.totalDistanceKm;
       acc.totalTimeMinutes += m.totalTimeMinutes;
@@ -269,6 +289,10 @@ export class OptimizeRouteUseCase {
         weight += m.totalWeightKg ?? 0;
         volume += m.totalVolumeM3 ?? 0;
       }
+      if (m.estimatedCo2Kg !== undefined) {
+        hasCo2 = true;
+        co2 += m.estimatedCo2Kg;
+      }
     }
     acc.totalDistanceKm = round(acc.totalDistanceKm);
     acc.totalTimeMinutes = round(acc.totalTimeMinutes);
@@ -276,6 +300,7 @@ export class OptimizeRouteUseCase {
       acc.totalWeightKg = round(weight);
       acc.totalVolumeM3 = round(volume);
     }
+    if (hasCo2) acc.estimatedCo2Kg = round(co2);
     return acc;
   }
 
