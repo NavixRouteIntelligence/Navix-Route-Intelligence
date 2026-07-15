@@ -33,6 +33,17 @@ export interface AccessInstructionView {
   text: string;
 }
 
+/** Dificuldade prevista de estacionamento no destino (ADR-0029). */
+export type ParkingDifficulty = 'easy' | 'moderate' | 'hard';
+
+export interface ParkingPredictionView {
+  difficulty: ParkingDifficulty;
+  /** Confiança da previsão, 0..1. */
+  confidence: number;
+  /** Caminhada estimada do estacionamento até a porta (min). */
+  walkMinutes: number;
+}
+
 /** Perfil do motorista aprendido/override (IA personalizada). */
 export interface DriverProfileInput {
   /** Multiplicador da velocidade base (1 = neutro; >1 mais rápido). */
@@ -71,6 +82,8 @@ export interface ScheduledStopView {
   timeWindowRespected: boolean | null;
   /** Instruções de acesso ao destino (ADR-0028). Presente quando há observações. */
   access?: AccessInstructionView[];
+  /** Previsão de estacionamento no destino (ADR-0029). */
+  parking?: ParkingPredictionView;
 }
 
 export interface RouteScheduleView {

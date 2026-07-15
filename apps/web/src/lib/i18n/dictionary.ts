@@ -127,6 +127,12 @@ const pt_BR = {
   'access.gate_code': 'Código',
   'access.reception': 'Portaria',
   'access.note': 'Observação',
+
+  'parking.title': 'Estacionamento',
+  'parking.easy': 'Fácil',
+  'parking.moderate': 'Moderado',
+  'parking.hard': 'Difícil',
+  'parking.walk': 'a pé',
 };
 
 type Keys = typeof pt_BR;
@@ -259,6 +265,12 @@ const en: Keys = {
   'access.gate_code': 'Code',
   'access.reception': 'Reception',
   'access.note': 'Note',
+
+  'parking.title': 'Parking',
+  'parking.easy': 'Easy',
+  'parking.moderate': 'Moderate',
+  'parking.hard': 'Hard',
+  'parking.walk': 'walk',
 };
 
 const es: Keys = {
@@ -369,6 +381,12 @@ const es: Keys = {
   'access.gate_code': 'Código',
   'access.reception': 'Recepción',
   'access.note': 'Nota',
+
+  'parking.title': 'Aparcamiento',
+  'parking.easy': 'Fácil',
+  'parking.moderate': 'Moderado',
+  'parking.hard': 'Difícil',
+  'parking.walk': 'a pie',
 };
 
 export const DICTIONARY: Record<Locale, Keys> = {
