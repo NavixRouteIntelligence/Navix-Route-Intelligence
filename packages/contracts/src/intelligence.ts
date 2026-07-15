@@ -36,6 +36,9 @@ export interface AccessInstructionView {
 /** Dificuldade prevista de estacionamento no destino (ADR-0029). */
 export type ParkingDifficulty = 'easy' | 'moderate' | 'hard';
 
+/** Valores de `ParkingDifficulty` para validação em runtime. */
+export const PARKING_DIFFICULTIES: readonly ParkingDifficulty[] = ['easy', 'moderate', 'hard'];
+
 export interface ParkingPredictionView {
   difficulty: ParkingDifficulty;
   /** Confiança da previsão, 0..1. */
@@ -204,4 +207,49 @@ export interface RouteIntelligenceReport {
     punctuality: number;
     source: DriverProfileSource;
   };
+}
+
+/**
+ * Inteligência coletiva (ADR-0031). Observações compartilhadas pelos motoristas
+ * de um tenant, agregadas por **célula de localização** para realimentar as
+ * previsões — o que a frota aprende em campo vira conhecimento comum.
+ */
+export type ObservationKind = 'parking' | 'service_time' | 'access';
+
+export interface RecordObservationRequest {
+  latitude: number;
+  longitude: number;
+  kind: ObservationKind;
+  /** `kind='parking'`: dificuldade real encontrada. */
+  parkingDifficulty?: ParkingDifficulty;
+  /** `kind='service_time'`: minutos reais de atendimento. */
+  serviceMinutes?: number;
+  /** `kind='access'`: dica de acesso confirmada em campo. */
+  accessTip?: string;
+}
+
+export interface RecordObservationResult {
+  id: string;
+  /** Célula de localização a que a observação foi atribuída. */
+  cell: string;
+}
+
+/** Estacionamento típico segundo a comunidade (ADR-0031). */
+export interface CollectiveParkingInsight {
+  difficulty: ParkingDifficulty;
+  /** Confiança pela quantidade/concordância das observações, 0..1. */
+  confidence: number;
+}
+
+export interface CollectiveInsightView {
+  /** Célula de localização agregada (~110 m). */
+  cell: string;
+  /** Total de observações que embasam o insight na célula. */
+  sampleSize: number;
+  /** Estacionamento típico; presente apenas com amostra suficiente. */
+  parking?: CollectiveParkingInsight;
+  /** Tempo de atendimento típico (min); presente apenas com amostra suficiente. */
+  typicalServiceMinutes?: number;
+  /** Dicas de acesso confirmadas por motoristas (deduplicadas). */
+  accessTips: string[];
 }

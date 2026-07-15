@@ -1,8 +1,10 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type {
   AuthenticatedUser,
+  CollectiveInsightView,
   LoadPlanView,
+  RecordObservationResult,
   ResourceResponse,
   RouteIntelligenceReport,
 } from '@navix/contracts';
@@ -11,8 +13,12 @@ import { CurrentUser } from '../../../shared/interface/current-user.decorator';
 import { JwtAuthGuard } from '../../../shared/security/jwt-auth.guard';
 import { RolesGuard } from '../../../shared/security/roles.guard';
 import { ForecastRouteUseCase } from '../application/forecast-route.use-case';
+import { GetCollectiveInsightUseCase } from '../application/get-collective-insight.use-case';
 import { PlanLoadUseCase } from '../application/plan-load.use-case';
+import { RecordObservationUseCase } from '../application/record-observation.use-case';
+import { InsightQueryDto } from './dto/insight.query.dto';
 import { LoadPlanDto } from './dto/load-plan.dto';
+import { RecordObservationDto } from './dto/record-observation.dto';
 import { RouteForecastDto } from './dto/route-forecast.dto';
 
 /**
@@ -28,6 +34,8 @@ export class IntelligenceController {
   constructor(
     private readonly forecast: ForecastRouteUseCase,
     private readonly loadPlan: PlanLoadUseCase,
+    private readonly recordObservation: RecordObservationUseCase,
+    private readonly collectiveInsight: GetCollectiveInsightUseCase,
   ) {}
 
   @Post('route-forecast')
@@ -51,6 +59,38 @@ export class IntelligenceController {
     @Body() dto: LoadPlanDto,
   ): ResourceResponse<LoadPlanView> {
     const data = this.loadPlan.execute({ ...dto, tenantId: user.tenantId });
+    return { data };
+  }
+
+  @Post('observations')
+  @ApiOperation({
+    summary: 'Inteligência coletiva: registra uma observação de campo do motorista',
+  })
+  async observe(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: RecordObservationDto,
+  ): Promise<ResourceResponse<RecordObservationResult>> {
+    const data = await this.recordObservation.execute({
+      ...dto,
+      tenantId: user.tenantId,
+      driverId: user.id,
+    });
+    return { data };
+  }
+
+  @Get('insights')
+  @ApiOperation({
+    summary: 'Inteligência coletiva: insight agregado da comunidade por localização',
+  })
+  async insights(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: InsightQueryDto,
+  ): Promise<ResourceResponse<CollectiveInsightView>> {
+    const data = await this.collectiveInsight.execute({
+      tenantId: user.tenantId,
+      latitude: query.latitude,
+      longitude: query.longitude,
+    });
     return { data };
   }
 }

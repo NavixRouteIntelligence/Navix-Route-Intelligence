@@ -147,6 +147,15 @@ const pt_BR = {
   'load.warning.weight_over_capacity': 'Excede a capacidade de peso',
   'load.warning.volume_over_capacity': 'Excede a capacidade de volume',
   'load.warning.fragile_under_load': 'Item frágil pode ficar sob carga',
+
+  'insight.title': 'Inteligência coletiva',
+  'insight.subtitle': 'O que a frota aprendeu neste local',
+  'insight.empty': 'Ainda sem observações suficientes aqui',
+  'insight.samples': 'observações',
+  'insight.parking': 'Estacionamento típico',
+  'insight.service': 'Atendimento típico',
+  'insight.tips': 'Dicas de acesso da comunidade',
+  'insight.minutes': 'min',
 };
 
 type Keys = typeof pt_BR;
@@ -299,6 +308,15 @@ const en: Keys = {
   'load.warning.weight_over_capacity': 'Exceeds weight capacity',
   'load.warning.volume_over_capacity': 'Exceeds volume capacity',
   'load.warning.fragile_under_load': 'Fragile item may sit under load',
+
+  'insight.title': 'Collective intelligence',
+  'insight.subtitle': 'What the fleet has learned at this spot',
+  'insight.empty': 'Not enough observations here yet',
+  'insight.samples': 'observations',
+  'insight.parking': 'Typical parking',
+  'insight.service': 'Typical service',
+  'insight.tips': 'Community access tips',
+  'insight.minutes': 'min',
 };
 
 const es: Keys = {
@@ -429,6 +447,15 @@ const es: Keys = {
   'load.warning.weight_over_capacity': 'Supera la capacidad de peso',
   'load.warning.volume_over_capacity': 'Supera la capacidad de volumen',
   'load.warning.fragile_under_load': 'El artículo frágil puede quedar bajo carga',
+
+  'insight.title': 'Inteligencia colectiva',
+  'insight.subtitle': 'Lo que la flota aprendió en este lugar',
+  'insight.empty': 'Aún no hay suficientes observaciones aquí',
+  'insight.samples': 'observaciones',
+  'insight.parking': 'Aparcamiento típico',
+  'insight.service': 'Atención típica',
+  'insight.tips': 'Consejos de acceso de la comunidad',
+  'insight.minutes': 'min',
 };
 
 export const DICTIONARY: Record<Locale, Keys> = {
