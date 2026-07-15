@@ -10,6 +10,10 @@ import type {
 
 import { ValidationError } from '../../../shared/kernel/domain-error';
 import type { LatLng } from '../../../shared/kernel/geo';
+import {
+  ACCESS_INSTRUCTIONS,
+  type AccessInstructionsPort,
+} from '../domain/access-instructions.port';
 import { analyzeDelays } from '../domain/delay-risk';
 import { planDeparture } from '../domain/departure-planner';
 import {
@@ -41,6 +45,7 @@ export class ForecastRouteUseCase {
   constructor(
     @Inject(TRAFFIC_MODEL) private readonly traffic: TrafficModelPort,
     @Inject(DRIVER_PROFILE_SOURCE) private readonly driverSource: DriverProfileSourcePort,
+    @Inject(ACCESS_INSTRUCTIONS) private readonly access: AccessInstructionsPort,
   ) {}
 
   async execute(command: ForecastRouteCommand): Promise<RouteIntelligenceReport> {
@@ -89,8 +94,12 @@ export class ForecastRouteUseCase {
     const fuel = adviseFuel(vehicleType, schedule.totalDistanceKm, command.currentFuelPercent);
     const factorAtDeparture = this.traffic.factor(stops[0].point, departurePlan.departure);
 
+    const accessById = new Map(
+      command.stops.map((s) => [s.id, this.access.instructionsFor({ accessNotes: s.accessNotes })]),
+    );
+
     return {
-      schedule: this.toScheduleView(schedule),
+      schedule: this.toScheduleView(schedule, accessById),
       delays,
       fuel,
       departure: {
@@ -124,22 +133,29 @@ export class ForecastRouteUseCase {
     return { profile: NEUTRAL_DRIVER_PROFILE, source: 'default' };
   }
 
-  private toScheduleView(schedule: RouteSchedule): RouteScheduleView {
+  private toScheduleView(
+    schedule: RouteSchedule,
+    accessById: Map<string, ReturnType<AccessInstructionsPort['instructionsFor']>>,
+  ): RouteScheduleView {
     return {
       departureAt: schedule.departure.toISOString(),
       completionAt: schedule.completion.toISOString(),
       totalMinutes: schedule.totalMinutes,
       totalDistanceKm: schedule.totalDistanceKm,
-      stops: schedule.stops.map((s) => ({
-        id: s.id,
-        sequence: s.sequence,
-        etaMinutes: s.etaMinutes,
-        arrivalAt: s.arrivalAt.toISOString(),
-        legDistanceKm: s.legDistanceKm,
-        cumulativeDistanceKm: s.cumulativeDistanceKm,
-        serviceMinutes: s.serviceMinutes,
-        timeWindowRespected: s.timeWindowRespected,
-      })),
+      stops: schedule.stops.map((s) => {
+        const access = accessById.get(s.id);
+        return {
+          id: s.id,
+          sequence: s.sequence,
+          etaMinutes: s.etaMinutes,
+          arrivalAt: s.arrivalAt.toISOString(),
+          legDistanceKm: s.legDistanceKm,
+          cumulativeDistanceKm: s.cumulativeDistanceKm,
+          serviceMinutes: s.serviceMinutes,
+          timeWindowRespected: s.timeWindowRespected,
+          ...(access && access.length > 0 ? { access } : {}),
+        };
+      }),
     };
   }
 }
