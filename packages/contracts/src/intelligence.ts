@@ -132,6 +132,66 @@ export interface TrafficContextView {
 
 export type DriverProfileSource = 'default' | 'learned' | 'override';
 
+/**
+ * Organização otimizada da carga (ADR-0030). Item a carregar, na ordem de
+ * entrega pretendida (`sequence` = 1 é a **primeira** parada a ser entregue).
+ */
+export interface LoadItemInput {
+  id: string;
+  /** Ordem de entrega (1 = primeira a sair). */
+  sequence: number;
+  /** Peso do item (kg). Opcional; default 0. */
+  weightKg?: number;
+  /** Volume do item (m³). Opcional; default 0. */
+  volumeM3?: number;
+  /** Item frágil — deve ficar por cima, sem carga pesada em cima. */
+  fragile?: boolean;
+  /** Rótulo curto (ex.: cliente/nota). Apenas apresentação. */
+  label?: string;
+}
+
+export interface LoadPlanRequest {
+  items: LoadItemInput[];
+  vehicleType?: VehicleType;
+  /** Capacidade de peso do veículo (kg). Default: pelo tipo, se informado. */
+  capacityKg?: number;
+  /** Capacidade de volume do veículo (m³). Default: pelo tipo, se informado. */
+  capacityVolumeM3?: number;
+}
+
+/** Zona de estiva sugerida — porta (acesso fácil) → fundo (carregado primeiro). */
+export type LoadZone = 'door' | 'middle' | 'front';
+
+export interface LoadPlacementView {
+  id: string;
+  label?: string;
+  /** Ordem de **carregamento** (1 = carregado primeiro, vai ao fundo). */
+  loadOrder: number;
+  /** Ordem de **entrega** de origem (1 = primeira a sair). */
+  deliverySequence: number;
+  zone: LoadZone;
+  weightKg: number;
+  volumeM3: number;
+  fragile: boolean;
+}
+
+export interface LoadPlanView {
+  /** Itens na ordem de carregamento (LIFO: última entrega no fundo). */
+  placements: LoadPlacementView[];
+  totalWeightKg: number;
+  totalVolumeM3: number;
+  /** Capacidade considerada; null quando não informada nem derivável do tipo. */
+  capacityKg: number | null;
+  capacityVolumeM3: number | null;
+  /** Ocupação 0..1; null quando não há capacidade de referência. */
+  weightUtilization: number | null;
+  volumeUtilization: number | null;
+  /** Excede a capacidade de peso ou volume. */
+  overCapacity: boolean;
+  /** Avisos operacionais (excesso, frágil sob carga, etc.). */
+  warnings: string[];
+}
+
 export interface RouteIntelligenceReport {
   schedule: RouteScheduleView;
   delays: DelayRiskView[];

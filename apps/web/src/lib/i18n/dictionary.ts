@@ -133,6 +133,20 @@ const pt_BR = {
   'parking.moderate': 'Moderado',
   'parking.hard': 'Difícil',
   'parking.walk': 'a pé',
+
+  'load.title': 'Organização da carga',
+  'load.subtitle': 'Ordem de carregamento (último a entregar vai ao fundo)',
+  'load.order': 'Ordem',
+  'load.zone.door': 'Porta',
+  'load.zone.middle': 'Meio',
+  'load.zone.front': 'Fundo',
+  'load.fragile': 'Frágil',
+  'load.utilization': 'Ocupação',
+  'load.weight': 'Peso',
+  'load.volume': 'Volume',
+  'load.warning.weight_over_capacity': 'Excede a capacidade de peso',
+  'load.warning.volume_over_capacity': 'Excede a capacidade de volume',
+  'load.warning.fragile_under_load': 'Item frágil pode ficar sob carga',
 };
 
 type Keys = typeof pt_BR;
@@ -271,6 +285,20 @@ const en: Keys = {
   'parking.moderate': 'Moderate',
   'parking.hard': 'Hard',
   'parking.walk': 'walk',
+
+  'load.title': 'Load organization',
+  'load.subtitle': 'Loading order (last to deliver goes to the back)',
+  'load.order': 'Order',
+  'load.zone.door': 'Door',
+  'load.zone.middle': 'Middle',
+  'load.zone.front': 'Back',
+  'load.fragile': 'Fragile',
+  'load.utilization': 'Utilization',
+  'load.weight': 'Weight',
+  'load.volume': 'Volume',
+  'load.warning.weight_over_capacity': 'Exceeds weight capacity',
+  'load.warning.volume_over_capacity': 'Exceeds volume capacity',
+  'load.warning.fragile_under_load': 'Fragile item may sit under load',
 };
 
 const es: Keys = {
@@ -387,6 +415,20 @@ const es: Keys = {
   'parking.moderate': 'Moderado',
   'parking.hard': 'Difícil',
   'parking.walk': 'a pie',
+
+  'load.title': 'Organización de la carga',
+  'load.subtitle': 'Orden de carga (lo último en entregar va al fondo)',
+  'load.order': 'Orden',
+  'load.zone.door': 'Puerta',
+  'load.zone.middle': 'Medio',
+  'load.zone.front': 'Fondo',
+  'load.fragile': 'Frágil',
+  'load.utilization': 'Ocupación',
+  'load.weight': 'Peso',
+  'load.volume': 'Volumen',
+  'load.warning.weight_over_capacity': 'Supera la capacidad de peso',
+  'load.warning.volume_over_capacity': 'Supera la capacidad de volumen',
+  'load.warning.fragile_under_load': 'El artículo frágil puede quedar bajo carga',
 };
 
 export const DICTIONARY: Record<Locale, Keys> = {

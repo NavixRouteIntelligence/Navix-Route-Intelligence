@@ -6,11 +6,14 @@ import { DomainExceptionFilter } from '../src/shared/interface/domain-exception.
 import { JwtAuthGuard } from '../src/shared/security/jwt-auth.guard';
 import { RolesGuard } from '../src/shared/security/roles.guard';
 import { ForecastRouteUseCase } from '../src/modules/intelligence/application/forecast-route.use-case';
+import { PlanLoadUseCase } from '../src/modules/intelligence/application/plan-load.use-case';
 import { ACCESS_INSTRUCTIONS } from '../src/modules/intelligence/domain/access-instructions.port';
 import { DRIVER_PROFILE_SOURCE } from '../src/modules/intelligence/domain/driver-profile-source.port';
+import { LOAD_PLANNER } from '../src/modules/intelligence/domain/load-planner.port';
 import { PARKING_PREDICTOR } from '../src/modules/intelligence/domain/parking-predictor.port';
 import { TRAFFIC_MODEL, TimeContextTrafficModel } from '../src/modules/intelligence/domain/traffic-model';
 import { HeuristicAccessInstructions } from '../src/modules/intelligence/infrastructure/heuristic-access-instructions';
+import { HeuristicLoadPlanner } from '../src/modules/intelligence/infrastructure/heuristic-load-planner';
 import { HeuristicParkingPredictor } from '../src/modules/intelligence/infrastructure/heuristic-parking-predictor';
 import { NoHistoryDriverProfileSource } from '../src/modules/intelligence/infrastructure/no-history-driver-profile.source';
 import { IntelligenceController } from '../src/modules/intelligence/interface/intelligence.controller';
@@ -25,10 +28,12 @@ describe('Intelligence (e2e)', () => {
       controllers: [IntelligenceController],
       providers: [
         ForecastRouteUseCase,
+        PlanLoadUseCase,
         { provide: TRAFFIC_MODEL, useClass: TimeContextTrafficModel },
         { provide: DRIVER_PROFILE_SOURCE, useClass: NoHistoryDriverProfileSource },
         { provide: ACCESS_INSTRUCTIONS, useClass: HeuristicAccessInstructions },
         { provide: PARKING_PREDICTOR, useClass: HeuristicParkingPredictor },
+        { provide: LOAD_PLANNER, useClass: HeuristicLoadPlanner },
       ],
     })
       .overrideGuard(JwtAuthGuard)
@@ -85,6 +90,31 @@ describe('Intelligence (e2e)', () => {
     await request(app.getHttpServer())
       .post('/api/v1/intelligence/route-forecast')
       .send({ stops: [] })
+      .expect(400);
+  });
+
+  it('POST /api/v1/intelligence/load-plan retorna o plano de carga (LIFO)', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/api/v1/intelligence/load-plan')
+      .send({
+        vehicleType: 'van',
+        items: [
+          { id: 'a', sequence: 1, weightKg: 100, volumeM3: 1 },
+          { id: 'b', sequence: 2, weightKg: 200, volumeM3: 2, fragile: true },
+        ],
+      })
+      .expect(201);
+
+    expect(res.body.data.placements.map((p: { id: string }) => p.id)).toEqual(['b', 'a']);
+    expect(res.body.data.totalWeightKg).toBe(300);
+    expect(res.body.data.capacityKg).toBe(1200);
+    expect(res.body.data.overCapacity).toBe(false);
+  });
+
+  it('rejeita plano de carga sem itens (400)', async () => {
+    await request(app.getHttpServer())
+      .post('/api/v1/intelligence/load-plan')
+      .send({ items: [] })
       .expect(400);
   });
 });
