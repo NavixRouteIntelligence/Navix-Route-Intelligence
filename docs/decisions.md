@@ -51,6 +51,7 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 | ADR-0025 | Navix Intelligence — 1ª camada (heurísticas atrás de ports, ML-ready) | Aceito | ✅ `POST /intelligence/route-forecast`: cronograma/ETA + conclusão, atrasos+mitigação, combustível, melhor horário de saída, trânsito por contexto temporal e perfil de motorista; tudo em serviços de domínio + ports (`TrafficModelPort`/`DriverProfileSourcePort`) prontos para ML/LLM | 2026-07-14 |
 | ADR-0026 | Modo Economia — otimizar por tempo/combustível/pedágio/CO₂ | Aceito | ✅ `economyMode` mapeia preset de pesos sobre o motor existente (reuso ADR-0022/24); estimativa de CO₂ na métrica; seletor no web (DS + i18n 4 locales + a11y). Diferenciação fina de tempo/pedágio real depende do provedor de mapas (próximo PR) | 2026-07-14 |
 | ADR-0027 | Provedor de mapas/roteamento (Mapbox) com fallback Haversine | Aceito | ✅ `RoutingProviderPort` (matriz distância+duração assíncrona); adaptador Mapbox Matrix API (real, opt-in por `MAPS_PROVIDER`+`MAPBOX_TOKEN`) degrada para Haversine em qualquer falha; solver refatorado para async | 2026-07-15 |
+| ADR-0028 | Navegação contextual — instruções de acesso ao destino | Aceito | ✅ `AccessInstructionsPort` (classificador heurístico de `accessNotes`) estende o route-forecast; `access[]` por parada (porta/doca/interfone/código/portaria/nota); componente web `AccessInstructionList` (DS/i18n/a11y). Fecha a Fase A | 2026-07-15 |
 
 ---
 
@@ -331,6 +332,17 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 
 ---
 
+## ADR-0028 — Navegação contextual (instruções de acesso ao destino)
+
+- **Status:** Aceito · **Data:** 2026-07-15
+- **Status da implementação:** ✅ Implementado (2º recurso da Fase A, **fecha a Fase A**). O `route-forecast` (ADR-0025) passa a derivar **instruções de acesso** por parada: um `AccessInstructionsPort` classifica as observações livres (`accessNotes`, ex.: `delivery.notes`) em tipos — **entrada, doca, interfone, código, portaria, nota** — via `classifyAccessNotes` (heurística por palavras-chave, pura e testada). Cada `ScheduledStopView` ganha `access[]` quando há observações. No **web**: componente reutilizável `AccessInstructionList` (ícone + rótulo por tipo, tokens do DS, i18n PT-BR/PT-PT/EN/ES, a11y) + cliente `intelligenceApi.routeForecast`.
+- **Contexto:** "Chegou ao destino" não basta na última milha: o motorista precisa saber **como acessar** (porta de serviço, doca, interfone, código, deixar na portaria). A informação existe solta nas observações da entrega — faltava estruturá-la.
+- **Decisão:** Extrair as instruções por um **port** (ML-ready), com um classificador heurístico determinístico agora e NLP/LLM depois, **sem tocar o caso de uso**. A UI é um componente de domínio reutilizável, plugável na rota do motorista/previsão.
+- **Alternativas consideradas:** **Campo estruturado por entrega** (exigiria migração do Delivery + recoleta de dados; a extração das observações aproveita o que já existe e evolui p/ estruturado depois); **LLM já** (sem pipeline/custo justificados nesta camada — a port deixa plugável); **texto cru sem classificação** (pior UX — o tipo permite ícone/priorização).
+- **Consequências:** Navegação de acesso premium a partir de dados existentes, i18n e acessível. **Pendências:** campo de acesso estruturado no agregado Delivery; NLP/LLM no classificador; feedback do motorista realimentando a base (o que deu certo na visita); integração numa página de previsão dedicada do motorista.
+
+---
+
 ## Template
 
 ```markdown
@@ -368,3 +380,4 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 | 2026-07-14 | 1.5 | AI Eng. | ADR-0025: Navix Intelligence (1ª camada) — route-forecast com cronograma/ETA, atrasos, combustível, melhor saída; heurísticas atrás de ports prontas para ML/LLM |
 | 2026-07-15 | 1.6 | Design+Arch | ADR-0026: Modo Economia (tempo/combustível/pedágio/CO₂) — preset de pesos + CO₂ + seletor no web (DS/i18n/a11y); Fase A da experiência do motorista |
 | 2026-07-15 | 1.7 | Arquitetura | ADR-0027: RoutingProviderPort + adaptador Mapbox Matrix API (fallback Haversine); solver refatorado para async |
+| 2026-07-15 | 1.8 | Design+Arch | ADR-0028: Navegação contextual — AccessInstructionsPort + access[] no route-forecast + AccessInstructionList no web; encerra a Fase A |

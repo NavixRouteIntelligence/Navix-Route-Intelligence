@@ -2,12 +2,13 @@ import { ValidationError } from '../../../shared/kernel/domain-error';
 import type { DriverProfile } from '../domain/driver-profile';
 import type { DriverProfileSourcePort } from '../domain/driver-profile-source.port';
 import type { TrafficModelPort } from '../domain/traffic-model';
+import { HeuristicAccessInstructions } from '../infrastructure/heuristic-access-instructions';
 import { ForecastRouteUseCase } from './forecast-route.use-case';
 
 function build(learned: DriverProfile | null = null) {
   const traffic: TrafficModelPort = { factor: () => 1 };
   const source: DriverProfileSourcePort = { get: async () => learned };
-  return new ForecastRouteUseCase(traffic, source);
+  return new ForecastRouteUseCase(traffic, source, new HeuristicAccessInstructions());
 }
 
 const base = {
@@ -44,6 +45,20 @@ describe('ForecastRouteUseCase', () => {
     const report = await build(learned).execute({ ...base, driverId: 'd1' });
     expect(report.driver.source).toBe('learned');
     expect(report.driver.speedFactor).toBe(1.3);
+  });
+
+  it('deriva instruções de acesso das observações da parada (ADR-0028)', async () => {
+    const report = await build().execute({
+      ...base,
+      stops: [
+        { id: 'a', latitude: 0, longitude: 0 },
+        { id: 'b', latitude: 0, longitude: 0.2, accessNotes: 'Entrar pela doca; interfone 5' },
+      ],
+    });
+    const stopB = report.schedule.stops.find((s) => s.id === 'b');
+    expect(stopB?.access?.map((i) => i.kind)).toEqual(['dock', 'intercom']);
+    const stopA = report.schedule.stops.find((s) => s.id === 'a');
+    expect(stopA?.access).toBeUndefined();
   });
 
   it('rejeita previsão sem paradas', async () => {

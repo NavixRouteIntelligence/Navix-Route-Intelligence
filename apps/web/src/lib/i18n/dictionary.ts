@@ -119,6 +119,14 @@ const pt_BR = {
   'economy.tolls.desc': 'Evita trechos com pedágio.',
   'economy.co2.desc': 'Minimiza as emissões.',
   'optimizer.co2': 'Emissão de CO₂',
+
+  'access.title': 'Acesso ao destino',
+  'access.entrance': 'Entrada',
+  'access.dock': 'Doca',
+  'access.intercom': 'Interfone',
+  'access.gate_code': 'Código',
+  'access.reception': 'Portaria',
+  'access.note': 'Observação',
 };
 
 type Keys = typeof pt_BR;
@@ -243,6 +251,14 @@ const en: Keys = {
   'economy.tolls.desc': 'Avoids toll segments.',
   'economy.co2.desc': 'Minimizes emissions.',
   'optimizer.co2': 'CO₂ emissions',
+
+  'access.title': 'Destination access',
+  'access.entrance': 'Entrance',
+  'access.dock': 'Dock',
+  'access.intercom': 'Intercom',
+  'access.gate_code': 'Code',
+  'access.reception': 'Reception',
+  'access.note': 'Note',
 };
 
 const es: Keys = {
@@ -345,6 +361,14 @@ const es: Keys = {
   'economy.tolls.desc': 'Evita tramos con peaje.',
   'economy.co2.desc': 'Minimiza las emisiones.',
   'optimizer.co2': 'Emisiones de CO₂',
+
+  'access.title': 'Acceso al destino',
+  'access.entrance': 'Entrada',
+  'access.dock': 'Muelle',
+  'access.intercom': 'Portero',
+  'access.gate_code': 'Código',
+  'access.reception': 'Recepción',
+  'access.note': 'Nota',
 };
 
 export const DICTIONARY: Record<Locale, Keys> = {

@@ -15,6 +15,22 @@ export interface ForecastStopInput {
   timeWindow?: TimeWindow | null;
   /** Tempo de atendimento específico da parada (min). */
   serviceTimeMinutes?: number;
+  /** Observações de acesso ao destino (ex.: `delivery.notes`). Origem das instruções. */
+  accessNotes?: string;
+}
+
+/** Tipo de instrução de acesso ao destino (navegação contextual — ADR-0028). */
+export type AccessInstructionKind =
+  | 'entrance'
+  | 'dock'
+  | 'intercom'
+  | 'gate_code'
+  | 'reception'
+  | 'note';
+
+export interface AccessInstructionView {
+  kind: AccessInstructionKind;
+  text: string;
 }
 
 /** Perfil do motorista aprendido/override (IA personalizada). */
@@ -53,6 +69,8 @@ export interface ScheduledStopView {
   serviceMinutes: number;
   /** null quando a parada não tem janela. */
   timeWindowRespected: boolean | null;
+  /** Instruções de acesso ao destino (ADR-0028). Presente quando há observações. */
+  access?: AccessInstructionView[];
 }
 
 export interface RouteScheduleView {

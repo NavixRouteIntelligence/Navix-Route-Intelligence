@@ -17,6 +17,7 @@ import {
   IsPositive,
   IsString,
   Max,
+  MaxLength,
   Min,
   ValidateNested,
 } from 'class-validator';
@@ -66,6 +67,15 @@ export class ForecastStopDto implements ForecastStopInput {
   @Min(0)
   @Max(1440)
   serviceTimeMinutes?: number;
+
+  @ApiPropertyOptional({
+    example: 'Entrar pela doca dos fundos; interfone 12; código do portão 4589.',
+    description: 'Observações de acesso (viram instruções contextuais).',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  accessNotes?: string;
 }
 
 export class DriverProfileDto implements DriverProfileInput {

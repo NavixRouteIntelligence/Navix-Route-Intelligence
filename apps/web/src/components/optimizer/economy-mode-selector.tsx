@@ -3,8 +3,8 @@
 import type { EconomyMode } from '@navix/contracts';
 import { Clock, Coins, Fuel, Leaf, Scale, type LucideIcon } from 'lucide-react';
 
-import { useT } from '@/lib/i18n/locale-provider';
 import type { TranslationKey } from '@/lib/i18n/dictionary';
+import { useT } from '@/lib/i18n/locale-provider';
 import { cn } from '@/lib/utils';
 
 type Option = {

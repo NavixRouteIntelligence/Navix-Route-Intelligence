@@ -6,8 +6,10 @@ import { DomainExceptionFilter } from '../src/shared/interface/domain-exception.
 import { JwtAuthGuard } from '../src/shared/security/jwt-auth.guard';
 import { RolesGuard } from '../src/shared/security/roles.guard';
 import { ForecastRouteUseCase } from '../src/modules/intelligence/application/forecast-route.use-case';
+import { ACCESS_INSTRUCTIONS } from '../src/modules/intelligence/domain/access-instructions.port';
 import { DRIVER_PROFILE_SOURCE } from '../src/modules/intelligence/domain/driver-profile-source.port';
 import { TRAFFIC_MODEL, TimeContextTrafficModel } from '../src/modules/intelligence/domain/traffic-model';
+import { HeuristicAccessInstructions } from '../src/modules/intelligence/infrastructure/heuristic-access-instructions';
 import { NoHistoryDriverProfileSource } from '../src/modules/intelligence/infrastructure/no-history-driver-profile.source';
 import { IntelligenceController } from '../src/modules/intelligence/interface/intelligence.controller';
 
@@ -23,6 +25,7 @@ describe('Intelligence (e2e)', () => {
         ForecastRouteUseCase,
         { provide: TRAFFIC_MODEL, useClass: TimeContextTrafficModel },
         { provide: DRIVER_PROFILE_SOURCE, useClass: NoHistoryDriverProfileSource },
+        { provide: ACCESS_INSTRUCTIONS, useClass: HeuristicAccessInstructions },
       ],
     })
       .overrideGuard(JwtAuthGuard)
