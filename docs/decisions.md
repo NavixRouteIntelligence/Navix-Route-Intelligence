@@ -53,6 +53,7 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 | ADR-0027 | Provedor de mapas/roteamento (Mapbox) com fallback Haversine | Aceito | ✅ `RoutingProviderPort` (matriz distância+duração assíncrona); adaptador Mapbox Matrix API (real, opt-in por `MAPS_PROVIDER`+`MAPBOX_TOKEN`) degrada para Haversine em qualquer falha; solver refatorado para async | 2026-07-15 |
 | ADR-0028 | Navegação contextual — instruções de acesso ao destino | Aceito | ✅ `AccessInstructionsPort` (classificador heurístico de `accessNotes`) estende o route-forecast; `access[]` por parada (porta/doca/interfone/código/portaria/nota); componente web `AccessInstructionList` (DS/i18n/a11y). Fecha a Fase A | 2026-07-15 |
 | ADR-0029 | Previsão inteligente de estacionamento (Fase B) | Aceito | ✅ `ParkingPredictorPort` (heurística que reusa `TrafficModelPort` como proxy de congestionamento, ML-ready) anexa `parking` (dificuldade fácil/moderado/difícil + confiança + minutos a pé) por parada no route-forecast; componente web `ParkingBadge` (DS/i18n 4 locales/a11y). Abre a Fase B | 2026-07-15 |
+| ADR-0030 | Organização otimizada da carga (Fase B) | Aceito | ✅ `POST /intelligence/load-plan`: `LoadPlannerPort` (heurística **LIFO** — última entrega ao fundo, ML-ready p/ bin packing 3D) devolve sequência de carregamento, zonas de estiva (porta/meio/fundo), ocupação de peso/volume e avisos (excesso, frágil sob carga); capacidade explícita ou por tipo de veículo; componente web `LoadPlanList` (DS/i18n 4 locales/a11y). Fecha a Fase B | 2026-07-15 |
 
 ---
 
@@ -355,6 +356,17 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 
 ---
 
+## ADR-0030 — Organização otimizada da carga (Fase B)
+
+- **Status:** Aceito · **Data:** 2026-07-15
+- **Status da implementação:** ✅ Implementado (2º recurso da **Fase B**, **fecha a Fase B**). Novo endpoint `POST /intelligence/load-plan`: dado um conjunto de itens com ordem de entrega e peso/volume/fragilidade, o `LoadPlannerPort` devolve um **plano de carregamento**. A heurística `planLoad` aplica **LIFO** — o que é entregue primeiro é carregado por último (fica junto à porta / por cima), minimizando remanejo — e calcula **zonas de estiva** (porta/meio/fundo), **ocupação** de peso/volume e **avisos** (excesso de capacidade, frágil sob carga). A capacidade vem explícita (`capacityKg`/`capacityVolumeM3`) ou é derivada do tipo de veículo. No **web**: componente reutilizável `LoadPlanList` (ordem, zona, frágil, ocupação e avisos; DS + i18n PT-BR/PT-PT/EN/ES + a11y).
+- **Contexto:** Depois de definir a rota, o motorista ainda perde tempo (e arrisca avarias) organizando a carga por instinto. A ordem de entrega já determina a estiva ótima — faltava traduzir isso num plano claro, com ocupação e alertas.
+- **Decisão:** Expor o plano por um **port** ML-ready — heurística LIFO determinística agora, **planejador 3D (bin packing)** ou modelo aprendido depois, **sem tocar consumidores**. Endpoint dedicado (separado do route-forecast) por ser uma preocupação física distinta do cronograma.
+- **Alternativas consideradas:** **Dobrar no route-forecast** (mistura estiva com cronograma; o endpoint dedicado mantém coesão e evolui isolado); **bin packing 3D já** (complexidade/tempo não justificados nesta camada — a port deixa plugável); **reusar o `VehicleProfile` do otimizador** para capacidade (violaria a fronteira entre módulos de negócio — mantida uma tabela local de capacidade por tipo, com **pendência** de consolidar os defaults de capacidade no `shared/kernel` para eliminar a duplicação sem acoplar os módulos).
+- **Consequências:** Preparação de carga premium, determinística, i18n e acessível, a partir da ordem de entrega. **Pendências:** consolidar capacidade por tipo de veículo no `shared/kernel` (unificar com `VehicleProfile`); planejador 3D/bin packing (dimensões, empilhamento, restrições de estiva); ligar o plano à rota otimizada e ao POD; realimentação do motorista (avarias/remanejo reais).
+
+---
+
 ## Template
 
 ```markdown
@@ -394,3 +406,4 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 | 2026-07-15 | 1.7 | Arquitetura | ADR-0027: RoutingProviderPort + adaptador Mapbox Matrix API (fallback Haversine); solver refatorado para async |
 | 2026-07-15 | 1.8 | Design+Arch | ADR-0028: Navegação contextual — AccessInstructionsPort + access[] no route-forecast + AccessInstructionList no web; encerra a Fase A |
 | 2026-07-15 | 1.9 | Design+Arch | ADR-0029: Previsão inteligente de estacionamento — ParkingPredictorPort (reusa TrafficModelPort) + parking por parada no route-forecast + ParkingBadge no web; abre a Fase B |
+| 2026-07-15 | 2.0 | Design+Arch | ADR-0030: Organização otimizada da carga — POST /intelligence/load-plan (LoadPlannerPort LIFO + zonas/ocupação/avisos) + LoadPlanList no web; encerra a Fase B |
