@@ -14,6 +14,10 @@ import {
   ACCESS_INSTRUCTIONS,
   type AccessInstructionsPort,
 } from '../domain/access-instructions.port';
+import {
+  PARKING_PREDICTOR,
+  type ParkingPredictorPort,
+} from '../domain/parking-predictor.port';
 import { analyzeDelays } from '../domain/delay-risk';
 import { planDeparture } from '../domain/departure-planner';
 import {
@@ -46,6 +50,7 @@ export class ForecastRouteUseCase {
     @Inject(TRAFFIC_MODEL) private readonly traffic: TrafficModelPort,
     @Inject(DRIVER_PROFILE_SOURCE) private readonly driverSource: DriverProfileSourcePort,
     @Inject(ACCESS_INSTRUCTIONS) private readonly access: AccessInstructionsPort,
+    @Inject(PARKING_PREDICTOR) private readonly parking: ParkingPredictorPort,
   ) {}
 
   async execute(command: ForecastRouteCommand): Promise<RouteIntelligenceReport> {
@@ -97,9 +102,12 @@ export class ForecastRouteUseCase {
     const accessById = new Map(
       command.stops.map((s) => [s.id, this.access.instructionsFor({ accessNotes: s.accessNotes })]),
     );
+    const pointById = new Map(
+      command.stops.map((s) => [s.id, { latitude: s.latitude, longitude: s.longitude }]),
+    );
 
     return {
-      schedule: this.toScheduleView(schedule, accessById),
+      schedule: this.toScheduleView(schedule, accessById, pointById),
       delays,
       fuel,
       departure: {
@@ -136,6 +144,7 @@ export class ForecastRouteUseCase {
   private toScheduleView(
     schedule: RouteSchedule,
     accessById: Map<string, ReturnType<AccessInstructionsPort['instructionsFor']>>,
+    pointById: Map<string, LatLng>,
   ): RouteScheduleView {
     return {
       departureAt: schedule.departure.toISOString(),
@@ -144,6 +153,7 @@ export class ForecastRouteUseCase {
       totalDistanceKm: schedule.totalDistanceKm,
       stops: schedule.stops.map((s) => {
         const access = accessById.get(s.id);
+        const point = pointById.get(s.id);
         return {
           id: s.id,
           sequence: s.sequence,
@@ -154,6 +164,7 @@ export class ForecastRouteUseCase {
           serviceMinutes: s.serviceMinutes,
           timeWindowRespected: s.timeWindowRespected,
           ...(access && access.length > 0 ? { access } : {}),
+          ...(point ? { parking: this.parking.predict({ point, arrivalAt: s.arrivalAt }) } : {}),
         };
       }),
     };

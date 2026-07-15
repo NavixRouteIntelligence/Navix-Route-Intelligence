@@ -52,6 +52,7 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 | ADR-0026 | Modo Economia — otimizar por tempo/combustível/pedágio/CO₂ | Aceito | ✅ `economyMode` mapeia preset de pesos sobre o motor existente (reuso ADR-0022/24); estimativa de CO₂ na métrica; seletor no web (DS + i18n 4 locales + a11y). Diferenciação fina de tempo/pedágio real depende do provedor de mapas (próximo PR) | 2026-07-14 |
 | ADR-0027 | Provedor de mapas/roteamento (Mapbox) com fallback Haversine | Aceito | ✅ `RoutingProviderPort` (matriz distância+duração assíncrona); adaptador Mapbox Matrix API (real, opt-in por `MAPS_PROVIDER`+`MAPBOX_TOKEN`) degrada para Haversine em qualquer falha; solver refatorado para async | 2026-07-15 |
 | ADR-0028 | Navegação contextual — instruções de acesso ao destino | Aceito | ✅ `AccessInstructionsPort` (classificador heurístico de `accessNotes`) estende o route-forecast; `access[]` por parada (porta/doca/interfone/código/portaria/nota); componente web `AccessInstructionList` (DS/i18n/a11y). Fecha a Fase A | 2026-07-15 |
+| ADR-0029 | Previsão inteligente de estacionamento (Fase B) | Aceito | ✅ `ParkingPredictorPort` (heurística que reusa `TrafficModelPort` como proxy de congestionamento, ML-ready) anexa `parking` (dificuldade fácil/moderado/difícil + confiança + minutos a pé) por parada no route-forecast; componente web `ParkingBadge` (DS/i18n 4 locales/a11y). Abre a Fase B | 2026-07-15 |
 
 ---
 
@@ -343,6 +344,17 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 
 ---
 
+## ADR-0029 — Previsão inteligente de estacionamento (Fase B)
+
+- **Status:** Aceito · **Data:** 2026-07-15
+- **Status da implementação:** ✅ Implementado (1º recurso da **Fase B**). O `route-forecast` (ADR-0025) passa a anexar uma **previsão de estacionamento** por parada: um `ParkingPredictorPort` estima **dificuldade** (fácil/moderado/difícil), **confiança** e **minutos a pé** até a porta no horário previsto de chegada. O adaptador heurístico `HeuristicParkingPredictor` **reutiliza o `TrafficModelPort`** (ADR-0025) como proxy de congestionamento local — sem nova dependência de dados. Cada `ScheduledStopView` ganha `parking?`. No **web**: componente reutilizável `ParkingBadge` (ícone + dificuldade com tom do DS + caminhada, i18n PT-BR/PT-PT/EN/ES, a11y).
+- **Contexto:** Na última milha, o tempo real de entrega inclui **encontrar vaga e caminhar** até a porta — invisível no ETA puro. Antecipar a dificuldade permite ao motorista se planejar (janela, veículo, aproximação) e melhora a precisão percebida do cronograma.
+- **Decisão:** Expor a previsão por um **port** ML-ready, com heurística determinística agora (proxy de trânsito) e modelo dedicado depois (histórico de permanência/vaga, tipo de via, horário), **sem tocar consumidores**. Reutilizar o sinal de trânsito já existente em vez de introduzir fonte nova.
+- **Alternativas consideradas:** **Modelo dedicado já** (sem dados de estacionamento coletados ainda — a port deixa plugável); **fonte externa de vagas** (custo/cobertura não justificados nesta camada; entra atrás da port depois); **ignorar estacionamento** (subestima a última milha — pior UX/precisão).
+- **Consequências:** Sinal premium de última milha a partir de dados existentes, i18n e acessível. **Pendências:** modelo dedicado com histórico de permanência/vaga por local e horário; realimentação do motorista (dificuldade real observada); sinais externos de disponibilidade de vaga; integração na página de previsão dedicada do motorista.
+
+---
+
 ## Template
 
 ```markdown
@@ -381,3 +393,4 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 | 2026-07-15 | 1.6 | Design+Arch | ADR-0026: Modo Economia (tempo/combustível/pedágio/CO₂) — preset de pesos + CO₂ + seletor no web (DS/i18n/a11y); Fase A da experiência do motorista |
 | 2026-07-15 | 1.7 | Arquitetura | ADR-0027: RoutingProviderPort + adaptador Mapbox Matrix API (fallback Haversine); solver refatorado para async |
 | 2026-07-15 | 1.8 | Design+Arch | ADR-0028: Navegação contextual — AccessInstructionsPort + access[] no route-forecast + AccessInstructionList no web; encerra a Fase A |
+| 2026-07-15 | 1.9 | Design+Arch | ADR-0029: Previsão inteligente de estacionamento — ParkingPredictorPort (reusa TrafficModelPort) + parking por parada no route-forecast + ParkingBadge no web; abre a Fase B |

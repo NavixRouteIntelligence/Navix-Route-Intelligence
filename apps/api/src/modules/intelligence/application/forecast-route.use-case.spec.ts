@@ -3,12 +3,18 @@ import type { DriverProfile } from '../domain/driver-profile';
 import type { DriverProfileSourcePort } from '../domain/driver-profile-source.port';
 import type { TrafficModelPort } from '../domain/traffic-model';
 import { HeuristicAccessInstructions } from '../infrastructure/heuristic-access-instructions';
+import { HeuristicParkingPredictor } from '../infrastructure/heuristic-parking-predictor';
 import { ForecastRouteUseCase } from './forecast-route.use-case';
 
 function build(learned: DriverProfile | null = null) {
   const traffic: TrafficModelPort = { factor: () => 1 };
   const source: DriverProfileSourcePort = { get: async () => learned };
-  return new ForecastRouteUseCase(traffic, source, new HeuristicAccessInstructions());
+  return new ForecastRouteUseCase(
+    traffic,
+    source,
+    new HeuristicAccessInstructions(),
+    new HeuristicParkingPredictor(traffic),
+  );
 }
 
 const base = {
@@ -32,6 +38,9 @@ describe('ForecastRouteUseCase', () => {
     expect(report.departure.recommendedDepartureAt).toEqual(expect.any(String));
     expect(report.traffic.factorAtDeparture).toBeGreaterThan(0);
     expect(report.driver.source).toBe('default');
+    // Previsão de estacionamento por parada (ADR-0029).
+    expect(report.schedule.stops[0].parking?.difficulty).toBe('easy');
+    expect(report.schedule.stops[0].parking?.walkMinutes).toBeGreaterThan(0);
   });
 
   it('usa o override de perfil quando informado', async () => {

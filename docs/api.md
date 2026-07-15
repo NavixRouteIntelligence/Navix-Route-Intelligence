@@ -414,6 +414,7 @@ POST /api/v1/intelligence/route-forecast   # relatório de previsão de rota
   - `traffic` — multiplicador de congestionamento na partida + janela (`off_peak`/`moderate`/`peak`).
   - `driver` — perfil aplicado (`speedFactor`, `serviceTimeMinutes`, `punctuality`) e `source` (`default`/`learned`/`override`).
   - `schedule.stops[].access` — **navegação contextual** (ADR-0028): instruções de acesso ao destino derivadas de `accessNotes`, tipadas (`entrance`/`dock`/`intercom`/`gate_code`/`reception`/`note`). Componente web `AccessInstructionList`.
+  - `schedule.stops[].parking` — **previsão de estacionamento** (ADR-0029): `difficulty` (`easy`/`moderate`/`hard`), `confidence` e `walkMinutes` (caminhada até a porta) por parada, via `ParkingPredictorPort` (heurística reusa o sinal de trânsito; ML-ready). Componente web `ParkingBadge`.
 - **IA personalizada por motorista**: `DriverProfile` aprendido do histórico (estatístico hoje; **modelo de ML** pela mesma port depois). **Previsão de trânsito**: heurística por hora/dia (`TrafficModelPort`), evoluível para modelo por região/histórico. Nada de acoplamento a framework de ML nesta camada.
 
 ## 15. Documentação viva
@@ -467,3 +468,4 @@ GET /api/v1/health/ready     -> 200 | 503 (Postgres duro; Redis reportado, não 
 | 2026-07-15 | 0.25 | Design+Arch | Modo Economia: `economyMode` (time/fuel/tolls/co2) + `metrics.estimatedCo2Kg` no route-plan; seletor no Otimizador (§14.3, ADR-0026) |
 | 2026-07-15 | 0.26 | Arquitetura | Provedor de mapas: RoutingProviderPort + Mapbox Matrix API (fallback Haversine); distância+duração reais no motor (§14.3, ADR-0027) |
 | 2026-07-15 | 0.27 | Design+Arch | Navegação contextual: `accessNotes` na previsão → `schedule.stops[].access` tipado; AccessInstructionList no web (§14.7, ADR-0028) |
+| 2026-07-15 | 0.28 | Design+Arch | Previsão de estacionamento: `schedule.stops[].parking` (difficulty/confidence/walkMinutes) via ParkingPredictorPort; ParkingBadge no web (§14.7, ADR-0029) |
