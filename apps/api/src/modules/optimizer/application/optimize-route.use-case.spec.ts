@@ -1,6 +1,6 @@
 import type { AuditLogPort } from '../../../shared/audit/audit-log.port';
 import type { PagedResult } from '../../../shared/kernel/pagination';
-import { HaversineDistanceProvider } from '../infrastructure/distance/haversine-distance.provider';
+import { HaversineRoutingProvider } from '../infrastructure/routing/haversine-routing.provider';
 import type { OptimizerMetrics } from '../infrastructure/observability/optimizer-metrics';
 import { NearestNeighbor2OptStrategy } from '../infrastructure/strategies/nearest-neighbor-2opt.strategy';
 import type { RoutePlan } from '../domain/route-plan';
@@ -27,7 +27,7 @@ function build() {
     observeSolve: jest.fn(),
     markInfeasible: jest.fn(),
   } as unknown as OptimizerMetrics;
-  const solver = new RouteSolver(new HaversineDistanceProvider(), { augment: () => ({}) }, registry);
+  const solver = new RouteSolver(new HaversineRoutingProvider(), { augment: () => ({}) }, registry);
   const uc = new OptimizeRouteUseCase(plans, gateway, audit, solver, metrics);
   return { uc, saved, metrics };
 }

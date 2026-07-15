@@ -80,8 +80,8 @@ export class OptimizeRouteUseCase {
     }
 
     const plan = command.vehicles?.length
-      ? this.planFleet(command, rawStops, service)
-      : this.planSingle(command, rawStops, service);
+      ? await this.planFleet(command, rawStops, service)
+      : await this.planSingle(command, rawStops, service);
 
     await this.plans.save(plan);
     await this.audit.record({
@@ -101,18 +101,18 @@ export class OptimizeRouteUseCase {
   }
 
   /** Caminho de veículo único (comportamento legado + ADR-0022 Fase 1). */
-  private planSingle(
+  private async planSingle(
     command: OptimizeRouteCommand,
     rawStops: OptimizationStop[],
     service: number,
-  ): RoutePlan {
+  ): Promise<RoutePlan> {
     const profile = VehicleProfile.resolve(command.vehicle, DEFAULT_SPEED_KMH);
     const speed = command.averageSpeedKmh ?? profile.averageSpeedKmh;
     if (speed <= 0) throw new ValidationError('Velocidade média deve ser positiva.');
 
     const hasOrigin = command.origin != null;
     const nodes = this.withOrigin(command.origin, rawStops);
-    const solved = this.solver.solve({
+    const solved = await this.solver.solve({
       nodes,
       hasOrigin,
       speed,
@@ -157,11 +157,11 @@ export class OptimizeRouteUseCase {
   }
 
   /** Caminho multi-veículo (ADR-0022 Fase 2): clustering + rota por veículo. */
-  private planFleet(
+  private async planFleet(
     command: OptimizeRouteCommand,
     rawStops: OptimizationStop[],
     service: number,
-  ): RoutePlan {
+  ): Promise<RoutePlan> {
     const vehicles = command.vehicles!;
     if (vehicles.length > MAX_VEHICLES) {
       throw new ValidationError(`Máximo de ${MAX_VEHICLES} veículos por plano.`);
@@ -189,7 +189,7 @@ export class OptimizeRouteUseCase {
 
       const clusterStops = clusterIdx.map((i) => rawStops[i]);
       const nodes = this.withOrigin(command.origin, clusterStops);
-      const solved = this.solver.solve({
+      const solved = await this.solver.solve({
         nodes,
         hasOrigin,
         speed,

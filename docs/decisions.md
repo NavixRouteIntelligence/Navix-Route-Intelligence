@@ -50,6 +50,7 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 | ADR-0024 | Estratégia metaheurística (VND) + sobretaxas de pedágio/zona de risco | Aceito | ✅ Estratégia `or-opt-2opt` (Or-opt + 2-opt) pela mesma port; `CostAugmentationPort` alimenta o *seam* de custo — zonas de risco configuráveis (no-op default); path aberto para OR-Tools nativo e provedor de pedágio | 2026-07-14 |
 | ADR-0025 | Navix Intelligence — 1ª camada (heurísticas atrás de ports, ML-ready) | Aceito | ✅ `POST /intelligence/route-forecast`: cronograma/ETA + conclusão, atrasos+mitigação, combustível, melhor horário de saída, trânsito por contexto temporal e perfil de motorista; tudo em serviços de domínio + ports (`TrafficModelPort`/`DriverProfileSourcePort`) prontos para ML/LLM | 2026-07-14 |
 | ADR-0026 | Modo Economia — otimizar por tempo/combustível/pedágio/CO₂ | Aceito | ✅ `economyMode` mapeia preset de pesos sobre o motor existente (reuso ADR-0022/24); estimativa de CO₂ na métrica; seletor no web (DS + i18n 4 locales + a11y). Diferenciação fina de tempo/pedágio real depende do provedor de mapas (próximo PR) | 2026-07-14 |
+| ADR-0027 | Provedor de mapas/roteamento (Mapbox) com fallback Haversine | Aceito | ✅ `RoutingProviderPort` (matriz distância+duração assíncrona); adaptador Mapbox Matrix API (real, opt-in por `MAPS_PROVIDER`+`MAPBOX_TOKEN`) degrada para Haversine em qualquer falha; solver refatorado para async | 2026-07-15 |
 
 ---
 
@@ -319,6 +320,17 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 
 ---
 
+## ADR-0027 — Provedor de mapas/roteamento (Mapbox) com fallback Haversine
+
+- **Status:** Aceito · **Data:** 2026-07-15
+- **Status da implementação:** ✅ Implementado. Novo `RoutingProviderPort` que devolve a **matriz de distância (km) e duração (min)** entre os pontos — assíncrono. `HaversineRoutingProvider` (default) deriva a duração da velocidade do veículo; `MapboxRoutingProvider` usa a **Mapbox Matrix API** (`directions-matrix/v1/mapbox/driving`, distância+duração reais, com trânsito), selecionável por `MAPS_PROVIDER=mapbox` + `MAPBOX_TOKEN`. **Resiliente**: sem token, acima de 25 coordenadas, timeout (4s) ou qualquer erro externo → **degrada para Haversine**, nunca derruba a otimização (mesmo princípio do Redis/tracing/storage). O `RouteSolver` foi refatorado para **assíncrono** e consome a port; `OptimizeRouteUseCase` (single/fleet) aguarda. `OptimizerService.estimate` mantém o `DistanceProviderPort` síncrono.
+- **Contexto:** O Modo Economia (ADR-0026) por **tempo** e o cronograma dependem de **duração real de trânsito** (≠ distância/velocidade). Sem um provedor de mapas, `time`/`fuel`/`co2` colapsam em "minimizar distância". O usuário aprovou integrar mapas já.
+- **Decisão:** Introduzir a port de roteamento com **matriz** (não par-a-par — encaixa na API do Mapbox e é eficiente), um adaptador real **opt-in** e **fallback geométrico** sempre presente. A credencial `MAPBOX_TOKEN` é fornecida pelo operador no ambiente (segredo) — o código nunca a embute. A refatoração síncrono→assíncrona ficou **isolada neste PR** para revisão segura do motor já validado.
+- **Alternativas consideradas:** **Directions por par (n²)** (estoura rate limit/custo; a Matrix API resolve em uma chamada, até 25 pts); **OSRM self-hosted** (sem credencial, porém exige operar o serviço — a port aceita esse adaptador no futuro); **manter só Haversine** (não entrega tempo/pedágio fiéis — o requisito); **credencial embutida** (proibido; vem do ambiente).
+- **Consequências:** Distância e **tempo reais** quando `mapbox` está ligado, com degradação graciosa; base para tempo/pedágio fiéis no Modo Economia. **Pendências:** chunking para rotas > 25 paradas; **custo de pedágio por trecho** (Directions com dados de pedágio) para preencher o `edgeSurcharge`; usar o provedor também no cronograma da Intelligence (ADR-0025); cache/rate-limit dedicados.
+
+---
+
 ## Template
 
 ```markdown
@@ -355,3 +367,4 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 | 2026-07-14 | 1.4 | Arquitetura | ADR-0024 (Fase 4): estratégia metaheurística `or-opt-2opt` (VND) + `CostAugmentationPort` (zonas de risco no seam de custo); ADR-0022 → Aceito |
 | 2026-07-14 | 1.5 | AI Eng. | ADR-0025: Navix Intelligence (1ª camada) — route-forecast com cronograma/ETA, atrasos, combustível, melhor saída; heurísticas atrás de ports prontas para ML/LLM |
 | 2026-07-15 | 1.6 | Design+Arch | ADR-0026: Modo Economia (tempo/combustível/pedágio/CO₂) — preset de pesos + CO₂ + seletor no web (DS/i18n/a11y); Fase A da experiência do motorista |
+| 2026-07-15 | 1.7 | Arquitetura | ADR-0027: RoutingProviderPort + adaptador Mapbox Matrix API (fallback Haversine); solver refatorado para async |

@@ -15,9 +15,9 @@ import {
   type CostAugmentationPort,
 } from '../domain/ports/cost-augmentation.port';
 import {
-  DISTANCE_PROVIDER,
-  type DistanceProviderPort,
-} from '../domain/ports/distance-provider.port';
+  ROUTING_PROVIDER,
+  type RoutingProviderPort,
+} from '../domain/ports/routing-provider.port';
 import type {
   NodeWindow,
   OptimizationWeights,
@@ -64,14 +64,17 @@ export interface SolvedRoute {
 @Injectable()
 export class RouteSolver {
   constructor(
-    @Inject(DISTANCE_PROVIDER) private readonly distance: DistanceProviderPort,
+    @Inject(ROUTING_PROVIDER) private readonly routing: RoutingProviderPort,
     @Inject(COST_AUGMENTATION) private readonly augmentation: CostAugmentationPort,
     private readonly registry: StrategyRegistry,
   ) {}
 
-  solve(input: SolveInput): SolvedRoute {
+  async solve(input: SolveInput): Promise<SolvedRoute> {
     const { nodes, hasOrigin, speed, service, profile } = input;
-    const { distanceMatrix, timeMatrix } = this.buildMatrices(nodes, speed);
+    const { distanceKm: distanceMatrix, durationMin: timeMatrix } = await this.routing.matrix(
+      nodes.map((n) => n.point),
+      speed,
+    );
     const windows = this.buildWindows(nodes);
     // Priorização dinâmica por SLA: o peso cresce conforme o fim da janela se
     // aproxima (ADR-0022 Fase 3). Sem janela, é o peso base (retrocompatível).
@@ -149,24 +152,6 @@ export class RouteSolver {
       capacity,
       solveSeconds,
     };
-  }
-
-  private buildMatrices(
-    nodes: OptimizationStop[],
-    speedKmh: number,
-  ): { distanceMatrix: number[][]; timeMatrix: number[][] } {
-    const size = nodes.length;
-    const distanceMatrix: number[][] = Array.from({ length: size }, () => new Array(size).fill(0));
-    const timeMatrix: number[][] = Array.from({ length: size }, () => new Array(size).fill(0));
-    for (let i = 0; i < size; i++) {
-      for (let j = i + 1; j < size; j++) {
-        const km = this.distance.distanceKm(nodes[i].point, nodes[j].point);
-        const minutes = (km / speedKmh) * 60;
-        distanceMatrix[i][j] = distanceMatrix[j][i] = km;
-        timeMatrix[i][j] = timeMatrix[j][i] = minutes;
-      }
-    }
-    return { distanceMatrix, timeMatrix };
   }
 
   private buildWindows(nodes: OptimizationStop[]): (NodeWindow | null)[] {

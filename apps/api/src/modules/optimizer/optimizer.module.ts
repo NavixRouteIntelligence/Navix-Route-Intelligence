@@ -19,13 +19,17 @@ import { StrategyRegistry } from './application/strategy-registry';
 import { DELIVERY_GATEWAY } from './application/ports/delivery-gateway.port';
 import { COST_AUGMENTATION } from './domain/ports/cost-augmentation.port';
 import { DISTANCE_PROVIDER } from './domain/ports/distance-provider.port';
+import { ROUTING_PROVIDER } from './domain/ports/routing-provider.port';
 import { JOB_EVENTS } from './domain/ports/job-events.port';
 import { OPTIMIZATION_JOB_QUEUE } from './domain/ports/optimization-job-queue.port';
 import { OPTIMIZATION_JOB_REPOSITORY } from './domain/ports/optimization-job-repository.port';
 import { OPTIMIZATION_STRATEGIES } from './domain/ports/route-optimization-strategy.port';
 import { ROUTE_PLAN_REPOSITORY } from './domain/ports/route-plan-repository.port';
+import { AppConfigService } from '../../shared/config/app-config.service';
 import { ConfigurableCostAugmentation } from './infrastructure/augmentation/configurable-cost-augmentation';
 import { HaversineDistanceProvider } from './infrastructure/distance/haversine-distance.provider';
+import { HaversineRoutingProvider } from './infrastructure/routing/haversine-routing.provider';
+import { MapboxRoutingProvider } from './infrastructure/routing/mapbox-routing.provider';
 import { RealtimeJobEvents } from './infrastructure/events/realtime-job-events';
 import { DeliveryGateway } from './infrastructure/gateways/delivery.gateway';
 import { OptimizationJobOrmEntity } from './infrastructure/persistence/optimization-job.orm-entity';
@@ -70,6 +74,18 @@ import { OptimizerController } from './interface/optimizer.controller';
       inject: [NearestNeighbor2OptStrategy, OrOpt2OptStrategy],
     },
     { provide: DISTANCE_PROVIDER, useClass: HaversineDistanceProvider },
+    HaversineRoutingProvider,
+    MapboxRoutingProvider,
+    {
+      // Provedor de roteamento por configuração (ADR-0027); mapbox degrada p/ Haversine.
+      provide: ROUTING_PROVIDER,
+      inject: [AppConfigService, HaversineRoutingProvider, MapboxRoutingProvider],
+      useFactory: (
+        config: AppConfigService,
+        haversine: HaversineRoutingProvider,
+        mapbox: MapboxRoutingProvider,
+      ) => (config.maps.provider === 'mapbox' ? mapbox : haversine),
+    },
     { provide: COST_AUGMENTATION, useClass: ConfigurableCostAugmentation },
     { provide: ROUTE_PLAN_REPOSITORY, useClass: RoutePlanRepository },
     { provide: OPTIMIZATION_JOB_REPOSITORY, useClass: OptimizationJobRepository },

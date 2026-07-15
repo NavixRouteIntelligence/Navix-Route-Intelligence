@@ -25,6 +25,8 @@ import {
 } from '../src/modules/optimizer/domain/ports/optimization-job-repository.port';
 import { COST_AUGMENTATION } from '../src/modules/optimizer/domain/ports/cost-augmentation.port';
 import { OPTIMIZATION_STRATEGIES } from '../src/modules/optimizer/domain/ports/route-optimization-strategy.port';
+import { ROUTING_PROVIDER } from '../src/modules/optimizer/domain/ports/routing-provider.port';
+import { HaversineRoutingProvider } from '../src/modules/optimizer/infrastructure/routing/haversine-routing.provider';
 import { ROUTE_PLAN_REPOSITORY } from '../src/modules/optimizer/domain/ports/route-plan-repository.port';
 import type { RoutePlanRepositoryPort } from '../src/modules/optimizer/domain/ports/route-plan-repository.port';
 import type { RoutePlan } from '../src/modules/optimizer/domain/route-plan';
@@ -108,6 +110,7 @@ describe('Optimizer (e2e, assíncrono)', () => {
           inject: [NearestNeighbor2OptStrategy, OrOpt2OptStrategy],
         },
         { provide: DISTANCE_PROVIDER, useClass: HaversineDistanceProvider },
+        { provide: ROUTING_PROVIDER, useClass: HaversineRoutingProvider },
         { provide: COST_AUGMENTATION, useValue: { augment: () => ({}) } },
         { provide: ROUTE_PLAN_REPOSITORY, useClass: InMemoryRoutePlanRepository },
         { provide: OPTIMIZATION_JOB_REPOSITORY, useClass: InMemoryJobRepository },
