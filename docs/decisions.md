@@ -54,6 +54,7 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 | ADR-0028 | Navegação contextual — instruções de acesso ao destino | Aceito | ✅ `AccessInstructionsPort` (classificador heurístico de `accessNotes`) estende o route-forecast; `access[]` por parada (porta/doca/interfone/código/portaria/nota); componente web `AccessInstructionList` (DS/i18n/a11y). Fecha a Fase A | 2026-07-15 |
 | ADR-0029 | Previsão inteligente de estacionamento (Fase B) | Aceito | ✅ `ParkingPredictorPort` (heurística que reusa `TrafficModelPort` como proxy de congestionamento, ML-ready) anexa `parking` (dificuldade fácil/moderado/difícil + confiança + minutos a pé) por parada no route-forecast; componente web `ParkingBadge` (DS/i18n 4 locales/a11y). Abre a Fase B | 2026-07-15 |
 | ADR-0030 | Organização otimizada da carga (Fase B) | Aceito | ✅ `POST /intelligence/load-plan`: `LoadPlannerPort` (heurística **LIFO** — última entrega ao fundo, ML-ready p/ bin packing 3D) devolve sequência de carregamento, zonas de estiva (porta/meio/fundo), ocupação de peso/volume e avisos (excesso, frágil sob carga); capacidade explícita ou por tipo de veículo; componente web `LoadPlanList` (DS/i18n 4 locales/a11y). Fecha a Fase B | 2026-07-15 |
+| ADR-0031 | Inteligência coletiva por tenant (Fase C) | Aceito | ✅ `POST /intelligence/observations` + `GET /intelligence/insights`: observações de campo do motorista (estacionamento/tempo de atendimento/dica de acesso) persistidas por tenant (RLS FORCE) e agregadas por **célula de localização** (~110 m) atrás do `CollectiveInsightsPort`; agregação pura (moda/mediana/dedup) com **amostra mínima** (privacidade); componente web `CollectiveInsightCard` (DS/i18n 4 locales/a11y). Abre a Fase C | 2026-07-15 |
 
 ---
 
@@ -367,6 +368,17 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 
 ---
 
+## ADR-0031 — Inteligência coletiva por tenant (Fase C)
+
+- **Status:** Aceito · **Data:** 2026-07-15
+- **Status da implementação:** ✅ Implementado (1º recurso da **Fase C**). O conhecimento que a frota adquire em campo passa a ser compartilhado dentro do tenant. Dois endpoints: `POST /intelligence/observations` (o motorista relata **estacionamento** real, **tempo de atendimento** ou **dica de acesso** confirmada) e `GET /intelligence/insights?latitude&longitude` (devolve o insight agregado). As observações são persistidas na tabela `collective_observations` (RLS FORCE + policy por tenant, como todo dado de negócio) e atribuídas a uma **célula de localização** (`locationCell`, arredondamento a 3 casas ≈ 110 m). A agregação é uma função de domínio pura (`aggregateInsight`): **moda** da dificuldade de estacionamento (desempate pela mais severa), **mediana** do tempo de atendimento e **dedupe** das dicas por frequência, tudo sujeito a uma **amostra mínima** (`MIN_SAMPLE`) antes de expor qualquer agregado. No **web**: componente reutilizável `CollectiveInsightCard` (estacionamento/atendimento/dicas + tamanho da amostra; DS + i18n PT-BR/PT-PT/EN/ES + a11y).
+- **Contexto:** Cada motorista redescobre sozinho as particularidades de cada endereço (onde estacionar, quanto demora, como acessar). Esse conhecimento se perde. As ADRs 0028/0029 já apontavam a "realimentação do motorista" como pendência — a inteligência coletiva é o laço que fecha isso.
+- **Decisão:** Persistir observações por tenant atrás de um **port** (`CollectiveInsightsPort` — armazenamento) e manter a **agregação no domínio** (pura, testável, independente do store). Escopo **por tenant** (decisão do produto) com RLS, reusando o padrão de persistência existente (entidade ORM + `scopedRepository` + migração com policy). **Privacidade:** `driverId` guardado para dedupe/anti-abuso e nunca exposto; agregados só aparecem acima da amostra mínima, evitando identificar um relato individual.
+- **Alternativas consideradas:** **Store em memória** (não sobrevive a restart nem a múltiplas instâncias — inviável para "coletivo"); **agregação no SQL** (mais rápida, porém acopla a lógica ao banco e dificulta o teste/evolução — a agregação pura pode virar modelo depois); **sem célula, por coordenada exata** (não agrupa relatos próximos e expõe posição — a célula agrega e anonimiza); **cross-tenant/global** (rejeitado por privacidade e por decisão de produto: o coletivo é da frota).
+- **Consequências:** A frota fica mais inteligente a cada entrega; o laço de realimentação das ADRs 0028/0029 passa a existir. **Pendências:** realimentar as próprias previsões (um `CommunityAwareParkingPredictor`/`AccessInstructions` que consulte o insight); ponderar por recência/reputação do motorista; expurgo/retention das observações; agregação incremental/materializada para escala; app do motorista (mobile) publicando observações automaticamente ao concluir a parada.
+
+---
+
 ## Template
 
 ```markdown
@@ -407,3 +419,4 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 | 2026-07-15 | 1.8 | Design+Arch | ADR-0028: Navegação contextual — AccessInstructionsPort + access[] no route-forecast + AccessInstructionList no web; encerra a Fase A |
 | 2026-07-15 | 1.9 | Design+Arch | ADR-0029: Previsão inteligente de estacionamento — ParkingPredictorPort (reusa TrafficModelPort) + parking por parada no route-forecast + ParkingBadge no web; abre a Fase B |
 | 2026-07-15 | 2.0 | Design+Arch | ADR-0030: Organização otimizada da carga — POST /intelligence/load-plan (LoadPlannerPort LIFO + zonas/ocupação/avisos) + LoadPlanList no web; encerra a Fase B |
+| 2026-07-15 | 2.1 | Design+Arch | ADR-0031: Inteligência coletiva por tenant — observações de campo (RLS) agregadas por célula atrás do CollectiveInsightsPort + CollectiveInsightCard no web; abre a Fase C |

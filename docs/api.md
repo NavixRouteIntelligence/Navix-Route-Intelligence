@@ -404,6 +404,8 @@ Camada de IA/predição. Serviços de domínio desacoplados atrás de *ports* pr
 ```
 POST /api/v1/intelligence/route-forecast   # relatório de previsão de rota
 POST /api/v1/intelligence/load-plan         # organização otimizada da carga (LIFO)
+POST /api/v1/intelligence/observations      # inteligência coletiva: registra observação de campo
+GET  /api/v1/intelligence/insights          # inteligência coletiva: insight agregado por local
 ```
 
 - **Payload**: `{ stops[] (id, lat, lng, timeWindow?, serviceTimeMinutes?, accessNotes?), vehicleType?, origin?, earliestDeparture?, averageSpeedKmh?, driverId?, driver? (override de perfil), currentFuelPercent? }`.
@@ -423,6 +425,12 @@ POST /api/v1/intelligence/load-plan         # organização otimizada da carga (
 - **Payload**: `{ items[] (id, sequence, weightKg?, volumeM3?, fragile?, label?), vehicleType?, capacityKg?, capacityVolumeM3? }`. `sequence` é a ordem de entrega (1 = primeira a sair).
 - **Resposta** (`LoadPlanView`): `placements[]` na **ordem de carregamento LIFO** (`loadOrder`, `deliverySequence`, `zone` porta/meio/fundo, `weightKg`, `volumeM3`, `fragile`), `totalWeightKg`/`totalVolumeM3`, `capacityKg`/`capacityVolumeM3` (explícita ou por tipo de veículo), `weightUtilization`/`volumeUtilization` (0..1), `overCapacity` e `warnings[]` (`weight_over_capacity`/`volume_over_capacity`/`fragile_under_load`).
 - **Regra**: o que é entregue primeiro é carregado por último (fica junto à porta), minimizando remanejo. Heurística LIFO atrás do `LoadPlannerPort` — plugável para bin packing 3D depois. Componente web `LoadPlanList`.
+
+**Inteligência coletiva por tenant** (ADR-0031):
+
+- **`POST /intelligence/observations`** — o motorista relata uma observação de campo. Payload: `{ latitude, longitude, kind ('parking'|'service_time'|'access'), parkingDifficulty?, serviceMinutes?, accessTip? }`. Resposta: `{ id, cell }`. Persistido por tenant (RLS) na tabela `collective_observations`.
+- **`GET /intelligence/insights?latitude=&longitude=`** — insight agregado da **célula de localização** (~110 m). Resposta (`CollectiveInsightView`): `{ cell, sampleSize, parking? {difficulty, confidence}, typicalServiceMinutes?, accessTips[] }`. Agregação pura (moda/mediana/dedup) com **amostra mínima** antes de expor qualquer campo (privacidade). Componente web `CollectiveInsightCard`.
+- **Privacidade**: `driverId` guardado só para dedupe/anti-abuso, nunca exposto; agregados exigem amostra mínima; escopo por tenant (RLS), sem cruzar tenants.
 
 ## 15. Documentação viva
 
@@ -477,3 +485,4 @@ GET /api/v1/health/ready     -> 200 | 503 (Postgres duro; Redis reportado, não 
 | 2026-07-15 | 0.27 | Design+Arch | Navegação contextual: `accessNotes` na previsão → `schedule.stops[].access` tipado; AccessInstructionList no web (§14.7, ADR-0028) |
 | 2026-07-15 | 0.28 | Design+Arch | Previsão de estacionamento: `schedule.stops[].parking` (difficulty/confidence/walkMinutes) via ParkingPredictorPort; ParkingBadge no web (§14.7, ADR-0029) |
 | 2026-07-15 | 0.29 | Design+Arch | Organização da carga: POST /intelligence/load-plan (LoadPlannerPort LIFO — zonas/ocupação/avisos); LoadPlanList no web (§14.7, ADR-0030) |
+| 2026-07-15 | 0.30 | Design+Arch | Inteligência coletiva: POST /intelligence/observations + GET /intelligence/insights (observações por tenant/RLS agregadas por célula); CollectiveInsightCard no web (§14.7, ADR-0031) |
