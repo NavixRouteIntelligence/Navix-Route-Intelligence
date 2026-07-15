@@ -145,4 +145,11 @@ export class AppConfigService {
       riskZones: parseRiskZones(this.get('OPTIMIZER_RISK_ZONES')),
     };
   }
+
+  get maps() {
+    return {
+      provider: this.get('MAPS_PROVIDER'),
+      mapboxToken: this.get('MAPBOX_TOKEN') || undefined,
+    };
+  }
 }

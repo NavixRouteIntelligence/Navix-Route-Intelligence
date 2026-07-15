@@ -91,6 +91,11 @@ export const envSchema = z.object({
   // Zonas de risco (ADR-0024): JSON de [{latitude,longitude,radiusKm,penalty}].
   // Default vazio → sem efeito (no-op). Parseado/validado em AppConfigService.
   OPTIMIZER_RISK_ZONES: z.string().default('[]'),
+
+  // --- Provedor de mapas/roteamento (ADR-0027) ---
+  // `mapbox` usa a Matrix API (requer MAPBOX_TOKEN, já definido acima); qualquer
+  // falha cai em Haversine.
+  MAPS_PROVIDER: z.enum(['haversine', 'mapbox']).default('haversine'),
 });
 
 export type Env = z.infer<typeof envSchema>;

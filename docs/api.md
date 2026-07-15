@@ -319,7 +319,9 @@ Corpo do POST: `origin?` (depósito), **uma** das fontes `deliveryIds[]` (busca 
 - `vehicles?: OptimizationVehicleInput[]` — uma **frota** (mutuamente exclusivo com `vehicle`). As paradas são **agrupadas por proximidade** (sweep angular em torno da origem/centroide) e **distribuídas entre os veículos respeitando capacidade** (peso/volume), balanceando a contagem.
 - Resposta ganha `routes[]` (`{ vehicleIndex, vehicleType?, stops, metrics, capacity? }` por veículo), `params.vehicleCount` e, se houver, `unassignedStops` (IDs que não couberam) + `params.unassignedCount`. O topo (`stops`/`metrics`) é a **agregação** das rotas (retrocompatível para consumidores existentes).
 
-**Modo Economia (ADR-0026):** `economyMode ∈ time | fuel | tolls | co2` escolhe o objetivo — mapeia um preset de pesos sobre o mesmo motor (`time` valoriza janelas; `fuel`/`co2` minimizam distância; `tolls` evita pedágio via CostAugmentation). A resposta traz `metrics.estimatedCo2Kg` (consumo × fator de emissão) e `params.economyMode`. Diferenciação fina de tempo/pedágio real depende do provedor de mapas (roadmap). Seletor no web (Otimizador), acessível e i18n.
+**Modo Economia (ADR-0026):** `economyMode ∈ time | fuel | tolls | co2` escolhe o objetivo — mapeia um preset de pesos sobre o mesmo motor (`time` valoriza janelas; `fuel`/`co2` minimizam distância; `tolls` evita pedágio via CostAugmentation). A resposta traz `metrics.estimatedCo2Kg` (consumo × fator de emissão) e `params.economyMode`. Seletor no web (Otimizador), acessível e i18n.
+
+**Provedor de mapas (ADR-0027):** distância e **duração** vêm de um `RoutingProviderPort`. Default **Haversine** (geométrico); com `MAPS_PROVIDER=mapbox` + `MAPBOX_TOKEN`, usa a **Mapbox Matrix API** (distância+duração reais de trânsito), tornando fiel o Modo Economia por **tempo**. Resiliente: qualquer falha/timeout/limite → cai em Haversine (a otimização nunca quebra).
 
 **Estratégia e sobretaxas (ADR-0024 — Fase 4):**
 - `strategy?`: `nearest-neighbor-2opt` (padrão) ou **`or-opt-2opt`** (metaheurística VND — Or-opt + 2-opt, melhor qualidade; **nunca pior** que a padrão). Um adaptador OR-Tools nativo entraria pela mesma port, sem mudar a API.
@@ -462,3 +464,4 @@ GET /api/v1/health/ready     -> 200 | 503 (Postgres duro; Redis reportado, não 
 | 2026-07-14 | 0.23 | Arquitetura | Optimizer Fase 4: estratégia `or-opt-2opt` (metaheurística VND) e sobretaxas de zona de risco/pedágio no custo (§14.3, ADR-0024) |
 | 2026-07-14 | 0.24 | AI Eng. | Navix Intelligence (1ª camada): POST /intelligence/route-forecast — cronograma/ETA, atrasos, combustível, melhor saída, trânsito (§14.7, ADR-0025) |
 | 2026-07-15 | 0.25 | Design+Arch | Modo Economia: `economyMode` (time/fuel/tolls/co2) + `metrics.estimatedCo2Kg` no route-plan; seletor no Otimizador (§14.3, ADR-0026) |
+| 2026-07-15 | 0.26 | Arquitetura | Provedor de mapas: RoutingProviderPort + Mapbox Matrix API (fallback Haversine); distância+duração reais no motor (§14.3, ADR-0027) |
