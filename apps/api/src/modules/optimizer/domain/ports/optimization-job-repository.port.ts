@@ -1,4 +1,5 @@
 import type {
+  EconomyMode,
   OptimizationJobStatus,
   OptimizationStopInput,
   OptimizationStrategyName,
@@ -15,6 +16,7 @@ export interface OptimizationJobRequest {
   strategy?: OptimizationStrategyName;
   averageSpeedKmh?: number;
   serviceTimeMinutes?: number;
+  economyMode?: EconomyMode;
   vehicle?: OptimizationVehicleInput;
   vehicles?: OptimizationVehicleInput[];
 }

@@ -7,6 +7,11 @@ import type { DeliveryPriority, TimeWindow } from './delivery';
 
 export type OptimizationStrategyName = 'nearest-neighbor-2opt' | 'or-opt-2opt';
 
+/** Modo Economia (ADR-0026): objetivo de otimização escolhido pelo usuário. */
+export type EconomyMode = 'time' | 'fuel' | 'tolls' | 'co2';
+
+export const ECONOMY_MODES: readonly EconomyMode[] = ['time', 'fuel', 'tolls', 'co2'];
+
 export const OPTIMIZATION_STRATEGIES: readonly OptimizationStrategyName[] = [
   'nearest-neighbor-2opt',
   // Metaheurística mais forte (VND: Or-opt + 2-opt) — melhor qualidade, mesmo
@@ -59,6 +64,8 @@ export interface OptimizeRouteRequest {
   strategy?: OptimizationStrategyName;
   averageSpeedKmh?: number;
   serviceTimeMinutes?: number;
+  /** Modo Economia — o que priorizar (ADR-0026). Ausente = balanceado (legado). */
+  economyMode?: EconomyMode;
   /** Perfil do veículo único (capacidade/velocidade por tipo). Opcional (ADR-0022). */
   vehicle?: OptimizationVehicleInput;
   /**
@@ -94,6 +101,8 @@ export interface RouteMetrics {
   totalWeightKg?: number;
   /** Volume total transportado (m³). Presente quando há demanda informada (ADR-0022). */
   totalVolumeM3?: number;
+  /** Emissão estimada de CO₂ (kg) da rota (ADR-0026). Presente quando há veículo. */
+  estimatedCo2Kg?: number;
 }
 
 /** Análise de capacidade da rota vs. o veículo (ADR-0022). */
@@ -129,6 +138,8 @@ export interface RoutePlanParams {
   vehicleCount?: number;
   /** Nº de paradas não atribuídas por falta de capacidade (ADR-0022, Fase 2). */
   unassignedCount?: number;
+  /** Modo Economia aplicado (ADR-0026). Presente quando informado. */
+  economyMode?: EconomyMode;
 }
 
 /** Rota de um veículo dentro de um plano multi-veículo (ADR-0022, Fase 2). */

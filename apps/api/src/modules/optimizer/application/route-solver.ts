@@ -39,6 +39,8 @@ export interface SolveInput {
   profile: VehicleProfile;
   strategyName?: OptimizationStrategyName;
   strategyLabel?: string;
+  /** Pesos da função de custo (Modo Economia — ADR-0026). Default: balanceado. */
+  weights?: OptimizationWeights;
 }
 
 export interface SolvedRoute {
@@ -92,7 +94,7 @@ export class RouteSolver {
       windows,
       serviceTimeMinutes: service,
       hasOrigin,
-      weights: WEIGHTS,
+      weights: input.weights ?? WEIGHTS,
       perNodeServiceMinutes,
       ...(edgeSurcharge ? { edgeSurcharge } : {}),
       ...(nodeSurcharge ? { nodeSurcharge } : {}),
