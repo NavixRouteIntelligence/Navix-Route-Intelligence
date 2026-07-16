@@ -66,6 +66,12 @@ class InMemoryJobRepository implements OptimizationJobRepositoryPort {
     const j = this.store.get(id);
     if (j) this.store.set(id, { ...j, ...patch, updatedAt: new Date() });
   }
+  async claim(id: string): Promise<boolean> {
+    const j = this.store.get(id);
+    if (!j || j.status !== 'queued') return false;
+    this.store.set(id, { ...j, status: 'running', updatedAt: new Date() });
+    return true;
+  }
 }
 
 const TENANT = '019f335f-a2ae-7dd9-bcda-d458fe138c98';

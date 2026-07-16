@@ -22,12 +22,14 @@ function baseJob(): OptimizationJobRecord {
 const events: JobEventsPort = { optimizationJobUpdated: jest.fn() };
 
 describe('ProcessOptimizationJobUseCase', () => {
-  it('running → succeeded, gravando o routePlanId', async () => {
+  it('reivindica (queued→running) → succeeded, gravando o routePlanId', async () => {
     const update = jest.fn().mockResolvedValue(undefined);
+    const claim = jest.fn().mockResolvedValue(true);
     const jobs: OptimizationJobRepositoryPort = {
       findById: jest.fn().mockResolvedValue(baseJob()),
       create: jest.fn(),
       update,
+      claim,
     };
     const optimize = { execute: jest.fn().mockResolvedValue({ id: 'plan-1' }) } as unknown as OptimizeRouteUseCase;
 
@@ -35,8 +37,9 @@ describe('ProcessOptimizationJobUseCase', () => {
     const ok = await uc.execute('t1', 'j1');
 
     expect(ok).toBe(true);
-    expect(update).toHaveBeenNthCalledWith(1, 'j1', { status: 'running' });
-    expect(update).toHaveBeenNthCalledWith(2, 'j1', { status: 'succeeded', routePlanId: 'plan-1' });
+    expect(claim).toHaveBeenCalledWith('j1');
+    // O `running` é a própria reivindicação atômica; `update` só grava o desfecho.
+    expect(update).toHaveBeenNthCalledWith(1, 'j1', { status: 'succeeded', routePlanId: 'plan-1' });
     expect(optimize.execute).toHaveBeenCalledWith(
       expect.objectContaining({ tenantId: 't1', deliveryIds: ['d1', 'd2'] }),
     );
@@ -48,13 +51,30 @@ describe('ProcessOptimizationJobUseCase', () => {
       findById: jest.fn().mockResolvedValue(baseJob()),
       create: jest.fn(),
       update,
+      claim: jest.fn().mockResolvedValue(true),
     };
     const optimize = { execute: jest.fn().mockRejectedValue(new Error('sem paradas')) } as unknown as OptimizeRouteUseCase;
 
     const uc = new ProcessOptimizationJobUseCase(jobs, events, optimize);
     await uc.execute('t1', 'j1');
 
-    expect(update).toHaveBeenNthCalledWith(2, 'j1', { status: 'failed', error: 'sem paradas' });
+    expect(update).toHaveBeenCalledWith('j1', { status: 'failed', error: 'sem paradas' });
+  });
+
+  it('perdeu a corrida (claim=false) → não reexecuta (idempotente sob concorrência)', async () => {
+    const update = jest.fn();
+    const jobs: OptimizationJobRepositoryPort = {
+      findById: jest.fn().mockResolvedValue(baseJob()),
+      create: jest.fn(),
+      update,
+      claim: jest.fn().mockResolvedValue(false),
+    };
+    const optimize = { execute: jest.fn() } as unknown as OptimizeRouteUseCase;
+
+    const uc = new ProcessOptimizationJobUseCase(jobs, events, optimize);
+    expect(await uc.execute('t1', 'j1')).toBe(true);
+    expect(update).not.toHaveBeenCalled();
+    expect(optimize.execute).not.toHaveBeenCalled();
   });
 
   it('job ainda não visível → retorna false (fila reagenda)', async () => {
@@ -62,6 +82,7 @@ describe('ProcessOptimizationJobUseCase', () => {
       findById: jest.fn().mockResolvedValue(null),
       create: jest.fn(),
       update: jest.fn(),
+      claim: jest.fn(),
     };
     const optimize = { execute: jest.fn() } as unknown as OptimizeRouteUseCase;
 
@@ -76,6 +97,7 @@ describe('ProcessOptimizationJobUseCase', () => {
       findById: jest.fn().mockResolvedValue(running),
       create: jest.fn(),
       update,
+      claim: jest.fn(),
     };
     const optimize = { execute: jest.fn() } as unknown as OptimizeRouteUseCase;
 

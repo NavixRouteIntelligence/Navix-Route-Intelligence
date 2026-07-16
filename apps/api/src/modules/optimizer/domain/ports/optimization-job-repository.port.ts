@@ -43,6 +43,14 @@ export interface OptimizationJobRepositoryPort {
   create(record: Omit<OptimizationJobRecord, 'createdAt' | 'updatedAt'>): Promise<void>;
   findById(tenantId: string, id: string): Promise<OptimizationJobRecord | null>;
   update(id: string, patch: OptimizationJobUpdate): Promise<void>;
+  /**
+   * Reivindica um job para processamento de forma **atômica**: transiciona
+   * `queued` → `running` só se ainda estiver `queued`. Retorna `true` para quem
+   * venceu a corrida (deve processar) e `false` se outro consumidor já assumiu.
+   * Base para processamento **seguro sob concorrência** / múltiplas instâncias
+   * (ADR-0041).
+   */
+  claim(id: string): Promise<boolean>;
 }
 
 export const OPTIMIZATION_JOB_REPOSITORY = Symbol('OPTIMIZATION_JOB_REPOSITORY');

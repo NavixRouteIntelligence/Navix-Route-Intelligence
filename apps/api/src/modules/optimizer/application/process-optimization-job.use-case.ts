@@ -28,7 +28,11 @@ export class ProcessOptimizationJobUseCase {
     if (!job) return false;
     if (job.status !== 'queued') return true; // já processado — idempotente
 
-    await this.transition(tenantId, job, { status: 'running' });
+    // Reivindica de forma atômica (queued → running). Se outro consumidor já
+    // assumiu (múltiplas instâncias / reprocessamento), sai sem duplicar (ADR-0041).
+    const claimed = await this.jobs.claim(job.id);
+    if (!claimed) return true;
+    this.events.optimizationJobUpdated(tenantId, this.toView(job, { status: 'running' }));
 
     try {
       const plan = await this.optimize.execute({ ...job.request, tenantId });
@@ -46,7 +50,14 @@ export class ProcessOptimizationJobUseCase {
     patch: { status: OptimizationJobStatus; routePlanId?: string; error?: string },
   ): Promise<void> {
     await this.jobs.update(job.id, patch);
-    const view: OptimizationJob = {
+    this.events.optimizationJobUpdated(tenantId, this.toView(job, patch));
+  }
+
+  private toView(
+    job: OptimizationJobRecord,
+    patch: { status: OptimizationJobStatus; routePlanId?: string; error?: string },
+  ): OptimizationJob {
+    return {
       jobId: job.id,
       status: patch.status,
       routePlanId: patch.routePlanId ?? null,
@@ -54,6 +65,5 @@ export class ProcessOptimizationJobUseCase {
       createdAt: job.createdAt.toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    this.events.optimizationJobUpdated(tenantId, view);
   }
 }
