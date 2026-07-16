@@ -6,7 +6,8 @@ COPY package.json package-lock.json* ./
 COPY packages/contracts/package.json ./packages/contracts/
 COPY apps/web/package.json ./apps/web/
 
-RUN npm install
+# `npm ci` é reprodutível (respeita o lockfile) — hardening S3.
+RUN npm ci
 
 COPY tsconfig.base.json ./
 COPY packages/contracts ./packages/contracts
@@ -26,6 +27,9 @@ COPY --from=build /repo/apps/web/.next ./.next
 COPY --from=build /repo/apps/web/public ./public
 COPY --from=build /repo/apps/web/package.json ./package.json
 COPY --from=build /repo/apps/web/next.config.mjs ./next.config.mjs
+
+# Não roda como root (hardening S3).
+USER node
 
 EXPOSE 3000
 CMD ["npm", "run", "start"]

@@ -7,7 +7,8 @@ COPY package.json package-lock.json* ./
 COPY packages/contracts/package.json ./packages/contracts/
 COPY apps/api/package.json ./apps/api/
 
-RUN npm install
+# `npm ci` é reprodutível (respeita o lockfile) — hardening S3.
+RUN npm ci
 
 # Copia o código e builda contracts + api
 COPY tsconfig.base.json ./
@@ -26,6 +27,9 @@ COPY --from=build /repo/node_modules ./node_modules
 COPY --from=build /repo/packages/contracts ./packages/contracts
 COPY --from=build /repo/apps/api/package.json ./apps/api/package.json
 COPY --from=build /repo/apps/api/dist ./apps/api/dist
+
+# Não roda como root (hardening S3): a imagem node:alpine já traz o usuário `node`.
+USER node
 
 EXPOSE 3001
 CMD ["node", "apps/api/dist/main.js"]

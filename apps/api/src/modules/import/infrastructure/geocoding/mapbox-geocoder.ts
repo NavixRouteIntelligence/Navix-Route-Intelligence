@@ -20,6 +20,9 @@ interface MapboxFeature {
  * nulo (a linha sem coordenadas será marcada como inválida). Troca por outro
  * provedor sem afetar o resto (porta GeocoderPort).
  */
+/** Timeout por chamada ao Mapbox — evita exaustão de conexões (hardening S10). */
+const TIMEOUT_MS = 5000;
+
 @Injectable()
 export class MapboxGeocoder implements GeocoderPort {
   private readonly logger = new Logger(MapboxGeocoder.name);
@@ -39,7 +42,7 @@ export class MapboxGeocoder implements GeocoderPort {
       `?access_token=${token}&limit=1&language=pt`;
 
     try {
-      const res = await fetch(url);
+      const res = await fetch(url, { signal: AbortSignal.timeout(TIMEOUT_MS) });
       if (!res.ok) {
         const body = await res.text().catch(() => '');
         this.logger.warn(`Mapbox respondeu ${res.status}: ${body.slice(0, 200)}`);
