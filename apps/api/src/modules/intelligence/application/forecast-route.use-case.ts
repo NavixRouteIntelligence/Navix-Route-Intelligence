@@ -147,27 +147,28 @@ export class ForecastRouteUseCase {
     accessById: Map<string, ReturnType<AccessInstructionsPort['instructionsFor']>>,
     pointById: Map<string, LatLng>,
   ): Promise<RouteScheduleView> {
-    const stops = await Promise.all(
-      schedule.stops.map(async (s) => {
-        const access = accessById.get(s.id);
-        const point = pointById.get(s.id);
-        const parking = point
-          ? await this.parking.predict({ tenantId, point, arrivalAt: s.arrivalAt })
-          : undefined;
-        return {
-          id: s.id,
-          sequence: s.sequence,
-          etaMinutes: s.etaMinutes,
-          arrivalAt: s.arrivalAt.toISOString(),
-          legDistanceKm: s.legDistanceKm,
-          cumulativeDistanceKm: s.cumulativeDistanceKm,
-          serviceMinutes: s.serviceMinutes,
-          timeWindowRespected: s.timeWindowRespected,
-          ...(access && access.length > 0 ? { access } : {}),
-          ...(parking ? { parking } : {}),
-        };
-      }),
-    );
+    // Uma única previsão em lote para todas as paradas (ADR-0043) — sem N+1.
+    const predictInputs = schedule.stops
+      .map((s) => ({ id: s.id, point: pointById.get(s.id), arrivalAt: s.arrivalAt }))
+      .filter((s): s is { id: string; point: LatLng; arrivalAt: Date } => s.point !== undefined);
+    const parkingById = await this.parking.predictMany(tenantId, predictInputs);
+
+    const stops = schedule.stops.map((s) => {
+      const access = accessById.get(s.id);
+      const parking = parkingById.get(s.id);
+      return {
+        id: s.id,
+        sequence: s.sequence,
+        etaMinutes: s.etaMinutes,
+        arrivalAt: s.arrivalAt.toISOString(),
+        legDistanceKm: s.legDistanceKm,
+        cumulativeDistanceKm: s.cumulativeDistanceKm,
+        serviceMinutes: s.serviceMinutes,
+        timeWindowRespected: s.timeWindowRespected,
+        ...(access && access.length > 0 ? { access } : {}),
+        ...(parking ? { parking } : {}),
+      };
+    });
     return {
       departureAt: schedule.departure.toISOString(),
       completionAt: schedule.completion.toISOString(),

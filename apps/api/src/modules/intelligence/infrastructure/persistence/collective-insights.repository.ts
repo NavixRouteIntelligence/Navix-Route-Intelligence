@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { MoreThanOrEqual, Repository } from 'typeorm';
+import { In, MoreThanOrEqual, Repository } from 'typeorm';
 
 import { scopedRepository } from '../../../../shared/database/transaction-context';
 import type { CollectiveObservation } from '../../domain/collective-insight';
@@ -49,7 +49,26 @@ export class CollectiveInsightsRepository implements CollectiveInsightsPort {
       order: { createdAt: 'DESC' },
       take: limit,
     });
-    return rows.map((r) => ({
+    return rows.map((r) => this.toDomain(r));
+  }
+
+  async findRecentByCells(
+    tenantId: string,
+    cells: string[],
+    since: Date,
+    limit: number,
+  ): Promise<CollectiveObservation[]> {
+    if (cells.length === 0) return [];
+    const rows = await this.repo.find({
+      where: { tenantId, cell: In(cells), createdAt: MoreThanOrEqual(since) },
+      order: { createdAt: 'DESC' },
+      take: limit,
+    });
+    return rows.map((r) => this.toDomain(r));
+  }
+
+  private toDomain(r: CollectiveObservationOrmEntity): CollectiveObservation {
+    return {
       id: r.id,
       tenantId: r.tenantId,
       driverId: r.driverId,
@@ -61,6 +80,6 @@ export class CollectiveInsightsRepository implements CollectiveInsightsPort {
       serviceMinutes: r.serviceMinutes,
       accessTip: r.accessTip,
       createdAt: r.createdAt,
-    }));
+    };
   }
 }

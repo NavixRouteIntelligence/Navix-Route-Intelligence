@@ -15,6 +15,16 @@ export interface CollectiveInsightsPort {
     since: Date,
     limit: number,
   ): Promise<CollectiveObservation[]>;
+  /**
+   * Observações recentes de **várias células** numa única consulta (ADR-0043) —
+   * elimina o N+1 quando o forecast precisa do histórico de todas as paradas.
+   */
+  findRecentByCells(
+    tenantId: string,
+    cells: string[],
+    since: Date,
+    limit: number,
+  ): Promise<CollectiveObservation[]>;
 }
 
 export const COLLECTIVE_INSIGHTS = Symbol('COLLECTIVE_INSIGHTS');
