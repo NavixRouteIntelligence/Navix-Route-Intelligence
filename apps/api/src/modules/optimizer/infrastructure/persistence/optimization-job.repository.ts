@@ -58,4 +58,13 @@ export class OptimizationJobRepository implements OptimizationJobRepositoryPort 
       },
     );
   }
+
+  async claim(id: string): Promise<boolean> {
+    // UPDATE ... WHERE id = $1 AND status = 'queued' — só um consumidor vence.
+    const result = await this.repo.update(
+      { id, status: 'queued' },
+      { status: 'running', updatedAt: new Date() },
+    );
+    return (result.affected ?? 0) > 0;
+  }
 }

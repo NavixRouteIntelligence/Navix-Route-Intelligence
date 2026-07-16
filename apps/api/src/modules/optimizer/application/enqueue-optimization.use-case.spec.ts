@@ -6,7 +6,7 @@ describe('EnqueueOptimizationUseCase', () => {
   it('cria um job "queued", enfileira o processamento e retorna o jobId', async () => {
     const create = jest.fn().mockResolvedValue(undefined);
     const enqueue = jest.fn();
-    const jobs: OptimizationJobRepositoryPort = { create, findById: jest.fn(), update: jest.fn() };
+    const jobs: OptimizationJobRepositoryPort = { create, findById: jest.fn(), update: jest.fn(), claim: jest.fn() };
     const queue: OptimizationJobQueuePort = { enqueue };
 
     const uc = new EnqueueOptimizationUseCase(jobs, queue);
