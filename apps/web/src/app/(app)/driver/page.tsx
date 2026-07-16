@@ -20,6 +20,8 @@ import { useState } from 'react';
 
 import { AiRouteOptimizer } from '@/components/driver/ai-route-optimizer';
 import { DriverInsights } from '@/components/driver/driver-insights';
+import { DriverStopIntelligence } from '@/components/driver/driver-stop-intelligence';
+import { VoiceAssistantButton } from '@/components/driver/voice-assistant-button';
 import { PodCapture } from '@/components/pod/pod-capture';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -32,6 +34,7 @@ import { StatCard } from '@/components/ui/stat-card';
 import { TD, TH, THead, TR, Table } from '@/components/ui/table';
 import { useToast } from '@/components/ui/toast';
 import { deliveriesApi } from '@/lib/api/deliveries';
+import { intelligenceApi } from '@/lib/api/intelligence';
 import { optimizerApi } from '@/lib/api/optimizer';
 import { trackingApi } from '@/lib/api/tracking';
 import { useAuth } from '@/lib/auth/auth-provider';
@@ -89,6 +92,44 @@ export default function DriverDashboardPage() {
 
   const delivered = history.data?.data ?? [];
 
+  // --- Navix Intelligence: previsão (estacionamento/acesso), carga e coletiva ---
+  const vehicleType = plan?.params.vehicleType;
+
+  const forecast = useQuery({
+    queryKey: ['driver-forecast', plan?.id],
+    enabled: Boolean(plan) && stops.length > 0,
+    queryFn: () =>
+      intelligenceApi.routeForecast({
+        stops: stops.map((s) => ({ id: s.deliveryId, latitude: s.latitude, longitude: s.longitude })),
+        ...(vehicleType ? { vehicleType } : {}),
+      }),
+  });
+
+  const loadPlanQuery = useQuery({
+    queryKey: ['driver-loadplan', plan?.id],
+    enabled: Boolean(plan) && stops.length > 0,
+    queryFn: () =>
+      intelligenceApi.loadPlan({
+        items: stops.map((s) => ({
+          id: s.deliveryId,
+          sequence: s.sequence,
+          ...(s.weightKg !== undefined ? { weightKg: s.weightKg } : {}),
+          ...(s.volumeM3 !== undefined ? { volumeM3: s.volumeM3 } : {}),
+        })),
+        ...(vehicleType ? { vehicleType } : {}),
+      }),
+  });
+
+  const insight = useQuery({
+    queryKey: ['driver-insight', nextStop?.deliveryId],
+    enabled: Boolean(nextStop),
+    queryFn: () => intelligenceApi.collectiveInsight(nextStop!.latitude, nextStop!.longitude),
+  });
+
+  const forecastStop = nextStop
+    ? forecast.data?.data.schedule.stops.find((st) => st.id === nextStop.deliveryId)
+    : undefined;
+
   // Abre o comprovante (POD) para a próxima parada.
   function concludeStop() {
     if (remaining <= 0 || !nextStop) return;
@@ -131,6 +172,11 @@ export default function DriverDashboardPage() {
               <Flag className="h-4 w-4" />
               Reportar problema
             </Button>
+            <VoiceAssistantButton
+              onIntent={(view) => {
+                if (view.intent === 'mark_delivered') concludeStop();
+              }}
+            />
           </div>
         }
       />
@@ -277,6 +323,15 @@ export default function DriverDashboardPage() {
                 })}
               </CardContent>
             </Card>
+
+            {/* Navix Intelligence da parada atual (ADR-0028/0029/0030/0031) */}
+            <DriverStopIntelligence
+              parking={forecastStop?.parking}
+              access={forecastStop?.access}
+              insight={insight.data?.data}
+              loadPlan={loadPlanQuery.data?.data}
+              loading={forecast.isLoading}
+            />
           </div>
         </div>
       )}
