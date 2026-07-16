@@ -55,6 +55,10 @@ export const envSchema = z.object({
   STORAGE_DRIVER: z.enum(['local', 's3']).default('local'),
   STORAGE_LOCAL_DIR: z.string().default('./storage'),
   STORAGE_PUBLIC_BASE_URL: z.string().default('http://localhost:3001/api/v1/files'),
+  // Assinatura das URLs de mídia (ADR-0046). Segredo estável entre instâncias em
+  // produção; se ausente, cai para um segredo por-processo (dev single-instance).
+  MEDIA_URL_SECRET: z.string().optional(),
+  MEDIA_URL_TTL_SECONDS: z.coerce.number().int().positive().default(900),
   S3_ENDPOINT: z.string().optional(),
   S3_REGION: z.string().default('auto'),
   S3_BUCKET: z.string().optional(),

@@ -13,7 +13,7 @@ import {
   type DeliveryOutcomePort,
   type PodRepositoryPort,
 } from '../domain/ports/pod-repository.port';
-import { toPodView } from './pod.mapper';
+import { toPodViewSigned } from './pod.mapper';
 
 export interface SubmitPodCommand extends CreatePodRequest {
   tenantId: string;
@@ -83,7 +83,7 @@ export class SubmitPodUseCase {
       metadata: { status: command.status, hasPhoto: Boolean(photo), hasSignature: Boolean(signature) },
     });
 
-    return toPodView(pod);
+    return toPodViewSigned(pod, this.storage);
   }
 
   /**
@@ -99,7 +99,7 @@ export class SubmitPodUseCase {
     if (!value) return null;
     if (!isDataUrl(value)) return value;
     const { buffer, contentType, extension } = decodeDataUrl(value);
-    const { url } = await this.storage.save({
+    const { ref } = await this.storage.save({
       scope: 'pod',
       tenantId,
       id: podId,
@@ -108,6 +108,6 @@ export class SubmitPodUseCase {
       contentType,
       extension,
     });
-    return url;
+    return ref;
   }
 }

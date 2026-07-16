@@ -2,11 +2,12 @@ import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import { Controller, Get, NotFoundException, Param, Res } from '@nestjs/common';
+import { Controller, Get, NotFoundException, Param, Query, Res } from '@nestjs/common';
 import { ApiExcludeController } from '@nestjs/swagger';
 import type { Response } from 'express';
 
 import { AppConfigService } from '../config/app-config.service';
+import { MediaUrlSigner, resolveMediaSecret } from './media-url-signer';
 
 // Só imagens rasterizadas: SVG fica de fora (vetor de XSS quando servido inline).
 const CONTENT_TYPE: Record<string, string> = {
@@ -30,10 +31,15 @@ const SAFE_SEGMENT = /^[A-Za-z0-9._-]+$/;
 export class FilesController {
   private readonly dir: string;
   private readonly enabled: boolean;
+  private readonly signer: MediaUrlSigner;
 
   constructor(config: AppConfigService) {
     this.dir = config.storage.localDir;
     this.enabled = config.storage.driver === 'local';
+    this.signer = new MediaUrlSigner(
+      resolveMediaSecret(config.storage.mediaUrlSecret),
+      config.storage.mediaUrlTtlSeconds,
+    );
   }
 
   @Get(':scope/:tenant/:name')
@@ -41,12 +47,18 @@ export class FilesController {
     @Param('scope') scope: string,
     @Param('tenant') tenant: string,
     @Param('name') name: string,
+    @Query('exp') exp: string,
+    @Query('sig') sig: string,
     @Res() res: Response,
   ): void {
     if (!this.enabled) throw new NotFoundException();
     for (const part of [scope, tenant, name]) {
       if (!SAFE_SEGMENT.test(part) || part.includes('..')) throw new NotFoundException();
     }
+
+    // Assinatura HMAC + expiração (ADR-0046): sem link válido, não serve a mídia.
+    const key = `${scope}/${tenant}/${name}`;
+    if (!this.signer.verify(key, Number(exp), sig ?? '')) throw new NotFoundException();
 
     const full = join(this.dir, scope, tenant, name);
     const ext = name.split('.').pop()?.toLowerCase() ?? '';
