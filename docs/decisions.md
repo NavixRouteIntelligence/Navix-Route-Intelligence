@@ -56,6 +56,7 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 | ADR-0030 | Organização otimizada da carga (Fase B) | Aceito | ✅ `POST /intelligence/load-plan`: `LoadPlannerPort` (heurística **LIFO** — última entrega ao fundo, ML-ready p/ bin packing 3D) devolve sequência de carregamento, zonas de estiva (porta/meio/fundo), ocupação de peso/volume e avisos (excesso, frágil sob carga); capacidade explícita ou por tipo de veículo; componente web `LoadPlanList` (DS/i18n 4 locales/a11y). Fecha a Fase B | 2026-07-15 |
 | ADR-0031 | Inteligência coletiva por tenant (Fase C) | Aceito | ✅ `POST /intelligence/observations` + `GET /intelligence/insights`: observações de campo do motorista (estacionamento/tempo de atendimento/dica de acesso) persistidas por tenant (RLS FORCE) e agregadas por **célula de localização** (~110 m) atrás do `CollectiveInsightsPort`; agregação pura (moda/mediana/dedup) com **amostra mínima** (privacidade); componente web `CollectiveInsightCard` (DS/i18n 4 locales/a11y). Abre a Fase C | 2026-07-15 |
 | ADR-0032 | Assistente por voz do motorista (Fase C) | Aceito | ✅ `POST /intelligence/voice-command`: `VoiceCommandInterpreterPort` (heurística de intenção por palavras-chave PT/EN/ES, ML-ready p/ NLU/LLM) classifica a transcrição em intenção (próxima parada/resumo/quanto falta/entregue/estacionamento/ajuda) + slots; STT/TTS no navegador (Web Speech API) via componente `VoiceAssistantButton` com _fallback_ elegante (DS/i18n 4 locales/a11y). **Fecha a Fase C e os 6 recursos do motorista** | 2026-07-15 |
+| ADR-0033 | Montagem da experiência do motorista na tela (integração A) | Aceito | ✅ A página do motorista passa a **renderizar** os 6 recursos: `VoiceAssistantButton` no cabeçalho + `DriverStopIntelligence` (estacionamento/acesso/coletiva/carga) na parada atual, guiado pela previsão/carga derivadas do plano de rota. Componente **apresentacional** (dados via props) + consultas na página. Abre a fase de integrações | 2026-07-16 |
 
 ---
 
@@ -391,6 +392,17 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 
 ---
 
+## ADR-0033 — Montagem da experiência do motorista na tela (integração A)
+
+- **Status:** Aceito · **Data:** 2026-07-16
+- **Status da implementação:** ✅ Implementado (1ª integração da sequência A→E). Os 6 recursos do motorista (ADR-0026–0032) estavam construídos e testados isoladamente, mas **não renderizados** em nenhuma página. A página `driver` passa a montá-los: `VoiceAssistantButton` no cabeçalho (com `onIntent` inicial `mark_delivered`→concluir parada) e `DriverStopIntelligence` na coluna da parada atual, reunindo **estacionamento** e **acesso** (do `route-forecast`), **inteligência coletiva** (do `insights` pela coordenada da próxima parada) e **organização da carga** (do `load-plan`). As três consultas (`react-query`) derivam do **plano de rota** já carregado (as paradas trazem `latitude/longitude`, `sequence` e demanda).
+- **Contexto:** Entregar valor exige que o trabalho das Fases A–C apareça na tela do motorista. Sem a montagem, tudo ficava no backend + testes.
+- **Decisão:** Separar **apresentação** de **busca de dados**: `DriverStopIntelligence` é puramente apresentacional (recebe `parking`/`access`/`insight`/`loadPlan` por props, testável com RTL sem `react-query`), enquanto a página faz as consultas e o _join_ por `deliveryId`. Reutilizar os componentes já existentes (`ParkingBadge`, `AccessInstructionList`, `CollectiveInsightCard`, `LoadPlanList`, `VoiceAssistantButton`) sem alterá-los.
+- **Alternativas consideradas:** **Componente com data-fetching embutido** (dificultaria o teste e acoplaria à camada de dados — preferiu-se apresentacional + consultas na página); **nova rota dedicada** (a página `driver` já é o hub natural do motorista); **derivar a previsão de outra fonte** (o plano de rota já tem as coordenadas e a sequência — evita nova origem de dados).
+- **Consequências:** A experiência premium do motorista fica visível e coesa, reusando componentes e o Design System. Prepara o terreno para as integrações B (realimentar previsões com a coletiva), C (ações reais do assistente) e D (captura automática de observações). **Pendências:** ver ADR-0031/0032 (realimentação e ações); acesso depende de `accessNotes` chegarem ao plano; POD/observação automáticos ao concluir parada.
+
+---
+
 ## Template
 
 ```markdown
@@ -433,3 +445,4 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 | 2026-07-15 | 2.0 | Design+Arch | ADR-0030: Organização otimizada da carga — POST /intelligence/load-plan (LoadPlannerPort LIFO + zonas/ocupação/avisos) + LoadPlanList no web; encerra a Fase B |
 | 2026-07-15 | 2.1 | Design+Arch | ADR-0031: Inteligência coletiva por tenant — observações de campo (RLS) agregadas por célula atrás do CollectiveInsightsPort + CollectiveInsightCard no web; abre a Fase C |
 | 2026-07-15 | 2.2 | Design+Arch | ADR-0032: Assistente por voz — POST /intelligence/voice-command (VoiceCommandInterpreterPort, heurística de intenção PT/EN/ES) + VoiceAssistantButton (Web Speech API) no web; encerra a Fase C e os 6 recursos do motorista |
+| 2026-07-16 | 2.3 | Design+Arch | ADR-0033: Montagem da experiência do motorista na página (VoiceAssistantButton + DriverStopIntelligence, apresentacional + consultas derivadas do plano); abre as integrações A→E |

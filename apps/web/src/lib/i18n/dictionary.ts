@@ -169,6 +169,9 @@ const pt_BR = {
   'voice.reply.report_parking': 'Registrando o estacionamento.',
   'voice.reply.help': 'Você pode pedir: próxima parada, resumo, quanto falta, marcar entregue ou reportar estacionamento.',
   'voice.reply.unknown': 'Não entendi. Diga "ajuda" para ver os comandos.',
+
+  'stopIntel.title': 'Inteligência da parada',
+  'stopIntel.empty': 'Sem sinais para esta parada ainda.',
 };
 
 type Keys = typeof pt_BR;
@@ -343,6 +346,9 @@ const en: Keys = {
   'voice.reply.report_parking': 'Logging the parking report.',
   'voice.reply.help': 'You can say: next stop, summary, time left, mark delivered or report parking.',
   'voice.reply.unknown': 'I did not catch that. Say "help" to list commands.',
+
+  'stopIntel.title': 'Stop intelligence',
+  'stopIntel.empty': 'No signals for this stop yet.',
 };
 
 const es: Keys = {
@@ -495,6 +501,9 @@ const es: Keys = {
   'voice.reply.report_parking': 'Registrando el aparcamiento.',
   'voice.reply.help': 'Puedes decir: siguiente parada, resumen, cuánto falta, marcar entregada o reportar aparcamiento.',
   'voice.reply.unknown': 'No entendí. Di "ayuda" para ver los comandos.',
+
+  'stopIntel.title': 'Inteligencia de la parada',
+  'stopIntel.empty': 'Aún no hay señales para esta parada.',
 };
 
 export const DICTIONARY: Record<Locale, Keys> = {
