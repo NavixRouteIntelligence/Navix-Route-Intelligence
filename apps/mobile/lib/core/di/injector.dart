@@ -14,6 +14,8 @@ import '../../features/imports/data/import_repository.dart';
 import '../../features/imports/presentation/import_cubit.dart';
 import '../../features/intelligence/data/intelligence_repository.dart';
 import '../../features/intelligence/presentation/stop_intelligence_cubit.dart';
+import '../../features/intelligence/presentation/voice_assistant_cubit.dart';
+import '../voice/speech_service.dart';
 import '../../features/optimizer/data/optimizer_repository.dart';
 import '../../features/optimizer/presentation/optimizer_cubit.dart';
 import '../../features/pod/data/pod_queue_store.dart';
@@ -110,5 +112,9 @@ Future<void> configureDependencies(AppConfig config) async {
     )
     ..registerFactory<StopIntelligenceCubit>(
       () => StopIntelligenceCubit(getIt<IntelligenceRepository>()),
+    )
+    ..registerLazySingleton<SpeechService>(PluginSpeechService.new)
+    ..registerFactory<VoiceAssistantCubit>(
+      () => VoiceAssistantCubit(getIt<SpeechService>(), getIt<IntelligenceRepository>()),
     );
 }

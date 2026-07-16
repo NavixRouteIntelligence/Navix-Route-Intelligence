@@ -60,6 +60,7 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 | ADR-0034 | Estacionamento ciente da comunidade (integração B) | Aceito | ✅ `ParkingPredictorPort` torna-se **assíncrona + por tenant**; `CommunityAwareParkingPredictor` parte da heurística de trânsito (ADR-0029) e a **realimenta** com o que a frota observou na célula (ADR-0031) via `blendParking` puro (a observação real puxa a dificuldade pela sua confiança); degrada para a heurística sem observações. Fecha o laço de realimentação | 2026-07-16 |
 | ADR-0035 | Ações do assistente de voz + captura automática (integrações C+D) | Aceito | ✅ O `onIntent` do `VoiceAssistantButton` liga a intenção às **ações reais** (marcar entregue, reportar estacionamento→observação, próxima parada/quanto falta/resumo→resposta com dados); ao concluir uma parada, o **tempo de atendimento** (dwell) é registrado automaticamente como observação `service_time` (ADR-0031). Realimenta a coletiva sem esforço do motorista. Web-only, reusa `recordObservation` | 2026-07-16 |
 | ADR-0036 | Paridade mobile — inteligência da parada (integração E.1) | Aceito | 🟡 App Flutter ganha a feature `intelligence`: `IntelligenceRepository` + `StopIntelligenceCubit` + `StopIntelligenceCard` no painel do motorista, mostrando estacionamento previsto (ciente da comunidade), acesso e o que a frota aprendeu no local; `DriverDelivery` passa a carregar coordenadas. Voz nativa (STT/TTS) e captura automática no POD ficam para E.2/E.3 | 2026-07-16 |
+| ADR-0037 | Assistente por voz nativo no mobile (integração E.2) | Aceito | 🟡 App Flutter ganha voz: `SpeechService` (abstração de STT/TTS sobre `speech_to_text`/`flutter_tts`), `VoiceAssistantCubit` (ouve → classifica no backend via `voice-command` → fala a resposta) e `VoiceAssistantButton` (FAB) no painel; a intenção liga às ações reais (entregue→POD, estacionamento→observação, próxima/quanto falta/resumo→aviso). Permissões iOS/Android necessárias (pastas de plataforma _gitignored_). STT/TTS on-device não validável headless. Falta E.3 (captura de dwell no POD) | 2026-07-16 |
 
 ---
 
@@ -439,6 +440,17 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 
 ---
 
+## ADR-0037 — Assistente por voz nativo no mobile (integração E.2)
+
+- **Status:** Aceito · **Data:** 2026-07-16
+- **Status da implementação:** 🟡 Parcial (2ª fatia da integração E). O app Flutter ganha o assistente por voz, espelhando o web (ADR-0032): STT no dispositivo (`speech_to_text`), classificação de intenção no backend (`POST /intelligence/voice-command`) e resposta falada (`flutter_tts`). Peças: `SpeechService` (abstração de STT/TTS, com `PluginSpeechService` sobre os plugins); `IntelligenceRepository.interpretVoice`; `VoiceAssistantCubit` (estados idle/listening/thinking/result/unsupported/error; `voiceReplyFor` monta a fala pt-BR no cliente); `VoiceAssistantButton` (FAB no painel do motorista). A intenção liga às **ações reais** via `BlocListener` na página: `mark_delivered`→abre o POD, `report_parking`→registra observação no local, `next_stop`/`remaining`/`route_summary`→aviso com dados. Permissões necessárias: iOS (`NSMicrophoneUsageDescription`, `NSSpeechRecognitionUsageDescription`), Android (`RECORD_AUDIO` + query `RecognitionService`). **Nota:** as pastas `ios/`/`android/` são _gitignored_ neste repositório (plataforma gerada localmente), então essas entradas ficam **fora do VCS** e precisam ser aplicadas onde os projetos de plataforma são mantidos/gerados.
+- **Contexto:** O motorista dirigindo precisa operar sem as mãos; a paridade com o web (ADR-0032) exige voz nativa no app, onde ele realmente trabalha.
+- **Decisão:** Reusar o **mesmo backend** (a intenção é conhecimento de domínio, já servida pelo `voice-command`) e manter STT/TTS **no dispositivo** (sem enviar áudio). Colocar STT/TTS atrás de uma **abstração** (`SpeechService`) para o cubit ser **testável com um fake**, sem plugins — validável com `flutter analyze`/`flutter test`. O assistente **não executa ações**; a página reage à intenção (mesmo princípio da ADR-0035).
+- **Alternativas consideradas:** **NLU on-device** (duplicaria a lógica do backend e perderia a evolução única para NLU/LLM — a intenção fica no servidor); **usar os plugins direto no cubit** (tornaria o cubit não testável headless — a abstração resolve); **enviar áudio ao backend** (custo/latência/privacidade — o STT do device é suficiente); **um pacote único STT+TTS** (os dois plugins são maduros e específicos).
+- **Consequências:** Paridade de voz no app, testável na lógica, com o backend reutilizado. **Limitação:** STT/TTS reais dependem de hardware/SO e permissões — **não validáveis de forma headless**; exigem teste em simulador/dispositivo. **Pendências (E.3):** captura automática do dwell ao concluir o POD no app (paridade da ADR-0035); confirmação por voz para ações sensíveis; wake-word; feedback visual de nível de áudio.
+
+---
+
 ## Template
 
 ```markdown
@@ -485,3 +497,4 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 | 2026-07-16 | 2.4 | Arquitetura | ADR-0034: Estacionamento ciente da comunidade — ParkingPredictorPort assíncrona/por tenant + CommunityAwareParkingPredictor realimenta a previsão (integração B) |
 | 2026-07-16 | 2.5 | Design+Arch | ADR-0035: Ações do assistente de voz + captura automática do tempo de atendimento (dwell) realimentando a coletiva (integrações C+D) |
 | 2026-07-16 | 2.6 | Mobile+Arch | ADR-0036: Paridade mobile — feature `intelligence` (StopIntelligenceCard: estacionamento/acesso/coletiva) no app Flutter (integração E.1); voz nativa e captura no POD em E.2/E.3 |
+| 2026-07-16 | 2.7 | Mobile+Arch | ADR-0037: Assistente por voz nativo no mobile — SpeechService (STT/TTS) + VoiceAssistantCubit/Button espelhando o voice-command, com ações reais (integração E.2); falta E.3 |

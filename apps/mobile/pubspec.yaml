@@ -50,6 +50,10 @@ dependencies:
   # i18n (versão fixada pelo flutter_localizations do SDK)
   intl: ^0.20.2
 
+  # Assistente por voz (STT/TTS nativos) — ADR-0037
+  speech_to_text: ^7.0.0
+  flutter_tts: ^4.2.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
