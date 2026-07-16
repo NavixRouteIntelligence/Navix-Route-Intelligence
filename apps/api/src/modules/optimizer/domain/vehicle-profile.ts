@@ -1,4 +1,4 @@
-import type { OptimizationVehicleInput, VehicleType } from '@navix/contracts';
+import { VEHICLE_CAPACITY_DEFAULTS, type OptimizationVehicleInput, type VehicleType } from '@navix/contracts';
 
 import { ValidationError } from '../../../shared/kernel/domain-error';
 import type { Demand } from './optimization-stop';
@@ -22,34 +22,36 @@ export interface VehicleTypeDefaults {
 
 // Defaults por tipo (tunáveis por tenant no futuro). Valores conservadores e
 // plausíveis para última milha; a moto/bicicleta priorizam agilidade urbana.
+// A **capacidade** vem da fonte única em `contracts` (ADR-0042); velocidade,
+// pedágio e restrição urbana são afinações operacionais do otimizador.
 const DEFAULTS: Record<VehicleType, VehicleTypeDefaults> = {
   bicycle: {
     averageSpeedKmh: 15,
-    capacity: { weightKg: 15, volumeM3: 0.1 },
+    capacity: VEHICLE_CAPACITY_DEFAULTS.bicycle,
     avoidTolls: true,
     urbanAccessRestricted: false,
   },
   motorcycle: {
     averageSpeedKmh: 35,
-    capacity: { weightKg: 30, volumeM3: 0.2 },
+    capacity: VEHICLE_CAPACITY_DEFAULTS.motorcycle,
     avoidTolls: true,
     urbanAccessRestricted: false,
   },
   car: {
     averageSpeedKmh: 40,
-    capacity: { weightKg: 400, volumeM3: 1.5 },
+    capacity: VEHICLE_CAPACITY_DEFAULTS.car,
     avoidTolls: false,
     urbanAccessRestricted: false,
   },
   van: {
     averageSpeedKmh: 35,
-    capacity: { weightKg: 1200, volumeM3: 8 },
+    capacity: VEHICLE_CAPACITY_DEFAULTS.van,
     avoidTolls: false,
     urbanAccessRestricted: false,
   },
   truck: {
     averageSpeedKmh: 28,
-    capacity: { weightKg: 12000, volumeM3: 40 },
+    capacity: VEHICLE_CAPACITY_DEFAULTS.truck,
     avoidTolls: false,
     urbanAccessRestricted: true,
   },

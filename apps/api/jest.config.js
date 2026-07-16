@@ -22,10 +22,10 @@ module.exports = {
   // de docs/coding-standards.md é ≥80% em domínio/aplicação).
   coverageThreshold: {
     global: {
-      statements: 24,
-      branches: 37,
-      functions: 25,
-      lines: 24,
+      statements: 40,
+      branches: 54,
+      functions: 42,
+      lines: 40,
     },
   },
   testEnvironment: 'node',
