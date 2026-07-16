@@ -107,7 +107,7 @@ export class ForecastRouteUseCase {
     );
 
     return {
-      schedule: this.toScheduleView(schedule, accessById, pointById),
+      schedule: await this.toScheduleView(command.tenantId, schedule, accessById, pointById),
       delays,
       fuel,
       departure: {
@@ -141,19 +141,19 @@ export class ForecastRouteUseCase {
     return { profile: NEUTRAL_DRIVER_PROFILE, source: 'default' };
   }
 
-  private toScheduleView(
+  private async toScheduleView(
+    tenantId: string,
     schedule: RouteSchedule,
     accessById: Map<string, ReturnType<AccessInstructionsPort['instructionsFor']>>,
     pointById: Map<string, LatLng>,
-  ): RouteScheduleView {
-    return {
-      departureAt: schedule.departure.toISOString(),
-      completionAt: schedule.completion.toISOString(),
-      totalMinutes: schedule.totalMinutes,
-      totalDistanceKm: schedule.totalDistanceKm,
-      stops: schedule.stops.map((s) => {
+  ): Promise<RouteScheduleView> {
+    const stops = await Promise.all(
+      schedule.stops.map(async (s) => {
         const access = accessById.get(s.id);
         const point = pointById.get(s.id);
+        const parking = point
+          ? await this.parking.predict({ tenantId, point, arrivalAt: s.arrivalAt })
+          : undefined;
         return {
           id: s.id,
           sequence: s.sequence,
@@ -164,9 +164,16 @@ export class ForecastRouteUseCase {
           serviceMinutes: s.serviceMinutes,
           timeWindowRespected: s.timeWindowRespected,
           ...(access && access.length > 0 ? { access } : {}),
-          ...(point ? { parking: this.parking.predict({ point, arrivalAt: s.arrivalAt }) } : {}),
+          ...(parking ? { parking } : {}),
         };
       }),
+    );
+    return {
+      departureAt: schedule.departure.toISOString(),
+      completionAt: schedule.completion.toISOString(),
+      totalMinutes: schedule.totalMinutes,
+      totalDistanceKm: schedule.totalDistanceKm,
+      stops,
     };
   }
 }

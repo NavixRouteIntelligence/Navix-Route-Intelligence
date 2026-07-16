@@ -15,7 +15,7 @@ import { TRAFFIC_MODEL, type TrafficModelPort } from '../domain/traffic-model';
 export class HeuristicParkingPredictor implements ParkingPredictorPort {
   constructor(@Inject(TRAFFIC_MODEL) private readonly traffic: TrafficModelPort) {}
 
-  predict(input: { point: LatLng; arrivalAt: Date }): ParkingPredictionView {
-    return predictParkingFromTraffic(this.traffic.factor(input.point, input.arrivalAt));
+  predict(input: { tenantId: string; point: LatLng; arrivalAt: Date }): Promise<ParkingPredictionView> {
+    return Promise.resolve(predictParkingFromTraffic(this.traffic.factor(input.point, input.arrivalAt)));
   }
 }
