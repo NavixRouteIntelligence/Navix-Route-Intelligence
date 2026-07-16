@@ -4,6 +4,7 @@ import { dirname, join } from 'node:path';
 import { Injectable } from '@nestjs/common';
 
 import { AppConfigService } from '../config/app-config.service';
+import { MediaUrlSigner, resolveMediaSecret } from './media-url-signer';
 import {
   storageKey,
   type StoragePort,
@@ -12,18 +13,24 @@ import {
 } from './storage.port';
 
 /**
- * Driver **local** (dev): grava os objetos em disco e os serve pelo
- * `FilesController` (`GET /api/v1/files/...`). A URL retornada é estável e é o
- * que se persiste no banco. Em produção usa-se o driver S3 (ADR-0019).
+ * Driver **local** (dev/self-host): grava os objetos em disco e os serve pelo
+ * `FilesController`. Guarda a **key** e gera a URL **assinada + expirável** no
+ * *read* (ADR-0046) — mídia de PII não fica em URL pública permanente. Em
+ * produção usa-se o driver S3 (ADR-0019).
  */
 @Injectable()
 export class FilesystemStorage implements StoragePort {
   private readonly dir: string;
   private readonly baseUrl: string;
+  private readonly signer: MediaUrlSigner;
 
   constructor(config: AppConfigService) {
     this.dir = config.storage.localDir;
     this.baseUrl = config.storage.publicBaseUrl.replace(/\/+$/, '');
+    this.signer = new MediaUrlSigner(
+      resolveMediaSecret(config.storage.mediaUrlSecret),
+      config.storage.mediaUrlTtlSeconds,
+    );
   }
 
   async save(input: StorageSaveInput): Promise<StoredMedia> {
@@ -31,14 +38,17 @@ export class FilesystemStorage implements StoragePort {
     const full = join(this.dir, key);
     await mkdir(dirname(full), { recursive: true });
     await writeFile(full, input.buffer);
-    return { url: `${this.baseUrl}/${key}` };
+    return { ref: key };
   }
 
-  async delete(url: string): Promise<void> {
-    if (!url.startsWith(`${this.baseUrl}/`)) return;
-    const key = url.slice(this.baseUrl.length + 1);
+  readUrl(ref: string): Promise<string> {
+    const { exp, sig } = this.signer.sign(ref);
+    return Promise.resolve(`${this.baseUrl}/${ref}?exp=${exp}&sig=${sig}`);
+  }
+
+  async delete(ref: string): Promise<void> {
     try {
-      await unlink(join(this.dir, key));
+      await unlink(join(this.dir, ref));
     } catch {
       /* best-effort */
     }

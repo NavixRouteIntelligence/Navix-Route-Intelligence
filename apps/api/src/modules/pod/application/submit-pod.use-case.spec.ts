@@ -19,7 +19,8 @@ function build(existing: ProofOfDelivery | null = null) {
   };
   const audit: AuditLogPort = { record: async () => undefined };
   const storage: StoragePort = {
-    save: async (input) => ({ url: `https://cdn.test/${input.scope}/${input.id}-${input.field}.${input.extension}` }),
+    save: async (input) => ({ ref: `${input.scope}/${input.tenantId}/${input.id}-${input.field}.${input.extension}` }),
+    readUrl: async (ref) => `https://cdn.test/${ref}?sig=test`,
     delete: async () => undefined,
   };
   return { uc: new SubmitPodUseCase(repo, delivery, audit, storage), saved, outcomes };
@@ -34,9 +35,10 @@ describe('SubmitPodUseCase', () => {
     expect(outcomes[0].status).toBe('delivered');
     expect(saved).toHaveLength(1);
     expect(view.status).toBe('delivered');
-    // Mídia foi para o storage: o banco guarda a URL, não a data URL.
-    expect(saved[0].photo).toMatch(/^https:\/\/cdn\.test\/pod\/.*-photo\.jpg$/);
-    expect(view.photo).toBe(saved[0].photo);
+    // Mídia foi para o storage: o banco guarda a REFERÊNCIA (key), não a data URL.
+    expect(saved[0].photo).toMatch(/^pod\/t1\/.*-photo\.jpg$/);
+    // A view expõe a URL ASSINADA resolvida no read (ADR-0046).
+    expect(view.photo).toBe(`https://cdn.test/${saved[0].photo}?sig=test`);
   });
 
   it('ausente: aplica desfecho failed', async () => {

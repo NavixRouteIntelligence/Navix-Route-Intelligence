@@ -117,6 +117,8 @@ export class AppConfigService {
       driver: this.get('STORAGE_DRIVER'),
       localDir: this.get('STORAGE_LOCAL_DIR'),
       publicBaseUrl: this.get('STORAGE_PUBLIC_BASE_URL'),
+      mediaUrlSecret: this.get('MEDIA_URL_SECRET'),
+      mediaUrlTtlSeconds: this.get('MEDIA_URL_TTL_SECONDS'),
       s3: {
         endpoint: this.get('S3_ENDPOINT'),
         region: this.get('S3_REGION'),

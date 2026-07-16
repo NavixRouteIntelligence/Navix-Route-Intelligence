@@ -1,4 +1,10 @@
-import { DeleteObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import {
+  DeleteObjectCommand,
+  GetObjectCommand,
+  PutObjectCommand,
+  S3Client,
+} from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { Injectable } from '@nestjs/common';
 
 import { AppConfigService } from '../config/app-config.service';
@@ -19,12 +25,12 @@ import {
 export class S3CompatibleStorage implements StoragePort {
   private readonly client: S3Client;
   private readonly bucket: string;
-  private readonly baseUrl: string;
+  private readonly ttlSeconds: number;
 
   constructor(config: AppConfigService) {
     const s3 = config.storage.s3;
-    if (!s3.bucket || !s3.publicBaseUrl) {
-      throw new Error('STORAGE_DRIVER=s3 exige S3_BUCKET e S3_PUBLIC_BASE_URL.');
+    if (!s3.bucket) {
+      throw new Error('STORAGE_DRIVER=s3 exige S3_BUCKET.');
     }
     this.client = new S3Client({
       region: s3.region,
@@ -36,7 +42,7 @@ export class S3CompatibleStorage implements StoragePort {
           : undefined,
     });
     this.bucket = s3.bucket;
-    this.baseUrl = s3.publicBaseUrl.replace(/\/+$/, '');
+    this.ttlSeconds = config.storage.mediaUrlTtlSeconds;
   }
 
   async save(input: StorageSaveInput): Promise<StoredMedia> {
@@ -49,12 +55,17 @@ export class S3CompatibleStorage implements StoragePort {
         ContentType: input.contentType,
       }),
     );
-    return { url: `${this.baseUrl}/${key}` };
+    return { ref: key };
   }
 
-  async delete(url: string): Promise<void> {
-    if (!url.startsWith(`${this.baseUrl}/`)) return;
-    const key = url.slice(this.baseUrl.length + 1);
-    await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
+  // Presigned GET (ADR-0046): o bucket permanece privado; o link expira.
+  readUrl(ref: string): Promise<string> {
+    return getSignedUrl(this.client, new GetObjectCommand({ Bucket: this.bucket, Key: ref }), {
+      expiresIn: this.ttlSeconds,
+    });
+  }
+
+  async delete(ref: string): Promise<void> {
+    await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: ref }));
   }
 }

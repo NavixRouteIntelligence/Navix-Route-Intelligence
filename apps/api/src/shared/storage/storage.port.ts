@@ -17,14 +17,20 @@ export interface StorageSaveInput {
 }
 
 export interface StoredMedia {
-  /** URL pública/servível do objeto — é o que se persiste no banco. */
-  url: string;
+  /** **Referência** estável do objeto (a *storage key*) — é o que fica no banco. */
+  ref: string;
 }
 
 export interface StoragePort {
   save(input: StorageSaveInput): Promise<StoredMedia>;
-  /** Remoção best-effort (ex.: limpeza de órfãos). */
-  delete(url: string): Promise<void>;
+  /**
+   * URL **assinada e expirável** para ler o objeto (ADR-0046): presigned GET no
+   * S3; URL HMAC + `exp` servida pelo `FilesController` no driver local. Gerada
+   * no *read* — evita URLs públicas permanentes para mídia de PII.
+   */
+  readUrl(ref: string): Promise<string>;
+  /** Remoção best-effort (ex.: limpeza de órfãos), pela referência. */
+  delete(ref: string): Promise<void>;
 }
 
 export const STORAGE = Symbol('STORAGE');
