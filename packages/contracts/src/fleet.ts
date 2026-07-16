@@ -15,6 +15,20 @@ export const VEHICLE_TYPES: readonly VehicleType[] = [
   'motorcycle',
   'bicycle',
 ];
+/**
+ * Capacidade física de referência por tipo de veículo (kg, m³). **Fonte única**
+ * (ADR-0042): consumida pelo `VehicleProfile` do otimizador e pelo `LoadPlanner`
+ * da Intelligence, eliminando a duplicação entre módulos. Vive em `contracts`
+ * (dependência comum), sem acoplar os módulos de negócio um ao outro.
+ */
+export const VEHICLE_CAPACITY_DEFAULTS: Record<VehicleType, { weightKg: number; volumeM3: number }> = {
+  bicycle: { weightKg: 15, volumeM3: 0.1 },
+  motorcycle: { weightKg: 30, volumeM3: 0.2 },
+  car: { weightKg: 400, volumeM3: 1.5 },
+  van: { weightKg: 1200, volumeM3: 8 },
+  truck: { weightKg: 12000, volumeM3: 40 },
+};
+
 export const VEHICLE_STATUSES: readonly VehicleStatus[] = [
   'active',
   'inactive',

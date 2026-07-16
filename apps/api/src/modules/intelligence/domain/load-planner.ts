@@ -1,26 +1,18 @@
-import type {
-  LoadItemInput,
-  LoadPlacementView,
-  LoadPlanRequest,
-  LoadPlanView,
-  LoadZone,
-  VehicleType,
+import {
+  VEHICLE_CAPACITY_DEFAULTS,
+  type LoadItemInput,
+  type LoadPlacementView,
+  type LoadPlanRequest,
+  type LoadPlanView,
+  type LoadZone,
 } from '@navix/contracts';
 
 /**
- * Capacidade de referência por tipo de veículo, usada quando o request não
- * informa `capacityKg`/`capacityVolumeM3` explicitamente. Espelha os defaults do
- * `VehicleProfile` do otimizador (ADR-0022); a consolidação num ponto único do
- * `shared/kernel` está registrada como pendência na ADR-0030 (evitar duplicação
- * sem acoplar os módulos de negócio um ao outro).
+ * Capacidade de referência por tipo de veículo (quando o request não informa
+ * `capacityKg`/`capacityVolumeM3`). **Fonte única** em `contracts` (ADR-0042),
+ * compartilhada com o `VehicleProfile` do otimizador — sem duplicar os números.
  */
-const CAPACITY_BY_TYPE: Record<VehicleType, { weightKg: number; volumeM3: number }> = {
-  bicycle: { weightKg: 15, volumeM3: 0.1 },
-  motorcycle: { weightKg: 30, volumeM3: 0.2 },
-  car: { weightKg: 400, volumeM3: 1.5 },
-  van: { weightKg: 1200, volumeM3: 8 },
-  truck: { weightKg: 12000, volumeM3: 40 },
-};
+const CAPACITY_BY_TYPE = VEHICLE_CAPACITY_DEFAULTS;
 
 function zoneFor(index: number, total: number): LoadZone {
   // `index` é a posição na ordem de ENTREGA (0 = primeira a sair).
