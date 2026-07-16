@@ -58,6 +58,7 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 | ADR-0032 | Assistente por voz do motorista (Fase C) | Aceito | ✅ `POST /intelligence/voice-command`: `VoiceCommandInterpreterPort` (heurística de intenção por palavras-chave PT/EN/ES, ML-ready p/ NLU/LLM) classifica a transcrição em intenção (próxima parada/resumo/quanto falta/entregue/estacionamento/ajuda) + slots; STT/TTS no navegador (Web Speech API) via componente `VoiceAssistantButton` com _fallback_ elegante (DS/i18n 4 locales/a11y). **Fecha a Fase C e os 6 recursos do motorista** | 2026-07-15 |
 | ADR-0033 | Montagem da experiência do motorista na tela (integração A) | Aceito | ✅ A página do motorista passa a **renderizar** os 6 recursos: `VoiceAssistantButton` no cabeçalho + `DriverStopIntelligence` (estacionamento/acesso/coletiva/carga) na parada atual, guiado pela previsão/carga derivadas do plano de rota. Componente **apresentacional** (dados via props) + consultas na página. Abre a fase de integrações | 2026-07-16 |
 | ADR-0034 | Estacionamento ciente da comunidade (integração B) | Aceito | ✅ `ParkingPredictorPort` torna-se **assíncrona + por tenant**; `CommunityAwareParkingPredictor` parte da heurística de trânsito (ADR-0029) e a **realimenta** com o que a frota observou na célula (ADR-0031) via `blendParking` puro (a observação real puxa a dificuldade pela sua confiança); degrada para a heurística sem observações. Fecha o laço de realimentação | 2026-07-16 |
+| ADR-0035 | Ações do assistente de voz + captura automática (integrações C+D) | Aceito | ✅ O `onIntent` do `VoiceAssistantButton` liga a intenção às **ações reais** (marcar entregue, reportar estacionamento→observação, próxima parada/quanto falta/resumo→resposta com dados); ao concluir uma parada, o **tempo de atendimento** (dwell) é registrado automaticamente como observação `service_time` (ADR-0031). Realimenta a coletiva sem esforço do motorista. Web-only, reusa `recordObservation` | 2026-07-16 |
 
 ---
 
@@ -415,6 +416,17 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 
 ---
 
+## ADR-0035 — Ações do assistente de voz + captura automática (integrações C+D)
+
+- **Status:** Aceito · **Data:** 2026-07-16
+- **Status da implementação:** ✅ Implementado (3ª e 4ª integrações da sequência A→E, **web-only**). **C:** o `onIntent` do `VoiceAssistantButton` na página do motorista deixa de ser um esboço e passa a executar **ações reais** — `mark_delivered` conclui a parada (abre o POD); `report_parking` registra uma observação de estacionamento (`recordObservation`) no local da próxima parada, com a dificuldade extraída da fala (`reportedParkingDifficulty`, default `hard`); `next_stop`/`remaining`/`route_summary` respondem com **dados reais** (ETA, paradas restantes, score) via _toast_. **D:** ao concluir uma parada (após o POD), o **tempo de atendimento** é capturado automaticamente — `dwellMinutes` mede o intervalo desde que a parada ficou ativa (um `ref` reiniciado por `useEffect`) e vira uma observação `service_time` no local. Ambas as capturas invalidam o insight coletivo da parada. Helpers puros (`dwellMinutes`, `reportedParkingDifficulty`) em `lib/driver/field-observations` são testados isoladamente.
+- **Contexto:** As ADRs 0031/0032 deixaram como pendência ligar o assistente às ações e alimentar a coletiva sem fricção. O motorista dirigindo não digita; o valor da inteligência coletiva depende de **haver** observações.
+- **Decisão:** Wiring **no cliente**, reusando os endpoints existentes (`recordObservation`), sem novo backend. Medir o dwell **no cliente** (a página já conhece o ciclo de vida da parada) em vez de inferi-lo no servidor a partir de POD/tracking (mais simples e sem nova origem de dados). Extrair a lógica pura para helpers testáveis; manter a orquestração (efeitos, toasts) na página.
+- **Alternativas consideradas:** **Capturar o dwell no backend** (exigiria correlacionar chegada×POD via tracking — mais complexo e sem ganho nesta fase); **assistente que confirma antes de agir** (bom para ações destrutivas; aqui as ações são reversíveis/seguras — deixado como evolução); **publicar a observação por evento de domínio** (a captura no cliente é suficiente e evita acoplar POD à coletiva; a versão por evento fica para o mobile).
+- **Consequências:** A coletiva passa a se alimentar sozinha a cada entrega e o assistente vira útil de fato, fechando o ciclo _observar → agregar → prever_ (ADR-0031→0034→0035). **Pendências:** confirmação por voz para ações sensíveis; capturar dwell também no app mobile; medir chegada real (geofence) em vez do início da parada na tela; publicar observações por evento de domínio no backend para fontes não-web.
+
+---
+
 ## Template
 
 ```markdown
@@ -458,3 +470,5 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 | 2026-07-15 | 2.1 | Design+Arch | ADR-0031: Inteligência coletiva por tenant — observações de campo (RLS) agregadas por célula atrás do CollectiveInsightsPort + CollectiveInsightCard no web; abre a Fase C |
 | 2026-07-15 | 2.2 | Design+Arch | ADR-0032: Assistente por voz — POST /intelligence/voice-command (VoiceCommandInterpreterPort, heurística de intenção PT/EN/ES) + VoiceAssistantButton (Web Speech API) no web; encerra a Fase C e os 6 recursos do motorista |
 | 2026-07-16 | 2.3 | Design+Arch | ADR-0033: Montagem da experiência do motorista na página (VoiceAssistantButton + DriverStopIntelligence, apresentacional + consultas derivadas do plano); abre as integrações A→E |
+| 2026-07-16 | 2.4 | Arquitetura | ADR-0034: Estacionamento ciente da comunidade — ParkingPredictorPort assíncrona/por tenant + CommunityAwareParkingPredictor realimenta a previsão (integração B) |
+| 2026-07-16 | 2.5 | Design+Arch | ADR-0035: Ações do assistente de voz + captura automática do tempo de atendimento (dwell) realimentando a coletiva (integrações C+D) |
