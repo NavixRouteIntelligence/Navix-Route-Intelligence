@@ -253,3 +253,38 @@ export interface CollectiveInsightView {
   /** Dicas de acesso confirmadas por motoristas (deduplicadas). */
   accessTips: string[];
 }
+
+/**
+ * Assistente por voz (ADR-0032). O reconhecimento de fala (STT) e a síntese
+ * (TTS) ficam no navegador; o backend classifica a **intenção** do comando —
+ * heurística agora, NLU/LLM depois pela mesma port. A apresentação da resposta
+ * (i18n) fica no cliente, mapeando a intenção para a fala.
+ */
+export type VoiceIntent =
+  | 'next_stop'
+  | 'route_summary'
+  | 'remaining'
+  | 'mark_delivered'
+  | 'report_parking'
+  | 'help'
+  | 'unknown';
+
+export interface VoiceCommandSlots {
+  /** Presente em `report_parking` quando a fala indica a dificuldade. */
+  parkingDifficulty?: ParkingDifficulty;
+}
+
+export interface VoiceCommandRequest {
+  /** Transcrição do comando falado (produzida pelo STT do navegador). */
+  transcript: string;
+  /** Locale do falante (ex.: `pt-BR`), para desambiguar palavras-chave. */
+  locale?: string;
+}
+
+export interface VoiceCommandView {
+  intent: VoiceIntent;
+  /** Confiança da classificação, 0..1. */
+  confidence: number;
+  /** Parâmetros extraídos da fala. */
+  slots: VoiceCommandSlots;
+}

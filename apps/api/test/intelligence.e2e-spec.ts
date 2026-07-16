@@ -7,6 +7,7 @@ import { JwtAuthGuard } from '../src/shared/security/jwt-auth.guard';
 import { RolesGuard } from '../src/shared/security/roles.guard';
 import { ForecastRouteUseCase } from '../src/modules/intelligence/application/forecast-route.use-case';
 import { GetCollectiveInsightUseCase } from '../src/modules/intelligence/application/get-collective-insight.use-case';
+import { InterpretVoiceCommandUseCase } from '../src/modules/intelligence/application/interpret-voice-command.use-case';
 import { PlanLoadUseCase } from '../src/modules/intelligence/application/plan-load.use-case';
 import { RecordObservationUseCase } from '../src/modules/intelligence/application/record-observation.use-case';
 import { ACCESS_INSTRUCTIONS } from '../src/modules/intelligence/domain/access-instructions.port';
@@ -15,9 +16,11 @@ import { DRIVER_PROFILE_SOURCE } from '../src/modules/intelligence/domain/driver
 import { LOAD_PLANNER } from '../src/modules/intelligence/domain/load-planner.port';
 import { PARKING_PREDICTOR } from '../src/modules/intelligence/domain/parking-predictor.port';
 import { TRAFFIC_MODEL, TimeContextTrafficModel } from '../src/modules/intelligence/domain/traffic-model';
+import { VOICE_INTERPRETER } from '../src/modules/intelligence/domain/voice-command-interpreter.port';
 import { HeuristicAccessInstructions } from '../src/modules/intelligence/infrastructure/heuristic-access-instructions';
 import { HeuristicLoadPlanner } from '../src/modules/intelligence/infrastructure/heuristic-load-planner';
 import { HeuristicParkingPredictor } from '../src/modules/intelligence/infrastructure/heuristic-parking-predictor';
+import { HeuristicVoiceInterpreter } from '../src/modules/intelligence/infrastructure/heuristic-voice-interpreter';
 import { InMemoryCollectiveInsights } from '../src/modules/intelligence/infrastructure/in-memory-collective-insights';
 import { NoHistoryDriverProfileSource } from '../src/modules/intelligence/infrastructure/no-history-driver-profile.source';
 import { IntelligenceController } from '../src/modules/intelligence/interface/intelligence.controller';
@@ -35,12 +38,14 @@ describe('Intelligence (e2e)', () => {
         PlanLoadUseCase,
         RecordObservationUseCase,
         GetCollectiveInsightUseCase,
+        InterpretVoiceCommandUseCase,
         { provide: TRAFFIC_MODEL, useClass: TimeContextTrafficModel },
         { provide: DRIVER_PROFILE_SOURCE, useClass: NoHistoryDriverProfileSource },
         { provide: ACCESS_INSTRUCTIONS, useClass: HeuristicAccessInstructions },
         { provide: PARKING_PREDICTOR, useClass: HeuristicParkingPredictor },
         { provide: LOAD_PLANNER, useClass: HeuristicLoadPlanner },
         { provide: COLLECTIVE_INSIGHTS, useClass: InMemoryCollectiveInsights },
+        { provide: VOICE_INTERPRETER, useClass: HeuristicVoiceInterpreter },
       ],
     })
       .overrideGuard(JwtAuthGuard)
@@ -148,6 +153,23 @@ describe('Intelligence (e2e)', () => {
     await request(app.getHttpServer())
       .post('/api/v1/intelligence/observations')
       .send({ latitude: 0, longitude: 0, kind: 'parking' })
+      .expect(400);
+  });
+
+  it('assistente por voz: classifica a intenção do comando', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/api/v1/intelligence/voice-command')
+      .send({ transcript: 'Qual é a próxima parada?', locale: 'pt-BR' })
+      .expect(201);
+
+    expect(res.body.data.intent).toBe('next_stop');
+    expect(res.body.data.confidence).toBeGreaterThan(0);
+  });
+
+  it('rejeita comando de voz vazio (400)', async () => {
+    await request(app.getHttpServer())
+      .post('/api/v1/intelligence/voice-command')
+      .send({ transcript: '' })
       .expect(400);
   });
 });
