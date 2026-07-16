@@ -7,11 +7,12 @@ import type {
   ResourceResponse,
   RouteForecastRequest,
   RouteIntelligenceReport,
+  VoiceCommandView,
 } from '@navix/contracts';
 
 import { apiRequest } from './client';
 
-/** Cliente da Navix Intelligence (ADR-0025/0028/0029/0030/0031). */
+/** Cliente da Navix Intelligence (ADR-0025/0028/0029/0030/0031/0032). */
 export const intelligenceApi = {
   /** Previsão de rota: cronograma/ETA, atrasos, combustível, saída, acesso e estacionamento. */
   routeForecast: (body: RouteForecastRequest) =>
@@ -40,4 +41,11 @@ export const intelligenceApi = {
       `/intelligence/insights?latitude=${latitude}&longitude=${longitude}`,
       { method: 'GET' },
     ),
+
+  /** Assistente por voz: classifica a intenção de um comando falado. */
+  voiceCommand: (transcript: string, locale?: string) =>
+    apiRequest<ResourceResponse<VoiceCommandView>>('/intelligence/voice-command', {
+      method: 'POST',
+      body: locale ? { transcript, locale } : { transcript },
+    }),
 };

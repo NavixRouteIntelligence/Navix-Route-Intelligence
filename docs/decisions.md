@@ -55,6 +55,7 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 | ADR-0029 | Previsão inteligente de estacionamento (Fase B) | Aceito | ✅ `ParkingPredictorPort` (heurística que reusa `TrafficModelPort` como proxy de congestionamento, ML-ready) anexa `parking` (dificuldade fácil/moderado/difícil + confiança + minutos a pé) por parada no route-forecast; componente web `ParkingBadge` (DS/i18n 4 locales/a11y). Abre a Fase B | 2026-07-15 |
 | ADR-0030 | Organização otimizada da carga (Fase B) | Aceito | ✅ `POST /intelligence/load-plan`: `LoadPlannerPort` (heurística **LIFO** — última entrega ao fundo, ML-ready p/ bin packing 3D) devolve sequência de carregamento, zonas de estiva (porta/meio/fundo), ocupação de peso/volume e avisos (excesso, frágil sob carga); capacidade explícita ou por tipo de veículo; componente web `LoadPlanList` (DS/i18n 4 locales/a11y). Fecha a Fase B | 2026-07-15 |
 | ADR-0031 | Inteligência coletiva por tenant (Fase C) | Aceito | ✅ `POST /intelligence/observations` + `GET /intelligence/insights`: observações de campo do motorista (estacionamento/tempo de atendimento/dica de acesso) persistidas por tenant (RLS FORCE) e agregadas por **célula de localização** (~110 m) atrás do `CollectiveInsightsPort`; agregação pura (moda/mediana/dedup) com **amostra mínima** (privacidade); componente web `CollectiveInsightCard` (DS/i18n 4 locales/a11y). Abre a Fase C | 2026-07-15 |
+| ADR-0032 | Assistente por voz do motorista (Fase C) | Aceito | ✅ `POST /intelligence/voice-command`: `VoiceCommandInterpreterPort` (heurística de intenção por palavras-chave PT/EN/ES, ML-ready p/ NLU/LLM) classifica a transcrição em intenção (próxima parada/resumo/quanto falta/entregue/estacionamento/ajuda) + slots; STT/TTS no navegador (Web Speech API) via componente `VoiceAssistantButton` com _fallback_ elegante (DS/i18n 4 locales/a11y). **Fecha a Fase C e os 6 recursos do motorista** | 2026-07-15 |
 
 ---
 
@@ -379,6 +380,17 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 
 ---
 
+## ADR-0032 — Assistente por voz do motorista (Fase C)
+
+- **Status:** Aceito · **Data:** 2026-07-15
+- **Status da implementação:** ✅ Implementado (2º recurso da **Fase C**, **fecha a Fase C e os 6 recursos da experiência do motorista**). Novo endpoint `POST /intelligence/voice-command`: recebe a **transcrição** de um comando falado (produzida pelo STT do navegador) e devolve a **intenção** classificada (`next_stop`/`route_summary`/`remaining`/`mark_delivered`/`report_parking`/`help`/`unknown`), confiança e _slots_ (ex.: dificuldade de estacionamento). A classificação é uma função de domínio pura (`interpretVoiceCommand`) por palavras-chave multilíngue (PT/EN/ES, robusta a acentos), atrás do `VoiceCommandInterpreterPort`. O reconhecimento (STT) e a síntese de fala (TTS) ficam no **navegador** (Web Speech API); o backend só faz NLU. No **web**: componente reutilizável `VoiceAssistantButton` (microfone, estados ouvindo/resposta, fala a resposta, _fallback_ elegante quando o navegador não suporta) + `useLocale` para idioma; o host reage à intenção via `onIntent`. A **cópia falada é montada no cliente** (i18n), mantendo o backend livre de i18n.
+- **Contexto:** Dirigindo, o motorista não pode operar a tela. Um comando de voz ("qual a próxima parada?", "marcar entregue") mantém as mãos no volante e os olhos na via — segurança e fluidez na última milha.
+- **Decisão:** Manter **STT/TTS no navegador** (grátis, sem streaming de áudio para o servidor, privacidade) e colocar a **classificação de intenção atrás de uma port** (heurística agora, NLU/LLM depois) — o mesmo padrão ML-ready das demais camadas. O backend devolve intenção estruturada, não texto; a fala é localizada no cliente. O assistente **não executa ações** — expõe a intenção; o host decide o que fazer, evitando efeitos colaterais acoplados.
+- **Alternativas consideradas:** **NLU/áudio no servidor** (custo/latência/privacidade de enviar áudio; a Web Speech API resolve no cliente — a port deixa o upgrade para NLU plugável); **classificar no próprio web** (perderia o seam ML e a reutilização mobile; a intenção é conhecimento de domínio); **backend devolver a frase pronta** (exigiria i18n no backend — preferiu-se intenção + i18n no cliente); **assistente que executa ações** (efeitos colaterais acoplados e arriscados por voz — preferiu-se intenção + host no controle).
+- **Consequências:** Operação _hands-free_ premium, multilíngue e acessível, com _fallback_ quando não há suporte. Seam pronto para NLU/LLM. **Pendências:** ligar `onIntent` às ações reais (abrir próxima parada, registrar observação coletiva, marcar entregue via POD); diálogo com contexto/confirmação por voz; wake-word; NLU/LLM com entidades (endereço, cliente); paridade no app mobile (Flutter) com STT/TTS nativos.
+
+---
+
 ## Template
 
 ```markdown
@@ -420,3 +432,4 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 | 2026-07-15 | 1.9 | Design+Arch | ADR-0029: Previsão inteligente de estacionamento — ParkingPredictorPort (reusa TrafficModelPort) + parking por parada no route-forecast + ParkingBadge no web; abre a Fase B |
 | 2026-07-15 | 2.0 | Design+Arch | ADR-0030: Organização otimizada da carga — POST /intelligence/load-plan (LoadPlannerPort LIFO + zonas/ocupação/avisos) + LoadPlanList no web; encerra a Fase B |
 | 2026-07-15 | 2.1 | Design+Arch | ADR-0031: Inteligência coletiva por tenant — observações de campo (RLS) agregadas por célula atrás do CollectiveInsightsPort + CollectiveInsightCard no web; abre a Fase C |
+| 2026-07-15 | 2.2 | Design+Arch | ADR-0032: Assistente por voz — POST /intelligence/voice-command (VoiceCommandInterpreterPort, heurística de intenção PT/EN/ES) + VoiceAssistantButton (Web Speech API) no web; encerra a Fase C e os 6 recursos do motorista |

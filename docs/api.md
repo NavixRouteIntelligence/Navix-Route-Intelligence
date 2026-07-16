@@ -406,6 +406,7 @@ POST /api/v1/intelligence/route-forecast   # relatório de previsão de rota
 POST /api/v1/intelligence/load-plan         # organização otimizada da carga (LIFO)
 POST /api/v1/intelligence/observations      # inteligência coletiva: registra observação de campo
 GET  /api/v1/intelligence/insights          # inteligência coletiva: insight agregado por local
+POST /api/v1/intelligence/voice-command     # assistente por voz: classifica a intenção falada
 ```
 
 - **Payload**: `{ stops[] (id, lat, lng, timeWindow?, serviceTimeMinutes?, accessNotes?), vehicleType?, origin?, earliestDeparture?, averageSpeedKmh?, driverId?, driver? (override de perfil), currentFuelPercent? }`.
@@ -431,6 +432,11 @@ GET  /api/v1/intelligence/insights          # inteligência coletiva: insight ag
 - **`POST /intelligence/observations`** — o motorista relata uma observação de campo. Payload: `{ latitude, longitude, kind ('parking'|'service_time'|'access'), parkingDifficulty?, serviceMinutes?, accessTip? }`. Resposta: `{ id, cell }`. Persistido por tenant (RLS) na tabela `collective_observations`.
 - **`GET /intelligence/insights?latitude=&longitude=`** — insight agregado da **célula de localização** (~110 m). Resposta (`CollectiveInsightView`): `{ cell, sampleSize, parking? {difficulty, confidence}, typicalServiceMinutes?, accessTips[] }`. Agregação pura (moda/mediana/dedup) com **amostra mínima** antes de expor qualquer campo (privacidade). Componente web `CollectiveInsightCard`.
 - **Privacidade**: `driverId` guardado só para dedupe/anti-abuso, nunca exposto; agregados exigem amostra mínima; escopo por tenant (RLS), sem cruzar tenants.
+
+**Assistente por voz** (ADR-0032):
+
+- **`POST /intelligence/voice-command`** — classifica a **intenção** de um comando falado. Payload: `{ transcript, locale? }` (a transcrição vem do STT do navegador). Resposta (`VoiceCommandView`): `{ intent ('next_stop'|'route_summary'|'remaining'|'mark_delivered'|'report_parking'|'help'|'unknown'), confidence, slots {parkingDifficulty?} }`.
+- **STT/TTS no navegador** (Web Speech API); o backend só faz NLU (heurística de palavras-chave PT/EN/ES atrás do `VoiceCommandInterpreterPort`, plugável para NLU/LLM). A resposta falada é **montada e localizada no cliente** a partir da intenção. Componente web `VoiceAssistantButton` com _fallback_ quando não há suporte. O assistente **não executa ações** — o host reage à intenção.
 
 ## 15. Documentação viva
 
@@ -486,3 +492,4 @@ GET /api/v1/health/ready     -> 200 | 503 (Postgres duro; Redis reportado, não 
 | 2026-07-15 | 0.28 | Design+Arch | Previsão de estacionamento: `schedule.stops[].parking` (difficulty/confidence/walkMinutes) via ParkingPredictorPort; ParkingBadge no web (§14.7, ADR-0029) |
 | 2026-07-15 | 0.29 | Design+Arch | Organização da carga: POST /intelligence/load-plan (LoadPlannerPort LIFO — zonas/ocupação/avisos); LoadPlanList no web (§14.7, ADR-0030) |
 | 2026-07-15 | 0.30 | Design+Arch | Inteligência coletiva: POST /intelligence/observations + GET /intelligence/insights (observações por tenant/RLS agregadas por célula); CollectiveInsightCard no web (§14.7, ADR-0031) |
+| 2026-07-15 | 0.31 | Design+Arch | Assistente por voz: POST /intelligence/voice-command (VoiceCommandInterpreterPort — intenção PT/EN/ES); VoiceAssistantButton (Web Speech API) no web (§14.7, ADR-0032) |

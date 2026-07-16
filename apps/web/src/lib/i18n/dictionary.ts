@@ -156,6 +156,19 @@ const pt_BR = {
   'insight.service': 'Atendimento típico',
   'insight.tips': 'Dicas de acesso da comunidade',
   'insight.minutes': 'min',
+
+  'voice.title': 'Assistente por voz',
+  'voice.listen': 'Falar',
+  'voice.listening': 'Ouvindo…',
+  'voice.unsupported': 'Seu navegador não suporta comando de voz',
+  'voice.you': 'Você',
+  'voice.reply.next_stop': 'Abrindo a próxima parada.',
+  'voice.reply.route_summary': 'Aqui está o resumo da rota.',
+  'voice.reply.remaining': 'Calculando quanto falta.',
+  'voice.reply.mark_delivered': 'Marcando a parada como entregue.',
+  'voice.reply.report_parking': 'Registrando o estacionamento.',
+  'voice.reply.help': 'Você pode pedir: próxima parada, resumo, quanto falta, marcar entregue ou reportar estacionamento.',
+  'voice.reply.unknown': 'Não entendi. Diga "ajuda" para ver os comandos.',
 };
 
 type Keys = typeof pt_BR;
@@ -317,6 +330,19 @@ const en: Keys = {
   'insight.service': 'Typical service',
   'insight.tips': 'Community access tips',
   'insight.minutes': 'min',
+
+  'voice.title': 'Voice assistant',
+  'voice.listen': 'Speak',
+  'voice.listening': 'Listening…',
+  'voice.unsupported': 'Your browser does not support voice commands',
+  'voice.you': 'You',
+  'voice.reply.next_stop': 'Opening the next stop.',
+  'voice.reply.route_summary': 'Here is the route summary.',
+  'voice.reply.remaining': 'Calculating remaining time.',
+  'voice.reply.mark_delivered': 'Marking the stop as delivered.',
+  'voice.reply.report_parking': 'Logging the parking report.',
+  'voice.reply.help': 'You can say: next stop, summary, time left, mark delivered or report parking.',
+  'voice.reply.unknown': 'I did not catch that. Say "help" to list commands.',
 };
 
 const es: Keys = {
@@ -456,6 +482,19 @@ const es: Keys = {
   'insight.service': 'Atención típica',
   'insight.tips': 'Consejos de acceso de la comunidad',
   'insight.minutes': 'min',
+
+  'voice.title': 'Asistente por voz',
+  'voice.listen': 'Hablar',
+  'voice.listening': 'Escuchando…',
+  'voice.unsupported': 'Tu navegador no admite comandos de voz',
+  'voice.you': 'Tú',
+  'voice.reply.next_stop': 'Abriendo la siguiente parada.',
+  'voice.reply.route_summary': 'Aquí está el resumen de la ruta.',
+  'voice.reply.remaining': 'Calculando cuánto falta.',
+  'voice.reply.mark_delivered': 'Marcando la parada como entregada.',
+  'voice.reply.report_parking': 'Registrando el aparcamiento.',
+  'voice.reply.help': 'Puedes decir: siguiente parada, resumen, cuánto falta, marcar entregada o reportar aparcamiento.',
+  'voice.reply.unknown': 'No entendí. Di "ayuda" para ver los comandos.',
 };
 
 export const DICTIONARY: Record<Locale, Keys> = {
