@@ -12,7 +12,10 @@ import '../../../core/ui/navix_section_header.dart';
 import '../../../core/ui/navix_skeleton.dart';
 import '../../../core/ui/navix_states.dart';
 import '../../../core/ui/navix_status_pill.dart';
+import '../../intelligence/data/intelligence_repository.dart';
 import '../../intelligence/presentation/stop_intelligence_card.dart';
+import '../../intelligence/presentation/voice_assistant_button.dart';
+import '../../intelligence/presentation/voice_assistant_cubit.dart';
 import '../../pod/presentation/pod_capture_sheet.dart';
 import '../../pod/presentation/pod_sync_cubit.dart';
 import '../domain/driver_dashboard_data.dart';
@@ -29,6 +32,7 @@ class DriverDashboardPage extends StatelessWidget {
     return MultiBlocProvider(
       providers: [
         BlocProvider(create: (_) => GetIt.instance<DriverDashboardCubit>()..load()),
+        BlocProvider(create: (_) => GetIt.instance<VoiceAssistantCubit>()),
         // Singletons: persistem enquanto o app vive (não são fechados aqui).
         BlocProvider.value(value: GetIt.instance<LocationSharingCubit>()),
         BlocProvider.value(value: GetIt.instance<PodSyncCubit>()),
@@ -83,13 +87,60 @@ class _DriverViewState extends State<_DriverView> {
     }
   }
 
+  /// Reage à intenção reconhecida por voz (ADR-0037), ligando-a às ações reais.
+  void _onVoiceResult(VoiceAssistantState s) {
+    final data = context.read<DriverDashboardCubit>().state.data;
+    final next = data?.next;
+    switch (s.command?.intent) {
+      case 'mark_delivered':
+        if (data != null) _register(data);
+        break;
+      case 'report_parking':
+        if (next != null && next.hasCoordinates) {
+          GetIt.instance<IntelligenceRepository>()
+              .recordParking(
+                latitude: next.latitude!,
+                longitude: next.longitude!,
+                difficulty: s.command?.parkingDifficulty ?? 'hard',
+              )
+              .catchError((_) {});
+        }
+        break;
+      case 'next_stop':
+        _snack(next == null ? 'Rota concluída.' : 'Próxima parada: ${next.addressLine}');
+        break;
+      case 'remaining':
+        _snack(data == null ? 'Sem rota ativa.' : '${data.remaining} parada(s) restantes.');
+        break;
+      case 'route_summary':
+        _snack(data == null
+            ? 'Sem rota ativa.'
+            : '${data.total} paradas · ${data.delivered} concluídas.');
+        break;
+      default:
+        break;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final sharing = context.watch<LocationSharingCubit>().state.sharing;
     return Scaffold(
+      floatingActionButton: const VoiceAssistantButton(),
       body: SafeArea(
         bottom: false,
-        child: BlocListener<LocationSharingCubit, LocationSharingState>(
+        child: BlocListener<VoiceAssistantCubit, VoiceAssistantState>(
+          listenWhen: (p, c) => p.status != c.status,
+          listener: (context, s) {
+            if (s.status == VoiceStatus.result) {
+              _onVoiceResult(s);
+            } else if (s.status == VoiceStatus.unsupported) {
+              _snack('Comando de voz indisponível neste dispositivo.');
+            } else if (s.status == VoiceStatus.error && s.error != null) {
+              _snack(s.error!);
+            }
+          },
+          child: BlocListener<LocationSharingCubit, LocationSharingState>(
           listenWhen: (p, c) => p.error != c.error && c.error != null,
           listener: (context, s) => _snack(s.error!),
           child: BlocBuilder<DriverDashboardCubit, DriverDashboardState>(
@@ -119,6 +170,7 @@ class _DriverViewState extends State<_DriverView> {
                 child: KeyedSubtree(key: ValueKey(state.status), child: child),
               );
             },
+          ),
           ),
         ),
       ),

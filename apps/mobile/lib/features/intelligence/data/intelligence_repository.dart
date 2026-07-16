@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 
 import '../../../core/network/dio_failure_mapper.dart';
 import '../domain/stop_intelligence.dart';
+import '../domain/voice_command.dart';
 
 /// Cliente da Navix Intelligence com escopo de motorista (ADR-0028–0034).
 /// Combina a previsão de rota (estacionamento/acesso da parada) com a
@@ -67,6 +68,26 @@ class IntelligenceRepository {
         'kind': 'parking',
         'parkingDifficulty': difficulty,
       });
+
+  /// Classifica a intenção de um comando falado (transcrição do STT).
+  Future<VoiceCommand> interpretVoice(String transcript, {String? locale}) async {
+    try {
+      final res = await _dio.post<dynamic>('/intelligence/voice-command', data: {
+        'transcript': transcript,
+        if (locale != null) 'locale': locale,
+      });
+      final data = _data(res);
+      final slots = data['slots'];
+      return VoiceCommand(
+        intent: (data['intent'] as String?) ?? 'unknown',
+        confidence: (data['confidence'] as num?)?.toDouble() ?? 0,
+        parkingDifficulty:
+            slots is Map<String, dynamic> ? slots['parkingDifficulty'] as String? : null,
+      );
+    } on DioException catch (e) {
+      throw mapDioException(e);
+    }
+  }
 
   Future<void> _observe(Map<String, dynamic> body) async {
     try {
