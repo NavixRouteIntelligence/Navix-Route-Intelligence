@@ -8,13 +8,13 @@ import type { Response } from 'express';
 
 import { AppConfigService } from '../config/app-config.service';
 
+// Só imagens rasterizadas: SVG fica de fora (vetor de XSS quando servido inline).
 const CONTENT_TYPE: Record<string, string> = {
   png: 'image/png',
   jpg: 'image/jpeg',
   jpeg: 'image/jpeg',
   webp: 'image/webp',
   gif: 'image/gif',
-  svg: 'image/svg+xml',
 };
 
 const SAFE_SEGMENT = /^[A-Za-z0-9._-]+$/;
@@ -51,9 +51,16 @@ export class FilesController {
     const full = join(this.dir, scope, tenant, name);
     const ext = name.split('.').pop()?.toLowerCase() ?? '';
 
+    const contentType = CONTENT_TYPE[ext];
+    if (!contentType) throw new NotFoundException();
+
     void stat(full)
       .then(() => {
-        res.setHeader('Content-Type', CONTENT_TYPE[ext] ?? 'application/octet-stream');
+        res.setHeader('Content-Type', contentType);
+        // Hardening anti-XSS (ADR-0039): impede sniffing e execução como HTML/SVG.
+        res.setHeader('X-Content-Type-Options', 'nosniff');
+        res.setHeader('Content-Disposition', `inline; filename="${name}"`);
+        res.setHeader('Content-Security-Policy', "default-src 'none'; sandbox");
         res.setHeader('Cache-Control', 'private, max-age=31536000, immutable');
         createReadStream(full).pipe(res);
       })
