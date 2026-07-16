@@ -14,9 +14,10 @@ import {
   Route as RouteIcon,
   Upload,
 } from 'lucide-react';
+import type { VoiceCommandView } from '@navix/contracts';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { AiRouteOptimizer } from '@/components/driver/ai-route-optimizer';
 import { DriverInsights } from '@/components/driver/driver-insights';
@@ -38,6 +39,7 @@ import { intelligenceApi } from '@/lib/api/intelligence';
 import { optimizerApi } from '@/lib/api/optimizer';
 import { trackingApi } from '@/lib/api/tracking';
 import { useAuth } from '@/lib/auth/auth-provider';
+import { dwellMinutes, reportedParkingDifficulty } from '@/lib/driver/field-observations';
 import { TRACKING_STATUS } from '@/lib/tracking/status';
 import { useShareLocation } from '@/lib/tracking/use-share-location';
 import { formatDateTime, formatNumber } from '@/lib/utils';
@@ -63,6 +65,8 @@ export default function DriverDashboardPage() {
   const [running, setRunning] = useState(false);
   const [podFor, setPodFor] = useState<string | null>(null);
   const share = useShareLocation();
+  // Instante em que a parada atual ficou ativa — base do dwell (tempo de atendimento).
+  const stopStartedRef = useRef<number>(Date.now());
 
   const myPosition = useQuery({
     queryKey: ['driver-position'],
@@ -130,17 +134,86 @@ export default function DriverDashboardPage() {
     ? forecast.data?.data.schedule.stops.find((st) => st.id === nextStop.deliveryId)
     : undefined;
 
+  // Reinicia o cronômetro de dwell sempre que uma nova parada fica ativa.
+  useEffect(() => {
+    stopStartedRef.current = Date.now();
+  }, [completed, running]);
+
   // Abre o comprovante (POD) para a próxima parada.
   function concludeStop() {
     if (remaining <= 0 || !nextStop) return;
     setPodFor(nextStop.deliveryId);
   }
 
-  // Após registrar o comprovante: avança a parada e atualiza os dados.
+  // Após registrar o comprovante: captura o tempo de atendimento na coletiva
+  // (ADR-0031, integração D), avança a parada e atualiza os dados.
   function onPodDone() {
+    const done = stops[completed];
+    if (done) {
+      const minutes = dwellMinutes(stopStartedRef.current, Date.now());
+      void intelligenceApi
+        .recordObservation({
+          latitude: done.latitude,
+          longitude: done.longitude,
+          kind: 'service_time',
+          serviceMinutes: minutes,
+        })
+        .catch(() => undefined);
+    }
     setCompleted((c) => c + 1);
     qc.invalidateQueries({ queryKey: ['driver-history'] });
     qc.invalidateQueries({ queryKey: ['deliveries'] });
+    qc.invalidateQueries({ queryKey: ['driver-insight'] });
+  }
+
+  // Assistente por voz (ADR-0032, integração C): liga a intenção reconhecida às
+  // ações reais da rota.
+  function onVoiceIntent(view: VoiceCommandView) {
+    switch (view.intent) {
+      case 'mark_delivered':
+        concludeStop();
+        break;
+      case 'report_parking':
+        if (nextStop) {
+          void intelligenceApi
+            .recordObservation({
+              latitude: nextStop.latitude,
+              longitude: nextStop.longitude,
+              kind: 'parking',
+              parkingDifficulty: reportedParkingDifficulty(view),
+            })
+            .then(() => qc.invalidateQueries({ queryKey: ['driver-insight'] }))
+            .catch(() => undefined);
+        }
+        break;
+      case 'next_stop':
+        toast({
+          tone: 'info',
+          title: 'Próxima parada',
+          description: nextStop
+            ? `Parada ${nextStop.sequence} · ETA ${formatMinutes(nextStop.etaMinutes)}`
+            : 'Rota concluída.',
+        });
+        break;
+      case 'remaining':
+        toast({
+          tone: 'info',
+          title: 'Quanto falta',
+          description: `${remaining} parada(s) · ${formatMinutes(remainingMin)} · ${formatNumber(remainingKm, 1)} km`,
+        });
+        break;
+      case 'route_summary':
+        toast({
+          tone: 'info',
+          title: 'Resumo da rota',
+          description: plan
+            ? `${stops.length} paradas · ${completed} concluídas · score ${plan.score}/100`
+            : 'Sem rota ativa.',
+        });
+        break;
+      default:
+        break;
+    }
   }
 
   return (
@@ -172,11 +245,7 @@ export default function DriverDashboardPage() {
               <Flag className="h-4 w-4" />
               Reportar problema
             </Button>
-            <VoiceAssistantButton
-              onIntent={(view) => {
-                if (view.intent === 'mark_delivered') concludeStop();
-              }}
-            />
+            <VoiceAssistantButton onIntent={onVoiceIntent} />
           </div>
         }
       />
