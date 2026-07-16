@@ -61,6 +61,7 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 | ADR-0035 | Ações do assistente de voz + captura automática (integrações C+D) | Aceito | ✅ O `onIntent` do `VoiceAssistantButton` liga a intenção às **ações reais** (marcar entregue, reportar estacionamento→observação, próxima parada/quanto falta/resumo→resposta com dados); ao concluir uma parada, o **tempo de atendimento** (dwell) é registrado automaticamente como observação `service_time` (ADR-0031). Realimenta a coletiva sem esforço do motorista. Web-only, reusa `recordObservation` | 2026-07-16 |
 | ADR-0036 | Paridade mobile — inteligência da parada (integração E.1) | Aceito | 🟡 App Flutter ganha a feature `intelligence`: `IntelligenceRepository` + `StopIntelligenceCubit` + `StopIntelligenceCard` no painel do motorista, mostrando estacionamento previsto (ciente da comunidade), acesso e o que a frota aprendeu no local; `DriverDelivery` passa a carregar coordenadas. Voz nativa (STT/TTS) e captura automática no POD ficam para E.2/E.3 | 2026-07-16 |
 | ADR-0037 | Assistente por voz nativo no mobile (integração E.2) | Aceito | 🟡 App Flutter ganha voz: `SpeechService` (abstração de STT/TTS sobre `speech_to_text`/`flutter_tts`), `VoiceAssistantCubit` (ouve → classifica no backend via `voice-command` → fala a resposta) e `VoiceAssistantButton` (FAB) no painel; a intenção liga às ações reais (entregue→POD, estacionamento→observação, próxima/quanto falta/resumo→aviso). Permissões iOS/Android necessárias (pastas de plataforma _gitignored_). STT/TTS on-device não validável headless. Falta E.3 (captura de dwell no POD) | 2026-07-16 |
+| ADR-0038 | Captura automática do dwell no POD mobile (integração E.3) | Aceito | ✅ Ao concluir o POD no app, o tempo de atendimento (`dwellMinutes`, medido desde que a parada ficou ativa) vira observação `service_time` no local — paridade da ADR-0035 no mobile. **Encerra a sequência de integrações A→E** e o ciclo observar→agregar→prever também pelo celular | 2026-07-16 |
 
 ---
 
@@ -451,6 +452,17 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 
 ---
 
+## ADR-0038 — Captura automática do dwell no POD mobile (integração E.3)
+
+- **Status:** Aceito · **Data:** 2026-07-16
+- **Status da implementação:** ✅ Implementado (3ª e última fatia da integração E — **encerra a sequência A→E**). Paridade da captura automática (ADR-0035) no app Flutter: ao **concluir o POD** de uma parada, o app registra o **tempo de atendimento** (dwell) como observação `service_time` no local. `dwellMinutes` (função pura, limitada a [0, 600], testada) mede o intervalo desde que a parada ficou ativa; um cronômetro por parada (`_stopStartedAt`/`_stopStartedId`) é reiniciado por um `BlocConsumer<DriverDashboardCubit>` quando a próxima entrega muda; a captura reusa `IntelligenceRepository.recordServiceTime` (adicionado na E.1) e é _fire-and-forget_ (silenciosa em erro). Com isso, a inteligência coletiva passa a se alimentar **também pelo celular**, sem esforço do motorista.
+- **Contexto:** No web (ADR-0035) o dwell já realimenta a coletiva automaticamente. Faltava a mesma captura no app, onde o motorista opera de fato — sem ela, a frota em campo não contribuía com o sinal mais valioso (tempo real de atendimento por local).
+- **Decisão:** Medir o dwell **no cliente** (o app conhece o ciclo de vida da parada), reusar o endpoint de observações e a função pura de dwell (mesmo desenho da ADR-0035). Reiniciar o cronômetro via `BlocConsumer` na mudança da parada — sem estado extra no backend. Captura _fire-and-forget_ para nunca bloquear a operação.
+- **Alternativas consideradas:** **Capturar no backend a partir do POD/tracking** (exigiria correlacionar chegada×POD — mais complexo, sem ganho nesta fase); **medir por geofence** (mais preciso, porém pesado — fica como evolução); **bloquear o fluxo até confirmar o envio** (pior UX — a observação é acessória).
+- **Consequências:** O ciclo **observar → agregar → prever** fica fechado em ambos os clientes (web e mobile): campo alimenta a coletiva, a coletiva realimenta a previsão (ADR-0034) e tudo aparece na tela (ADR-0033/0036). **Encerra a sequência de integrações A→E.** **Pendências gerais (evolução):** medir chegada por geofence; reportar estacionamento por ação rápida no app; publicar observações por evento de domínio no backend para outras fontes; ponderar a agregação por recência/reputação; cache/materialização por célula para escala.
+
+---
+
 ## Template
 
 ```markdown
@@ -498,3 +510,4 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 | 2026-07-16 | 2.5 | Design+Arch | ADR-0035: Ações do assistente de voz + captura automática do tempo de atendimento (dwell) realimentando a coletiva (integrações C+D) |
 | 2026-07-16 | 2.6 | Mobile+Arch | ADR-0036: Paridade mobile — feature `intelligence` (StopIntelligenceCard: estacionamento/acesso/coletiva) no app Flutter (integração E.1); voz nativa e captura no POD em E.2/E.3 |
 | 2026-07-16 | 2.7 | Mobile+Arch | ADR-0037: Assistente por voz nativo no mobile — SpeechService (STT/TTS) + VoiceAssistantCubit/Button espelhando o voice-command, com ações reais (integração E.2); falta E.3 |
+| 2026-07-16 | 2.8 | Mobile+Arch | ADR-0038: Captura automática do dwell ao concluir o POD no app (observação service_time), paridade da ADR-0035 (integração E.3); encerra a sequência A→E |

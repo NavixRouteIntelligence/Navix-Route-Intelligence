@@ -13,6 +13,7 @@ import '../../../core/ui/navix_skeleton.dart';
 import '../../../core/ui/navix_states.dart';
 import '../../../core/ui/navix_status_pill.dart';
 import '../../intelligence/data/intelligence_repository.dart';
+import '../../intelligence/domain/dwell.dart';
 import '../../intelligence/presentation/stop_intelligence_card.dart';
 import '../../intelligence/presentation/voice_assistant_button.dart';
 import '../../intelligence/presentation/voice_assistant_cubit.dart';
@@ -50,10 +51,33 @@ class _DriverView extends StatefulWidget {
 }
 
 class _DriverViewState extends State<_DriverView> {
+  // Início do atendimento da parada atual — base do dwell (ADR-0038).
+  DateTime _stopStartedAt = DateTime.now();
+  String? _stopStartedId;
+
   void _snack(String msg) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  /// Reinicia o cronômetro de dwell quando a parada ativa muda.
+  void _syncStopTimer(DriverDashboardData? data) {
+    final nextId = data?.next?.id;
+    if (nextId != _stopStartedId) {
+      _stopStartedId = nextId;
+      _stopStartedAt = DateTime.now();
+    }
+  }
+
+  /// Captura automática do tempo de atendimento (dwell) como observação
+  /// coletiva ao concluir a parada (ADR-0031/0038, paridade da ADR-0035).
+  void _captureDwell(DriverDelivery stop) {
+    if (!stop.hasCoordinates) return;
+    final minutes = dwellMinutes(_stopStartedAt, DateTime.now());
+    GetIt.instance<IntelligenceRepository>()
+        .recordServiceTime(latitude: stop.latitude!, longitude: stop.longitude!, minutes: minutes)
+        .catchError((_) {});
   }
 
   Future<void> _toggleShare() async {
@@ -81,6 +105,8 @@ class _DriverViewState extends State<_DriverView> {
     );
     if (!mounted) return;
     if (registered == true) {
+      // Captura o tempo de atendimento antes de recarregar (a parada muda).
+      _captureDwell(next);
       // O sheet já dá o feedback (registrado / salvo offline). Atualiza a fila e os dados.
       GetIt.instance<PodSyncCubit>().refresh();
       dashboard.load();
@@ -143,7 +169,8 @@ class _DriverViewState extends State<_DriverView> {
           child: BlocListener<LocationSharingCubit, LocationSharingState>(
           listenWhen: (p, c) => p.error != c.error && c.error != null,
           listener: (context, s) => _snack(s.error!),
-          child: BlocBuilder<DriverDashboardCubit, DriverDashboardState>(
+          child: BlocConsumer<DriverDashboardCubit, DriverDashboardState>(
+            listener: (context, state) => _syncStopTimer(state.data),
             builder: (context, state) {
               final child = switch (state.status) {
                 DriverDashboardStatus.loading => const _LoadingView(),
