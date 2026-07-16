@@ -59,6 +59,7 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 | ADR-0033 | Montagem da experiência do motorista na tela (integração A) | Aceito | ✅ A página do motorista passa a **renderizar** os 6 recursos: `VoiceAssistantButton` no cabeçalho + `DriverStopIntelligence` (estacionamento/acesso/coletiva/carga) na parada atual, guiado pela previsão/carga derivadas do plano de rota. Componente **apresentacional** (dados via props) + consultas na página. Abre a fase de integrações | 2026-07-16 |
 | ADR-0034 | Estacionamento ciente da comunidade (integração B) | Aceito | ✅ `ParkingPredictorPort` torna-se **assíncrona + por tenant**; `CommunityAwareParkingPredictor` parte da heurística de trânsito (ADR-0029) e a **realimenta** com o que a frota observou na célula (ADR-0031) via `blendParking` puro (a observação real puxa a dificuldade pela sua confiança); degrada para a heurística sem observações. Fecha o laço de realimentação | 2026-07-16 |
 | ADR-0035 | Ações do assistente de voz + captura automática (integrações C+D) | Aceito | ✅ O `onIntent` do `VoiceAssistantButton` liga a intenção às **ações reais** (marcar entregue, reportar estacionamento→observação, próxima parada/quanto falta/resumo→resposta com dados); ao concluir uma parada, o **tempo de atendimento** (dwell) é registrado automaticamente como observação `service_time` (ADR-0031). Realimenta a coletiva sem esforço do motorista. Web-only, reusa `recordObservation` | 2026-07-16 |
+| ADR-0036 | Paridade mobile — inteligência da parada (integração E.1) | Aceito | 🟡 App Flutter ganha a feature `intelligence`: `IntelligenceRepository` + `StopIntelligenceCubit` + `StopIntelligenceCard` no painel do motorista, mostrando estacionamento previsto (ciente da comunidade), acesso e o que a frota aprendeu no local; `DriverDelivery` passa a carregar coordenadas. Voz nativa (STT/TTS) e captura automática no POD ficam para E.2/E.3 | 2026-07-16 |
 
 ---
 
@@ -427,6 +428,17 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 
 ---
 
+## ADR-0036 — Paridade mobile: inteligência da parada (integração E.1)
+
+- **Status:** Aceito · **Data:** 2026-07-16
+- **Status da implementação:** 🟡 Parcial (1ª fatia da integração E — paridade mobile). O app Flutter ganha a feature `intelligence`, seguindo a Clean Architecture do app (data/domain/presentation, Cubit, Dio, GetIt): `IntelligenceRepository` combina o `route-forecast` (estacionamento — já **ciente da comunidade** pelo backend, ADR-0034 — e acesso da parada) com o `insights` (coletiva do local); `StopIntelligenceCubit` orquestra o carregamento; `StopIntelligenceCard` (widget autossuficiente, gerencia o próprio cubit) renderiza tudo no painel do motorista, abaixo da próxima entrega. `DriverDelivery` passou a carregar `latitude/longitude`. O repositório já expõe `recordServiceTime`/`recordParking` para a captura futura. **Fora desta fatia:** assistente por voz nativo (STT/TTS via plugins) e captura automática do dwell no fluxo de POD.
+- **Contexto:** A experiência premium do motorista existia só no web. O motorista em campo usa o app; sem paridade, a inteligência coletiva e as previsões não chegam a quem mais precisa.
+- **Decisão:** Trazer primeiro a **camada de leitura** (previsão + acesso + coletiva), que reusa endpoints existentes e não exige plugins nativos — validável de forma headless com `flutter analyze`/`flutter test`. Fatiar a voz nativa (plugins, permissões, config de plataforma) e a captura no POD em entregas próprias (E.2/E.3), por serem mais pesadas e de validação diferente. Widget **autossuficiente** (cria e fecha o próprio cubit) para não tocar o `MultiBlocProvider` da página.
+- **Alternativas consideradas:** **Fazer toda a paridade num PR só** (grande, arriscado e com validação heterogênea — fatiado em E.1/E.2/E.3); **cubit provido na página** (acoplaria o ciclo de vida à página; o widget autossuficiente recarrega sozinho ao mudar a parada); **buscar coordenadas do plano de rota** (as entregas já trazem o endereço com coordenadas — evita nova consulta).
+- **Consequências:** O motorista no app passa a ver estacionamento, acesso e o aprendizado da frota por parada, com o backend já realimentado pela comunidade (ADR-0034). **Pendências (E.2/E.3):** assistente por voz nativo (`speech_to_text`/`flutter_tts`) espelhando o `VoiceCommandInterpreterPort`; captura automática do dwell ao concluir o POD (paridade da ADR-0035); reportar estacionamento por ação rápida; medir chegada por geofence.
+
+---
+
 ## Template
 
 ```markdown
@@ -472,3 +484,4 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 | 2026-07-16 | 2.3 | Design+Arch | ADR-0033: Montagem da experiência do motorista na página (VoiceAssistantButton + DriverStopIntelligence, apresentacional + consultas derivadas do plano); abre as integrações A→E |
 | 2026-07-16 | 2.4 | Arquitetura | ADR-0034: Estacionamento ciente da comunidade — ParkingPredictorPort assíncrona/por tenant + CommunityAwareParkingPredictor realimenta a previsão (integração B) |
 | 2026-07-16 | 2.5 | Design+Arch | ADR-0035: Ações do assistente de voz + captura automática do tempo de atendimento (dwell) realimentando a coletiva (integrações C+D) |
+| 2026-07-16 | 2.6 | Mobile+Arch | ADR-0036: Paridade mobile — feature `intelligence` (StopIntelligenceCard: estacionamento/acesso/coletiva) no app Flutter (integração E.1); voz nativa e captura no POD em E.2/E.3 |

@@ -10,6 +10,8 @@ class DriverDelivery extends Equatable {
     required this.status,
     this.windowStart,
     this.windowEnd,
+    this.latitude,
+    this.longitude,
   });
 
   final String id;
@@ -19,9 +21,15 @@ class DriverDelivery extends Equatable {
   final String status; // pending | in_route | delivered | failed | canceled
   final DateTime? windowStart;
   final DateTime? windowEnd;
+  final double? latitude;
+  final double? longitude;
+
+  /// Tem coordenadas para consultar a inteligência da parada.
+  bool get hasCoordinates => latitude != null && longitude != null;
 
   @override
-  List<Object?> get props => [id, addressLine, cityLine, priority, status, windowStart, windowEnd];
+  List<Object?> get props =>
+      [id, addressLine, cityLine, priority, status, windowStart, windowEnd, latitude, longitude];
 }
 
 /// Rastreamento em tempo real do próprio motorista (/tracking/me/latest).

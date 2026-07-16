@@ -12,6 +12,7 @@ import '../../../core/ui/navix_section_header.dart';
 import '../../../core/ui/navix_skeleton.dart';
 import '../../../core/ui/navix_states.dart';
 import '../../../core/ui/navix_status_pill.dart';
+import '../../intelligence/presentation/stop_intelligence_card.dart';
 import '../../pod/presentation/pod_capture_sheet.dart';
 import '../../pod/presentation/pod_sync_cubit.dart';
 import '../domain/driver_dashboard_data.dart';
@@ -158,6 +159,13 @@ class _Content extends StatelessWidget {
                 if (data.next != null) ...[
                   _NextDelivery(delivery: data.next!, onAction: onAction),
                   const SizedBox(height: 12),
+                  if (data.next!.hasCoordinates) ...[
+                    StopIntelligenceCard(
+                      latitude: data.next!.latitude!,
+                      longitude: data.next!.longitude!,
+                    ),
+                    const SizedBox(height: 12),
+                  ],
                 ],
                 _MiniMap(),
                 const SizedBox(height: 12),

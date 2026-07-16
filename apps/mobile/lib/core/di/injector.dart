@@ -12,6 +12,8 @@ import '../../features/driver/presentation/location_sharing_cubit.dart';
 import '../location/location_service.dart';
 import '../../features/imports/data/import_repository.dart';
 import '../../features/imports/presentation/import_cubit.dart';
+import '../../features/intelligence/data/intelligence_repository.dart';
+import '../../features/intelligence/presentation/stop_intelligence_cubit.dart';
 import '../../features/optimizer/data/optimizer_repository.dart';
 import '../../features/optimizer/presentation/optimizer_cubit.dart';
 import '../../features/pod/data/pod_queue_store.dart';
@@ -102,5 +104,11 @@ Future<void> configureDependencies(AppConfig config) async {
     ..registerLazySingleton<OptimizerRepository>(
       () => OptimizerRepository(getIt<DioClient>().apiDio),
     )
-    ..registerFactory<OptimizerCubit>(() => OptimizerCubit(getIt<OptimizerRepository>()));
+    ..registerFactory<OptimizerCubit>(() => OptimizerCubit(getIt<OptimizerRepository>()))
+    ..registerLazySingleton<IntelligenceRepository>(
+      () => IntelligenceRepository(getIt<DioClient>().apiDio),
+    )
+    ..registerFactory<StopIntelligenceCubit>(
+      () => StopIntelligenceCubit(getIt<IntelligenceRepository>()),
+    );
 }

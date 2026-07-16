@@ -104,6 +104,8 @@ class DriverDashboardRepository {
       status: (d['status'] as String?) ?? 'pending',
       windowStart: DateTime.tryParse((w['start'] as String?) ?? ''),
       windowEnd: DateTime.tryParse((w['end'] as String?) ?? ''),
+      latitude: (addr['latitude'] as num?)?.toDouble(),
+      longitude: (addr['longitude'] as num?)?.toDouble(),
     );
   }
 
