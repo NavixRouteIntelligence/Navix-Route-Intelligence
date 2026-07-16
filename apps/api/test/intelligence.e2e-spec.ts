@@ -17,9 +17,9 @@ import { LOAD_PLANNER } from '../src/modules/intelligence/domain/load-planner.po
 import { PARKING_PREDICTOR } from '../src/modules/intelligence/domain/parking-predictor.port';
 import { TRAFFIC_MODEL, TimeContextTrafficModel } from '../src/modules/intelligence/domain/traffic-model';
 import { VOICE_INTERPRETER } from '../src/modules/intelligence/domain/voice-command-interpreter.port';
+import { CommunityAwareParkingPredictor } from '../src/modules/intelligence/infrastructure/community-aware-parking-predictor';
 import { HeuristicAccessInstructions } from '../src/modules/intelligence/infrastructure/heuristic-access-instructions';
 import { HeuristicLoadPlanner } from '../src/modules/intelligence/infrastructure/heuristic-load-planner';
-import { HeuristicParkingPredictor } from '../src/modules/intelligence/infrastructure/heuristic-parking-predictor';
 import { HeuristicVoiceInterpreter } from '../src/modules/intelligence/infrastructure/heuristic-voice-interpreter';
 import { InMemoryCollectiveInsights } from '../src/modules/intelligence/infrastructure/in-memory-collective-insights';
 import { NoHistoryDriverProfileSource } from '../src/modules/intelligence/infrastructure/no-history-driver-profile.source';
@@ -42,7 +42,7 @@ describe('Intelligence (e2e)', () => {
         { provide: TRAFFIC_MODEL, useClass: TimeContextTrafficModel },
         { provide: DRIVER_PROFILE_SOURCE, useClass: NoHistoryDriverProfileSource },
         { provide: ACCESS_INSTRUCTIONS, useClass: HeuristicAccessInstructions },
-        { provide: PARKING_PREDICTOR, useClass: HeuristicParkingPredictor },
+        { provide: PARKING_PREDICTOR, useClass: CommunityAwareParkingPredictor },
         { provide: LOAD_PLANNER, useClass: HeuristicLoadPlanner },
         { provide: COLLECTIVE_INSIGHTS, useClass: InMemoryCollectiveInsights },
         { provide: VOICE_INTERPRETER, useClass: HeuristicVoiceInterpreter },
@@ -171,5 +171,22 @@ describe('Intelligence (e2e)', () => {
       .post('/api/v1/intelligence/voice-command')
       .send({ transcript: '' })
       .expect(400);
+  });
+
+  it('integração B: a previsão de estacionamento realimenta com a coletiva', async () => {
+    const point = { latitude: -23.7, longitude: -46.7 };
+    for (let i = 0; i < 3; i += 1) {
+      await request(app.getHttpServer())
+        .post('/api/v1/intelligence/observations')
+        .send({ ...point, kind: 'parking', parkingDifficulty: 'hard' })
+        .expect(201);
+    }
+
+    const res = await request(app.getHttpServer())
+      .post('/api/v1/intelligence/route-forecast')
+      .send({ stops: [{ id: 'x', ...point }] })
+      .expect(201);
+
+    expect(res.body.data.schedule.stops[0].parking.difficulty).toBe('hard');
   });
 });

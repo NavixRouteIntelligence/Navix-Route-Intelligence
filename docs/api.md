@@ -418,7 +418,7 @@ POST /api/v1/intelligence/voice-command     # assistente por voz: classifica a i
   - `traffic` — multiplicador de congestionamento na partida + janela (`off_peak`/`moderate`/`peak`).
   - `driver` — perfil aplicado (`speedFactor`, `serviceTimeMinutes`, `punctuality`) e `source` (`default`/`learned`/`override`).
   - `schedule.stops[].access` — **navegação contextual** (ADR-0028): instruções de acesso ao destino derivadas de `accessNotes`, tipadas (`entrance`/`dock`/`intercom`/`gate_code`/`reception`/`note`). Componente web `AccessInstructionList`.
-  - `schedule.stops[].parking` — **previsão de estacionamento** (ADR-0029): `difficulty` (`easy`/`moderate`/`hard`), `confidence` e `walkMinutes` (caminhada até a porta) por parada, via `ParkingPredictorPort` (heurística reusa o sinal de trânsito; ML-ready). Componente web `ParkingBadge`.
+  - `schedule.stops[].parking` — **previsão de estacionamento** (ADR-0029): `difficulty` (`easy`/`moderate`/`hard`), `confidence` e `walkMinutes` (caminhada até a porta) por parada, via `ParkingPredictorPort` (heurística reusa o sinal de trânsito; ML-ready). **Realimentada pela inteligência coletiva** (ADR-0034): o `CommunityAwareParkingPredictor` corrige a heurística com o que a frota observou na célula do local. Componente web `ParkingBadge`.
 - **IA personalizada por motorista**: `DriverProfile` aprendido do histórico (estatístico hoje; **modelo de ML** pela mesma port depois). **Previsão de trânsito**: heurística por hora/dia (`TrafficModelPort`), evoluível para modelo por região/histórico. Nada de acoplamento a framework de ML nesta camada.
 
 **`POST /intelligence/load-plan`** — **organização otimizada da carga** (ADR-0030):
@@ -493,3 +493,4 @@ GET /api/v1/health/ready     -> 200 | 503 (Postgres duro; Redis reportado, não 
 | 2026-07-15 | 0.29 | Design+Arch | Organização da carga: POST /intelligence/load-plan (LoadPlannerPort LIFO — zonas/ocupação/avisos); LoadPlanList no web (§14.7, ADR-0030) |
 | 2026-07-15 | 0.30 | Design+Arch | Inteligência coletiva: POST /intelligence/observations + GET /intelligence/insights (observações por tenant/RLS agregadas por célula); CollectiveInsightCard no web (§14.7, ADR-0031) |
 | 2026-07-15 | 0.31 | Design+Arch | Assistente por voz: POST /intelligence/voice-command (VoiceCommandInterpreterPort — intenção PT/EN/ES); VoiceAssistantButton (Web Speech API) no web (§14.7, ADR-0032) |
+| 2026-07-16 | 0.32 | Arquitetura | Estacionamento ciente da comunidade: ParkingPredictorPort assíncrona/por tenant + CommunityAwareParkingPredictor realimenta a previsão com a coletiva (§14.7, ADR-0034) |

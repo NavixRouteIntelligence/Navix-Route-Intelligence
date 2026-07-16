@@ -13,9 +13,9 @@ import { LOAD_PLANNER } from './domain/load-planner.port';
 import { PARKING_PREDICTOR } from './domain/parking-predictor.port';
 import { TRAFFIC_MODEL, TimeContextTrafficModel } from './domain/traffic-model';
 import { VOICE_INTERPRETER } from './domain/voice-command-interpreter.port';
+import { CommunityAwareParkingPredictor } from './infrastructure/community-aware-parking-predictor';
 import { HeuristicAccessInstructions } from './infrastructure/heuristic-access-instructions';
 import { HeuristicLoadPlanner } from './infrastructure/heuristic-load-planner';
-import { HeuristicParkingPredictor } from './infrastructure/heuristic-parking-predictor';
 import { HeuristicVoiceInterpreter } from './infrastructure/heuristic-voice-interpreter';
 import { NoHistoryDriverProfileSource } from './infrastructure/no-history-driver-profile.source';
 import { CollectiveObservationOrmEntity } from './infrastructure/persistence/collective-observation.orm-entity';
@@ -39,7 +39,7 @@ import { IntelligenceController } from './interface/intelligence.controller';
     { provide: TRAFFIC_MODEL, useClass: TimeContextTrafficModel },
     { provide: DRIVER_PROFILE_SOURCE, useClass: NoHistoryDriverProfileSource },
     { provide: ACCESS_INSTRUCTIONS, useClass: HeuristicAccessInstructions },
-    { provide: PARKING_PREDICTOR, useClass: HeuristicParkingPredictor },
+    { provide: PARKING_PREDICTOR, useClass: CommunityAwareParkingPredictor },
     { provide: LOAD_PLANNER, useClass: HeuristicLoadPlanner },
     { provide: COLLECTIVE_INSIGHTS, useClass: CollectiveInsightsRepository },
     { provide: VOICE_INTERPRETER, useClass: HeuristicVoiceInterpreter },
