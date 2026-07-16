@@ -8,7 +8,7 @@ import { Type } from 'class-transformer';
 import { IsIn, IsOptional, IsString, IsUUID, MaxLength, ValidateNested } from 'class-validator';
 
 import { AddressDto } from './address.dto';
-import { TimeWindowDto } from './time-window.dto';
+import { TimeWindowDto } from '../../../../shared/interface/time-window.dto';
 
 export class CreateDeliveryDto implements CreateDeliveryRequest {
   @ApiProperty({ type: AddressDto })

@@ -22,7 +22,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 
-import { TimeWindowDto } from '../../../delivery/interface/dto/time-window.dto';
+import { TimeWindowDto } from '../../../../shared/interface/time-window.dto';
 
 class ForecastOriginDto {
   @ApiProperty()

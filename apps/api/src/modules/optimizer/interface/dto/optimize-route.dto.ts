@@ -28,7 +28,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 
-import { TimeWindowDto } from '../../../delivery/interface/dto/time-window.dto';
+import { TimeWindowDto } from '../../../../shared/interface/time-window.dto';
 
 export class OriginDto implements OriginInput {
   @ApiProperty({ example: -23.55 })
