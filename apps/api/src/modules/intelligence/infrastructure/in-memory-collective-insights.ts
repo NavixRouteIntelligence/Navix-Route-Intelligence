@@ -23,11 +23,31 @@ export class InMemoryCollectiveInsights implements CollectiveInsightsPort {
     since: Date,
     limit: number,
   ): Promise<CollectiveObservation[]> {
+    return this.query(tenantId, (c) => c === cell, since, limit);
+  }
+
+  findRecentByCells(
+    tenantId: string,
+    cells: string[],
+    since: Date,
+    limit: number,
+  ): Promise<CollectiveObservation[]> {
+    if (cells.length === 0) return Promise.resolve([]);
+    const set = new Set(cells);
+    return this.query(tenantId, (c) => set.has(c), since, limit);
+  }
+
+  private query(
+    tenantId: string,
+    cellMatches: (cell: string) => boolean,
+    since: Date,
+    limit: number,
+  ): Promise<CollectiveObservation[]> {
     const found = this.rows
       .filter(
         (o) =>
           o.tenantId === tenantId &&
-          o.cell === cell &&
+          cellMatches(o.cell) &&
           o.createdAt.getTime() >= since.getTime(),
       )
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
