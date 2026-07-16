@@ -15,9 +15,15 @@ describe('data-url', () => {
     expect(out.buffer.toString('utf8')).toBe('hello');
   });
 
-  it('mapeia jpeg → jpg e desconhecido → bin', () => {
+  it('mapeia jpeg → jpg', () => {
     expect(decodeDataUrl(`data:image/jpeg;base64,${Buffer.from('a').toString('base64')}`).extension).toBe('jpg');
-    expect(decodeDataUrl(`data:application/pdf;base64,${Buffer.from('a').toString('base64')}`).extension).toBe('bin');
+  });
+
+  it('rejeita SVG (vetor de XSS) e qualquer tipo não-rasterizado', () => {
+    const svg = `data:image/svg+xml;base64,${Buffer.from('<svg onload="alert(1)"/>').toString('base64')}`;
+    expect(() => decodeDataUrl(svg)).toThrow(ValidationError);
+    expect(() => decodeDataUrl(`data:application/pdf;base64,${Buffer.from('a').toString('base64')}`)).toThrow(ValidationError);
+    expect(() => decodeDataUrl(`data:text/html;base64,${Buffer.from('a').toString('base64')}`)).toThrow(ValidationError);
   });
 
   it('rejeita valor que não é data URL', () => {

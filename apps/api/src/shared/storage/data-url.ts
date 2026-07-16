@@ -8,13 +8,17 @@ export interface DecodedDataUrl {
 
 const DATA_URL_RE = /^data:([^;,]+)?((?:;[^,]*)*),(.*)$/s;
 
+/**
+ * Tipos de imagem **rasterizada** aceitos (ADR-0039). `image/svg+xml` é
+ * deliberadamente **excluído**: SVG pode conter script e, servido inline, é um
+ * vetor de XSS armazenado. Só entram formatos que o navegador nunca executa.
+ */
 const EXTENSION_BY_TYPE: Record<string, string> = {
   'image/png': 'png',
   'image/jpeg': 'jpg',
   'image/jpg': 'jpg',
   'image/webp': 'webp',
   'image/gif': 'gif',
-  'image/svg+xml': 'svg',
 };
 
 /** É uma data URL (`data:...`)? Se não, assume-se que já é uma URL de storage. */
@@ -32,10 +36,15 @@ export function decodeDataUrl(value: string): DecodedDataUrl {
   const payload = match[3] ?? '';
   const isBase64 = /;base64/i.test(params);
 
+  const extension = EXTENSION_BY_TYPE[contentType];
+  if (!extension) {
+    // Allowlist estrita: rejeita SVG e qualquer tipo não-rasterizado (anti-XSS).
+    throw new ValidationError(`Tipo de mídia não permitido: ${contentType}.`);
+  }
+
   const buffer = isBase64
     ? Buffer.from(payload, 'base64')
     : Buffer.from(decodeURIComponent(payload), 'utf8');
-  const extension = EXTENSION_BY_TYPE[contentType] ?? 'bin';
 
   return { buffer, contentType, extension };
 }
