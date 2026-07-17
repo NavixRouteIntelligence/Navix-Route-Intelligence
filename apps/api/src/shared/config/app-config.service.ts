@@ -131,6 +131,10 @@ export class AppConfigService {
     };
   }
 
+  get tracking() {
+    return { retentionDays: this.get('TRACKING_RETENTION_DAYS') };
+  }
+
   get observability() {
     return {
       tracingEnabled: this.get('OTEL_ENABLED'),

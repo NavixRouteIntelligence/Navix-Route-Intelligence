@@ -12,6 +12,7 @@ function build() {
     findLatestForDriver: async () => null,
     findLatestPerDriver: async () => [],
     findHistory: async () => [],
+    pruneOlderThan: async () => 0,
   };
   const events: TrackingEventsPort & { positionUpdated: jest.Mock } = {
     positionUpdated: jest.fn(),

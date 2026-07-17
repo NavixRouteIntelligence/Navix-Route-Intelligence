@@ -59,6 +59,8 @@ export const envSchema = z.object({
   // produção; se ausente, cai para um segredo por-processo (dev single-instance).
   MEDIA_URL_SECRET: z.string().optional(),
   MEDIA_URL_TTL_SECONDS: z.coerce.number().int().positive().default(900),
+  // Retenção de posições de tracking (dias); 0 desliga o expurgo (ADR-0048).
+  TRACKING_RETENTION_DAYS: z.coerce.number().int().min(0).default(90),
   S3_ENDPOINT: z.string().optional(),
   S3_REGION: z.string().default('auto'),
   S3_BUCKET: z.string().optional(),

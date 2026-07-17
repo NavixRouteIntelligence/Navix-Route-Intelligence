@@ -15,6 +15,13 @@ export interface PositionRepositoryPort {
   findLatestPerDriver(tenantId: string): Promise<DriverPosition[]>;
   /** Histórico recente de um motorista, do mais novo ao mais antigo. */
   findHistory(tenantId: string, driverId: string, limit: number): Promise<DriverPosition[]>;
+  /**
+   * Expurga as posições do tenant anteriores a `olderThan` e devolve quantas
+   * foram removidas (ADR-0048). Escopado ao tenant — compatível com a RLS, sem
+   * varredura cross-tenant. Chamado de forma amostrada na escrita e disponível
+   * para um job de ops.
+   */
+  pruneOlderThan(tenantId: string, olderThan: Date): Promise<number>;
 }
 
 export const POSITION_REPOSITORY = Symbol('POSITION_REPOSITORY');
