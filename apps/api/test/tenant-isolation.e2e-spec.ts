@@ -16,6 +16,12 @@ loadEnv({ path: '../../.env' });
 const TENANT_A = randomUUID();
 const TENANT_B = randomUUID();
 const DELIVERY_A = randomUUID();
+const AUDIT_A = randomUUID();
+const AUDIT_B = randomUUID();
+const AUDIT_SISTEMA = randomUUID();
+const KEY_A = randomUUID();
+const KEY_B = randomUUID();
+const KEY_HASH_B = `hash-b-${TENANT_B}`;
 
 /**
  * Conecta como o role de RUNTIME (não-superusuário) — é ele que fica sujeito à
@@ -62,6 +68,31 @@ describe('Isolamento multi-tenant via RLS (integração)', () => {
         [DELIVERY_A, TENANT_A],
       );
     });
+
+    // audit_log (ADR-0054): INSERT é permitido sem contexto — é assim que o
+    // AuditLogWriter e o RolesGuard gravam de verdade.
+    await ds.query(
+      `INSERT INTO audit_log (id, tenant_id, actor_id, action, resource, metadata)
+       VALUES ($1,$2,NULL,'iso.a','r','{}'),($3,$4,NULL,'iso.b','r','{}'),
+              ($5,NULL,NULL,'iso.sistema','r','{}')`,
+      [AUDIT_A, TENANT_A, AUDIT_B, TENANT_B, AUDIT_SISTEMA],
+    );
+
+    // api_keys (ADR-0054): escrita exige contexto do próprio tenant.
+    for (const [id, tenant, hash] of [
+      [KEY_A, TENANT_A, `hash-a-${TENANT_A}`],
+      [KEY_B, TENANT_B, KEY_HASH_B],
+    ]) {
+      await ds.transaction(async (m) => {
+        await setTenant(m, tenant);
+        await m.query(`INSERT INTO api_keys (id, tenant_id, name, key_hash) VALUES ($1,$2,$3,$4)`, [
+          id,
+          tenant,
+          `key-${tenant}`,
+          hash,
+        ]);
+      });
+    }
   });
 
   afterAll(async () => {
@@ -70,8 +101,27 @@ describe('Isolamento multi-tenant via RLS (integração)', () => {
       await setTenant(m, TENANT_A);
       await m.query(`DELETE FROM deliveries WHERE id = $1`, [DELIVERY_A]);
     });
-    await ds.query(`DELETE FROM tenants WHERE id IN ($1,$2)`, [TENANT_A, TENANT_B]);
+    // audit_log é append-only para o role de runtime (sem política de DELETE):
+    // a limpeza usa o owner, via a conexão de migração.
     await ds.destroy();
+
+    const owner = await new DataSource({
+      type: 'postgres',
+      host: process.env.DB_HOST ?? 'localhost',
+      port: Number(process.env.DB_DIRECT_PORT ?? 5432),
+      username: process.env.DB_USER ?? 'navix',
+      password: process.env.DB_PASSWORD ?? 'navix_dev_password',
+      database: process.env.DB_NAME ?? 'navix',
+      entities: [],
+    }).initialize();
+    await owner.query(`DELETE FROM audit_log WHERE id IN ($1,$2,$3)`, [
+      AUDIT_A,
+      AUDIT_B,
+      AUDIT_SISTEMA,
+    ]);
+    await owner.query(`DELETE FROM api_keys WHERE id IN ($1,$2)`, [KEY_A, KEY_B]);
+    await owner.query(`DELETE FROM tenants WHERE id IN ($1,$2)`, [TENANT_A, TENANT_B]);
+    await owner.destroy();
   });
 
   it('o tenant B NÃO enxerga a entrega do tenant A', async () => {
@@ -95,5 +145,92 @@ describe('Isolamento multi-tenant via RLS (integração)', () => {
       return m.query(`SELECT id FROM deliveries WHERE id = $1`, [DELIVERY_A]);
     });
     expect(rows).toHaveLength(0);
+  });
+
+  describe('audit_log (ADR-0054)', () => {
+    it('o tenant A só enxerga a própria auditoria (nem a de B, nem a de sistema)', async () => {
+      const rows = await ds.transaction(async (m) => {
+        await setTenant(m, TENANT_A);
+        return m.query(`SELECT action FROM audit_log WHERE id IN ($1,$2,$3)`, [
+          AUDIT_A,
+          AUDIT_B,
+          AUDIT_SISTEMA,
+        ]);
+      });
+      expect(rows).toEqual([{ action: 'iso.a' }]);
+    });
+
+    it('aceita INSERT sem contexto de tenant', async () => {
+      // O AuditLogWriter grava pelo repositório base e o RolesGuard audita antes
+      // dos interceptors — ambos fora da transação de tenant. Barrar esses
+      // INSERTs faria a auditoria parar em silêncio (o writer engole exceções).
+      const id = randomUUID();
+      await ds.query(
+        `INSERT INTO audit_log (id, tenant_id, actor_id, action, resource, metadata)
+         VALUES ($1,$2,NULL,'iso.sem-contexto','r','{}')`,
+        [id, TENANT_A],
+      );
+
+      const rows = await ds.transaction(async (m) => {
+        await setTenant(m, TENANT_A);
+        return m.query(`SELECT action FROM audit_log WHERE id = $1`, [id]);
+      });
+      expect(rows).toHaveLength(1);
+    });
+
+    it('é append-only para o role de runtime: UPDATE e DELETE não afetam nada', async () => {
+      await ds.transaction(async (m) => {
+        await setTenant(m, TENANT_A);
+        await m.query(`UPDATE audit_log SET action = 'adulterado' WHERE id = $1`, [AUDIT_A]);
+        await m.query(`DELETE FROM audit_log WHERE id = $1`, [AUDIT_A]);
+      });
+
+      const rows = await ds.transaction(async (m) => {
+        await setTenant(m, TENANT_A);
+        return m.query(`SELECT action FROM audit_log WHERE id = $1`, [AUDIT_A]);
+      });
+      expect(rows).toEqual([{ action: 'iso.a' }]);
+    });
+  });
+
+  describe('api_keys (ADR-0054)', () => {
+    it('permite o lookup por key_hash sem contexto (autenticação M2M)', async () => {
+      // A chave precisa ser encontrada ANTES de o tenant ser conhecido — mesma
+      // restrição que mantém `users` sem RLS.
+      const rows = await ds.query(`SELECT tenant_id FROM api_keys WHERE key_hash = $1`, [
+        KEY_HASH_B,
+      ]);
+      expect(rows).toEqual([{ tenant_id: TENANT_B }]);
+    });
+
+    it('o tenant A não enxerga a chave do tenant B', async () => {
+      const rows = await ds.transaction(async (m) => {
+        await setTenant(m, TENANT_A);
+        return m.query(`SELECT id FROM api_keys WHERE id = $1`, [KEY_B]);
+      });
+      expect(rows).toHaveLength(0);
+    });
+
+    it('o tenant A não consegue criar chave para o tenant B', async () => {
+      await expect(
+        ds.transaction(async (m) => {
+          await setTenant(m, TENANT_A);
+          return m.query(
+            `INSERT INTO api_keys (id, tenant_id, name, key_hash) VALUES ($1,$2,'invasora',$3)`,
+            [randomUUID(), TENANT_B, `hash-x-${TENANT_B}`],
+          );
+        }),
+      ).rejects.toThrow(/row-level security/i);
+    });
+
+    it('o tenant A não consegue revogar a chave do tenant B', async () => {
+      await ds.transaction(async (m) => {
+        await setTenant(m, TENANT_A);
+        await m.query(`UPDATE api_keys SET revoked_at = now() WHERE id = $1`, [KEY_B]);
+      });
+
+      const rows = await ds.query(`SELECT revoked_at FROM api_keys WHERE id = $1`, [KEY_B]);
+      expect(rows[0].revoked_at).toBeNull();
+    });
   });
 });

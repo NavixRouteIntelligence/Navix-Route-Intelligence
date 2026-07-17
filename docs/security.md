@@ -13,13 +13,12 @@
 >
 > **AINDA NÃO IMPLEMENTADO (roadmap) — não presuma que estes controles existem:**
 > criptografia em repouso / **envelope encryption por tenant** (ADR-0010) — a PII
-> está em **texto puro**; **blacklist de tokens no Redis** e rate limiting em Redis
-> (o storage atual é **em memória**, não compartilhado entre instâncias); **MFA**;
+> está em **texto puro**; **blacklist de tokens no Redis**; **MFA**;
 > **autenticação M2M** (OAuth2 / API keys — a tabela `api_keys` existe mas não há
-> fluxo); **webhooks assinados por HMAC**; **SAST/SCA/DAST e secret scanning no CI**;
-> imutabilidade do `audit_log` por *trigger* (hoje é append-only só por convenção);
-> hardening de containers (usuário não-root). As seções abaixo descrevem a política
-> **alvo**; itens não implementados estão marcados como ⬜.
+> fluxo; a RLS dela já está no lugar, ADR-0054); **webhooks assinados por HMAC**;
+> **SAST/DAST no CI**; hardening de containers (usuário não-root). As seções
+> abaixo descrevem a política **alvo**; itens não implementados estão marcados
+> como ⬜.
 
 Segurança é requisito de primeira classe, não uma etapa final. Nenhuma feature é considerada pronta sem atender a este documento. Novas ameaças ou decisões de segurança relevantes viram ADR em [decisions.md](./decisions.md).
 
@@ -119,7 +118,7 @@ Cada tenant possui uma **DEK** (Data Encryption Key) própria, protegida por uma
 
 ### 7.1 Auditoria e acesso privilegiado
 
-- **Trilha de auditoria** (`audit_log`): quem fez o quê, em qual tenant, quando. ✅ *Gravação implementada.* O caráter **append-only / imutável** (sem UPDATE/DELETE) é hoje **por convenção da aplicação**; a imutabilidade forçada no banco (trigger/revogação de privilégios) é ⬜ *roadmap*.
+- **Trilha de auditoria** (`audit_log`): quem fez o quê, em qual tenant, quando. ✅ *Gravação implementada.* O caráter **append-only / imutável** é ✅ **forçado pelo banco** desde o ADR-0054: a tabela tem RLS com `FORCE` e políticas apenas de `SELECT` (isolado por tenant) e `INSERT` — sem política de `UPDATE`/`DELETE`, o Postgres nega os dois para o role de runtime. O `INSERT` é permitido **sem** contexto de tenant de propósito: o `AuditLogWriter` grava fora da transação de tenant e o `RolesGuard` audita antes dos interceptors — barrá-los faria a auditoria parar em silêncio.
 - **Acesso privilegiado (operadores Navix)** segue *least privilege*, com **break-glass** auditado e temporário para suporte/incidentes — nunca acesso permanente a dados de tenants.
 - Ações administrativas sensíveis exigem reautenticação/MFA.
 
