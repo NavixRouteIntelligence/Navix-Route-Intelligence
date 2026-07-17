@@ -1,0 +1,44 @@
+# Alertmanager da Navix (auditoria 5, R8 — ADR-0057).
+#
+# Este arquivo define o ROTEAMENTO. O canal de notificação real (Slack, PagerDuty,
+# e-mail) é preenchido no DEPLOY — depende de credenciais/webhooks que não moram
+# no repositório (regra de segurança). Sem um receiver configurado, os alertas
+# ainda aparecem no Alertmanager (:9093) e no Prometheus (:9090/alerts); só não
+# são enviados a lugar nenhum.
+#
+# Para ligar o Slack em produção, exporte SLACK_WEBHOOK_URL no ambiente do
+# Alertmanager e descomente o receiver 'slack' abaixo (e aponte as rotas a ele).
+
+route:
+  receiver: default
+  group_by: ['alertname', 'severity']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  routes:
+    # Críticos: agrupa mais rápido e repete com mais frequência.
+    - matchers:
+        - severity="critical"
+      receiver: default
+      group_wait: 10s
+      repeat_interval: 1h
+
+receivers:
+  # Placeholder: não envia a lugar nenhum (o alerta fica visível na UI).
+  # Troque por 'slack'/'pagerduty' no deploy.
+  - name: default
+
+  # Descomente e aponte as rotas para cá quando houver webhook:
+  # - name: slack
+  #   slack_configs:
+  #     - api_url: '${SLACK_WEBHOOK_URL}'
+  #       channel: '#navix-alerts'
+  #       title: '{{ .CommonAnnotations.summary }}'
+  #       text: "{{ range .Alerts }}{{ .Annotations.description }}\n{{ .Annotations.runbook_url }}\n{{ end }}"
+
+inhibit_rules:
+  # Um NavixApiDown crítico silencia os alertas derivados (latência/erro) do
+  # mesmo alvo — evita tempestade de alertas quando a causa é uma só.
+  - source_matchers: [severity="critical", alertname="NavixApiDown"]
+    target_matchers: [severity=~"warning|info"]
+    equal: ['service']

@@ -68,9 +68,15 @@ OTEL_ENABLED=true OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 npm run star
 
 O dashboard inicial (`docker/observability/grafana/dashboards/navix-api.json`) traz RPS por rota, latência p95, taxa de erro 5xx e memória do processo.
 
+## 6.1 Alertas (ADR-0057)
+
+Regras de alerta em [`docker/observability/alerts.yml`](../docker/observability/alerts.yml), avaliadas pelo Prometheus e roteadas ao **Alertmanager** ([`alertmanager.yml`](../docker/observability/alertmanager.yml)). Cobrem disponibilidade (`up`), 5xx, latência p95, 429, event loop, memória e o solver — todas ancoradas em métricas reais de `/metrics`. Cada alerta aponta para a seção correspondente do **[runbook](./runbook.md)** (sintoma → diagnóstico → ação).
+
+O **canal de notificação** (Slack/PagerDuty) é preenchido no deploy — depende de webhook/credenciais fora do repositório. Sem receiver, os alertas ficam visíveis nas UIs (`:9090/alerts`, `:9093`) mas não são enviados.
+
 ## 7. Produção (K8s)
 
-- **Métricas**: `ServiceMonitor`/scrape apontando para `/metrics`; regras de alerta no Prometheus (ex.: p95 alto, 5xx > X%).
+- **Métricas**: `ServiceMonitor`/scrape apontando para `/metrics`; regras de alerta prontas em `alerts.yml` (§6.1).
 - **Tracing**: `OTEL_ENABLED=true` + `OTEL_EXPORTER_OTLP_ENDPOINT` para um **OpenTelemetry Collector** (que fan-out para Tempo/Jaeger/vendor).
 - **Logs**: coletados do stdout (Loki/ELK); correlacionáveis por `trace_id`.
 - **Probes**: `livenessProbe` → `/api/v1/health/live`; `readinessProbe` → `/api/v1/health/ready`.

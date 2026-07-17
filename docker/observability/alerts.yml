@@ -1,0 +1,134 @@
+# Regras de alerta da Navix API (auditoria 5, R8 — ADR-0057).
+#
+# Todas as expressões usam métricas REAIS expostas em /metrics:
+#   - http_server_requests_total / http_server_request_duration_seconds
+#     (labels: method, route, status_code) — do HttpMetricsInterceptor
+#   - optimizer_solve_duration_seconds / optimizer_capacity_infeasible_total
+#   - métricas padrão do prom-client (process_*, nodejs_*)
+#   - up{job="navix-api"} — sintética do scrape do Prometheus
+#
+# Cada alerta aponta um runbook_url para docs/runbook.md#<âncora>.
+groups:
+  - name: navix-api-disponibilidade
+    rules:
+      - alert: NavixApiDown
+        expr: up{job="navix-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'API Navix fora do ar ({{ $labels.instance }})'
+          description: 'O scrape de {{ $labels.instance }} falha há mais de 1 minuto.'
+          runbook_url: 'https://github.com/NavixRouteIntelligence/Navix-Route-Intelligence/blob/main/docs/runbook.md#navixapidown'
+
+      - alert: NavixApiAbsent
+        expr: absent(up{job="navix-api"})
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'Nenhum target navix-api no Prometheus'
+          description: 'O Prometheus não conhece nenhum alvo navix-api — scrape mal configurado ou serviço nunca subiu.'
+          runbook_url: 'https://github.com/NavixRouteIntelligence/Navix-Route-Intelligence/blob/main/docs/runbook.md#navixapidown'
+
+  - name: navix-api-trafego
+    rules:
+      # Taxa de 5xx > 5% por 5m, com piso de tráfego para não disparar no vazio.
+      - alert: NavixApiHighErrorRate
+        expr: |
+          sum(rate(http_server_requests_total{status_code=~"5.."}[5m]))
+            / sum(rate(http_server_requests_total[5m])) > 0.05
+          and sum(rate(http_server_requests_total[5m])) > 0.2
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'Taxa de erro 5xx acima de 5%'
+          description: '{{ $value | humanizePercentage }} das requisições retornam 5xx nos últimos 5 minutos.'
+          runbook_url: 'https://github.com/NavixRouteIntelligence/Navix-Route-Intelligence/blob/main/docs/runbook.md#navixapihigherrorrate'
+
+      # p95 de latência HTTP > 1s por 5m.
+      - alert: NavixApiHighLatencyP95
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (le) (rate(http_server_request_duration_seconds_bucket[5m]))
+          ) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Latência p95 acima de 1s'
+          description: 'p95 da duração das requisições HTTP está em {{ $value | humanizeDuration }} nos últimos 5 minutos.'
+          runbook_url: 'https://github.com/NavixRouteIntelligence/Navix-Route-Intelligence/blob/main/docs/runbook.md#navixapihighlatencyp95'
+
+      # Pico de 429 (rate limiting) — pode indicar abuso ou limite mal calibrado.
+      - alert: NavixApiRateLimitingSpike
+        expr: sum(rate(http_server_requests_total{status_code="429"}[5m])) > 1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Volume alto de respostas 429 (rate limiting)'
+          description: '{{ $value | humanize }} req/s recebendo 429 — abuso, cliente em loop ou limite mal calibrado.'
+          runbook_url: 'https://github.com/NavixRouteIntelligence/Navix-Route-Intelligence/blob/main/docs/runbook.md#navixapiratelimitingspike'
+
+  - name: navix-api-recursos
+    rules:
+      # Event loop travado: CPU-bound segurando o loop (ex.: otimização in-process).
+      - alert: NavixApiEventLoopLag
+        expr: nodejs_eventloop_lag_p99_seconds{job="navix-api"} > 0.2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Event loop travando (p99 > 200ms)'
+          description: 'p99 do lag do event loop está em {{ $value | humanizeDuration }} — trabalho CPU-bound segurando o processo. Considere OPTIMIZER_QUEUE_DRIVER=bullmq com worker dedicado.'
+          runbook_url: 'https://github.com/NavixRouteIntelligence/Navix-Route-Intelligence/blob/main/docs/runbook.md#navixapieventlooplag'
+
+      # Memória residente (RSS) acima de um teto ABSOLUTO por 10m.
+      #
+      # NÃO usar `heap_used / heap_total`: `heap_total` é o heap já comprometido
+      # (o V8 o mantém colado ao used), então a razão fica ~0.95 no funcionamento
+      # normal e o alerta viraria ruído. O limite real do heap não é exportado
+      # pelo prom-client; RSS absoluto é o número que ops acompanha.
+      #
+      # 1.5 GiB é um DEFAULT a calibrar por deploy (ajuste ao limite do container:
+      # ~75-80% do limite de memória é um bom ponto de partida).
+      - alert: NavixApiHighMemory
+        expr: process_resident_memory_bytes{job="navix-api"} > 1610612736
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Memória residente acima do teto (RSS)'
+          description: 'RSS em {{ $value | humanize1024 }}B há 10 minutos. Ajuste o limiar ao container ou investigue vazamento.'
+          runbook_url: 'https://github.com/NavixRouteIntelligence/Navix-Route-Intelligence/blob/main/docs/runbook.md#navixapihighmemory'
+
+  - name: navix-optimizer
+    rules:
+      # p95 da resolução da rota > 2s: o solver está lento (n grande / provider externo).
+      - alert: NavixOptimizerSlow
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (le) (rate(optimizer_solve_duration_seconds_bucket[10m]))
+          ) > 2
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Otimização de rota lenta (p95 > 2s)'
+          description: 'p95 da resolução do solver está em {{ $value | humanizeDuration }}. Rotas muito grandes ou provider de mapas degradado.'
+          runbook_url: 'https://github.com/NavixRouteIntelligence/Navix-Route-Intelligence/blob/main/docs/runbook.md#navixoptimizerslow'
+
+      # Rotas inviáveis por capacidade aparecendo com frequência.
+      - alert: NavixOptimizerCapacityInfeasible
+        expr: sum(rate(optimizer_capacity_infeasible_total[15m])) > 0
+        for: 15m
+        labels:
+          severity: info
+        annotations:
+          summary: 'Rotas inviáveis por capacidade recorrentes'
+          description: 'Otimizações vêm falhando por demanda acima da capacidade do veículo — perfis de frota mal cadastrados ou demanda subestimada.'
+          runbook_url: 'https://github.com/NavixRouteIntelligence/Navix-Route-Intelligence/blob/main/docs/runbook.md#navixoptimizercapacityinfeasible'

@@ -8,9 +8,10 @@ name: navix-observability
 #
 #   docker compose -f docker/observability/docker-compose.observability.yml up -d
 #
-# Grafana:    http://localhost:3002   (admin/admin, anon habilitado)
-# Prometheus: http://localhost:9090
-# Jaeger UI:  http://localhost:16686
+# Grafana:      http://localhost:3002   (admin/admin, anon habilitado)
+# Prometheus:   http://localhost:9090   (aba /alerts para ver as regras — ADR-0057)
+# Alertmanager: http://localhost:9093
+# Jaeger UI:    http://localhost:16686
 
 services:
   prometheus:
@@ -22,12 +23,27 @@ services:
       - '--storage.tsdb.retention.time=15d'
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./alerts.yml:/etc/prometheus/alerts.yml:ro
       - prometheus_data:/prometheus
     ports:
       - '9090:9090'
     extra_hosts:
       # Permite ao Prometheus (container) alcançar a API rodando no host (Linux).
       - 'host.docker.internal:host-gateway'
+    depends_on:
+      - alertmanager
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: navix-alertmanager
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+    ports:
+      - '9093:9093'
 
   grafana:
     image: grafana/grafana:latest
@@ -61,3 +77,4 @@ services:
 volumes:
   prometheus_data:
   grafana_data:
+  alertmanager_data:
