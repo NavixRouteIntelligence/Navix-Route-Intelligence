@@ -4,19 +4,18 @@ import {
   HttpStatus,
   type MessageEvent,
   Post,
-  Query,
   Sse,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import type { AuthenticatedUser, RealtimeEvent, RealtimeTicket } from '@navix/contracts';
 import { interval, map, merge, Observable } from 'rxjs';
 
 import { CurrentUser } from '../interface/current-user.decorator';
-import { UnauthorizedError } from '../kernel/domain-error';
 import { JwtAuthGuard } from '../security/jwt-auth.guard';
 import { RealtimeHub } from './realtime-hub';
-import { RealtimeTicketService } from './realtime-ticket.service';
+import { RealtimeSession, RealtimeTicketGuard } from './realtime-ticket.guard';
+import { RealtimeTicketService, type TicketSession } from './realtime-ticket.service';
 
 const HEARTBEAT_MS = 25_000;
 
@@ -41,16 +40,17 @@ export class RealtimeController {
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Emite um ticket curto para autenticar a conexão SSE' })
-  ticket(@CurrentUser() user: AuthenticatedUser): RealtimeTicket {
+  ticket(@CurrentUser() user: AuthenticatedUser): Promise<RealtimeTicket> {
     return this.tickets.issue(user.tenantId, user.id);
   }
 
   @Sse('stream')
+  @UseGuards(RealtimeTicketGuard)
   @ApiOperation({ summary: 'Stream SSE de eventos do tenant (autenticado por ticket)' })
-  stream(@Query('ticket') ticket?: string): Observable<MessageEvent> {
-    const session = this.tickets.verify(ticket);
-    if (!session) throw new UnauthorizedError('Ticket de tempo real inválido ou expirado.');
-
+  // O ticket é lido pelo guard, não por um @Query — declarado aqui para que
+  // continue documentado na spec OpenAPI.
+  @ApiQuery({ name: 'ticket', required: true, description: 'Ticket de POST /realtime/ticket' })
+  stream(@RealtimeSession() session: TicketSession): Observable<MessageEvent> {
     const events = this.hub
       .stream(session.tenantId)
       .pipe(map((event) => ({ data: event }) as MessageEvent));
