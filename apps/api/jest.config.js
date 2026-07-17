@@ -13,6 +13,7 @@ module.exports = {
     'src/**/*.ts',
     '!src/**/*.module.ts',
     '!src/main.ts',
+    '!src/main-worker.ts',
     '!src/**/*.spec.ts',
     '!src/database/migrations/**',
   ],
@@ -21,12 +22,22 @@ module.exports = {
   // Fixado logo abaixo do medido atual — elevar conforme a suíte cresce (a meta
   // de docs/coding-standards.md é ≥80% em domínio/aplicação).
   coverageThreshold: {
+    // Nota: os pisos por-diretório abaixo REMOVEM esses arquivos do cálculo
+    // "global" do Jest, então o global aqui cobre o restante (infra, interface,
+    // domínio, shared) — mais baixo por natureza, melhor coberto por E2E.
     global: {
-      statements: 40,
-      branches: 54,
-      functions: 42,
-      lines: 40,
+      statements: 42,
+      branches: 56,
+      functions: 43,
+      lines: 42,
     },
+    // Núcleo de negócio (auditoria 5, R6): a camada de aplicação — onde mora a
+    // lógica — não pode cair abaixo de 60%. Encoda a meta por-módulo, não só a
+    // global (que é diluída por infra/interface, melhor cobertas por E2E).
+    './src/modules/delivery/application/': { statements: 60, lines: 60 },
+    './src/modules/identity/application/': { statements: 60, lines: 60 },
+    './src/modules/optimizer/application/': { statements: 80, lines: 80 },
+    './src/modules/tracking/application/': { statements: 60, lines: 60 },
   },
   testEnvironment: 'node',
 };
