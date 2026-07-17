@@ -44,6 +44,7 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "dotenv": "^16.4.5",
+    "exceljs": "^4.4.0",
     "helmet": "^7.1.0",
     "ioredis": "^5.4.1",
     "nestjs-pino": "^4.0.0",
@@ -59,7 +60,6 @@
     "swagger-ui-express": "^5.0.0",
     "typeorm": "^0.3.20",
     "uuid": "^10.0.0",
-    "xlsx": "^0.18.5",
     "zod": "^3.23.4"
   },
   "devDependencies": {
