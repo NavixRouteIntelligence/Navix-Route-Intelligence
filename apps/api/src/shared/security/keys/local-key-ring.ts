@@ -35,11 +35,10 @@ export class LocalKeyRing implements KeyRingPort {
       const kid = randomUUID();
       this.signing = { kid, privateKey };
       this.publicKeys.set(kid, publicKey);
-      if (config.isProduction) {
-        this.logger.error('JWT keys ausentes em produção — usando par efêmero. Configure JWT_PRIVATE_KEY/JWT_PUBLIC_KEY.');
-      } else {
-        this.logger.warn('JWT keys não configuradas — par RSA efêmero gerado (dev).');
-      }
+      // Em produção este caminho é inalcançável: `validateEnv` derruba o boot
+      // quando as chaves faltam (ADR-0052). Fora dela, o par efêmero é o
+      // comportamento desejado.
+      this.logger.warn('JWT keys não configuradas — par RSA efêmero gerado (dev).');
     }
 
     // Chave anterior (rotação): apenas verificação.

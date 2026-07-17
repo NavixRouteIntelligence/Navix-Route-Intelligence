@@ -1,5 +1,8 @@
 import { z } from 'zod';
 
+/** Senha do role de runtime usada apenas em dev/test (rejeitada em produção). */
+export const DEV_APP_PASSWORD = 'navix_app_password';
+
 /**
  * Esquema de validação das variáveis de ambiente.
  * A aplicação falha rápido na inicialização se a configuração for inválida
@@ -20,7 +23,8 @@ export const envSchema = z.object({
   DB_PASSWORD: z.string().min(1),
   // Role de runtime da aplicação — NÃO superusuário, sujeito à RLS.
   DB_APP_USER: z.string().default('navix_app'),
-  DB_APP_PASSWORD: z.string().default('navix_app_password'),
+  // O default só vale fora de produção; `assertProductionConfig` o rejeita lá.
+  DB_APP_PASSWORD: z.string().default(DEV_APP_PASSWORD),
   DB_NAME: z.string().min(1),
   DB_SSL: z
     .enum(['true', 'false'])
@@ -106,6 +110,62 @@ export const envSchema = z.object({
 
 export type Env = z.infer<typeof envSchema>;
 
+/**
+ * Exigências que só se aplicam a `NODE_ENV=production` (ADR-0052).
+ *
+ * Cada item abaixo tem defaults ou fallbacks convenientes em dev que se tornam
+ * **perigosos em produção** — e todos falhavam da pior forma possível: em
+ * silêncio. Sem `JWT_PRIVATE_KEY` a app gerava um par RSA **por processo**, e
+ * com múltiplas instâncias cada uma rejeitava os tokens das outras (login
+ * intermitente, todos deslogados a cada deploy); `MEDIA_URL_SECRET` tinha o
+ * mesmo defeito nas URLs assinadas de POD. Um `logger.error` não protege
+ * ninguém às 3h da manhã: configuração ausente em produção deve **derrubar o
+ * boot**, quando o deploy ainda pode ser revertido sem dano.
+ *
+ * Retorna a lista de problemas (vazia = OK), para ser testável sem processo.
+ */
+export function assertProductionConfig(env: Env): string[] {
+  if (env.NODE_ENV !== 'production') return [];
+  const problems: string[] = [];
+
+  const requireAll = (keys: (keyof Env)[], why: string): void => {
+    const missing = keys.filter((k) => {
+      const v = env[k];
+      return v === undefined || v === '';
+    });
+    if (missing.length > 0) problems.push(`${missing.join(', ')}: ${why}`);
+  };
+
+  // Chaves de assinatura de JWT — sem elas, par efêmero por instância.
+  requireAll(
+    ['JWT_PRIVATE_KEY', 'JWT_PUBLIC_KEY', 'JWT_KEY_ID'],
+    'obrigatórias em produção (sem elas cada instância assina com um par ' +
+      'efêmero próprio e rejeita os tokens das demais).',
+  );
+
+  // Segredo de assinatura de URLs de mídia — mesmo defeito, no POD.
+  requireAll(
+    ['MEDIA_URL_SECRET'],
+    'obrigatório em produção (sem ele cada instância assina URLs de POD com um ' +
+      'segredo próprio e rejeita os links das demais).',
+  );
+
+  // Senha padrão do role de runtime jamais pode chegar a produção.
+  if (env.DB_APP_PASSWORD === DEV_APP_PASSWORD) {
+    problems.push(
+      'DB_APP_PASSWORD: está com a senha padrão de desenvolvimento; defina uma ' +
+        'senha própria em produção.',
+    );
+  }
+
+  // Tráfego de banco sem TLS em produção.
+  if (!env.DB_SSL) {
+    problems.push('DB_SSL: deve ser "true" em produção (conexão de banco sem TLS).');
+  }
+
+  return problems;
+}
+
 /** Valida `process.env` e retorna a configuração tipada. Lança em caso de erro. */
 export function validateEnv(config: Record<string, unknown>): Env {
   const parsed = envSchema.safeParse(config);
@@ -114,6 +174,13 @@ export function validateEnv(config: Record<string, unknown>): Env {
       .map((i) => `  - ${i.path.join('.')}: ${i.message}`)
       .join('\n');
     throw new Error(`Configuração de ambiente inválida:\n${issues}`);
+  }
+
+  const problems = assertProductionConfig(parsed.data);
+  if (problems.length > 0) {
+    throw new Error(
+      `Configuração inválida para produção:\n${problems.map((p) => `  - ${p}`).join('\n')}`,
+    );
   }
   return parsed.data;
 }
