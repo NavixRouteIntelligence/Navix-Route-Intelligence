@@ -29,7 +29,7 @@ describe('ProcessOptimizationJobUseCase', () => {
       findById: jest.fn().mockResolvedValue(baseJob()),
       create: jest.fn(),
       update,
-      claim,
+      claim, resetForRetry: jest.fn(),
     };
     const optimize = { execute: jest.fn().mockResolvedValue({ id: 'plan-1' }) } as unknown as OptimizeRouteUseCase;
 
@@ -51,7 +51,7 @@ describe('ProcessOptimizationJobUseCase', () => {
       findById: jest.fn().mockResolvedValue(baseJob()),
       create: jest.fn(),
       update,
-      claim: jest.fn().mockResolvedValue(true),
+      claim: jest.fn().mockResolvedValue(true), resetForRetry: jest.fn(),
     };
     const optimize = { execute: jest.fn().mockRejectedValue(new Error('sem paradas')) } as unknown as OptimizeRouteUseCase;
 
@@ -67,7 +67,7 @@ describe('ProcessOptimizationJobUseCase', () => {
       findById: jest.fn().mockResolvedValue(baseJob()),
       create: jest.fn(),
       update,
-      claim: jest.fn().mockResolvedValue(false),
+      claim: jest.fn().mockResolvedValue(false), resetForRetry: jest.fn(),
     };
     const optimize = { execute: jest.fn() } as unknown as OptimizeRouteUseCase;
 
@@ -82,7 +82,7 @@ describe('ProcessOptimizationJobUseCase', () => {
       findById: jest.fn().mockResolvedValue(null),
       create: jest.fn(),
       update: jest.fn(),
-      claim: jest.fn(),
+      claim: jest.fn(), resetForRetry: jest.fn(),
     };
     const optimize = { execute: jest.fn() } as unknown as OptimizeRouteUseCase;
 
@@ -97,7 +97,7 @@ describe('ProcessOptimizationJobUseCase', () => {
       findById: jest.fn().mockResolvedValue(running),
       create: jest.fn(),
       update,
-      claim: jest.fn(),
+      claim: jest.fn(), resetForRetry: jest.fn(),
     };
     const optimize = { execute: jest.fn() } as unknown as OptimizeRouteUseCase;
 

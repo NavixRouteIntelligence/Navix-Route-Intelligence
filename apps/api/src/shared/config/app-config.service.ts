@@ -149,6 +149,10 @@ export class AppConfigService {
       autoReoptimize: this.get('OPTIMIZER_AUTO_REOPTIMIZE'),
       reoptimizeDebounceMs: this.get('OPTIMIZER_REOPTIMIZE_DEBOUNCE_MS'),
       riskZones: parseRiskZones(this.get('OPTIMIZER_RISK_ZONES')),
+      queueDriver: this.get('OPTIMIZER_QUEUE_DRIVER'),
+      workerEnabled: this.get('OPTIMIZER_WORKER_ENABLED'),
+      jobAttempts: this.get('OPTIMIZER_JOB_ATTEMPTS'),
+      jobBackoffMs: this.get('OPTIMIZER_JOB_BACKOFF_MS'),
     };
   }
 

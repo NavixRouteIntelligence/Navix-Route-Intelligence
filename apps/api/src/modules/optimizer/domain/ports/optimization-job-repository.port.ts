@@ -51,6 +51,14 @@ export interface OptimizationJobRepositoryPort {
    * (ADR-0041).
    */
   claim(id: string): Promise<boolean>;
+  /**
+   * Devolve um job **preso em `running`** para `queued`, para reprocessamento.
+   * Usado quando o worker que o reivindicou morreu e o BullMQ redelivera o job
+   * (o `claim` sozinho barraria o retry, pois o status já saiu de `queued`).
+   * Transiciona só `running` → `queued`; retorna `true` se algo foi resetado.
+   * Escopo de tenant preservado (a operação corre dentro do contexto do job).
+   */
+  resetForRetry(id: string): Promise<boolean>;
 }
 
 export const OPTIMIZATION_JOB_REPOSITORY = Symbol('OPTIMIZATION_JOB_REPOSITORY');

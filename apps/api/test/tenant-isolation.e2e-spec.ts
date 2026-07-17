@@ -3,6 +3,9 @@ import { randomUUID } from 'node:crypto';
 import { config as loadEnv } from 'dotenv';
 import { DataSource } from 'typeorm';
 
+import { AuditLogWriter } from '../src/shared/audit/audit-log.writer';
+import { AuditLogOrmEntity } from '../src/shared/audit/audit-log.orm-entity';
+
 /**
  * Prova de isolamento multi-tenant no NÍVEL DO BANCO (RLS). Requer Docker/Postgres
  * no ar e as migrações aplicadas (inclui FORCE ROW LEVEL SECURITY).
@@ -35,7 +38,7 @@ function makeDataSource(): DataSource {
     username: process.env.DB_APP_USER ?? 'navix_app',
     password: process.env.DB_APP_PASSWORD ?? 'navix_app_password',
     database: process.env.DB_NAME ?? 'navix',
-    entities: [],
+    entities: [AuditLogOrmEntity],
   });
 }
 
@@ -119,6 +122,8 @@ describe('Isolamento multi-tenant via RLS (integração)', () => {
       AUDIT_B,
       AUDIT_SISTEMA,
     ]);
+    // Linhas criadas pelos testes de INSERT sem contexto e pelo writer real.
+    await owner.query(`DELETE FROM audit_log WHERE action IN ('iso.sem-contexto', 'iso.writer')`);
     await owner.query(`DELETE FROM api_keys WHERE id IN ($1,$2)`, [KEY_A, KEY_B]);
     await owner.query(`DELETE FROM tenants WHERE id IN ($1,$2)`, [TENANT_A, TENANT_B]);
     await owner.destroy();
@@ -176,6 +181,27 @@ describe('Isolamento multi-tenant via RLS (integração)', () => {
         return m.query(`SELECT action FROM audit_log WHERE id = $1`, [id]);
       });
       expect(rows).toHaveLength(1);
+    });
+
+    it('o AuditLogWriter grava sem contexto de tenant (regressão do RETURNING × RLS)', async () => {
+      // Regressão do ADR-0054: a política de SELECT torna `INSERT ... RETURNING`
+      // inválido sem contexto de tenant. O writer usava `save()` (que faz
+      // RETURNING para recarregar defaults), então TODA a auditoria falhava em
+      // silêncio (o writer engole exceções). Aqui exercitamos o writer REAL.
+      const writer = new AuditLogWriter(ds.getRepository(AuditLogOrmEntity));
+      await writer.record({
+        tenantId: TENANT_A,
+        actorId: null,
+        action: 'iso.writer',
+        resource: 'r',
+        metadata: { via: 'writer' },
+      });
+
+      const rows = await ds.transaction(async (m) => {
+        await setTenant(m, TENANT_A);
+        return m.query(`SELECT action FROM audit_log WHERE action = 'iso.writer'`);
+      });
+      expect(rows).toEqual([{ action: 'iso.writer' }]);
     });
 
     it('é append-only para o role de runtime: UPDATE e DELETE não afetam nada', async () => {
