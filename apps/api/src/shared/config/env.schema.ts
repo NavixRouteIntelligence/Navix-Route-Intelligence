@@ -98,6 +98,21 @@ export const envSchema = z.object({
     .default('false')
     .transform((v) => v === 'true'),
   OPTIMIZER_REOPTIMIZE_DEBOUNCE_MS: z.coerce.number().int().positive().default(2000),
+  // Fila de jobs de otimização (ADR-0007/0055). `inprocess` (default): processa
+  // no mesmo processo (não durável). `bullmq`: fila durável no Redis com worker,
+  // retry/backoff e redelivery em crash — permite escalar o worker à parte.
+  OPTIMIZER_QUEUE_DRIVER: z.enum(['inprocess', 'bullmq']).default('inprocess'),
+  // Ativa o worker BullMQ neste processo. Default true (co-locado com a API).
+  // Numa topologia de worker dedicado, a API roda com `false` (só enfileira) e
+  // o processo `main-worker` roda com `true`.
+  OPTIMIZER_WORKER_ENABLED: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((v) => v === 'true'),
+  // Tentativas por job na fila BullMQ (inclui a primeira execução).
+  OPTIMIZER_JOB_ATTEMPTS: z.coerce.number().int().positive().default(3),
+  // Backoff exponencial inicial entre tentativas (ms).
+  OPTIMIZER_JOB_BACKOFF_MS: z.coerce.number().int().positive().default(1000),
   // Zonas de risco (ADR-0024): JSON de [{latitude,longitude,radiusKm,penalty}].
   // Default vazio → sem efeito (no-op). Parseado/validado em AppConfigService.
   OPTIMIZER_RISK_ZONES: z.string().default('[]'),

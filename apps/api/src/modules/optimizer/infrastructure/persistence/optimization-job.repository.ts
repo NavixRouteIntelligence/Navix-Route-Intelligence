@@ -67,4 +67,14 @@ export class OptimizationJobRepository implements OptimizationJobRepositoryPort 
     );
     return (result.affected ?? 0) > 0;
   }
+
+  async resetForRetry(id: string): Promise<boolean> {
+    // Só reseta o que ficou preso em `running` (worker morto). Jobs terminais
+    // (succeeded/failed) e ainda-queued não são afetados.
+    const result = await this.repo.update(
+      { id, status: 'running' },
+      { status: 'queued', updatedAt: new Date() },
+    );
+    return (result.affected ?? 0) > 0;
+  }
 }
