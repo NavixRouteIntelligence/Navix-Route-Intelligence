@@ -13,6 +13,12 @@ COPY tsconfig.base.json ./
 COPY packages/contracts ./packages/contracts
 COPY apps/web ./apps/web
 
+# NEXT_PUBLIC_* é embutido em tempo de BUILD pelo Next.js. O Render passa a
+# variável de ambiente como build-arg quando existe um ARG correspondente aqui.
+# Sem isto, o painel congela o padrão localhost e não acha a API em produção.
+ARG NEXT_PUBLIC_API_BASE_URL
+ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
+
 RUN npm run build -w packages/contracts \
   && npm run build -w apps/web
 
