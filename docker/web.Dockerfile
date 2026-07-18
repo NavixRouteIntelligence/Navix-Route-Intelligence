@@ -19,6 +19,14 @@ COPY apps/web ./apps/web
 ARG NEXT_PUBLIC_API_BASE_URL
 ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
 
+# O proxy same-origin (`rewrites` do next.config) também é resolvido em tempo de
+# BUILD — o Next "assa" as regras no build e NÃO as reavalia no runtime. Por isso
+# API_PROXY_ORIGIN precisa estar presente AQUI (build-arg), não só em runtime;
+# senão o rewrite é congelado vazio e /api/* cai no 404 do próprio Next (o
+# painel mostra "Erro inesperado"). Ver next.config.mjs e ADR-0059.
+ARG API_PROXY_ORIGIN
+ENV API_PROXY_ORIGIN=$API_PROXY_ORIGIN
+
 RUN npm run build -w packages/contracts \
   && npm run build -w apps/web
 
