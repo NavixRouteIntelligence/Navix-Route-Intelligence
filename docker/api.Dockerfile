@@ -24,6 +24,10 @@ WORKDIR /repo
 ENV NODE_ENV=production
 
 COPY --from=build /repo/node_modules ./node_modules
+# Dependências do workspace da API que o npm NÃO içou para a raiz (ex.:
+# @opentelemetry/auto-instrumentations-node, aninhado por conflito de versão).
+# Sem isto, o runtime falha com "Cannot find module" em pacotes do apps/api.
+COPY --from=build /repo/apps/api/node_modules ./apps/api/node_modules
 COPY --from=build /repo/packages/contracts ./packages/contracts
 COPY --from=build /repo/apps/api/package.json ./apps/api/package.json
 COPY --from=build /repo/apps/api/dist ./apps/api/dist
