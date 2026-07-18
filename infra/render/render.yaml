@@ -1,0 +1,132 @@
+# Blueprint do Render — piloto (região Frankfurt / UE).
+# No Render: New + -> Blueprint -> aponte para o repositório. Depois preencha os
+# segredos (marcados sync:false) em cada serviço. Ver
+# docs/infrastructure/01-piloto-passo-a-passo.md.
+
+services:
+  # ---- API (o "cérebro") --------------------------------------------------
+  - type: web
+    name: navix-api
+    runtime: docker
+    dockerfilePath: ./docker/api.Dockerfile
+    region: frankfurt
+    plan: starter
+    # O health tem rotas `live`/`ready` — `/api/v1/health` (sem sufixo) dá 404.
+    healthCheckPath: /api/v1/health/live
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: OPTIMIZER_WORKER_ENABLED
+        value: "false"
+      - key: STORAGE_DRIVER
+        value: s3
+      # Banco/Redis: o app lê variáveis SEPARADAS (não DATABASE_URL/REDIS_URL).
+      # Preencha a partir da connection string do Neon/Upstash.
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        value: "5432"
+      - key: DB_DIRECT_PORT
+        value: "5432"
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_APP_USER
+        sync: false   # role de runtime não-owner (RLS) — NÃO use o owner
+      - key: DB_APP_PASSWORD
+        sync: false   # senha própria; a padrão de dev é rejeitada em produção
+      - key: DB_NAME
+        sync: false
+      - key: DB_SSL
+        value: "true"  # obrigatório em produção (ADR-0052); Neon exige TLS
+      - key: REDIS_HOST
+        sync: false
+      - key: REDIS_PORT
+        sync: false
+      - key: REDIS_PASSWORD
+        sync: false
+      # Autenticação: as TRÊS chaves JWT são obrigatórias em produção (ADR-0052).
+      - key: JWT_PRIVATE_KEY
+        sync: false
+      - key: JWT_PUBLIC_KEY
+        sync: false
+      - key: JWT_KEY_ID
+        sync: false
+      - key: MEDIA_URL_SECRET
+        sync: false   # obrigatório em produção (ADR-0052); assina URLs de POD
+      - key: ENCRYPTION_KEK
+        sync: false
+
+  # ---- Worker de otimização (processa rotas; NÃO recebe HTTP) -------------
+  - type: worker
+    name: navix-worker
+    runtime: docker
+    dockerfilePath: ./docker/api.Dockerfile
+    dockerCommand: node dist/main-worker.js
+    region: frankfurt
+    plan: starter
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: OPTIMIZER_WORKER_ENABLED
+        value: "true"
+      - key: OPTIMIZER_QUEUE_DRIVER
+        value: bullmq   # o worker só faz sentido com a fila BullMQ (ADR-0055)
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        value: "5432"
+      - key: DB_DIRECT_PORT
+        value: "5432"
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_APP_USER
+        sync: false
+      - key: DB_APP_PASSWORD
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: DB_SSL
+        value: "true"
+      - key: REDIS_HOST
+        sync: false
+      - key: REDIS_PORT
+        sync: false
+      - key: REDIS_PASSWORD
+        sync: false
+      - key: JWT_PRIVATE_KEY
+        sync: false
+      - key: JWT_PUBLIC_KEY
+        sync: false
+      - key: JWT_KEY_ID
+        sync: false
+      - key: MEDIA_URL_SECRET
+        sync: false
+      - key: ENCRYPTION_KEK
+        sync: false
+
+  # ---- Web (painel Next.js) ----------------------------------------------
+  - type: web
+    name: navix-web
+    runtime: docker
+    dockerfilePath: ./docker/web.Dockerfile
+    region: frankfurt
+    plan: starter
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # O navegador chama a API SAME-ORIGIN (/api) — o cookie de sessão fica
+      # first-party. Valor fixo `/api` (embutido no build).
+      - key: NEXT_PUBLIC_API_BASE_URL
+        value: /api
+      # O Next encaminha /api/* para a API por trás (runtime). SEM isto, /api/*
+      # cai no 404 do próprio Next (HTML) e o painel mostra "Erro inesperado".
+      # `host` vem sem esquema; o next.config prefixa https:// automaticamente.
+      - key: API_PROXY_ORIGIN
+        fromService:
+          type: web
+          name: navix-api
+          property: host
