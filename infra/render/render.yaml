@@ -122,11 +122,10 @@ services:
       # first-party. Valor fixo `/api` (embutido no build).
       - key: NEXT_PUBLIC_API_BASE_URL
         value: /api
-      # O Next encaminha /api/* para a API por trás (runtime). SEM isto, /api/*
-      # cai no 404 do próprio Next (HTML) e o painel mostra "Erro inesperado".
-      # `host` vem sem esquema; o next.config prefixa https:// automaticamente.
+      # O Next encaminha /api/* para a API por trás. É resolvido em tempo de
+      # BUILD (o Next "assa" os rewrites) — por isso precisa ser um VALOR LITERAL
+      # aqui, disponível ao build-arg (ADR-0059). SEM isto, /api/* cai no 404 do
+      # próprio Next (HTML) e o painel mostra "Erro inesperado". Ajuste se a URL
+      # da API mudar.
       - key: API_PROXY_ORIGIN
-        fromService:
-          type: web
-          name: navix-api
-          property: host
+        value: https://navix-api.onrender.com
