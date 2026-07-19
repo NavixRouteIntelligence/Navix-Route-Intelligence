@@ -1,7 +1,9 @@
 {
   "@@locale": "en",
   "appTitle": "Navix",
-  "@appTitle": { "description": "Application name" },
+  "@appTitle": {
+    "description": "Application name"
+  },
   "navRoute": "Route",
   "navDeliveries": "Deliveries",
   "navDashboard": "Dashboard",
@@ -15,7 +17,11 @@
   "welcome": "Welcome, {name}",
   "@welcome": {
     "description": "Greeting",
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "comingSoon": "Coming soon",
   "fieldEmail": "Email",
@@ -32,5 +38,21 @@
   "noAccountRegister": "Create account",
   "haveAccountLogin": "Sign in",
   "accountDriver": "Independent Driver",
-  "accountCompany": "Company"
+  "accountCompany": "Company",
+  "deliveriesFilterAll": "All",
+  "deliveryStatusPending": "Pending",
+  "deliveryStatusInRoute": "In route",
+  "deliveryStatusDelivered": "Delivered",
+  "deliveryStatusFailed": "Failed",
+  "deliveryPriorityHigh": "High",
+  "deliveryPriorityUrgent": "Urgent",
+  "deliveriesEmptyTitle": "No deliveries",
+  "deliveriesEmptyDescription": "No deliveries for this filter.",
+  "deliveriesErrorTitle": "Couldn't load",
+  "deliveriesRetry": "Try again",
+  "deliveriesNoAddress": "Address not provided",
+  "deliveriesNoWindow": "No window",
+  "themeToggle": "Theme",
+  "importAction": "Import",
+  "optimizeMyRoute": "Optimize my route"
 }

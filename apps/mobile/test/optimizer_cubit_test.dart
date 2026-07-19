@@ -28,6 +28,8 @@ void main() {
     ],
   );
 
+  setUpAll(() => registerFallbackValue(OptimizerScope.company));
+
   setUp(() => repo = _MockRepo());
 
   test('loadDeliveries: pré-seleciona geocodificadas e conta ignoradas', () async {
@@ -52,7 +54,7 @@ void main() {
 
   test('optimize sucesso: vai para resultado com o plano', () async {
     when(() => repo.pendingDeliveries()).thenAnswer((_) async => deliveries);
-    when(() => repo.optimize(deliveryIds: any(named: 'deliveryIds'), averageSpeedKmh: any(named: 'averageSpeedKmh'), serviceTimeMinutes: any(named: 'serviceTimeMinutes')))
+    when(() => repo.optimize(deliveryIds: any(named: 'deliveryIds'), averageSpeedKmh: any(named: 'averageSpeedKmh'), serviceTimeMinutes: any(named: 'serviceTimeMinutes'), scope: any(named: 'scope')))
         .thenAnswer((_) async => result);
     final cubit = OptimizerCubit(repo);
     await cubit.loadDeliveries();
@@ -64,12 +66,59 @@ void main() {
 
   test('optimize falha: mensagem de erro', () async {
     when(() => repo.pendingDeliveries()).thenAnswer((_) async => deliveries);
-    when(() => repo.optimize(deliveryIds: any(named: 'deliveryIds'), averageSpeedKmh: any(named: 'averageSpeedKmh'), serviceTimeMinutes: any(named: 'serviceTimeMinutes')))
+    when(() => repo.optimize(deliveryIds: any(named: 'deliveryIds'), averageSpeedKmh: any(named: 'averageSpeedKmh'), serviceTimeMinutes: any(named: 'serviceTimeMinutes'), scope: any(named: 'scope')))
         .thenThrow(const NetworkFailure());
     final cubit = OptimizerCubit(repo);
     await cubit.loadDeliveries();
     await cubit.optimize();
     expect(cubit.state.step, OptimizerStep.deliveries); // não avançou
     expect(cubit.state.error, 'Sem conexão com o servidor.');
+  });
+
+  // S3 — caminho do MOTORISTA (/route-plans/mine): mesmo fluxo, só o escopo muda.
+  test('caminho mine: usa o escopo do campo (setado pela tela)', () async {
+    when(() => repo.pendingDeliveries()).thenAnswer((_) async => deliveries);
+    when(() => repo.optimize(deliveryIds: any(named: 'deliveryIds'), averageSpeedKmh: any(named: 'averageSpeedKmh'), serviceTimeMinutes: any(named: 'serviceTimeMinutes'), scope: any(named: 'scope')))
+        .thenAnswer((_) async => result);
+    final cubit = OptimizerCubit(repo)..scope = OptimizerScope.mine;
+    await cubit.loadDeliveries();
+    await cubit.optimize();
+
+    expect(cubit.state.step, OptimizerStep.result);
+    verify(() => repo.optimize(
+          deliveryIds: any(named: 'deliveryIds'),
+          averageSpeedKmh: any(named: 'averageSpeedKmh'),
+          serviceTimeMinutes: any(named: 'serviceTimeMinutes'),
+          scope: OptimizerScope.mine,
+        )).called(1);
+  });
+
+  test('caminho mine: override no optimize(scope:) tem prioridade sobre o campo', () async {
+    when(() => repo.pendingDeliveries()).thenAnswer((_) async => deliveries);
+    when(() => repo.optimize(deliveryIds: any(named: 'deliveryIds'), averageSpeedKmh: any(named: 'averageSpeedKmh'), serviceTimeMinutes: any(named: 'serviceTimeMinutes'), scope: any(named: 'scope')))
+        .thenAnswer((_) async => result);
+    final cubit = OptimizerCubit(repo); // campo = company (default)
+    await cubit.loadDeliveries();
+    await cubit.optimize(scope: OptimizerScope.mine);
+
+    verify(() => repo.optimize(
+          deliveryIds: any(named: 'deliveryIds'),
+          averageSpeedKmh: any(named: 'averageSpeedKmh'),
+          serviceTimeMinutes: any(named: 'serviceTimeMinutes'),
+          scope: OptimizerScope.mine,
+        )).called(1);
+  });
+
+  test('caminho mine: falha do otimizador exibe erro tratado', () async {
+    when(() => repo.pendingDeliveries()).thenAnswer((_) async => deliveries);
+    when(() => repo.optimize(deliveryIds: any(named: 'deliveryIds'), averageSpeedKmh: any(named: 'averageSpeedKmh'), serviceTimeMinutes: any(named: 'serviceTimeMinutes'), scope: any(named: 'scope')))
+        .thenThrow(const ServerFailure('A otimização falhou.'));
+    final cubit = OptimizerCubit(repo)..scope = OptimizerScope.mine;
+    await cubit.loadDeliveries();
+    await cubit.optimize();
+
+    expect(cubit.state.optimizing, isFalse);
+    expect(cubit.state.step, OptimizerStep.deliveries);
+    expect(cubit.state.error, 'A otimização falhou.');
   });
 }

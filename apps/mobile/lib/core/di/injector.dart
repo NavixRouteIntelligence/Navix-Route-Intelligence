@@ -5,6 +5,8 @@ import '../../features/auth/data/auth_repository_impl.dart';
 import '../../features/auth/domain/auth_repository.dart';
 import '../../features/dashboard/data/dashboard_repository.dart';
 import '../../features/dashboard/presentation/dashboard_cubit.dart';
+import '../../features/deliveries/data/deliveries_repository.dart';
+import '../../features/deliveries/presentation/deliveries_cubit.dart';
 import '../../features/driver/data/driver_dashboard_repository.dart';
 import '../../features/driver/data/tracking_repository.dart';
 import '../../features/driver/presentation/driver_dashboard_cubit.dart';
@@ -73,6 +75,10 @@ Future<void> configureDependencies(AppConfig config) async {
       () => DashboardRepository(getIt<DioClient>().apiDio),
     )
     ..registerFactory<DashboardCubit>(() => DashboardCubit(getIt<DashboardRepository>()))
+    ..registerLazySingleton<DeliveriesRepository>(
+      () => DeliveriesRepository(getIt<DioClient>().apiDio),
+    )
+    ..registerFactory<DeliveriesCubit>(() => DeliveriesCubit(getIt<DeliveriesRepository>()))
     ..registerLazySingleton<DriverDashboardRepository>(
       () => DriverDashboardRepository(getIt<DioClient>().apiDio),
     )

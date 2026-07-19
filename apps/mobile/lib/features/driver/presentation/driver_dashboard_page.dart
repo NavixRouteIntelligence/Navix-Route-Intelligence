@@ -17,8 +17,11 @@ import '../../intelligence/domain/dwell.dart';
 import '../../intelligence/presentation/stop_intelligence_card.dart';
 import '../../intelligence/presentation/voice_assistant_button.dart';
 import '../../intelligence/presentation/voice_assistant_cubit.dart';
+import '../../optimizer/data/optimizer_repository.dart';
+import '../../optimizer/presentation/optimizer_page.dart';
 import '../../pod/presentation/pod_capture_sheet.dart';
 import '../../pod/presentation/pod_sync_cubit.dart';
+import '../../../l10n/gen/app_localizations.dart';
 import '../domain/driver_dashboard_data.dart';
 import 'driver_dashboard_cubit.dart';
 import 'location_sharing_cubit.dart';
@@ -235,6 +238,12 @@ class _Content extends StatelessWidget {
                 const _SyncBanner(),
                 _RouteHero(data: data),
                 const SizedBox(height: 12),
+                if (data.total > 0) ...[
+                  _OptimizeMineButton(
+                    onDone: () => context.read<DriverDashboardCubit>().load(),
+                  ),
+                  const SizedBox(height: 12),
+                ],
                 if (data.next != null) ...[
                   _NextDelivery(delivery: data.next!, onAction: onAction),
                   const SizedBox(height: 12),
@@ -342,6 +351,36 @@ class _TopBar extends StatelessWidget {
           icon: Icon(Theme.of(context).brightness == Brightness.dark ? Icons.light_mode_outlined : Icons.dark_mode_outlined),
         ),
       ],
+    );
+  }
+}
+
+/// Botão "Otimizar minha rota" (S3). Abre a única [OptimizerPage] em escopo do
+/// motorista (`/route-plans/mine`); ao voltar, recarrega o dashboard para
+/// refletir a rota otimizada ("Minha rota — entrega 1 de N").
+class _OptimizeMineButton extends StatelessWidget {
+  const _OptimizeMineButton({required this.onDone});
+
+  final VoidCallback onDone;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return SizedBox(
+      width: double.infinity,
+      child: FilledButton.tonalIcon(
+        onPressed: () async {
+          await Navigator.of(context).push<void>(
+            MaterialPageRoute(
+              builder: (_) => const OptimizerPage(scope: OptimizerScope.mine),
+            ),
+          );
+          onDone();
+        },
+        icon: const Icon(Icons.route_outlined),
+        label: Text(l10n.optimizeMyRoute),
+        style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
+      ),
     );
   }
 }

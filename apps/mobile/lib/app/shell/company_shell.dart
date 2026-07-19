@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../core/ui/placeholder_page.dart';
 import '../../features/dashboard/presentation/company_dashboard_page.dart';
+import '../../features/deliveries/presentation/company_deliveries_page.dart';
 import '../../features/imports/presentation/import_center_page.dart';
 import '../../features/profile/presentation/profile_page.dart';
 import '../../features/tracking/presentation/fleet_tracking_page.dart';
@@ -23,7 +23,7 @@ class _CompanyShellState extends State<CompanyShell> {
     final l10n = AppLocalizations.of(context);
     final pages = [
       const CompanyDashboardPage(),
-      PlaceholderPage(title: l10n.navDeliveries, icon: Icons.inventory_2_outlined),
+      const CompanyDeliveriesPage(),
       const ImportCenterPage(),
       const FleetTrackingPage(),
       const ProfilePage(),

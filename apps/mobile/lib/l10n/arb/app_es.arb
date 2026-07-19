@@ -27,5 +27,21 @@
   "noAccountRegister": "Crear cuenta",
   "haveAccountLogin": "Iniciar sesión",
   "accountDriver": "Conductor Independiente",
-  "accountCompany": "Empresa"
+  "accountCompany": "Empresa",
+  "deliveriesFilterAll": "Todas",
+  "deliveryStatusPending": "Pendiente",
+  "deliveryStatusInRoute": "En ruta",
+  "deliveryStatusDelivered": "Entregado",
+  "deliveryStatusFailed": "Fallida",
+  "deliveryPriorityHigh": "Alta",
+  "deliveryPriorityUrgent": "Urgente",
+  "deliveriesEmptyTitle": "Sin entregas",
+  "deliveriesEmptyDescription": "No hay entregas para este filtro.",
+  "deliveriesErrorTitle": "No se pudo cargar",
+  "deliveriesRetry": "Reintentar",
+  "deliveriesNoAddress": "Dirección no indicada",
+  "deliveriesNoWindow": "Sin ventana",
+  "themeToggle": "Tema",
+  "importAction": "Importar",
+  "optimizeMyRoute": "Optimizar mi ruta"
 }

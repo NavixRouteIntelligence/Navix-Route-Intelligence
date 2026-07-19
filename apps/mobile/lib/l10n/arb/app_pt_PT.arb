@@ -27,5 +27,21 @@
   "noAccountRegister": "Criar conta",
   "haveAccountLogin": "Entrar",
   "accountDriver": "Motorista Independente",
-  "accountCompany": "Empresa"
+  "accountCompany": "Empresa",
+  "deliveriesFilterAll": "Todas",
+  "deliveryStatusPending": "Pendente",
+  "deliveryStatusInRoute": "Em rota",
+  "deliveryStatusDelivered": "Entregue",
+  "deliveryStatusFailed": "Falhou",
+  "deliveryPriorityHigh": "Alta",
+  "deliveryPriorityUrgent": "Urgente",
+  "deliveriesEmptyTitle": "Sem entregas",
+  "deliveriesEmptyDescription": "Nenhuma entrega para este filtro.",
+  "deliveriesErrorTitle": "Não foi possível carregar",
+  "deliveriesRetry": "Tentar novamente",
+  "deliveriesNoAddress": "Endereço não informado",
+  "deliveriesNoWindow": "Sem janela",
+  "themeToggle": "Tema",
+  "importAction": "Importar",
+  "optimizeMyRoute": "Otimizar a minha rota"
 }
