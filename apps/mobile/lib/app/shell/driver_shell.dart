@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../core/ui/placeholder_page.dart';
+import '../../features/deliveries/presentation/driver_deliveries_page.dart';
 import '../../features/driver/presentation/driver_dashboard_page.dart';
 import '../../features/profile/presentation/profile_page.dart';
 import '../../l10n/gen/app_localizations.dart';
@@ -22,7 +22,7 @@ class _DriverShellState extends State<DriverShell> {
     final l10n = AppLocalizations.of(context);
     final pages = [
       const DriverDashboardPage(),
-      PlaceholderPage(title: l10n.navDeliveries, icon: Icons.inventory_2_outlined),
+      const DriverDeliveriesPage(),
       const ProfilePage(),
     ];
 

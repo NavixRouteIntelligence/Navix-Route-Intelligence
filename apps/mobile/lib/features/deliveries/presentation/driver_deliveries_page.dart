@@ -7,10 +7,12 @@ import '../../../l10n/gen/app_localizations.dart';
 import 'deliveries_cubit.dart';
 import 'widgets/deliveries_list_view.dart';
 
-/// Aba "Entregas" do CompanyShell. Casca fina sobre [DeliveriesListView] — o
-/// conteúdo é compartilhado com o Motorista (S1). A RLS escopa por tenant.
-class CompanyDeliveriesPage extends StatelessWidget {
-  const CompanyDeliveriesPage({super.key});
+/// Aba "Entregas" do DriverShell (S1). Casca fina sobre [DeliveriesListView],
+/// idêntica à da Empresa no conteúdo — o motorista autônomo vê as próprias
+/// entregas (mesmo endpoint `GET /deliveries`, escopado por tenant via RLS).
+/// A diferença entre os perfis é só a casca; a lista é compartilhada.
+class DriverDeliveriesPage extends StatelessWidget {
+  const DriverDeliveriesPage({super.key});
 
   @override
   Widget build(BuildContext context) {
