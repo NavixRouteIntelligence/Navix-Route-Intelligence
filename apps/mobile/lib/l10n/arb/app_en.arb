@@ -53,5 +53,6 @@
   "deliveriesNoAddress": "Address not provided",
   "deliveriesNoWindow": "No window",
   "themeToggle": "Theme",
-  "importAction": "Import"
+  "importAction": "Import",
+  "optimizeMyRoute": "Optimize my route"
 }

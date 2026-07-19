@@ -93,7 +93,12 @@ class OptimizerCubit extends Cubit<OptimizerState> {
   void setSpeed(double v) => emit(state.copyWith(averageSpeedKmh: v));
   void setServiceTime(double v) => emit(state.copyWith(serviceTimeMinutes: v));
 
-  Future<void> optimize() async {
+  /// Escopo do endpoint por papel (empresa × motorista). Setado na criação pela
+  /// tela; `optimize()` aceita override para teste. Mesmo fluxo, mesma tela — só
+  /// muda o path no repositório (ADR-0060).
+  OptimizerScope scope = OptimizerScope.company;
+
+  Future<void> optimize({OptimizerScope? scope}) async {
     if (state.selected.isEmpty) return;
     emit(state.copyWith(optimizing: true, clearError: true));
     try {
@@ -101,6 +106,7 @@ class OptimizerCubit extends Cubit<OptimizerState> {
         deliveryIds: state.selected.toList(),
         averageSpeedKmh: state.averageSpeedKmh,
         serviceTimeMinutes: state.serviceTimeMinutes,
+        scope: scope ?? this.scope,
       );
       emit(state.copyWith(optimizing: false, step: OptimizerStep.result, result: result));
     } on Failure catch (f) {

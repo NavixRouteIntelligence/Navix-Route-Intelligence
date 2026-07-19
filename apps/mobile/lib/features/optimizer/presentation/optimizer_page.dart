@@ -10,20 +10,26 @@ import '../../../core/ui/navix_section_header.dart';
 import '../../../core/ui/navix_skeleton.dart';
 import '../../../core/ui/navix_states.dart';
 import '../../../core/ui/navix_status_pill.dart';
+import '../data/optimizer_repository.dart';
 import '../domain/optimizer_models.dart';
 import 'optimizer_cubit.dart';
 
 const _fuelLPerKm = 0.12; // fator médio de consumo (L/km) — estimativa
 const _fuelPricePerL = 6.0; // R$/L — estimativa
 
-/// Route Optimizer (Empresa): Entregas → Configurar → Resultado.
+/// Route Optimizer: Entregas → Configurar → Resultado. Única tela para Empresa e
+/// Motorista — [scope] só troca o endpoint por papel (ADR-0060).
 class OptimizerPage extends StatelessWidget {
-  const OptimizerPage({super.key});
+  const OptimizerPage({super.key, this.scope = OptimizerScope.company});
+
+  final OptimizerScope scope;
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => GetIt.instance<OptimizerCubit>()..loadDeliveries(),
+      create: (_) => GetIt.instance<OptimizerCubit>()
+        ..scope = scope
+        ..loadDeliveries(),
       child: const _OptimizerView(),
     );
   }

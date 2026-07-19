@@ -42,5 +42,6 @@
   "deliveriesNoAddress": "Endereço não informado",
   "deliveriesNoWindow": "Sem janela",
   "themeToggle": "Tema",
-  "importAction": "Importar"
+  "importAction": "Importar",
+  "optimizeMyRoute": "Otimizar a minha rota"
 }
