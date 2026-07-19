@@ -52,5 +52,6 @@
   "deliveriesRetry": "Try again",
   "deliveriesNoAddress": "Address not provided",
   "deliveriesNoWindow": "No window",
-  "themeToggle": "Theme"
+  "themeToggle": "Theme",
+  "importAction": "Import"
 }
