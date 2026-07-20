@@ -147,6 +147,16 @@ curl -s http://<host>:3001/metrics | grep -E 'http_server_requests_total|process
 
 ---
 
+## Isolamento multi-tenant (RLS) em produção — verificado
+
+**2026-07-20:** confirmado no Neon que a API conecta como o role **`navix_app`** (`rolsuper=f`, `rolbypassrls=f`) e que `deliveries`/`audit_log`/`api_keys` têm RLS **ligada e forçada** (`relforcerowsecurity=t`); `users` sem RLS por design (login pré-tenant). O owner `neondb_owner` tem `bypassrls=t` (padrão Neon) — por isso a app **não** deve conectar como ele. Reconferir se o `DB_APP_USER` mudar.
+
+Query de auditoria (SQL Editor do Neon):
+```sql
+SELECT rolname, rolsuper, rolbypassrls FROM pg_roles WHERE rolname NOT LIKE 'pg_%';
+SELECT relname, relforcerowsecurity FROM pg_class WHERE relname IN ('deliveries','audit_log','api_keys');
+```
+
 ## Dependências (Postgres / Redis)
 
 **Postgres indisponível** → `ready` falha, 5xx generalizado. A app conecta via role de runtime não-owner (RLS). Verificar conectividade, conexões saturadas, RLS.
