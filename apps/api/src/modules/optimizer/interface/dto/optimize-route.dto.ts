@@ -166,6 +166,14 @@ export class OptimizeRouteDto implements OptimizeRouteRequest {
   @IsIn(ECONOMY_MODES as readonly string[])
   economyMode?: EconomyMode;
 
+  @ApiPropertyOptional({
+    example: true,
+    description: 'Modo inteligente: pesos derivados do contexto + estratégia mais forte (ADR-0066).',
+  })
+  @IsOptional()
+  @IsBoolean()
+  smart?: boolean;
+
   @ApiPropertyOptional({ example: 30, description: 'Velocidade média (km/h).' })
   @IsOptional()
   @IsNumber()

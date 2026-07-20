@@ -1,4 +1,4 @@
-import { BALANCED_WEIGHTS, estimateCo2Kg, weightsFor } from './economy';
+import { BALANCED_WEIGHTS, estimateCo2Kg, smartWeights, weightsFor } from './economy';
 
 describe('weightsFor (Modo Economia)', () => {
   it('sem modo: pesos balanceados (legado)', () => {
@@ -17,6 +17,43 @@ describe('weightsFor (Modo Economia)', () => {
 
   it('tolls: amplifica a sobretaxa (evita pedágio)', () => {
     expect(weightsFor('tolls').surcharge).toBeGreaterThan(1);
+  });
+});
+
+describe('smartWeights (Modo inteligente — ADR-0066)', () => {
+  it('sem janelas nem urgência: cai no balanceado', () => {
+    const w = smartWeights([
+      { priority: 'normal', hasTimeWindow: false },
+      { priority: 'low', hasTimeWindow: false },
+    ]);
+    expect(w).toEqual(BALANCED_WEIGHTS);
+  });
+
+  it('muitas janelas: peso de janela sobe', () => {
+    const w = smartWeights([
+      { priority: 'normal', hasTimeWindow: true },
+      { priority: 'normal', hasTimeWindow: true },
+    ]);
+    expect(w.timeWindow).toBeGreaterThan(BALANCED_WEIGHTS.timeWindow);
+    expect(w.timeWindow).toBeCloseTo(0.6, 5); // 0.1 + 1.0*0.5
+  });
+
+  it('muitos urgentes: peso de prioridade sobe', () => {
+    const w = smartWeights([
+      { priority: 'urgent', hasTimeWindow: false },
+      { priority: 'high', hasTimeWindow: false },
+    ]);
+    expect(w.priority).toBeGreaterThan(BALANCED_WEIGHTS.priority);
+    expect(w.priority).toBeCloseTo(0.3, 5); // 0.05 + 1.0*0.25
+  });
+
+  it('metade urgente e metade com janela: ajuste proporcional', () => {
+    const w = smartWeights([
+      { priority: 'urgent', hasTimeWindow: true },
+      { priority: 'normal', hasTimeWindow: false },
+    ]);
+    expect(w.timeWindow).toBeCloseTo(0.35, 5); // 0.1 + 0.5*0.5
+    expect(w.priority).toBeCloseTo(0.18, 5); // 0.05 + 0.5*0.25, arredondado a 2 casas
   });
 });
 
