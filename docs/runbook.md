@@ -216,6 +216,8 @@ O banco é o **Neon** (Postgres gerenciado, UE), com **backup contínuo / Point-
 3. Confirme que os dados batem com o esperado; descarte o branch.
 4. Registre a data do teste.
 
+**Última validação:** 2026-07-19 — branch PITR restaurado com sucesso (7 users, 23 audit_log, último audit 14:39 UTC). Dados íntegros; a trilha de auditoria confirma que o writer grava em produção. Próximo drill: ~2026-10.
+
 **DR (perda total da região):** Neon e Render são UE/Frankfurt. Um plano de DR cross-região é backlog — hoje o RPO/RTO é o do PITR do Neon. Documente o RPO aceito com o negócio.
 
 ## Rotação de segredos (Render)
