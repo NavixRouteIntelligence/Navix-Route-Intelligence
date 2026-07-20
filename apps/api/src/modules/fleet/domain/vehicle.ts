@@ -15,6 +15,7 @@ export interface VehicleProps {
   type: VehicleType;
   capacity: number;
   status: VehicleStatus;
+  odometerKm: number | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -25,6 +26,7 @@ export interface CreateVehicleInput {
   type: VehicleType;
   capacity: number;
   status?: VehicleStatus;
+  odometerKm?: number | null;
 }
 
 export interface UpdateVehicleInput {
@@ -32,6 +34,7 @@ export interface UpdateVehicleInput {
   type?: VehicleType;
   capacity?: number;
   status?: VehicleStatus;
+  odometerKm?: number | null;
 }
 
 /**
@@ -50,6 +53,7 @@ export class Vehicle {
       type: Vehicle.validateType(input.type),
       capacity: Vehicle.validateCapacity(input.capacity),
       status: input.status ? Vehicle.validateStatus(input.status) : 'active',
+      odometerKm: Vehicle.validateOdometer(input.odometerKm ?? null),
       createdAt: now,
       updatedAt: now,
     });
@@ -66,6 +70,8 @@ export class Vehicle {
     if (input.capacity !== undefined)
       this.props.capacity = Vehicle.validateCapacity(input.capacity);
     if (input.status !== undefined) this.props.status = Vehicle.validateStatus(input.status);
+    if (input.odometerKm !== undefined)
+      this.props.odometerKm = Vehicle.validateOdometer(input.odometerKm);
     this.props.updatedAt = new Date();
   }
 
@@ -110,5 +116,13 @@ export class Vehicle {
       throw new ValidationError(`Status de veículo inválido: ${status}.`);
     }
     return status;
+  }
+
+  private static validateOdometer(km: number | null): number | null {
+    if (km === null) return null;
+    if (!Number.isFinite(km) || km < 0 || !Number.isInteger(km)) {
+      throw new ValidationError('Hodômetro deve ser um inteiro não-negativo.');
+    }
+    return km;
   }
 }

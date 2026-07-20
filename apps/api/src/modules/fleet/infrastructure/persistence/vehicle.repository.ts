@@ -65,6 +65,7 @@ export class VehicleRepository implements VehicleRepositoryPort {
       type: row.type,
       capacity: row.capacity,
       status: row.status,
+      odometerKm: row.odometerKm ?? null,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     });

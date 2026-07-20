@@ -23,6 +23,9 @@ export class VehicleOrmEntity {
   @Column('text', { default: 'active' })
   status!: VehicleStatus;
 
+  @Column('integer', { name: 'odometer_km', nullable: true })
+  odometerKm!: number | null;
+
   @Column('timestamptz', { name: 'created_at' })
   createdAt!: Date;
 
