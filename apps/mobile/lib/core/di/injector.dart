@@ -21,6 +21,8 @@ import '../voice/speech_service.dart';
 import '../../features/optimizer/data/optimizer_repository.dart';
 import '../../features/earnings/data/tariff_store.dart';
 import '../../features/earnings/presentation/earnings_cubit.dart';
+import '../../features/finance/data/finance_repository.dart';
+import '../../features/finance/presentation/finance_cubit.dart';
 import '../../features/maintenance/data/maintenance_repository.dart';
 import '../../features/maintenance/presentation/maintenance_cubit.dart';
 import '../../features/optimizer/presentation/manual_route_cubit.dart';
@@ -130,6 +132,10 @@ Future<void> configureDependencies(AppConfig config) async {
       () => MaintenanceRepository(getIt<DioClient>().apiDio),
     )
     ..registerFactory<MaintenanceCubit>(() => MaintenanceCubit(getIt<MaintenanceRepository>()))
+    ..registerLazySingleton<FinanceRepository>(
+      () => FinanceRepository(getIt<DioClient>().apiDio),
+    )
+    ..registerFactory<FinanceCubit>(() => FinanceCubit(getIt<FinanceRepository>()))
     ..registerLazySingleton<IntelligenceRepository>(
       () => IntelligenceRepository(getIt<DioClient>().apiDio),
     )
