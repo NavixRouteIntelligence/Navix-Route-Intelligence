@@ -3,7 +3,9 @@ import { Inject, Injectable } from '@nestjs/common';
 import {
   DELIVERY_LOOKUP,
   type DeliveryLookupPort,
+  type DeliveryStopDto,
 } from '../../../delivery/application/delivery-lookup.service';
+import { classifyDestination } from '../../domain/destination-type';
 import type {
   DeliveryGatewayPort,
   OptimizerDeliveryStop,
@@ -26,18 +28,16 @@ export class DeliveryGateway implements DeliveryGatewayPort {
   }
 }
 
-function toStop(s: {
-  id: string;
-  latitude: number;
-  longitude: number;
-  priority: OptimizerDeliveryStop['priority'];
-  timeWindow: OptimizerDeliveryStop['timeWindow'];
-}): OptimizerDeliveryStop {
+function toStop(s: DeliveryStopDto): OptimizerDeliveryStop {
+  // Classificação automática do destino a partir do endereço (ADR-0064). Fica no
+  // Optimizer (não no Delivery) para não inverter a direção da dependência.
+  const destinationType = classifyDestination(s.addressText);
   return {
     id: s.id,
     latitude: s.latitude,
     longitude: s.longitude,
     priority: s.priority,
     timeWindow: s.timeWindow,
+    ...(destinationType ? { destinationType } : {}),
   };
 }

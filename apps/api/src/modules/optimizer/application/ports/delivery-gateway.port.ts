@@ -1,4 +1,4 @@
-import type { DeliveryPriority, TimeWindow } from '@navix/contracts';
+import type { DeliveryPriority, DestinationType, TimeWindow } from '@navix/contracts';
 
 export interface OptimizerDeliveryStop {
   id: string;
@@ -6,6 +6,8 @@ export interface OptimizerDeliveryStop {
   longitude: number;
   priority: DeliveryPriority;
   timeWindow: TimeWindow | null;
+  /** Tipo do destino classificado a partir do endereço (ADR-0064). */
+  destinationType?: DestinationType;
 }
 
 /**

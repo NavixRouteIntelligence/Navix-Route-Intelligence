@@ -1,4 +1,4 @@
-import type { DeliveryPriority } from '@navix/contracts';
+import type { DeliveryPriority, DestinationType } from '@navix/contracts';
 
 import { GeoPoint } from './geo-point';
 
@@ -32,6 +32,8 @@ export interface OptimizationStop {
   serviceTimeMinutes: number | null;
   /** Trava de posição da ordem manual (ADR-0063). Ausente/false = livre. */
   locked?: boolean;
+  /** Tipo do destino (ADR-0064). Define o tempo de serviço por tipo. */
+  destinationType?: DestinationType;
 }
 
 /** Peso numérico de prioridade (maior = mais urgente). */

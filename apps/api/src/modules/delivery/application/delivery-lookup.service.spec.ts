@@ -50,6 +50,7 @@ describe('DeliveryLookupService.getStops', () => {
       longitude: -46.6,
       priority: 'normal',
       timeWindow: { start: '2026-07-06T09:00:00.000Z', end: '2026-07-06T12:00:00.000Z' },
+      addressText: 'Rua A São Paulo',
     });
   });
 });
