@@ -11,6 +11,9 @@ class _MockRepo extends Mock implements DriverDashboardRepository {}
 void main() {
   late _MockRepo repo;
 
+  // Clock fixo: torna o lastUpdatedAt determinístico nos testes.
+  final fixed = DateTime(2026, 7, 20, 12);
+
   final data = DriverDashboardData(
     total: 12,
     delivered: 4,
@@ -32,6 +35,8 @@ void main() {
     remainingKm: 18.4,
   );
 
+  DriverDashboardCubit build() => DriverDashboardCubit(repo, clock: () => fixed);
+
   setUp(() => repo = _MockRepo());
 
   test('derivados: progress, remaining, currentIndex', () {
@@ -42,15 +47,15 @@ void main() {
   });
 
   blocTest<DriverDashboardCubit, DriverDashboardState>(
-    'load com sucesso: loading → success com dados',
+    'load com sucesso: loading → success com dados e carimbo de hora',
     build: () {
       when(() => repo.load()).thenAnswer((_) async => data);
-      return DriverDashboardCubit(repo);
+      return build();
     },
     act: (c) => c.load(),
     expect: () => [
       const DriverDashboardState(status: DriverDashboardStatus.loading),
-      DriverDashboardState(status: DriverDashboardStatus.success, data: data),
+      DriverDashboardState(status: DriverDashboardStatus.success, data: data, lastUpdatedAt: fixed),
     ],
   );
 
@@ -58,7 +63,7 @@ void main() {
     'load com falha: loading → error com mensagem',
     build: () {
       when(() => repo.load()).thenThrow(const NetworkFailure());
-      return DriverDashboardCubit(repo);
+      return build();
     },
     act: (c) => c.load(),
     expect: () => const [
@@ -99,11 +104,11 @@ void main() {
     'load silencioso com sucesso: só success (sem flash de loading)',
     build: () {
       when(() => repo.load()).thenAnswer((_) async => data);
-      return DriverDashboardCubit(repo);
+      return build();
     },
     act: (c) => c.load(silent: true),
     expect: () => [
-      DriverDashboardState(status: DriverDashboardStatus.success, data: data),
+      DriverDashboardState(status: DriverDashboardStatus.success, data: data, lastUpdatedAt: fixed),
     ],
   );
 
@@ -117,7 +122,7 @@ void main() {
       ];
       var i = 0;
       when(() => repo.load()).thenAnswer((_) => answers[i++ % answers.length]());
-      return DriverDashboardCubit(repo);
+      return build();
     },
     act: (c) async {
       await c.load();
@@ -125,8 +130,25 @@ void main() {
     },
     expect: () => [
       const DriverDashboardState(status: DriverDashboardStatus.loading),
-      DriverDashboardState(status: DriverDashboardStatus.success, data: data),
+      DriverDashboardState(status: DriverDashboardStatus.success, data: data, lastUpdatedAt: fixed),
       // Nenhum estado adicional: a falha silenciosa foi absorvida.
+    ],
+  );
+
+  blocTest<DriverDashboardCubit, DriverDashboardState>(
+    'toggleLive: pausa o tempo real preservando os dados',
+    build: () {
+      when(() => repo.load()).thenAnswer((_) async => data);
+      return build();
+    },
+    act: (c) async {
+      await c.load();
+      c.toggleLive(); // pausa
+    },
+    expect: () => [
+      const DriverDashboardState(status: DriverDashboardStatus.loading),
+      DriverDashboardState(status: DriverDashboardStatus.success, data: data, lastUpdatedAt: fixed),
+      DriverDashboardState(status: DriverDashboardStatus.success, data: data, lastUpdatedAt: fixed, live: false),
     ],
   );
 }

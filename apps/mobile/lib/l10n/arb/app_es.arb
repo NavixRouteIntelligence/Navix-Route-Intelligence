@@ -46,5 +46,7 @@
   "optimizeMyRoute": "Optimizar mi ruta",
   "journeyToday": "Jornada de hoy",
   "firstDelivery": "Primera entrega",
-  "lastDelivery": "Última entrega"
+  "lastDelivery": "Última entrega",
+  "live": "En vivo",
+  "paused": "Pausado"
 }
