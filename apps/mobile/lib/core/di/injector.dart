@@ -83,7 +83,12 @@ Future<void> configureDependencies(AppConfig config) async {
     ..registerLazySingleton<DriverDashboardRepository>(
       () => DriverDashboardRepository(getIt<DioClient>().apiDio),
     )
-    ..registerFactory<DriverDashboardCubit>(() => DriverDashboardCubit(getIt<DriverDashboardRepository>()))
+    ..registerFactory<DriverDashboardCubit>(
+      () => DriverDashboardCubit(
+        getIt<DriverDashboardRepository>(),
+        connectivity: getIt<ConnectivityService>(),
+      ),
+    )
     ..registerSingleton<LocationService>(const LocationService())
     ..registerLazySingleton<TrackingRepository>(
       () => TrackingRepository(getIt<DioClient>().apiDio),

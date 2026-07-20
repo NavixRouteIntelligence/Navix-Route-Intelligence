@@ -1,12 +1,25 @@
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:navix_mobile/core/connectivity/connectivity_service.dart';
 import 'package:navix_mobile/core/error/failure.dart';
 import 'package:navix_mobile/features/driver/data/driver_dashboard_repository.dart';
 import 'package:navix_mobile/features/driver/domain/driver_dashboard_data.dart';
 import 'package:navix_mobile/features/driver/presentation/driver_dashboard_cubit.dart';
 
 class _MockRepo extends Mock implements DriverDashboardRepository {}
+
+/// Conectividade controlável nos testes (sem tocar a plataforma).
+class _FakeConnectivity extends ConnectivityService {
+  _FakeConnectivity(this._controller);
+  final StreamController<bool> _controller;
+  @override
+  Future<bool> isOnline() async => true;
+  @override
+  Stream<bool> get onlineChanges => _controller.stream;
+}
 
 void main() {
   late _MockRepo repo;
@@ -37,7 +50,14 @@ void main() {
 
   DriverDashboardCubit build() => DriverDashboardCubit(repo, clock: () => fixed);
 
-  setUp(() => repo = _MockRepo());
+  late StreamController<bool> conn;
+
+  setUp(() {
+    repo = _MockRepo();
+    conn = StreamController<bool>.broadcast();
+  });
+
+  tearDown(() => conn.close());
 
   test('derivados: progress, remaining, currentIndex', () {
     expect(data.remaining, 8);
@@ -150,5 +170,42 @@ void main() {
       DriverDashboardState(status: DriverDashboardStatus.success, data: data, lastUpdatedAt: fixed),
       DriverDashboardState(status: DriverDashboardStatus.success, data: data, lastUpdatedAt: fixed, live: false),
     ],
+  );
+
+  blocTest<DriverDashboardCubit, DriverDashboardState>(
+    'conectividade: fica offline → online=false, preservando os dados em cache',
+    build: () {
+      when(() => repo.load()).thenAnswer((_) async => data);
+      return DriverDashboardCubit(repo, connectivity: _FakeConnectivity(conn), clock: () => fixed);
+    },
+    act: (c) async {
+      await c.load();
+      conn.add(false);
+      await Future<void>.delayed(Duration.zero);
+    },
+    expect: () => [
+      const DriverDashboardState(status: DriverDashboardStatus.loading),
+      DriverDashboardState(status: DriverDashboardStatus.success, data: data, lastUpdatedAt: fixed),
+      DriverDashboardState(status: DriverDashboardStatus.success, data: data, lastUpdatedAt: fixed, online: false),
+    ],
+  );
+
+  blocTest<DriverDashboardCubit, DriverDashboardState>(
+    'conectividade: ao reconectar, sincroniza (novo load)',
+    build: () {
+      when(() => repo.load()).thenAnswer((_) async => data);
+      return DriverDashboardCubit(repo, connectivity: _FakeConnectivity(conn), clock: () => fixed);
+    },
+    act: (c) async {
+      await c.load(); // 1º load
+      conn.add(false);
+      await Future<void>.delayed(Duration.zero);
+      conn.add(true); // reconecta → load silencioso (2º)
+      await Future<void>.delayed(Duration.zero);
+    },
+    verify: (c) {
+      expect(c.state.online, isTrue);
+      verify(() => repo.load()).called(2);
+    },
   );
 }

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../core/connectivity/connectivity_service.dart';
 import '../../../core/error/failure.dart';
 import '../data/driver_dashboard_repository.dart';
 import '../domain/driver_dashboard_data.dart';
@@ -15,6 +16,7 @@ class DriverDashboardState extends Equatable {
     this.data,
     this.error,
     this.live = true,
+    this.online = true,
     this.lastUpdatedAt,
   });
 
@@ -26,6 +28,10 @@ class DriverDashboardState extends Equatable {
   /// está pausado (economia de bateria/dados) e o painel fica estático.
   final bool live;
 
+  /// Conectividade (M5). Quando offline, o painel mostra o banner e serve o
+  /// último dado bom em cache; o polling pausa até a conexão voltar.
+  final bool online;
+
   /// Instante da última sincronização bem-sucedida — alimenta o "atualizado há Xs".
   final DateTime? lastUpdatedAt;
 
@@ -34,6 +40,7 @@ class DriverDashboardState extends Equatable {
     DriverDashboardData? data,
     String? error,
     bool? live,
+    bool? online,
     DateTime? lastUpdatedAt,
     bool clearError = false,
   }) {
@@ -42,20 +49,28 @@ class DriverDashboardState extends Equatable {
       data: data ?? this.data,
       error: clearError ? null : (error ?? this.error),
       live: live ?? this.live,
+      online: online ?? this.online,
       lastUpdatedAt: lastUpdatedAt ?? this.lastUpdatedAt,
     );
   }
 
   @override
-  List<Object?> get props => [status, data, error, live, lastUpdatedAt];
+  List<Object?> get props => [status, data, error, live, online, lastUpdatedAt];
 }
 
 class DriverDashboardCubit extends Cubit<DriverDashboardState> {
-  DriverDashboardCubit(this._repository, {DateTime Function()? clock})
-      : _now = clock ?? DateTime.now,
-        super(const DriverDashboardState());
+  DriverDashboardCubit(
+    this._repository, {
+    ConnectivityService? connectivity,
+    DateTime Function()? clock,
+  })  : _connectivity = connectivity,
+        _now = clock ?? DateTime.now,
+        super(const DriverDashboardState()) {
+    _watchConnectivity();
+  }
 
   final DriverDashboardRepository _repository;
+  final ConnectivityService? _connectivity;
   final DateTime Function() _now;
 
   /// Intervalo do auto refresh (M1/M2). Curto o bastante para o painel parecer
@@ -63,6 +78,7 @@ class DriverDashboardCubit extends Cubit<DriverDashboardState> {
   static const autoRefreshInterval = Duration(seconds: 30);
 
   Timer? _timer;
+  StreamSubscription<bool>? _connSub;
 
   /// Carrega o painel. Em [silent] (auto refresh / pull sobre dados existentes)
   /// não emite `loading` — evita o flash do skeleton — e uma falha **preserva**
@@ -88,10 +104,10 @@ class DriverDashboardCubit extends Cubit<DriverDashboardState> {
     }
   }
 
-  /// Liga o auto refresh periódico (idempotente) enquanto `live`. Cada tick faz
-  /// um [load] silencioso. O timer é cancelado em [close].
+  /// Liga o auto refresh periódico (idempotente) enquanto `live` e `online`.
+  /// Cada tick faz um [load] silencioso. O timer é cancelado em [close].
   void startAutoRefresh() {
-    if (state.live) _ensureTimer();
+    if (state.live && state.online) _ensureTimer();
   }
 
   void _ensureTimer() {
@@ -110,14 +126,39 @@ class DriverDashboardCubit extends Cubit<DriverDashboardState> {
       emit(state.copyWith(live: false));
     } else {
       emit(state.copyWith(live: true));
-      _ensureTimer();
-      load(silent: true);
+      if (state.online) {
+        _ensureTimer();
+        load(silent: true);
+      }
+    }
+  }
+
+  /// Observa a conectividade (M5): pausa o polling ao ficar offline e, ao voltar,
+  /// retoma e sincroniza. Sem serviço injetado (ex.: testes), é no-op.
+  void _watchConnectivity() {
+    final c = _connectivity;
+    if (c == null) return;
+    c.isOnline().then((online) {
+      if (!online && !isClosed) emit(state.copyWith(online: false));
+    }).catchError((_) {});
+    _connSub = c.onlineChanges.listen(_onConnectivityChanged);
+  }
+
+  void _onConnectivityChanged(bool online) {
+    if (online == state.online) return;
+    emit(state.copyWith(online: online));
+    if (online) {
+      if (state.live) _ensureTimer();
+      load(silent: true); // sincroniza ao reconectar
+    } else {
+      stopAutoRefresh(); // não martela a rede offline
     }
   }
 
   @override
   Future<void> close() {
     stopAutoRefresh();
+    _connSub?.cancel();
     return super.close();
   }
 }

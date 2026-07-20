@@ -77,5 +77,8 @@
   "manualRouteReoptimize": "Smart optimize",
   "manualRouteEmptyTitle": "Not enough stops",
   "manualRouteEmptyDescription": "You need at least two geocoded stops to reorder.",
-  "manualRouteLoadError": "Couldn't load the stops."
+  "manualRouteLoadError": "Couldn't load the stops.",
+  "offlineBanner": "You're offline — showing the last update.",
+  "offlineTitle": "No connection",
+  "offlineDescription": "You're offline. Your route reappears when the connection is back."
 }

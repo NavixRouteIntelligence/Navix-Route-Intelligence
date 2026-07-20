@@ -182,10 +182,16 @@ class _DriverViewState extends State<_DriverView> {
             builder: (context, state) {
               final child = switch (state.status) {
                 DriverDashboardStatus.loading => const _LoadingView(),
-                DriverDashboardStatus.error => NavixErrorState(
-                    description: state.error ?? 'Não foi possível carregar.',
-                    onRetry: () => context.read<DriverDashboardCubit>().load(),
-                  ),
+                DriverDashboardStatus.error => state.online
+                    ? NavixErrorState(
+                        description: state.error ?? 'Não foi possível carregar.',
+                        onRetry: () => context.read<DriverDashboardCubit>().load(),
+                      )
+                    : NavixErrorState(
+                        title: AppLocalizations.of(context).offlineTitle,
+                        description: AppLocalizations.of(context).offlineDescription,
+                        onRetry: () => context.read<DriverDashboardCubit>().load(),
+                      ),
                 DriverDashboardStatus.success => (state.data?.isEmpty ?? true)
                     ? const NavixEmptyState(
                         icon: Icons.local_shipping_outlined,
@@ -240,6 +246,7 @@ class _Content extends StatelessWidget {
               children: [
                 _TopBar(running: running),
                 const SizedBox(height: 16),
+                const _OfflineBanner(),
                 const _SyncBanner(),
                 _RouteHero(data: data),
                 const SizedBox(height: 12),
@@ -283,6 +290,42 @@ class _Content extends StatelessWidget {
         ),
         _ActionBar(running: running, onToggleRun: onToggleRun, onRegister: onRegister),
       ],
+    );
+  }
+}
+
+/// Banner de conexão (M5): aparece quando o dispositivo está offline. O painel
+/// segue mostrando o último dado bom em cache; o polling pausa até reconectar.
+class _OfflineBanner extends StatelessWidget {
+  const _OfflineBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    final l10n = AppLocalizations.of(context);
+    return BlocSelector<DriverDashboardCubit, DriverDashboardState, bool>(
+      selector: (state) => state.online,
+      builder: (context, online) {
+        if (online) return const SizedBox.shrink();
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: NavixCard(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              children: [
+                Icon(Icons.cloud_off_outlined, size: 16, color: t.warning),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    l10n.offlineBanner,
+                    style: TextStyle(fontSize: 12.5, color: t.warning, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
