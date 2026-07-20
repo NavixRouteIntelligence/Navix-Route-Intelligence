@@ -247,7 +247,9 @@ O Render **não** tem rotação automática (diferente do AWS Secrets Manager). 
 
 ## Status page
 
-Ainda **não configurada**. Opções, em ordem de esforço:
-- **Nativa do Render:** o painel já mostra o status dos serviços (interno).
-- **Hospedada** (Instatus/BetterStack/Statuspage): monitora `https://navix-api.onrender.com/api/v1/health/live` e publica uma página pública `status.navix.*` — o que os clientes esperam ver. Recomendado para o piloto B2B.
-- Configure o monitor para **checar `/health/live` a cada 1 min** e alertar junto com o Prometheus.
+✅ **Configurada** (UptimeRobot, 2026-07-20):
+- **Página pública:** https://stats.uptimerobot.com/p6hIZVoDEC
+- **Monitor:** HTTP(s) em `https://navix-api.onrender.com/api/v1/health/ready` (checa Postgres + Redis, reflete a usabilidade real), intervalo 5 min. Auto-add de novos monitores ligado.
+- Hospedada **fora** da infra da Navix — continua no ar mesmo se o Render cair.
+
+**Melhoria futura (opcional):** apontar um subdomínio `status.navix.*` para a página via **CNAME** (UptimeRobot → Status Page → Custom domain) — o que clientes B2B esperam ver.
