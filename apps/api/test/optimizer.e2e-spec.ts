@@ -14,6 +14,7 @@ import { OptimizeRouteUseCase } from '../src/modules/optimizer/application/optim
 import { ProcessOptimizationJobUseCase } from '../src/modules/optimizer/application/process-optimization-job.use-case';
 import { StrategyRegistry } from '../src/modules/optimizer/application/strategy-registry';
 import { DELIVERY_GATEWAY } from '../src/modules/optimizer/application/ports/delivery-gateway.port';
+import { SERVICE_TIME_HISTORY } from '../src/modules/optimizer/application/ports/service-time-history.port';
 import { DISTANCE_PROVIDER } from '../src/modules/optimizer/domain/ports/distance-provider.port';
 import { JOB_EVENTS } from '../src/modules/optimizer/domain/ports/job-events.port';
 import { OPTIMIZATION_JOB_QUEUE } from '../src/modules/optimizer/domain/ports/optimization-job-queue.port';
@@ -124,6 +125,11 @@ describe('Optimizer (e2e, assíncrono)', () => {
         { provide: DISTANCE_PROVIDER, useClass: HaversineDistanceProvider },
         { provide: ROUTING_PROVIDER, useClass: HaversineRoutingProvider },
         { provide: COST_AUGMENTATION, useValue: { augment: () => ({}) } },
+        // Sem histórico de tempo de serviço no e2e (todos os pontos = null).
+        {
+          provide: SERVICE_TIME_HISTORY,
+          useValue: { typicalServiceMinutes: async (_t: string, pts: unknown[]) => pts.map(() => null) },
+        },
         { provide: ROUTE_PLAN_REPOSITORY, useClass: InMemoryRoutePlanRepository },
         { provide: OPTIMIZATION_JOB_REPOSITORY, useClass: InMemoryJobRepository },
         // Fila imediata: processa em microtask (sem DataSource), suficiente p/ e2e.
