@@ -62,6 +62,66 @@ export interface UpdateVehicleRequest {
   status?: VehicleStatus;
 }
 
+// ---------- Manutenção do veículo (FASE 3, V1) ----------
+
+/**
+ * Tipo de manutenção/registro do veículo. Cobre os itens de gestão do motorista
+ * autônomo: troca de óleo, revisões, pneus, seguro, IPO (inspeção obrigatória),
+ * outras inspeções. `other` para itens fora da lista.
+ */
+export type MaintenanceType =
+  | 'oil_change'
+  | 'revision'
+  | 'tires'
+  | 'insurance'
+  | 'inspection'
+  | 'ipo'
+  | 'other';
+
+export const MAINTENANCE_TYPES: readonly MaintenanceType[] = [
+  'oil_change',
+  'revision',
+  'tires',
+  'insurance',
+  'inspection',
+  'ipo',
+  'other',
+];
+
+/**
+ * Registro de manutenção de um veículo. O próximo vencimento pode ser por
+ * **data** (seguro, IPO) e/ou por **quilometragem** (óleo, pneus). Valores
+ * monetários em euros (2 casas). Datas em ISO (YYYY-MM-DD).
+ */
+export interface MaintenanceRecord {
+  id: string;
+  tenantId: string;
+  vehicleId: string;
+  type: MaintenanceType;
+  /** Data em que a manutenção foi feita (ISO date). */
+  performedAt: string;
+  /** Hodômetro no momento do serviço (km). */
+  odometerKm: number | null;
+  /** Custo do serviço (€). */
+  cost: number | null;
+  notes: string | null;
+  /** Próximo vencimento por data (ISO date). */
+  nextDueDate: string | null;
+  /** Próximo vencimento por quilometragem (km). */
+  nextDueOdometerKm: number | null;
+  createdAt: string;
+}
+
+export interface CreateMaintenanceRecordRequest {
+  type: MaintenanceType;
+  performedAt: string;
+  odometerKm?: number | null;
+  cost?: number | null;
+  notes?: string | null;
+  nextDueDate?: string | null;
+  nextDueOdometerKm?: number | null;
+}
+
 // ---------- Driver ----------
 
 export type DriverStatus = 'active' | 'inactive';
