@@ -1,16 +1,14 @@
-# Alertmanager da Navix (auditoria 5, R8 — ADR-0057).
+# Alertmanager da Navix (auditoria 5, R8 — ADR-0057; webhook Slack — Fase 1).
 #
-# Este arquivo define o ROTEAMENTO. O canal de notificação real (Slack, PagerDuty,
-# e-mail) é preenchido no DEPLOY — depende de credenciais/webhooks que não moram
-# no repositório (regra de segurança). Sem um receiver configurado, os alertas
-# ainda aparecem no Alertmanager (:9093) e no Prometheus (:9090/alerts); só não
-# são enviados a lugar nenhum.
-#
-# Para ligar o Slack em produção, exporte SLACK_WEBHOOK_URL no ambiente do
-# Alertmanager e descomente o receiver 'slack' abaixo (e aponte as rotas a ele).
+# O webhook do Slack é um SEGREDO e NÃO mora aqui: é lido de um arquivo montado
+# (`api_url_file`), fora do controle de versão. Crie o arquivo com a sua URL:
+#   docker/observability/secrets/slack_webhook_url   (uma linha, gitignored)
+# a partir do exemplo `slack_webhook_url.example`. Sem o arquivo, o Alertmanager
+# sobe normalmente e mostra os alertas na UI (:9093); só o ENVIO ao Slack falha
+# (logado) até o arquivo existir.
 
 route:
-  receiver: default
+  receiver: slack
   group_by: ['alertname', 'severity']
   group_wait: 30s
   group_interval: 5m
@@ -19,22 +17,22 @@ route:
     # Críticos: agrupa mais rápido e repete com mais frequência.
     - matchers:
         - severity="critical"
-      receiver: default
+      receiver: slack
       group_wait: 10s
       repeat_interval: 1h
 
 receivers:
-  # Placeholder: não envia a lugar nenhum (o alerta fica visível na UI).
-  # Troque por 'slack'/'pagerduty' no deploy.
-  - name: default
-
-  # Descomente e aponte as rotas para cá quando houver webhook:
-  # - name: slack
-  #   slack_configs:
-  #     - api_url: '${SLACK_WEBHOOK_URL}'
-  #       channel: '#navix-alerts'
-  #       title: '{{ .CommonAnnotations.summary }}'
-  #       text: "{{ range .Alerts }}{{ .Annotations.description }}\n{{ .Annotations.runbook_url }}\n{{ end }}"
+  - name: slack
+    slack_configs:
+      - api_url_file: /etc/alertmanager/secrets/slack_webhook_url
+        channel: '#novo-canal' # canal dos alertas (o webhook já fixa o canal de destino)
+        send_resolved: true # avisa quando o alerta RESOLVE, não só quando dispara
+        title: '{{ .Status | toUpper }} · {{ .CommonLabels.alertname }}'
+        text: >-
+          {{ range .Alerts }}*{{ .Annotations.summary }}*
+          {{ .Annotations.description }}
+          {{ if .Annotations.runbook_url }}<{{ .Annotations.runbook_url }}|📖 runbook>{{ end }}
+          {{ end }}
 
 inhibit_rules:
   # Um NavixApiDown crítico silencia os alertas derivados (latência/erro) do

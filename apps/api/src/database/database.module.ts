@@ -27,8 +27,15 @@ import { AppConfigService } from '../shared/config/app-config.service';
           synchronize: false, // Nunca em produção: schema evolui só por migrações.
           migrationsRun: false,
           logging: !config.isProduction,
-          // PgBouncer em modo transaction não suporta prepared statements nomeados.
-          extra: { max: 20 },
+          extra: {
+            // Pool de conexões por instância.
+            max: 20,
+            // Hardening (Fase 1): limita a espera para ABRIR uma conexão — se o
+            // banco fica inacessível, a requisição falha rápido em vez de
+            // pendurar. Os limites de QUERY/transação ociosa ficam no default do
+            // role (migration RuntimeQueryTimeouts), confiável via PgBouncer.
+            connectionTimeoutMillis: 10_000,
+          },
         };
       },
     }),

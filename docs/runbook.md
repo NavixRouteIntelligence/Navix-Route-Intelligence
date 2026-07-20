@@ -147,6 +147,16 @@ curl -s http://<host>:3001/metrics | grep -E 'http_server_requests_total|process
 
 ---
 
+## Isolamento multi-tenant (RLS) em produção — verificado
+
+**2026-07-20:** confirmado no Neon que a API conecta como o role **`navix_app`** (`rolsuper=f`, `rolbypassrls=f`) e que `deliveries`/`audit_log`/`api_keys` têm RLS **ligada e forçada** (`relforcerowsecurity=t`); `users` sem RLS por design (login pré-tenant). O owner `neondb_owner` tem `bypassrls=t` (padrão Neon) — por isso a app **não** deve conectar como ele. Reconferir se o `DB_APP_USER` mudar.
+
+Query de auditoria (SQL Editor do Neon):
+```sql
+SELECT rolname, rolsuper, rolbypassrls FROM pg_roles WHERE rolname NOT LIKE 'pg_%';
+SELECT relname, relforcerowsecurity FROM pg_class WHERE relname IN ('deliveries','audit_log','api_keys');
+```
+
 ## Dependências (Postgres / Redis)
 
 **Postgres indisponível** → `ready` falha, 5xx generalizado. A app conecta via role de runtime não-owner (RLS). Verificar conectividade, conexões saturadas, RLS.
@@ -159,12 +169,87 @@ curl -s http://<host>:3001/metrics | grep -E 'http_server_requests_total|process
 
 ---
 
-## Notificação de alertas (⬜ pós-R2)
+## Deploy, rollback e zero-downtime (Render)
 
-As regras são avaliadas pelo Prometheus e roteadas ao Alertmanager ([alertmanager.yml](../docker/observability/alertmanager.yml)). O **canal real** (Slack/PagerDuty) é preenchido no deploy — depende de webhook/credenciais que não moram no repositório. Sem receiver, os alertas ficam visíveis nas UIs (:9090/alerts, :9093) mas não são enviados.
+A produção roda no **Render** (Frankfurt/UE): serviços `navix-api`, `navix-worker` e `navix-web`, definidos em [`infra/render/render.yaml`](../infra/render/render.yaml).
 
-Para ligar o Slack: exportar `SLACK_WEBHOOK_URL` no ambiente do Alertmanager e descomentar o receiver `slack` em `alertmanager.yml`.
+**Deploy** — automático a cada push na `main` (após a CI passar). O Render faz **rolling deploy zero-downtime**: sobe a nova versão, só corta o tráfego para ela **depois** que o health check (`/api/v1/health/live`) passa.
 
-## Backup / Restore / DR (⬜ pós-R2)
+**Rollback automático** — se o deploy novo falha no health check, o Render **mantém a versão antiga** no ar (o deploy falho nunca recebe tráfego).
 
-Depende do Postgres gerenciado do provider a ser escolhido (auditoria 5, R2). O procedimento de backup automatizado **com restore testado** e o DR entram junto com a IaC.
+**Rollback manual** (reverter um deploy ruim que passou no health mas está com bug):
+1. Render → serviço → aba **Events/Deploys** → localize o último deploy bom.
+2. **Rollback to this deploy** → o Render reimplanta aquela imagem.
+3. Confirme: `curl -s -o /dev/null -w "%{http_code}" https://navix-api.onrender.com/api/v1/health/live` → `200`.
+
+> Se o problema for de **migração de banco** (schema já mudou), rollback de código **não basta** — ver "Migrações" abaixo.
+
+## Migrações de banco
+
+As migrações rodam com o **owner** (não o role de runtime). Regra de ouro: **toda migração deve ser retrocompatível** com a versão de código anterior (expand/contract), para o rolling deploy não quebrar durante a janela em que as duas versões coexistem.
+- **Adicionar** coluna/tabela: seguro (a versão antiga ignora).
+- **Remover/renomear**: fazer em **dois deploys** (primeiro para de usar; depois remove).
+- Rollback de código com migração já aplicada: só reverta a migração se ela for destrutiva e o `down` for seguro; senão, corrija para frente (roll-forward).
+
+## Notificação de alertas → Slack/Discord
+
+As regras ([alerts.yml](../docker/observability/alerts.yml)) são avaliadas pelo Prometheus e roteadas ao Alertmanager ([alertmanager.yml](../docker/observability/alertmanager.yml)). Sem receiver, os alertas ficam visíveis nas UIs (:9090/alerts, :9093) mas **não são enviados**.
+
+**Ligar o Slack** — o receiver já está wired em `alertmanager.yml` (lê a URL de um arquivo montado, `api_url_file`); falta só o segredo:
+1. No Slack: crie um **Incoming Webhook** (apps.slack.com → Incoming Webhooks) → copie a URL.
+2. Cole a URL (uma linha) em **`docker/observability/secrets/slack_webhook_url`** — é **gitignored**, não vai ao repositório. Base: `slack_webhook_url.example`.
+3. Ajuste o `channel` em `alertmanager.yml` se necessário.
+4. Suba/reinicie: `docker compose -f docker/observability/docker-compose.observability.yml up -d alertmanager`.
+5. Teste o envio (sem esperar um incidente):
+   ```bash
+   docker exec navix-alertmanager amtool alert add \
+     alertname=TesteSlack severity=critical --alertmanager.url=http://localhost:9093
+   ```
+   → deve cair no seu canal. Depois `amtool alert` para ver/expirar.
+
+**Discord:** mesma ideia com `discord_configs` (ou o webhook do Discord com `/slack` no fim, que aceita o formato Slack).
+
+**Camada nativa do Render** (complementar): Render → **Settings → Notifications** envia e-mail/Slack em **deploy falho** e **serviço unhealthy** — ligue isso já, independe do Prometheus.
+
+## Backup / Restore / DR (Postgres gerenciado — Neon)
+
+O banco é o **Neon** (Postgres gerenciado, UE), com **backup contínuo / Point-in-Time Restore (PITR)** dentro da janela de retenção do plano — sem cron de `pg_dump` para manter.
+
+**Restore (PITR via branch — o caminho recomendado do Neon):**
+1. Neon Console → projeto → **Branches** → **Create branch** → **From a point in time** → escolha o timestamp (ex.: minutos antes do incidente).
+2. O branch tem uma **connection string própria**. Valide os dados nele (é uma cópia isolada — não afeta produção).
+3. Se estiver correto: aponte o `navix-api`/`navix-worker` para a connection string do branch (env no Render) **ou** promova o branch. Redeploy.
+
+**Restore validado (rode trimestralmente — o backup que nunca foi restaurado não existe):**
+1. Crie um branch PITR de ~1h atrás.
+2. Conecte e confira contagens: `SELECT count(*) FROM deliveries; SELECT max(created_at) FROM audit_log;`.
+3. Confirme que os dados batem com o esperado; descarte o branch.
+4. Registre a data do teste.
+
+**Última validação:** 2026-07-19 — branch PITR restaurado com sucesso (7 users, 23 audit_log, último audit 14:39 UTC). Dados íntegros; a trilha de auditoria confirma que o writer grava em produção. Próximo drill: ~2026-10.
+
+**DR (perda total da região):** Neon e Render são UE/Frankfurt. Um plano de DR cross-região é backlog — hoje o RPO/RTO é o do PITR do Neon. Documente o RPO aceito com o negócio.
+
+## Rotação de segredos (Render)
+
+O Render **não** tem rotação automática (diferente do AWS Secrets Manager). É um procedimento **manual/agendado** — os segredos vivem em env vars por serviço (idealmente num **Environment Group** compartilhado por api/worker).
+
+**Chaves JWT — rotação SEM downtime** (o app suporta chave anterior, ADR de rotação):
+1. Gere um novo par RS256 + um novo `JWT_KEY_ID`.
+2. Mova a chave **pública atual** para `JWT_PREVIOUS_PUBLIC_KEY` e o kid atual para `JWT_PREVIOUS_KEY_ID`.
+3. Ponha o novo par em `JWT_PRIVATE_KEY`/`JWT_PUBLIC_KEY`/`JWT_KEY_ID`.
+4. Redeploy. **Tokens novos** usam a chave nova; **tokens em voo** (assinados com a antiga) seguem válidos até expirar (o app valida pelo `kid`). Sem logout em massa.
+5. Depois de passado o TTL do access token (15 min), remova a chave anterior.
+
+**Outros segredos** (`MEDIA_URL_SECRET`, `ENCRYPTION_KEK`, senha do DB): rotação exige cuidado — `MEDIA_URL_SECRET` invalida URLs de POD assinadas em voo (baixo impacto, expiram rápido); `ENCRYPTION_KEK` exige re-encriptação se houver dado cifrado. Agende e documente o impacto antes.
+
+> ⚠️ Todos os segredos obrigatórios em produção são validados no **boot** (ADR-0052): se você apagar/errar um na rotação, a API **não sobe** — o rollback do Render segura a versão anterior. Rode a rotação fora de pico.
+
+## Status page
+
+✅ **Configurada** (UptimeRobot, 2026-07-20):
+- **Página pública:** https://stats.uptimerobot.com/p6hIZVoDEC
+- **Monitor:** HTTP(s) em `https://navix-api.onrender.com/api/v1/health/ready` (checa Postgres + Redis, reflete a usabilidade real), intervalo 5 min. Auto-add de novos monitores ligado.
+- Hospedada **fora** da infra da Navix — continua no ar mesmo se o Render cair.
+
+**Melhoria futura (opcional):** apontar um subdomínio `status.navix.*` para a página via **CNAME** (UptimeRobot → Status Page → Custom domain) — o que clientes B2B esperam ver.
