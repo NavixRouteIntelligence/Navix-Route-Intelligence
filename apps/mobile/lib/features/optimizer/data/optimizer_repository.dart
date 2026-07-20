@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 
 import '../../../core/error/failure.dart';
 import '../../../core/network/dio_failure_mapper.dart';
+import '../domain/editable_stop.dart';
 import '../domain/optimizer_models.dart';
 
 /// Escopo da otimização — define o endpoint por papel (ADR-0060):
@@ -60,6 +61,71 @@ class OptimizerRepository {
     } on DioException catch (e) {
       throw mapDioException(e);
     }
+  }
+
+  /// Paradas ativas do motorista (pending/in_route) **com coordenadas**, na ordem
+  /// atual — base da tela de ordem manual (RSE-2b). Descarta as não geocodificadas
+  /// (sem coordenada não há como otimizar nem travar posição).
+  Future<List<EditableStop>> activeStops() async {
+    try {
+      final res = await _dio.get<dynamic>('/deliveries', queryParameters: {'pageSize': 100, 'sort': 'createdAt'});
+      final data = res.data is Map<String, dynamic> ? (res.data as Map<String, dynamic>)['data'] : null;
+      if (data is! List) return const [];
+      return data
+          .whereType<Map<String, dynamic>>()
+          .where((d) => _activeStatuses.contains(d['status']))
+          .map(_toEditable)
+          .whereType<EditableStop>()
+          .toList();
+    } on DioException catch (e) {
+      throw mapDioException(e);
+    }
+  }
+
+  static const _activeStatuses = {'pending', 'in_route'};
+
+  /// Otimiza a partir de paradas **inline** (id, coordenada, prioridade, trava),
+  /// na ordem informada. Suporta:
+  ///  - `strategy: 'manual'` → preserva exatamente a ordem enviada (RSE-1);
+  ///  - estratégia de otimização + `locked` nas paradas → reordena só as livres
+  ///    ao redor das âncoras (RSE-2a).
+  /// Mesmo fluxo assíncrono (202 → poll → plano).
+  Future<RoutePlanResult> optimizeStops({
+    required List<EditableStop> stops,
+    String? strategy,
+    OptimizerScope scope = OptimizerScope.mine,
+  }) async {
+    try {
+      final res = await _dio.post<dynamic>(scope.path, data: {
+        'stops': stops.map((s) => s.toStopJson()).toList(),
+        if (strategy != null) 'strategy': strategy,
+      });
+      final jobId = _dataOf(res)['jobId'] as String? ?? '';
+      if (jobId.isEmpty) throw const ServerFailure('Resposta de otimização sem jobId.');
+      final planId = await _awaitPlan(jobId);
+      return await _fetchPlan(planId);
+    } on DioException catch (e) {
+      throw mapDioException(e);
+    }
+  }
+
+  EditableStop? _toEditable(Map<String, dynamic> d) {
+    final addr = d['address'] is Map<String, dynamic> ? d['address'] as Map<String, dynamic> : const {};
+    final lat = (addr['latitude'] as num?)?.toDouble();
+    final lng = (addr['longitude'] as num?)?.toDouble();
+    if (lat == null || lng == null || (lat == 0 && lng == 0)) return null; // sem geocodificação
+    final street = (addr['street'] as String?) ?? '';
+    final number = (addr['number'] as String?) ?? '';
+    final city = (addr['city'] as String?) ?? '';
+    final state = (addr['state'] as String?) ?? '';
+    return EditableStop(
+      id: (d['id'] as String?) ?? '',
+      label: [street, number].where((s) => s.isNotEmpty).join(', '),
+      cityLine: [city, state].where((s) => s.isNotEmpty).join(' — '),
+      latitude: lat,
+      longitude: lng,
+      priority: (d['priority'] as String?) ?? 'normal',
+    );
   }
 
   /// Poll do job até um estado terminal. Lança [Failure] em falha/timeout —

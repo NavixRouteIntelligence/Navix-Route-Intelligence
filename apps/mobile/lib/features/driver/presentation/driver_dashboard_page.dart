@@ -18,6 +18,7 @@ import '../../intelligence/presentation/stop_intelligence_card.dart';
 import '../../intelligence/presentation/voice_assistant_button.dart';
 import '../../intelligence/presentation/voice_assistant_cubit.dart';
 import '../../optimizer/data/optimizer_repository.dart';
+import '../../optimizer/presentation/manual_route_page.dart';
 import '../../optimizer/presentation/optimizer_page.dart';
 import '../../pod/presentation/pod_capture_sheet.dart';
 import '../../pod/presentation/pod_sync_cubit.dart';
@@ -250,6 +251,10 @@ class _Content extends StatelessWidget {
                   _OptimizeMineButton(
                     onDone: () => context.read<DriverDashboardCubit>().load(),
                   ),
+                  const SizedBox(height: 8),
+                  _ReorderRouteButton(
+                    onDone: () => context.read<DriverDashboardCubit>().load(),
+                  ),
                   const SizedBox(height: 12),
                 ],
                 if (data.next != null) ...[
@@ -438,6 +443,33 @@ class _LivePill extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+/// Abre a tela de ordem manual (RSE-2b): reordenar arrastando + travar posições.
+/// Ao voltar com sucesso, recarrega o dashboard (a rota mudou).
+class _ReorderRouteButton extends StatelessWidget {
+  const _ReorderRouteButton({required this.onDone});
+
+  final VoidCallback onDone;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: () async {
+          final saved = await Navigator.of(context).push<bool>(
+            MaterialPageRoute(builder: (_) => const ManualRoutePage()),
+          );
+          if (saved == true) onDone();
+        },
+        icon: const Icon(Icons.swap_vert_outlined),
+        label: Text(l10n.manualRouteTitle),
+        style: OutlinedButton.styleFrom(minimumSize: const Size(0, 44)),
+      ),
     );
   }
 }
