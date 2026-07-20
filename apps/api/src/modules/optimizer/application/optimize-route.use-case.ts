@@ -119,6 +119,7 @@ export class OptimizeRouteUseCase {
       service,
       profile,
       strategyName: command.strategy,
+      ...(command.strategy === 'manual' ? { strategyLabel: 'Ordem manual' } : {}),
       weights: weightsFor(command.economyMode),
     });
     this.metrics.observeSolve(solved.strategyName, solved.solveSeconds, solved.stops.length);
