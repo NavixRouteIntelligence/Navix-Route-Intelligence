@@ -61,5 +61,14 @@
   "manualRouteLoadError": "No se pudieron cargar las paradas.",
   "offlineBanner": "Estás sin conexión — mostrando la última actualización.",
   "offlineTitle": "Sin conexión",
-  "offlineDescription": "Estás sin conexión. Tu ruta reaparece cuando vuelva la conexión."
+  "offlineDescription": "Estás sin conexión. Tu ruta reaparece cuando vuelva la conexión.",
+  "earningsTitle": "Ganancias estimadas",
+  "earningsSetupPrompt": "Configura tu tarifa para ver tus ganancias estimadas.",
+  "earningsEstimateNote": "Estimación según tu tarifa.",
+  "earningsBreakdown": "{deliveries} entregas · {km} km",
+  "earningsTariffTitle": "Tu tarifa",
+  "earningsTariffHint": "Se usa solo en tu dispositivo para estimar ganancias.",
+  "earningsPerDelivery": "Por entrega",
+  "earningsPerKm": "Por km",
+  "earningsSave": "Guardar"
 }

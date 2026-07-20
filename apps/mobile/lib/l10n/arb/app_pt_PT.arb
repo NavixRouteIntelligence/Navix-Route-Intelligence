@@ -61,5 +61,14 @@
   "manualRouteLoadError": "Não foi possível carregar as paragens.",
   "offlineBanner": "Está offline — a mostrar a última atualização.",
   "offlineTitle": "Sem ligação",
-  "offlineDescription": "Está offline. A sua rota reaparece quando a ligação voltar."
+  "offlineDescription": "Está offline. A sua rota reaparece quando a ligação voltar.",
+  "earningsTitle": "Ganhos previstos",
+  "earningsSetupPrompt": "Configure a sua tarifa para ver os ganhos previstos.",
+  "earningsEstimateNote": "Estimativa com base na sua tarifa.",
+  "earningsBreakdown": "{deliveries} entregas · {km} km",
+  "earningsTariffTitle": "A sua tarifa",
+  "earningsTariffHint": "Usada só no seu dispositivo para estimar os ganhos.",
+  "earningsPerDelivery": "Por entrega",
+  "earningsPerKm": "Por km",
+  "earningsSave": "Guardar"
 }

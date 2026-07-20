@@ -12,6 +12,8 @@ import '../../../core/ui/navix_section_header.dart';
 import '../../../core/ui/navix_skeleton.dart';
 import '../../../core/ui/navix_states.dart';
 import '../../../core/ui/navix_status_pill.dart';
+import '../../earnings/presentation/earnings_card.dart';
+import '../../earnings/presentation/earnings_cubit.dart';
 import '../../intelligence/data/intelligence_repository.dart';
 import '../../intelligence/domain/dwell.dart';
 import '../../intelligence/presentation/stop_intelligence_card.dart';
@@ -42,6 +44,7 @@ class DriverDashboardPage extends StatelessWidget {
             ..startAutoRefresh(),
         ),
         BlocProvider(create: (_) => GetIt.instance<VoiceAssistantCubit>()),
+        BlocProvider(create: (_) => GetIt.instance<EarningsCubit>()..load()),
         // Singletons: persistem enquanto o app vive (não são fechados aqui).
         BlocProvider.value(value: GetIt.instance<LocationSharingCubit>()),
         BlocProvider.value(value: GetIt.instance<PodSyncCubit>()),
@@ -282,6 +285,8 @@ class _Content extends StatelessWidget {
                 _PodCard(podToday: data.podToday, onRegister: onRegister),
                 const SizedBox(height: 12),
                 _KpiRow(data: data),
+                const SizedBox(height: 12),
+                EarningsCard(deliveries: data.total, km: data.remainingKm ?? 0),
                 const SizedBox(height: 12),
                 _AiInsights(data: data),
               ],
