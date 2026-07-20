@@ -34,6 +34,11 @@ export interface OptimizationStop {
   locked?: boolean;
   /** Tipo do destino (ADR-0064). Define o tempo de serviço por tipo. */
   destinationType?: DestinationType;
+  /**
+   * Tempo de serviço típico observado neste local (Inteligência Coletiva, ADR-0065).
+   * Tem precedência sobre o default por tipo — dado real vence heurística.
+   */
+  historicalServiceMinutes?: number;
 }
 
 /** Peso numérico de prioridade (maior = mais urgente). */

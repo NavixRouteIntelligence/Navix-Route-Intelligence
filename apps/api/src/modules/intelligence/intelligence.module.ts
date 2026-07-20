@@ -2,6 +2,10 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { ForecastRouteUseCase } from './application/forecast-route.use-case';
+import {
+  COLLECTIVE_SERVICE_TIMES,
+  CollectiveServiceTimeLookup,
+} from './application/collective-service-time.lookup';
 import { GetCollectiveInsightUseCase } from './application/get-collective-insight.use-case';
 import { InterpretVoiceCommandUseCase } from './application/interpret-voice-command.use-case';
 import { PlanLoadUseCase } from './application/plan-load.use-case';
@@ -43,6 +47,9 @@ import { IntelligenceController } from './interface/intelligence.controller';
     { provide: LOAD_PLANNER, useClass: HeuristicLoadPlanner },
     { provide: COLLECTIVE_INSIGHTS, useClass: CollectiveInsightsRepository },
     { provide: VOICE_INTERPRETER, useClass: HeuristicVoiceInterpreter },
+    { provide: COLLECTIVE_SERVICE_TIMES, useClass: CollectiveServiceTimeLookup },
   ],
+  // Exposto para o Optimizer usar o tempo de serviço típico no custo (RSE-4).
+  exports: [COLLECTIVE_SERVICE_TIMES],
 })
 export class IntelligenceModule {}
