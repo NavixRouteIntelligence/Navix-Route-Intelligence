@@ -89,6 +89,7 @@ void main() {
       when(() => repo.optimizeStops(
             stops: any(named: 'stops'),
             strategy: any(named: 'strategy'),
+            smart: any(named: 'smart'),
             scope: any(named: 'scope'),
           )).thenAnswer((_) async => result);
       return build();
@@ -108,12 +109,13 @@ void main() {
   );
 
   blocTest<ManualRouteCubit, ManualRouteState>(
-    'reoptimizeRespectingLocks: envia strategy=null (otimiza respeitando travas)',
+    'reoptimizeRespectingLocks: envia smart=true (modo inteligente, respeitando travas)',
     build: () {
       when(() => repo.activeStops()).thenAnswer((_) async => stops);
       when(() => repo.optimizeStops(
             stops: any(named: 'stops'),
             strategy: any(named: 'strategy'),
+            smart: any(named: 'smart'),
             scope: any(named: 'scope'),
           )).thenAnswer((_) async => result);
       return build();
@@ -125,6 +127,7 @@ void main() {
     verify: (c) => verify(() => repo.optimizeStops(
           stops: any(named: 'stops'),
           strategy: null,
+          smart: true,
           scope: OptimizerScope.mine,
         )).called(1),
   );

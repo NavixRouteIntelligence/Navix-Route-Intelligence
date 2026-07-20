@@ -55,7 +55,7 @@
   "manualRouteUnlock": "Desbloquear",
   "manualRouteLockedCount": "{count} bloqueadas",
   "manualRouteSave": "Guardar ordem",
-  "manualRouteReoptimize": "Reotimizar",
+  "manualRouteReoptimize": "Otimização inteligente",
   "manualRouteEmptyTitle": "Paragens insuficientes",
   "manualRouteEmptyDescription": "Precisa de pelo menos duas paragens geocodificadas para reordenar.",
   "manualRouteLoadError": "Não foi possível carregar as paragens."

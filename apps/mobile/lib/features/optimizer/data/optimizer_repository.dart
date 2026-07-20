@@ -89,16 +89,20 @@ class OptimizerRepository {
   ///  - `strategy: 'manual'` → preserva exatamente a ordem enviada (RSE-1);
   ///  - estratégia de otimização + `locked` nas paradas → reordena só as livres
   ///    ao redor das âncoras (RSE-2a).
+  ///  - `smart: true` → modo inteligente (ADR-0066): pesos por contexto +
+  ///    estratégia mais forte, respeitando as travas.
   /// Mesmo fluxo assíncrono (202 → poll → plano).
   Future<RoutePlanResult> optimizeStops({
     required List<EditableStop> stops,
     String? strategy,
+    bool smart = false,
     OptimizerScope scope = OptimizerScope.mine,
   }) async {
     try {
       final res = await _dio.post<dynamic>(scope.path, data: {
         'stops': stops.map((s) => s.toStopJson()).toList(),
         if (strategy != null) 'strategy': strategy,
+        if (smart) 'smart': true,
       });
       final jobId = _dataOf(res)['jobId'] as String? ?? '';
       if (jobId.isEmpty) throw const ServerFailure('Resposta de otimização sem jobId.');

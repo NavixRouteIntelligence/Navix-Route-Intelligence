@@ -86,16 +86,18 @@ class ManualRouteCubit extends Cubit<ManualRouteState> {
   /// Salva exatamente a ordem atual (estratégia `manual` — não reordena nada).
   Future<void> saveManualOrder() => _submit(strategy: 'manual');
 
-  /// Reotimiza mantendo as paradas travadas nas posições atuais (RSE-2a).
-  Future<void> reoptimizeRespectingLocks() => _submit(strategy: null);
+  /// Reotimização **inteligente** (RSE-5): pesos por contexto + estratégia mais
+  /// forte, mantendo as paradas travadas nas posições atuais (RSE-2a).
+  Future<void> reoptimizeRespectingLocks() => _submit(strategy: null, smart: true);
 
-  Future<void> _submit({required String? strategy}) async {
+  Future<void> _submit({required String? strategy, bool smart = false}) async {
     if (!state.canSubmit) return;
     emit(state.copyWith(status: ManualRouteStatus.submitting, clearError: true));
     try {
       final result = await _repository.optimizeStops(
         stops: state.stops,
         strategy: strategy,
+        smart: smart,
         scope: OptimizerScope.mine,
       );
       emit(state.copyWith(status: ManualRouteStatus.success, result: result));
