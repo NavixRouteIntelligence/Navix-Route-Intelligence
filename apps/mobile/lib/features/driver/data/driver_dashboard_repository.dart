@@ -23,6 +23,7 @@ class DriverDashboardRepository {
       final items = _items(deliveries);
       final delivered = items.where((d) => d['status'] == 'delivered').length;
       final plan = _items(plans).isNotEmpty ? _items(plans).first : null;
+      final (first, last) = _journey(items);
 
       return DriverDashboardData(
         total: _metaTotal(deliveries),
@@ -30,6 +31,8 @@ class DriverDashboardRepository {
         next: _nextDelivery(items),
         tracking: _tracking(tracking),
         podToday: (pod['total'] as num?)?.toInt() ?? 0,
+        first: first,
+        last: last,
         score: plan == null ? null : (plan['score'] as num?)?.toInt(),
         savedKm: _planDouble(plan, ['savings', 'distanceKm']),
         avgSavingsPct: _planDouble(plan, ['savings', 'distancePct']),
@@ -67,19 +70,20 @@ class DriverDashboardRepository {
     return (node as num?)?.toDouble();
   }
 
+  /// Abertura da janela de horário de uma entrega (ou null).
+  DateTime? _windowStart(Map<String, dynamic> d) {
+    final w = d['timeWindow'];
+    final s = w is Map<String, dynamic> ? w['start'] as String? : null;
+    return s == null ? null : DateTime.tryParse(s);
+  }
+
   /// Próxima entrega ativa, ordenada pela abertura da janela de horário.
   DriverDelivery? _nextDelivery(List<Map<String, dynamic>> items) {
     final active = items.where((d) => _activeStatuses.contains(d['status'])).toList();
     if (active.isEmpty) return null;
 
-    DateTime? startOf(Map<String, dynamic> d) {
-      final w = d['timeWindow'];
-      final s = w is Map<String, dynamic> ? w['start'] as String? : null;
-      return s == null ? null : DateTime.tryParse(s);
-    }
-
     active.sort((a, b) {
-      final sa = startOf(a), sb = startOf(b);
+      final sa = _windowStart(a), sb = _windowStart(b);
       if (sa == null && sb == null) return 0;
       if (sa == null) return 1;
       if (sb == null) return -1;
@@ -87,6 +91,18 @@ class DriverDashboardRepository {
     });
 
     return _delivery(active.first);
+  }
+
+  /// Primeira e última paradas da jornada de hoje, pela janela de horário.
+  /// Considera todas as entregas (entregues inclusive) para emoldurar o dia.
+  /// Retorna (null, null) sem janelas; `last` fica null quando há só uma parada.
+  (DriverDelivery?, DriverDelivery?) _journey(List<Map<String, dynamic>> items) {
+    final withWindow = items.where((d) => _windowStart(d) != null).toList()
+      ..sort((a, b) => _windowStart(a)!.compareTo(_windowStart(b)!));
+    if (withWindow.isEmpty) return (null, null);
+    final first = _delivery(withWindow.first);
+    final last = withWindow.length > 1 ? _delivery(withWindow.last) : null;
+    return (first, last);
   }
 
   DriverDelivery _delivery(Map<String, dynamic> d) {

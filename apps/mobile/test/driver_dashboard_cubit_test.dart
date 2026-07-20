@@ -66,4 +66,67 @@ void main() {
       DriverDashboardState(status: DriverDashboardStatus.error, error: 'Sem conexão com o servidor.'),
     ],
   );
+
+  test('journey: primeira e última paradas do dia', () {
+    final withJourney = DriverDashboardData(
+      total: 3,
+      delivered: 1,
+      next: null,
+      tracking: const DriverTracking(),
+      podToday: 0,
+      first: DriverDelivery(
+        id: 'a',
+        addressLine: 'Rua A, 1',
+        cityLine: 'Lisboa',
+        priority: 'normal',
+        status: 'delivered',
+        windowStart: DateTime(2026, 7, 10, 8),
+      ),
+      last: DriverDelivery(
+        id: 'c',
+        addressLine: 'Rua C, 3',
+        cityLine: 'Lisboa',
+        priority: 'normal',
+        status: 'pending',
+        windowStart: DateTime(2026, 7, 10, 18),
+      ),
+    );
+    expect(withJourney.first?.id, 'a');
+    expect(withJourney.last?.id, 'c');
+  });
+
+  blocTest<DriverDashboardCubit, DriverDashboardState>(
+    'load silencioso com sucesso: só success (sem flash de loading)',
+    build: () {
+      when(() => repo.load()).thenAnswer((_) async => data);
+      return DriverDashboardCubit(repo);
+    },
+    act: (c) => c.load(silent: true),
+    expect: () => [
+      DriverDashboardState(status: DriverDashboardStatus.success, data: data),
+    ],
+  );
+
+  blocTest<DriverDashboardCubit, DriverDashboardState>(
+    'auto refresh: falha silenciosa preserva os últimos dados bons',
+    build: () {
+      // 1º load OK; 2º (silencioso) falha — o estado bom deve permanecer.
+      final answers = <Future<DriverDashboardData> Function()>[
+        () async => data,
+        () async => throw const NetworkFailure(),
+      ];
+      var i = 0;
+      when(() => repo.load()).thenAnswer((_) => answers[i++ % answers.length]());
+      return DriverDashboardCubit(repo);
+    },
+    act: (c) async {
+      await c.load();
+      await c.load(silent: true);
+    },
+    expect: () => [
+      const DriverDashboardState(status: DriverDashboardStatus.loading),
+      DriverDashboardState(status: DriverDashboardStatus.success, data: data),
+      // Nenhum estado adicional: a falha silenciosa foi absorvida.
+    ],
+  );
 }

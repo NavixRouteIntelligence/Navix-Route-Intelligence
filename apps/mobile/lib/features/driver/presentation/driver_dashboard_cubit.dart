@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -23,15 +25,45 @@ class DriverDashboardCubit extends Cubit<DriverDashboardState> {
 
   final DriverDashboardRepository _repository;
 
-  Future<void> load() async {
-    emit(const DriverDashboardState(status: DriverDashboardStatus.loading));
+  /// Intervalo do auto refresh (M1). Curto o bastante para o painel parecer
+  /// vivo, longo o bastante para não pesar em bateria/dados.
+  static const autoRefreshInterval = Duration(seconds: 30);
+
+  Timer? _timer;
+
+  /// Carrega o painel. Em [silent] (auto refresh / pull sobre dados existentes)
+  /// não emite `loading` — evita o flash do skeleton — e uma falha **preserva**
+  /// os últimos dados bons em vez de jogar a tela para o estado de erro.
+  Future<void> load({bool silent = false}) async {
+    if (!silent) {
+      emit(const DriverDashboardState(status: DriverDashboardStatus.loading));
+    }
     try {
       final data = await _repository.load();
       emit(DriverDashboardState(status: DriverDashboardStatus.success, data: data));
     } on Failure catch (f) {
+      if (silent && state.data != null) return; // mantém o que já está na tela
       emit(DriverDashboardState(status: DriverDashboardStatus.error, error: f.message));
     } catch (_) {
+      if (silent && state.data != null) return;
       emit(const DriverDashboardState(status: DriverDashboardStatus.error, error: 'Erro inesperado.'));
     }
+  }
+
+  /// Liga o auto refresh periódico (idempotente). Cada tick faz um [load]
+  /// silencioso. O timer é cancelado em [close].
+  void startAutoRefresh() {
+    _timer ??= Timer.periodic(autoRefreshInterval, (_) => load(silent: true));
+  }
+
+  void stopAutoRefresh() {
+    _timer?.cancel();
+    _timer = null;
+  }
+
+  @override
+  Future<void> close() {
+    stopAutoRefresh();
+    return super.close();
   }
 }
