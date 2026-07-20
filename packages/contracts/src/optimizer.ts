@@ -83,6 +83,13 @@ export interface OptimizeRouteRequest {
   serviceTimeMinutes?: number;
   /** Modo Economia — o que priorizar (ADR-0026). Ausente = balanceado (legado). */
   economyMode?: EconomyMode;
+  /**
+   * Modo inteligente (ADR-0066): usa a estratégia mais forte e **deriva os pesos
+   * do contexto** das paradas (janelas, urgência), combinando com histórico e
+   * classificação. Quando true, tem precedência sobre `economyMode`; `strategy`
+   * explícito ainda vence a escolha automática de algoritmo.
+   */
+  smart?: boolean;
   /** Perfil do veículo único (capacidade/velocidade por tipo). Opcional (ADR-0022). */
   vehicle?: OptimizationVehicleInput;
   /**
@@ -161,6 +168,8 @@ export interface RoutePlanParams {
   unassignedCount?: number;
   /** Modo Economia aplicado (ADR-0026). Presente quando informado. */
   economyMode?: EconomyMode;
+  /** Modo inteligente aplicado (ADR-0066). Presente quando ativo. */
+  smart?: boolean;
 }
 
 /** Rota de um veículo dentro de um plano multi-veículo (ADR-0022, Fase 2). */

@@ -14,7 +14,7 @@ import type {
 
 import { AUDIT_LOG, type AuditLogPort } from '../../../shared/audit/audit-log.port';
 import { NotFoundError, ValidationError } from '../../../shared/kernel/domain-error';
-import { estimateCo2Kg, weightsFor } from '../domain/economy';
+import { estimateCo2Kg, smartWeights, weightsFor } from '../domain/economy';
 import { partitionByCapacity } from '../domain/fleet-partitioner';
 import { GeoPoint } from '../domain/geo-point';
 import { ZERO_DEMAND, type OptimizationStop } from '../domain/optimization-stop';
@@ -26,6 +26,9 @@ import {
   SERVICE_TIME_HISTORY,
   type ServiceTimeHistoryPort,
 } from './ports/service-time-history.port';
+import type {
+  OptimizationWeights,
+} from '../domain/ports/route-optimization-strategy.port';
 import { RoutePlan } from '../domain/route-plan';
 import { VehicleProfile } from '../domain/vehicle-profile';
 import { OptimizerMetrics } from '../infrastructure/observability/optimizer-metrics';
@@ -54,6 +57,7 @@ export interface OptimizeRouteCommand {
   averageSpeedKmh?: number;
   serviceTimeMinutes?: number;
   economyMode?: EconomyMode;
+  smart?: boolean;
   vehicle?: OptimizationVehicleInput;
   vehicles?: OptimizationVehicleInput[];
 }
@@ -107,6 +111,26 @@ export class OptimizeRouteUseCase {
     return toRoutePlanView(plan);
   }
 
+  /** Pesos da função de custo: modo inteligente (contexto) vence Modo Economia. */
+  private resolveWeights(command: OptimizeRouteCommand, stops: OptimizationStop[]): OptimizationWeights {
+    if (command.smart) {
+      return smartWeights(stops.map((s) => ({ priority: s.priority, hasTimeWindow: s.timeWindow != null })));
+    }
+    return weightsFor(command.economyMode);
+  }
+
+  /** Estratégia: a explícita vence; senão o modo inteligente usa a mais forte. */
+  private resolveStrategy(command: OptimizeRouteCommand): OptimizationStrategyName | undefined {
+    return command.strategy ?? (command.smart ? 'or-opt-2opt' : undefined);
+  }
+
+  /** Rótulo da rota na explicação (modo inteligente / ordem manual). */
+  private strategyLabel(command: OptimizeRouteCommand): string | undefined {
+    if (command.smart) return 'Modo inteligente';
+    if (command.strategy === 'manual') return 'Ordem manual';
+    return undefined;
+  }
+
   /** Caminho de veículo único (comportamento legado + ADR-0022 Fase 1). */
   private async planSingle(
     command: OptimizeRouteCommand,
@@ -125,9 +149,9 @@ export class OptimizeRouteUseCase {
       speed,
       service,
       profile,
-      strategyName: command.strategy,
-      ...(command.strategy === 'manual' ? { strategyLabel: 'Ordem manual' } : {}),
-      weights: weightsFor(command.economyMode),
+      strategyName: this.resolveStrategy(command),
+      ...(this.strategyLabel(command) ? { strategyLabel: this.strategyLabel(command)! } : {}),
+      weights: this.resolveWeights(command, rawStops),
     });
     this.metrics.observeSolve(solved.strategyName, solved.solveSeconds, solved.stops.length);
     if (solved.capacity && !solved.capacity.feasible) this.metrics.markInfeasible();
@@ -143,6 +167,7 @@ export class OptimizeRouteUseCase {
         ...(profile.type ? { vehicleType: profile.type } : {}),
         ...(command.vehicle ? { avoidTolls: profile.avoidTolls } : {}),
         ...(command.economyMode ? { economyMode: command.economyMode } : {}),
+        ...(command.smart ? { smart: true } : {}),
       },
       stops: solved.stops,
       metrics: this.withCo2(solved.metrics, profile.type, solved.metrics.totalDistanceKm),
@@ -203,8 +228,9 @@ export class OptimizeRouteUseCase {
         speed,
         service,
         profile,
-        strategyName: command.strategy,
-        weights: weightsFor(command.economyMode),
+        strategyName: this.resolveStrategy(command),
+        ...(this.strategyLabel(command) ? { strategyLabel: this.strategyLabel(command)! } : {}),
+        weights: this.resolveWeights(command, rawStops),
       });
       strategyName = solved.strategyName;
       this.metrics.observeSolve(solved.strategyName, solved.solveSeconds, solved.stops.length);
@@ -269,6 +295,7 @@ export class OptimizeRouteUseCase {
         vehicleCount: routes.length,
         ...(unassignedStops.length > 0 ? { unassignedCount: unassignedStops.length } : {}),
         ...(command.economyMode ? { economyMode: command.economyMode } : {}),
+        ...(command.smart ? { smart: true } : {}),
       },
       stops,
       metrics,
