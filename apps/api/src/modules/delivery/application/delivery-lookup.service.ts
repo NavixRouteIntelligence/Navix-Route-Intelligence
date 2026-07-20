@@ -28,6 +28,12 @@ export interface DeliveryStopDto {
  */
 export interface DeliveryLookupPort {
   getStops(tenantId: string, ids: string[]): Promise<DeliveryStopDto[]>;
+  /**
+   * Nº de entregas **concluídas** (`delivered`) com conclusão no intervalo
+   * [from, to] — base do lucro/entrega (Finance, FASE 3). Aproxima a conclusão
+   * por `updatedAt` (status terminal).
+   */
+  countDeliveredInRange(tenantId: string, from: Date, to: Date): Promise<number>;
   /** Entregas **ativas** (pendente/em rota) — base da reotimização (ADR-0023). */
   listActive(tenantId: string): Promise<DeliveryStopDto[]>;
 }
@@ -59,6 +65,20 @@ export class DeliveryLookupService implements DeliveryLookupPort {
         return status === 'pending' || status === 'in_route';
       })
       .map((d) => this.toDto(d));
+  }
+
+  async countDeliveredInRange(tenantId: string, from: Date, to: Date): Promise<number> {
+    const { items } = await this.deliveries.findAll(tenantId, {
+      page: { page: 1, pageSize: 1000 },
+      filters: {},
+      sort: [],
+    });
+    return items.filter((d) => {
+      const s = d.snapshot();
+      if (s.status !== 'delivered') return false;
+      const t = s.updatedAt.getTime();
+      return t >= from.getTime() && t <= to.getTime();
+    }).length;
   }
 
   private toDto(d: Delivery): DeliveryStopDto {

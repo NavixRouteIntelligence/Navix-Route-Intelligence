@@ -2,6 +2,7 @@ export * from './common';
 export * from './auth';
 export * from './fleet';
 export * from './delivery';
+export * from './finance';
 export * from './optimizer';
 export * from './import';
 export * from './tracking';
