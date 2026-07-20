@@ -59,5 +59,23 @@
   "firstDelivery": "First delivery",
   "lastDelivery": "Last delivery",
   "live": "Live",
-  "paused": "Paused"
+  "paused": "Paused",
+  "manualRouteTitle": "Reorder route",
+  "manualRouteHint": "Drag to reorder. Lock a stop to pin its position.",
+  "manualRouteLock": "Lock position",
+  "manualRouteUnlock": "Unlock",
+  "manualRouteLockedCount": "{count} locked",
+  "@manualRouteLockedCount": {
+    "description": "Number of locked stops",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "manualRouteSave": "Save order",
+  "manualRouteReoptimize": "Reoptimize",
+  "manualRouteEmptyTitle": "Not enough stops",
+  "manualRouteEmptyDescription": "You need at least two geocoded stops to reorder.",
+  "manualRouteLoadError": "Couldn't load the stops."
 }

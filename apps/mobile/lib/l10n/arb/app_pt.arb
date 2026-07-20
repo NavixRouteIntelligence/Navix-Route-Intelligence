@@ -48,5 +48,15 @@
   "firstDelivery": "Primeira entrega",
   "lastDelivery": "Última entrega",
   "live": "Ao vivo",
-  "paused": "Pausado"
+  "paused": "Pausado",
+  "manualRouteTitle": "Reordenar rota",
+  "manualRouteHint": "Arraste para reordenar. Trave uma parada para fixar a posição.",
+  "manualRouteLock": "Travar posição",
+  "manualRouteUnlock": "Destravar",
+  "manualRouteLockedCount": "{count} travadas",
+  "manualRouteSave": "Salvar ordem",
+  "manualRouteReoptimize": "Reotimizar",
+  "manualRouteEmptyTitle": "Paradas insuficientes",
+  "manualRouteEmptyDescription": "Você precisa de ao menos duas paradas geocodificadas para reordenar.",
+  "manualRouteLoadError": "Não foi possível carregar as paradas."
 }

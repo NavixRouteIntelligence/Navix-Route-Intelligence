@@ -19,6 +19,7 @@ import '../../features/intelligence/presentation/stop_intelligence_cubit.dart';
 import '../../features/intelligence/presentation/voice_assistant_cubit.dart';
 import '../voice/speech_service.dart';
 import '../../features/optimizer/data/optimizer_repository.dart';
+import '../../features/optimizer/presentation/manual_route_cubit.dart';
 import '../../features/optimizer/presentation/optimizer_cubit.dart';
 import '../../features/pod/data/pod_queue_store.dart';
 import '../../features/pod/data/pod_repository.dart';
@@ -113,6 +114,7 @@ Future<void> configureDependencies(AppConfig config) async {
       () => OptimizerRepository(getIt<DioClient>().apiDio),
     )
     ..registerFactory<OptimizerCubit>(() => OptimizerCubit(getIt<OptimizerRepository>()))
+    ..registerFactory<ManualRouteCubit>(() => ManualRouteCubit(getIt<OptimizerRepository>()))
     ..registerLazySingleton<IntelligenceRepository>(
       () => IntelligenceRepository(getIt<DioClient>().apiDio),
     )
