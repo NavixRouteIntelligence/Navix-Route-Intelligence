@@ -3,7 +3,7 @@
  * Ver docs/reviews/phase-1-optimizer-plan.md e ADR-0022 (restrições ricas).
  */
 import type { VehicleType } from './fleet';
-import type { DeliveryPriority, TimeWindow } from './delivery';
+import type { DeliveryPriority, DestinationType, TimeWindow } from './delivery';
 
 export type OptimizationStrategyName = 'nearest-neighbor-2opt' | 'or-opt-2opt' | 'manual';
 
@@ -48,6 +48,12 @@ export interface OptimizationStopInput {
    * Ignorada pela estratégia `manual` (que já preserva tudo).
    */
   locked?: boolean;
+  /**
+   * Tipo do destino (ADR-0064). Quando presente e sem `serviceTimeMinutes`
+   * explícito, define o tempo de serviço por tipo (hospital demora mais que uma
+   * casa). Se omitido, o motor pode inferir a partir do endereço (classificador).
+   */
+  destinationType?: DestinationType;
 }
 
 /**
@@ -104,6 +110,8 @@ export interface RouteStopView {
   volumeM3?: number;
   /** Parada travada nesta posição pela ordem manual (ADR-0063). Presente quando true. */
   locked?: boolean;
+  /** Tipo do destino (ADR-0064). Presente quando informado ou classificado. */
+  destinationType?: DestinationType;
 }
 
 export interface RouteMetrics {

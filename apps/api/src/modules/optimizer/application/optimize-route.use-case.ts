@@ -348,6 +348,7 @@ export class OptimizeRouteUseCase {
           : null,
         demand: ZERO_DEMAND,
         serviceTimeMinutes: null,
+        ...(f.destinationType ? { destinationType: f.destinationType } : {}),
       }));
     }
 
@@ -362,6 +363,7 @@ export class OptimizeRouteUseCase {
         demand: { weightKg: s.weightKg ?? 0, volumeM3: s.volumeM3 ?? 0 },
         serviceTimeMinutes: s.serviceTimeMinutes ?? null,
         ...(s.locked ? { locked: true } : {}),
+        ...(s.destinationType ? { destinationType: s.destinationType } : {}),
       }));
     }
 

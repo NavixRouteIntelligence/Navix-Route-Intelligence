@@ -1,9 +1,11 @@
 import {
   DELIVERY_PRIORITIES,
+  DESTINATION_TYPES,
   ECONOMY_MODES,
   OPTIMIZATION_STRATEGIES,
   VEHICLE_TYPES,
   type DeliveryPriority,
+  type DestinationType,
   type EconomyMode,
   type OptimizationStopInput,
   type OptimizationStrategyName,
@@ -98,6 +100,14 @@ export class OptimizationStopDto implements OptimizationStopInput {
   @IsOptional()
   @IsBoolean()
   locked?: boolean;
+
+  @ApiPropertyOptional({
+    enum: DESTINATION_TYPES,
+    description: 'Tipo do destino; define o tempo de serviço por tipo (ADR-0064).',
+  })
+  @IsOptional()
+  @IsIn(DESTINATION_TYPES as readonly string[])
+  destinationType?: DestinationType;
 }
 
 export class OptimizationVehicleDto implements OptimizationVehicleInput {

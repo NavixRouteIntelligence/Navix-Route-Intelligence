@@ -14,6 +14,12 @@ export interface DeliveryStopDto {
   longitude: number;
   priority: DeliveryPriority;
   timeWindow: TimeWindow | null;
+  /**
+   * Texto do endereço (rua, complemento, cidade) — **dado**, não classificação.
+   * Deixa o Optimizer classificar o tipo de destino sem inverter a dependência
+   * entre módulos (ADR-0064). Ausente quando não há endereço textual.
+   */
+  addressText?: string;
 }
 
 /**
@@ -58,6 +64,9 @@ export class DeliveryLookupService implements DeliveryLookupPort {
   private toDto(d: Delivery): DeliveryStopDto {
     const s = d.snapshot();
     const address = s.address.snapshot();
+    const addressText = [address.street, address.complement, address.city]
+      .filter((p): p is string => !!p && p.length > 0)
+      .join(' ');
     return {
       id: s.id,
       latitude: address.latitude,
@@ -67,6 +76,7 @@ export class DeliveryLookupService implements DeliveryLookupPort {
         start: s.timeWindow.start.toISOString(),
         end: s.timeWindow.end.toISOString(),
       },
+      ...(addressText ? { addressText } : {}),
     };
   }
 }

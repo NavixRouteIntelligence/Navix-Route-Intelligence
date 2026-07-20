@@ -1,6 +1,7 @@
 import type {
   CapacityUsage,
   DeliveryPriority,
+  DestinationType,
   RouteMetrics,
   RouteSavings,
   RouteStopView,
@@ -21,6 +22,8 @@ export interface ScoringNode {
   serviceMinutes?: number | null;
   /** Parada travada pela ordem manual (ADR-0063). Reflete na view. */
   locked?: boolean;
+  /** Tipo do destino (ADR-0064). Reflete na view. */
+  destinationType?: DestinationType;
 }
 
 /** Tempo de serviço efetivo do nó: o específico, se houver; senão o global. */
@@ -122,6 +125,7 @@ export function buildStops(
         view.volumeM3 = round(n.demand.volumeM3);
       }
       if (n.locked) view.locked = true;
+      if (n.destinationType) view.destinationType = n.destinationType;
       views.push(view);
       clock += serviceOf(n, serviceMinutes); // tempo de serviço na parada (por nó)
     }

@@ -20,6 +20,32 @@ export const DELIVERY_PRIORITIES: readonly DeliveryPriority[] = [
   'urgent',
 ];
 
+/**
+ * Tipo do destino (Routing Strategy Engine, ADR-0064). Alimenta o tempo de
+ * serviço por tipo e, adiante, a Inteligência Coletiva (estacionamento, portaria,
+ * horários). `other` = desconhecido/não classificado (cai no default global).
+ */
+export type DestinationType =
+  | 'residence'
+  | 'apartment'
+  | 'condo'
+  | 'commerce'
+  | 'company'
+  | 'hospital'
+  | 'mall'
+  | 'other';
+
+export const DESTINATION_TYPES: readonly DestinationType[] = [
+  'residence',
+  'apartment',
+  'condo',
+  'commerce',
+  'company',
+  'hospital',
+  'mall',
+  'other',
+];
+
 /** Endereço completo com coordenadas geográficas (WGS84). */
 export interface Address {
   street: string;

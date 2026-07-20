@@ -8,6 +8,7 @@ import type {
 } from '@navix/contracts';
 
 import { assessCapacity, totalDemand } from '../domain/capacity';
+import { serviceMinutesForDestination } from '../domain/destination-type';
 import { type Demand, type OptimizationStop } from '../domain/optimization-stop';
 import { slaPriorityWeight } from '../domain/sla-priority';
 import {
@@ -81,7 +82,11 @@ export class RouteSolver {
     const priorities = nodes.map((n, i) =>
       hasOrigin && i === 0 ? 0 : slaPriorityWeight(n.priority, windows[i]?.endMinutes ?? null),
     );
-    const perNodeServiceMinutes = nodes.map((n) => n.serviceTimeMinutes ?? service);
+    // Tempo de serviço efetivo por nó (ADR-0064): explícito da parada, senão o
+    // default por tipo de destino, senão o global. Usado no custo e nas métricas.
+    const effectiveService = (n: OptimizationStop): number =>
+      n.serviceTimeMinutes ?? serviceMinutesForDestination(n.destinationType) ?? service;
+    const perNodeServiceMinutes = nodes.map(effectiveService);
 
     // Sobretaxas de pedágio/zona de risco (ADR-0024). No-op por padrão.
     const { edgeSurcharge, nodeSurcharge } = this.augmentation.augment({
@@ -126,8 +131,10 @@ export class RouteSolver {
       priority: n.priority,
       window: windows[i],
       demand: anyDemand && !(hasOrigin && i === 0) ? n.demand : undefined,
-      serviceMinutes: n.serviceTimeMinutes,
+      // Serviço efetivo (inclui o default por tipo) para métricas/ETA coerentes.
+      serviceMinutes: hasOrigin && i === 0 ? n.serviceTimeMinutes : effectiveService(n),
       ...(n.locked ? { locked: true } : {}),
+      ...(n.destinationType ? { destinationType: n.destinationType } : {}),
     }));
     const baselineOrder = nodes.map((_, i) => i);
 
