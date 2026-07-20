@@ -8,6 +8,31 @@ import { compositeCost } from './route-cost-model';
  * `ctx.hasOrigin`. Todas respeitam um `deadline` (orçamento de tempo).
  */
 
+/**
+ * Ordem inicial da otimização. Com travas (ADR-0063), parte da **identidade**
+ * (a ordem enviada), onde cada nó travado já está na sua posição-âncora; sem
+ * travas, usa a construção gulosa Nearest Neighbor (comportamento legado).
+ */
+export function initialOrder(ctx: StrategyContext): number[] {
+  if (ctx.locked?.some(Boolean)) {
+    return Array.from({ length: ctx.size }, (_, i) => i);
+  }
+  return nearestNeighbor(ctx);
+}
+
+/**
+ * Uma ordenação preserva as travas quando cada nó travado `k` permanece na sua
+ * posição-âncora `k` (a ordem parte da identidade). Guard simples e universal:
+ * vale para qualquer vizinhança (2-opt, Or-opt) sem lógica específica de move.
+ */
+export function preservesLocks(order: number[], locked?: boolean[]): boolean {
+  if (!locked) return true;
+  for (let k = 0; k < order.length; k++) {
+    if (locked[k] && order[k] !== k) return false;
+  }
+  return true;
+}
+
 /** Construção gulosa por vizinho mais próximo (distância). */
 export function nearestNeighbor(ctx: StrategyContext): number[] {
   const { size, distanceMatrix } = ctx;
@@ -44,6 +69,8 @@ export function twoOptImprove(ctx: StrategyContext, initial: number[], deadline:
       // nunca inverte a partir do primeiro nó (origem/âncora)
       for (let j = i + 1; j < n; j++) {
         const candidate = reverseSegment(best, i, j);
+        // Com travas: descarta inversões que deslocariam uma parada fixada.
+        if (!preservesLocks(candidate, ctx.locked)) continue;
         const cost = compositeCost(ctx, candidate);
         if (cost + 1e-9 < bestCost) {
           best = candidate;
@@ -82,6 +109,8 @@ export function orOptImprove(
         for (let j = start; j <= rest.length; j++) {
           if (j === i) continue; // mesma posição de origem do segmento
           const candidate = [...rest.slice(0, j), ...seg, ...rest.slice(j)];
+          // Com travas: só aceita reposicionamentos que preservam as âncoras.
+          if (!preservesLocks(candidate, ctx.locked)) continue;
           const cost = compositeCost(ctx, candidate);
           if (cost + 1e-9 < bestCost) {
             best = candidate;

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { OptimizationStrategyName } from '@navix/contracts';
 
-import { nearestNeighbor, twoOptImprove } from '../../domain/local-search';
+import { initialOrder, twoOptImprove } from '../../domain/local-search';
 import type {
   RouteOptimizationStrategy,
   StrategyContext,
@@ -20,7 +20,7 @@ export class NearestNeighbor2OptStrategy implements RouteOptimizationStrategy {
   readonly name: OptimizationStrategyName = 'nearest-neighbor-2opt';
 
   optimize(ctx: StrategyContext): StrategyResult {
-    const initial = nearestNeighbor(ctx);
+    const initial = initialOrder(ctx);
     return { order: twoOptImprove(ctx, initial, Date.now() + TIME_BUDGET_MS) };
   }
 }

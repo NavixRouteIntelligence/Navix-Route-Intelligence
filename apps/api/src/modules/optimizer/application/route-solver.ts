@@ -89,6 +89,11 @@ export class RouteSolver {
       avoidTolls: profile.avoidTolls,
     });
 
+    // Travas de posição (ADR-0063): a origem (nó 0) nunca trava. Só entra no ctx
+    // se houver ao menos uma — mantém o caminho sem-trava idêntico ao legado.
+    const locked = nodes.map((n, i) => (hasOrigin && i === 0 ? false : n.locked ?? false));
+    const hasLocks = locked.some(Boolean);
+
     const ctx: StrategyContext = {
       size: nodes.length,
       distanceMatrix,
@@ -101,6 +106,7 @@ export class RouteSolver {
       perNodeServiceMinutes,
       ...(edgeSurcharge ? { edgeSurcharge } : {}),
       ...(nodeSurcharge ? { nodeSurcharge } : {}),
+      ...(hasLocks ? { locked } : {}),
     };
 
     const strategy = this.registry.get(input.strategyName);
@@ -121,6 +127,7 @@ export class RouteSolver {
       window: windows[i],
       demand: anyDemand && !(hasOrigin && i === 0) ? n.demand : undefined,
       serviceMinutes: n.serviceTimeMinutes,
+      ...(n.locked ? { locked: true } : {}),
     }));
     const baselineOrder = nodes.map((_, i) => i);
 

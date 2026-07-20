@@ -44,6 +44,13 @@ export interface StrategyContext {
   edgeSurcharge?: number[][];
   /** Sobretaxa por nó visitado (ex.: zona de risco). */
   nodeSurcharge?: number[];
+  /**
+   * Travas de posição da ordem manual (ADR-0063). `locked[k] === true` fixa o nó
+   * `k` na posição `k` da ordem enviada; as buscas locais só aceitam movimentos
+   * que preservam essas posições (reordenam apenas as paradas livres). Ausente ⇒
+   * otimização irrestrita (comportamento legado, idêntico byte a byte).
+   */
+  locked?: boolean[];
 }
 
 export interface StrategyResult {

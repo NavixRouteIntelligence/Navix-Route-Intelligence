@@ -19,6 +19,8 @@ export interface ScoringNode {
   demand?: Demand;
   /** Tempo de serviço específico do nó (min); null/ausente usa o global. */
   serviceMinutes?: number | null;
+  /** Parada travada pela ordem manual (ADR-0063). Reflete na view. */
+  locked?: boolean;
 }
 
 /** Tempo de serviço efetivo do nó: o específico, se houver; senão o global. */
@@ -119,6 +121,7 @@ export function buildStops(
         view.weightKg = round(n.demand.weightKg);
         view.volumeM3 = round(n.demand.volumeM3);
       }
+      if (n.locked) view.locked = true;
       views.push(view);
       clock += serviceOf(n, serviceMinutes); // tempo de serviço na parada (por nó)
     }
