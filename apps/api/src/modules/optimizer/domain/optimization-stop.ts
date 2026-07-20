@@ -30,6 +30,8 @@ export interface OptimizationStop {
   demand: Demand;
   /** Tempo de parada específico (min); null usa o service time global. */
   serviceTimeMinutes: number | null;
+  /** Trava de posição da ordem manual (ADR-0063). Ausente/false = livre. */
+  locked?: boolean;
 }
 
 /** Peso numérico de prioridade (maior = mais urgente). */

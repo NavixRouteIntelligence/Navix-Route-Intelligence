@@ -90,6 +90,14 @@ export class OptimizationStopDto implements OptimizationStopInput {
   @Min(0)
   @Max(1440)
   serviceTimeMinutes?: number;
+
+  @ApiPropertyOptional({
+    example: false,
+    description: 'Trava a parada na posição enviada; a reotimização reordena só as livres (ADR-0063).',
+  })
+  @IsOptional()
+  @IsBoolean()
+  locked?: boolean;
 }
 
 export class OptimizationVehicleDto implements OptimizationVehicleInput {

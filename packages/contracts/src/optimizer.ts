@@ -41,6 +41,13 @@ export interface OptimizationStopInput {
   volumeM3?: number;
   /** Tempo de parada/atendimento específico desta parada, em minutos (sobrepõe o global). */
   serviceTimeMinutes?: number;
+  /**
+   * Trava de posição (Routing Strategy Engine, ADR-0062/0063). Quando `true`, a
+   * parada é **fixada na posição em que foi enviada** e a reotimização reordena
+   * apenas as paradas livres ao redor — "ordem manual sem perder a reotimização".
+   * Ignorada pela estratégia `manual` (que já preserva tudo).
+   */
+  locked?: boolean;
 }
 
 /**
@@ -95,6 +102,8 @@ export interface RouteStopView {
   weightKg?: number;
   /** Demanda de volume (m³) da parada. Presente quando informada (ADR-0022). */
   volumeM3?: number;
+  /** Parada travada nesta posição pela ordem manual (ADR-0063). Presente quando true. */
+  locked?: boolean;
 }
 
 export interface RouteMetrics {

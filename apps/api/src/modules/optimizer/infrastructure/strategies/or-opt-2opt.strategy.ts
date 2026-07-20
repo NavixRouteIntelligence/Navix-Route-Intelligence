@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { OptimizationStrategyName } from '@navix/contracts';
 
-import { nearestNeighbor, orOptImprove, twoOptImprove } from '../../domain/local-search';
+import { initialOrder, orOptImprove, twoOptImprove } from '../../domain/local-search';
 import { compositeCost } from '../../domain/route-cost-model';
 import type {
   RouteOptimizationStrategy,
@@ -26,7 +26,7 @@ export class OrOpt2OptStrategy implements RouteOptimizationStrategy {
 
   optimize(ctx: StrategyContext): StrategyResult {
     const deadline = Date.now() + TIME_BUDGET_MS;
-    let order = nearestNeighbor(ctx);
+    let order = initialOrder(ctx);
     let cost = compositeCost(ctx, order);
 
     let improved = true;

@@ -361,6 +361,7 @@ export class OptimizeRouteUseCase {
           : null,
         demand: { weightKg: s.weightKg ?? 0, volumeM3: s.volumeM3 ?? 0 },
         serviceTimeMinutes: s.serviceTimeMinutes ?? null,
+        ...(s.locked ? { locked: true } : {}),
       }));
     }
 
