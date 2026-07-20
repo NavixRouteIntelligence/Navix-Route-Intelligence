@@ -7,6 +7,7 @@ import '../../../core/session/session_state.dart';
 import '../../../core/ui/navix_button.dart';
 import '../../../core/ui/navix_card.dart';
 import '../../../l10n/gen/app_localizations.dart';
+import '../../maintenance/presentation/maintenance_page.dart';
 
 /// Perfil com identidade da sessão (RBAC) e logout.
 class ProfilePage extends StatelessWidget {
@@ -40,6 +41,21 @@ class ProfilePage extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
+              if (state.role == UserRole.driver) ...[
+                NavixCard(
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.build_outlined),
+                    title: Text(l10n.maintTitle),
+                    subtitle: Text(l10n.profileMaintenanceSubtitle),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => Navigator.of(context).push<void>(
+                      MaterialPageRoute(builder: (_) => const MaintenancePage()),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
               NavixButton(
                 label: l10n.signOut,
                 variant: NavixButtonVariant.outline,
