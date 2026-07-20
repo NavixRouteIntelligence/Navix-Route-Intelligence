@@ -35,7 +35,11 @@ class DriverDashboardPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
-        BlocProvider(create: (_) => GetIt.instance<DriverDashboardCubit>()..load()),
+        BlocProvider(
+          create: (_) => GetIt.instance<DriverDashboardCubit>()
+            ..load()
+            ..startAutoRefresh(),
+        ),
         BlocProvider(create: (_) => GetIt.instance<VoiceAssistantCubit>()),
         // Singletons: persistem enquanto o app vive (não são fechados aqui).
         BlocProvider.value(value: GetIt.instance<LocationSharingCubit>()),
@@ -238,6 +242,10 @@ class _Content extends StatelessWidget {
                 const _SyncBanner(),
                 _RouteHero(data: data),
                 const SizedBox(height: 12),
+                if (data.first != null) ...[
+                  _JourneyCard(first: data.first!, last: data.last),
+                  const SizedBox(height: 12),
+                ],
                 if (data.total > 0) ...[
                   _OptimizeMineButton(
                     onDone: () => context.read<DriverDashboardCubit>().load(),
@@ -438,6 +446,77 @@ class _RouteHero extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Jornada de hoje: primeira e última paradas (M1). Emoldura o dia do
+/// motorista — quando começa e quando termina — a partir das janelas de horário.
+class _JourneyCard extends StatelessWidget {
+  const _JourneyCard({required this.first, this.last});
+  final DriverDelivery first;
+  final DriverDelivery? last;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return NavixCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          NavixSectionHeader(title: l10n.journeyToday, icon: Icons.flag_outlined),
+          _JourneyRow(
+            icon: Icons.trip_origin,
+            label: l10n.firstDelivery,
+            delivery: first,
+          ),
+          if (last != null) ...[
+            const SizedBox(height: 10),
+            _JourneyRow(
+              icon: Icons.place,
+              label: l10n.lastDelivery,
+              delivery: last!,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _JourneyRow extends StatelessWidget {
+  const _JourneyRow({required this.icon, required this.label, required this.delivery});
+  final IconData icon;
+  final String label;
+  final DriverDelivery delivery;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    final time = delivery.windowStart != null ? _fmtTime(delivery.windowStart!) : '—';
+    final address = delivery.addressLine.isEmpty ? delivery.cityLine : delivery.addressLine;
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: t.accent),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label, style: TextStyle(fontSize: 11.5, color: t.muted)),
+              const SizedBox(height: 2),
+              Text(
+                address.isEmpty ? '—' : address,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(time, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+      ],
     );
   }
 }

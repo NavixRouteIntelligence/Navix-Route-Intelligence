@@ -54,6 +54,8 @@ class DriverDashboardData extends Equatable {
     required this.next,
     required this.tracking,
     required this.podToday,
+    this.first,
+    this.last,
     this.score,
     this.savedKm,
     this.avgSavingsPct,
@@ -66,6 +68,11 @@ class DriverDashboardData extends Equatable {
   final DriverDelivery? next;
   final DriverTracking tracking;
   final int podToday;
+
+  // Primeira e última paradas da jornada de hoje (por janela de horário).
+  // Dão ao motorista a moldura do dia: quando começa e quando termina.
+  final DriverDelivery? first;
+  final DriverDelivery? last;
 
   // Derivados do último Route Plan (quando disponível). Opcionais por honestidade:
   // o backend ainda não expõe uma rota "atribuída ao motorista" dedicada.
@@ -91,6 +98,8 @@ class DriverDashboardData extends Equatable {
         next,
         tracking,
         podToday,
+        first,
+        last,
         score,
         savedKm,
         avgSavingsPct,

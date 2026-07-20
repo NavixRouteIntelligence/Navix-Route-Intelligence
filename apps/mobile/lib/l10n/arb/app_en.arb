@@ -54,5 +54,8 @@
   "deliveriesNoWindow": "No window",
   "themeToggle": "Theme",
   "importAction": "Import",
-  "optimizeMyRoute": "Optimize my route"
+  "optimizeMyRoute": "Optimize my route",
+  "journeyToday": "Today's journey",
+  "firstDelivery": "First delivery",
+  "lastDelivery": "Last delivery"
 }
