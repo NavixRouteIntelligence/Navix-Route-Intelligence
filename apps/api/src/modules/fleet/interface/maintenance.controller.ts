@@ -14,6 +14,7 @@ import type {
   AuthenticatedUser,
   CollectionResponse,
   MaintenanceRecord as MaintenanceView,
+  MaintenanceReminder,
   ResourceResponse,
 } from '@navix/contracts';
 
@@ -24,6 +25,7 @@ import { Roles } from '../../../shared/security/roles.decorator';
 import { RolesGuard } from '../../../shared/security/roles.guard';
 import { CreateMaintenanceUseCase } from '../application/maintenance/create-maintenance.use-case';
 import { DeleteMaintenanceUseCase } from '../application/maintenance/delete-maintenance.use-case';
+import { GetMaintenanceRemindersUseCase } from '../application/maintenance/get-maintenance-reminders.use-case';
 import { ListMaintenanceUseCase } from '../application/maintenance/list-maintenance.use-case';
 import { CreateMaintenanceDto } from './dto/create-maintenance.dto';
 
@@ -41,6 +43,7 @@ export class MaintenanceController {
     private readonly createMaintenance: CreateMaintenanceUseCase,
     private readonly listMaintenance: ListMaintenanceUseCase,
     private readonly deleteMaintenance: DeleteMaintenanceUseCase,
+    private readonly getReminders: GetMaintenanceRemindersUseCase,
   ) {}
 
   @Post()
@@ -67,6 +70,16 @@ export class MaintenanceController {
       { page: 1, pageSize: Math.max(items.length, 1) },
       `${BASE_PATH}/${vehicleId}/maintenance`,
     );
+  }
+
+  /** Lembretes de vencimento (por data e/ou km) — FASE 3, V2. */
+  @Get('reminders')
+  async reminders(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('vehicleId', ParseUUIDPipe) vehicleId: string,
+  ): Promise<ResourceResponse<MaintenanceReminder[]>> {
+    const data = await this.getReminders.execute(user.tenantId, vehicleId);
+    return { data };
   }
 
   @Delete(':id')

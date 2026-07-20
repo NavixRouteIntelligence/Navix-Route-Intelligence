@@ -44,6 +44,8 @@ export interface Vehicle {
   /** Capacidade de carga em unidades definidas pelo tenant (ex.: kg ou volumes). */
   capacity: number;
   status: VehicleStatus;
+  /** Hodômetro atual (km). Base dos lembretes por quilometragem (FASE 3). */
+  odometerKm: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -53,6 +55,7 @@ export interface CreateVehicleRequest {
   type: VehicleType;
   capacity: number;
   status?: VehicleStatus;
+  odometerKm?: number;
 }
 
 export interface UpdateVehicleRequest {
@@ -60,6 +63,7 @@ export interface UpdateVehicleRequest {
   type?: VehicleType;
   capacity?: number;
   status?: VehicleStatus;
+  odometerKm?: number;
 }
 
 // ---------- Manutenção do veículo (FASE 3, V1) ----------
@@ -120,6 +124,24 @@ export interface CreateMaintenanceRecordRequest {
   notes?: string | null;
   nextDueDate?: string | null;
   nextDueOdometerKm?: number | null;
+}
+
+/** Situação de um lembrete de manutenção (FASE 3, V2). */
+export type ReminderStatus = 'overdue' | 'due_soon' | 'ok';
+
+/**
+ * Lembrete de manutenção derivado do registro mais recente de cada tipo com
+ * vencimento definido. `remainingDays`/`remainingKm` são positivos quando ainda
+ * falta, negativos quando venceu; `null` quando aquela dimensão não se aplica.
+ */
+export interface MaintenanceReminder {
+  vehicleId: string;
+  type: MaintenanceType;
+  dueDate: string | null;
+  dueOdometerKm: number | null;
+  remainingDays: number | null;
+  remainingKm: number | null;
+  status: ReminderStatus;
 }
 
 // ---------- Driver ----------

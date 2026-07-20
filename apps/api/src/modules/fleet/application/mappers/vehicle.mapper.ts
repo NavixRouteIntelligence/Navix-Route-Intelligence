@@ -12,6 +12,7 @@ export function toVehicleView(vehicle: Vehicle): VehicleView {
     type: s.type,
     capacity: s.capacity,
     status: s.status,
+    odometerKm: s.odometerKm,
     createdAt: s.createdAt.toISOString(),
     updatedAt: s.updatedAt.toISOString(),
   };

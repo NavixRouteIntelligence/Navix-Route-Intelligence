@@ -27,4 +27,10 @@ export class UpdateVehicleDto implements UpdateVehicleRequest {
   @IsOptional()
   @IsIn(VEHICLE_STATUSES as readonly string[])
   status?: VehicleStatus;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(10_000_000)
+  odometerKm?: number;
 }

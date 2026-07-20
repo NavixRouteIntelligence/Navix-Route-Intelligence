@@ -16,6 +16,7 @@ import { UpdateDriverUseCase } from './application/drivers/update-driver.use-cas
 // Application — maintenance (FASE 3, V1)
 import { CreateMaintenanceUseCase } from './application/maintenance/create-maintenance.use-case';
 import { DeleteMaintenanceUseCase } from './application/maintenance/delete-maintenance.use-case';
+import { GetMaintenanceRemindersUseCase } from './application/maintenance/get-maintenance-reminders.use-case';
 import { ListMaintenanceUseCase } from './application/maintenance/list-maintenance.use-case';
 import { FLEET_LOOKUP, FleetLookupService } from './application/fleet-lookup.service';
 // Domain ports
@@ -57,6 +58,7 @@ import { VehicleController } from './interface/vehicle.controller';
     CreateMaintenanceUseCase,
     ListMaintenanceUseCase,
     DeleteMaintenanceUseCase,
+    GetMaintenanceRemindersUseCase,
     { provide: VEHICLE_REPOSITORY, useClass: VehicleRepository },
     { provide: DRIVER_REPOSITORY, useClass: DriverRepository },
     { provide: MAINTENANCE_REPOSITORY, useClass: MaintenanceRepository },
