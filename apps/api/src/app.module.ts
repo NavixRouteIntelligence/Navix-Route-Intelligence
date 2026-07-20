@@ -15,6 +15,7 @@ import { TenancyModule } from './shared/tenancy/tenancy.module';
 import { IdempotencyModule } from './shared/idempotency/idempotency.module';
 import { ThrottlingModule } from './shared/security/throttling.module';
 import { DeliveryModule } from './modules/delivery/delivery.module';
+import { FinanceModule } from './modules/finance/finance.module';
 import { FleetModule } from './modules/fleet/fleet.module';
 import { ImportModule } from './modules/import/import.module';
 import { IntelligenceModule } from './modules/intelligence/intelligence.module';
@@ -51,6 +52,7 @@ import { UserSettingsModule } from './modules/user-settings/user-settings.module
     IdentityModule,
     UserSettingsModule,
     FleetModule,
+    FinanceModule,
     DeliveryModule,
     OptimizerModule,
     IntelligenceModule,
