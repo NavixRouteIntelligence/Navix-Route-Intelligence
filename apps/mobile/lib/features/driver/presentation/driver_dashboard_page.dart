@@ -14,6 +14,7 @@ import '../../../core/ui/navix_states.dart';
 import '../../../core/ui/navix_status_pill.dart';
 import '../../earnings/presentation/earnings_card.dart';
 import '../../earnings/presentation/earnings_cubit.dart';
+import '../../finance/presentation/finance_card.dart';
 import '../../intelligence/data/intelligence_repository.dart';
 import '../../intelligence/domain/dwell.dart';
 import '../../intelligence/presentation/stop_intelligence_card.dart';
@@ -287,6 +288,8 @@ class _Content extends StatelessWidget {
                 _KpiRow(data: data),
                 const SizedBox(height: 12),
                 EarningsCard(deliveries: data.total, km: data.remainingKm ?? 0),
+                const SizedBox(height: 12),
+                const FinanceCard(),
                 const SizedBox(height: 12),
                 _AiInsights(data: data),
               ],
