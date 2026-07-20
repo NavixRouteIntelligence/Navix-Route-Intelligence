@@ -80,5 +80,21 @@
   "manualRouteLoadError": "Couldn't load the stops.",
   "offlineBanner": "You're offline — showing the last update.",
   "offlineTitle": "No connection",
-  "offlineDescription": "You're offline. Your route reappears when the connection is back."
+  "offlineDescription": "You're offline. Your route reappears when the connection is back.",
+  "earningsTitle": "Estimated earnings",
+  "earningsSetupPrompt": "Set your rate to see your estimated earnings.",
+  "earningsEstimateNote": "Estimate based on your rate.",
+  "earningsBreakdown": "{deliveries} deliveries · {km} km",
+  "@earningsBreakdown": {
+    "description": "Earnings breakdown line",
+    "placeholders": {
+      "deliveries": { "type": "int" },
+      "km": { "type": "String" }
+    }
+  },
+  "earningsTariffTitle": "Your rate",
+  "earningsTariffHint": "Used only on your device to estimate earnings.",
+  "earningsPerDelivery": "Per delivery",
+  "earningsPerKm": "Per km",
+  "earningsSave": "Save"
 }
