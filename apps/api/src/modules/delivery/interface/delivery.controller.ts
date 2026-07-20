@@ -17,6 +17,7 @@ import type {
   AuthenticatedUser,
   CollectionResponse,
   Delivery as DeliveryView,
+  DeliveryInsights,
   ResourceResponse,
   SyncResponse,
 } from '@navix/contracts';
@@ -29,6 +30,7 @@ import { RolesGuard } from '../../../shared/security/roles.guard';
 import { ChangeDeliveryStatusUseCase } from '../application/change-delivery-status.use-case';
 import { CreateDeliveryUseCase } from '../application/create-delivery.use-case';
 import { DeleteDeliveryUseCase } from '../application/delete-delivery.use-case';
+import { GetDeliveryInsightsUseCase } from '../application/get-delivery-insights.use-case';
 import { GetDeliveryUseCase } from '../application/get-delivery.use-case';
 import { ListDeliveriesUseCase } from '../application/list-deliveries.use-case';
 import { SyncDeliveriesUseCase } from '../application/sync-deliveries.use-case';
@@ -56,6 +58,7 @@ export class DeliveryController {
     private readonly updateDelivery: UpdateDeliveryUseCase,
     private readonly changeStatus: ChangeDeliveryStatusUseCase,
     private readonly deleteDelivery: DeleteDeliveryUseCase,
+    private readonly getInsights: GetDeliveryInsightsUseCase,
   ) {}
 
   @Post()
@@ -95,6 +98,21 @@ export class DeliveryController {
       sort: this.parseSort(query.sort),
     });
     return buildCollection(result.items, result.total, result.page, BASE_PATH);
+  }
+
+  @Get('insights')
+  @ApiOperation({ summary: 'Insights de entrega: melhor região e horário (FASE 3, F2)' })
+  async insights(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ): Promise<ResourceResponse<DeliveryInsights>> {
+    const toDate = to ? new Date(`${to.slice(0, 10)}T23:59:59.999Z`) : new Date();
+    const fromDate = from
+      ? new Date(`${from.slice(0, 10)}T00:00:00.000Z`)
+      : new Date(toDate.getTime() - 90 * 24 * 60 * 60 * 1000);
+    const data = await this.getInsights.execute(user.tenantId, fromDate, toDate);
+    return { data };
   }
 
   @Get('sync')
