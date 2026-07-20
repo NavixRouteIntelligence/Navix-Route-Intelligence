@@ -185,13 +185,19 @@ As migrações rodam com o **owner** (não o role de runtime). Regra de ouro: **
 
 As regras ([alerts.yml](../docker/observability/alerts.yml)) são avaliadas pelo Prometheus e roteadas ao Alertmanager ([alertmanager.yml](../docker/observability/alertmanager.yml)). Sem receiver, os alertas ficam visíveis nas UIs (:9090/alerts, :9093) mas **não são enviados**.
 
-**Ligar o Slack** (webhook é segredo — você insere, não vai ao repositório):
+**Ligar o Slack** — o receiver já está wired em `alertmanager.yml` (lê a URL de um arquivo montado, `api_url_file`); falta só o segredo:
 1. No Slack: crie um **Incoming Webhook** (apps.slack.com → Incoming Webhooks) → copie a URL.
-2. No ambiente do Alertmanager, exporte `SLACK_WEBHOOK_URL=<url>`.
-3. Em `alertmanager.yml`, **descomente** o receiver `slack` e aponte a rota para ele.
-4. Reinicie o Alertmanager e teste com um alerta forçado.
+2. Cole a URL (uma linha) em **`docker/observability/secrets/slack_webhook_url`** — é **gitignored**, não vai ao repositório. Base: `slack_webhook_url.example`.
+3. Ajuste o `channel` em `alertmanager.yml` se necessário.
+4. Suba/reinicie: `docker compose -f docker/observability/docker-compose.observability.yml up -d alertmanager`.
+5. Teste o envio (sem esperar um incidente):
+   ```bash
+   docker exec navix-alertmanager amtool alert add \
+     alertname=TesteSlack severity=critical --alertmanager.url=http://localhost:9093
+   ```
+   → deve cair no seu canal. Depois `amtool alert` para ver/expirar.
 
-**Discord:** mesma ideia com `discord_configs` (ou um webhook Slack-compatível `/slack` no fim da URL do Discord).
+**Discord:** mesma ideia com `discord_configs` (ou o webhook do Discord com `/slack` no fim, que aceita o formato Slack).
 
 **Camada nativa do Render** (complementar): Render → **Settings → Notifications** envia e-mail/Slack em **deploy falho** e **serviço unhealthy** — ligue isso já, independe do Prometheus.
 
