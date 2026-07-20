@@ -22,6 +22,10 @@ import {
   ROUTE_PLAN_REPOSITORY,
   type RoutePlanRepositoryPort,
 } from '../domain/ports/route-plan-repository.port';
+import {
+  SERVICE_TIME_HISTORY,
+  type ServiceTimeHistoryPort,
+} from './ports/service-time-history.port';
 import { RoutePlan } from '../domain/route-plan';
 import { VehicleProfile } from '../domain/vehicle-profile';
 import { OptimizerMetrics } from '../infrastructure/observability/optimizer-metrics';
@@ -60,6 +64,7 @@ export class OptimizeRouteUseCase {
     @Inject(ROUTE_PLAN_REPOSITORY) private readonly plans: RoutePlanRepositoryPort,
     @Inject(DELIVERY_GATEWAY) private readonly delivery: DeliveryGatewayPort,
     @Inject(AUDIT_LOG) private readonly audit: AuditLogPort,
+    @Inject(SERVICE_TIME_HISTORY) private readonly history: ServiceTimeHistoryPort,
     private readonly solver: RouteSolver,
     private readonly metrics: OptimizerMetrics,
   ) {}
@@ -78,6 +83,8 @@ export class OptimizeRouteUseCase {
     if (rawStops.length > MAX_STOPS) {
       throw new ValidationError(`Máximo de ${MAX_STOPS} paradas por otimização síncrona.`);
     }
+
+    await this.enrichWithHistory(command.tenantId, rawStops);
 
     const plan = command.vehicles?.length
       ? await this.planFleet(command, rawStops, service)
@@ -322,6 +329,27 @@ export class OptimizeRouteUseCase {
       },
       ...stops,
     ];
+  }
+
+  /**
+   * Enriquece as paradas com o tempo de serviço típico observado (Inteligência
+   * Coletiva, ADR-0065) — dado real que o solver prefere ao default por tipo.
+   * Consulta em lote e é **resiliente**: qualquer falha do histórico é ignorada
+   * (a otimização segue com os defaults), pois é um sinal, não um requisito.
+   */
+  private async enrichWithHistory(tenantId: string, stops: OptimizationStop[]): Promise<void> {
+    try {
+      const points = stops.map((s) => ({
+        latitude: s.point.latitude,
+        longitude: s.point.longitude,
+      }));
+      const typical = await this.history.typicalServiceMinutes(tenantId, points);
+      typical.forEach((minutes, i) => {
+        if (minutes != null && minutes >= 0) stops[i].historicalServiceMinutes = minutes;
+      });
+    } catch {
+      // Sinal ausente/indisponível — segue com defaults por tipo/global.
+    }
   }
 
   private async resolveStops(command: OptimizeRouteCommand): Promise<OptimizationStop[]> {

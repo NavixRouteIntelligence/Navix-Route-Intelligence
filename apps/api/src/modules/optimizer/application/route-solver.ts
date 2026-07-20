@@ -82,10 +82,14 @@ export class RouteSolver {
     const priorities = nodes.map((n, i) =>
       hasOrigin && i === 0 ? 0 : slaPriorityWeight(n.priority, windows[i]?.endMinutes ?? null),
     );
-    // Tempo de serviço efetivo por nó (ADR-0064): explícito da parada, senão o
-    // default por tipo de destino, senão o global. Usado no custo e nas métricas.
+    // Tempo de serviço efetivo por nó: explícito da parada, senão o histórico
+    // observado (Inteligência Coletiva, ADR-0065), senão o default por tipo de
+    // destino (ADR-0064), senão o global. Dado real vence heurística.
     const effectiveService = (n: OptimizationStop): number =>
-      n.serviceTimeMinutes ?? serviceMinutesForDestination(n.destinationType) ?? service;
+      n.serviceTimeMinutes ??
+      n.historicalServiceMinutes ??
+      serviceMinutesForDestination(n.destinationType) ??
+      service;
     const perNodeServiceMinutes = nodes.map(effectiveService);
 
     // Sobretaxas de pedágio/zona de risco (ADR-0024). No-op por padrão.

@@ -22,13 +22,15 @@ function build() {
     listActiveStops: async () => [],
   };
   const audit: AuditLogPort = { record: async () => undefined };
+  // Sem histórico de tempo de serviço por padrão (todos os pontos = null).
+  const history = { typicalServiceMinutes: async (_t: string, pts: unknown[]) => pts.map(() => null) };
   const registry = new StrategyRegistry([new NearestNeighbor2OptStrategy()]);
   const metrics = {
     observeSolve: jest.fn(),
     markInfeasible: jest.fn(),
   } as unknown as OptimizerMetrics;
   const solver = new RouteSolver(new HaversineRoutingProvider(), { augment: () => ({}) }, registry);
-  const uc = new OptimizeRouteUseCase(plans, gateway, audit, solver, metrics);
+  const uc = new OptimizeRouteUseCase(plans, gateway, audit, history, solver, metrics);
   return { uc, saved, metrics };
 }
 

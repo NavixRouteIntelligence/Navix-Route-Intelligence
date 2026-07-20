@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 
 import { DeliveryModule } from '../delivery/delivery.module';
+import { IntelligenceModule } from '../intelligence/intelligence.module';
 import { EnqueueOptimizationUseCase } from './application/enqueue-optimization.use-case';
 import { GetOptimizationJobUseCase } from './application/get-optimization-job.use-case';
 import { GetRoutePlanUseCase } from './application/get-route-plan.use-case';
@@ -18,6 +19,7 @@ import {
 } from './application/auto-reoptimization.service';
 import { StrategyRegistry } from './application/strategy-registry';
 import { DELIVERY_GATEWAY } from './application/ports/delivery-gateway.port';
+import { SERVICE_TIME_HISTORY } from './application/ports/service-time-history.port';
 import { COST_AUGMENTATION } from './domain/ports/cost-augmentation.port';
 import { DISTANCE_PROVIDER } from './domain/ports/distance-provider.port';
 import { ROUTING_PROVIDER } from './domain/ports/routing-provider.port';
@@ -33,6 +35,7 @@ import { HaversineRoutingProvider } from './infrastructure/routing/haversine-rou
 import { MapboxRoutingProvider } from './infrastructure/routing/mapbox-routing.provider';
 import { RealtimeJobEvents } from './infrastructure/events/realtime-job-events';
 import { DeliveryGateway } from './infrastructure/gateways/delivery.gateway';
+import { IntelligenceServiceTimeHistory } from './infrastructure/history/intelligence-service-time-history';
 import { OptimizationJobOrmEntity } from './infrastructure/persistence/optimization-job.orm-entity';
 import { OptimizationJobRepository } from './infrastructure/persistence/optimization-job.repository';
 import { RoutePlanOrmEntity } from './infrastructure/persistence/route-plan.orm-entity';
@@ -55,6 +58,7 @@ import { OptimizerController } from './interface/optimizer.controller';
   imports: [
     TypeOrmModule.forFeature([RoutePlanOrmEntity, OptimizationJobOrmEntity]),
     DeliveryModule,
+    IntelligenceModule,
   ],
   controllers: [OptimizerController],
   providers: [
@@ -117,6 +121,7 @@ import { OptimizerController } from './interface/optimizer.controller';
     OptimizationJobWorker,
     { provide: JOB_EVENTS, useClass: RealtimeJobEvents },
     { provide: DELIVERY_GATEWAY, useClass: DeliveryGateway },
+    { provide: SERVICE_TIME_HISTORY, useClass: IntelligenceServiceTimeHistory },
     { provide: OPTIMIZER_SERVICE, useClass: OptimizerService },
   ],
   exports: [OPTIMIZER_SERVICE],
