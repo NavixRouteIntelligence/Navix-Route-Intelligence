@@ -42,6 +42,7 @@ import { InProcessOptimizationJobQueue } from './infrastructure/queue/in-process
 import { BullOptimizationJobQueue } from './infrastructure/queue/bull-optimization-job.queue';
 import { OptimizationJobWorker } from './infrastructure/queue/optimization-job.worker';
 import { TenantScopedReoptimizationTrigger } from './infrastructure/reoptimization/tenant-scoped-reoptimization.trigger';
+import { ManualStrategy } from './infrastructure/strategies/manual.strategy';
 import { NearestNeighbor2OptStrategy } from './infrastructure/strategies/nearest-neighbor-2opt.strategy';
 import { OrOpt2OptStrategy } from './infrastructure/strategies/or-opt-2opt.strategy';
 import { OptimizerController } from './interface/optimizer.controller';
@@ -71,10 +72,15 @@ import { OptimizerController } from './interface/optimizer.controller';
     OptimizerMetrics,
     NearestNeighbor2OptStrategy,
     OrOpt2OptStrategy,
+    ManualStrategy,
     {
       provide: OPTIMIZATION_STRATEGIES,
-      useFactory: (nn: NearestNeighbor2OptStrategy, orOpt: OrOpt2OptStrategy) => [nn, orOpt],
-      inject: [NearestNeighbor2OptStrategy, OrOpt2OptStrategy],
+      useFactory: (
+        nn: NearestNeighbor2OptStrategy,
+        orOpt: OrOpt2OptStrategy,
+        manual: ManualStrategy,
+      ) => [nn, orOpt, manual],
+      inject: [NearestNeighbor2OptStrategy, OrOpt2OptStrategy, ManualStrategy],
     },
     { provide: DISTANCE_PROVIDER, useClass: HaversineDistanceProvider },
     HaversineRoutingProvider,

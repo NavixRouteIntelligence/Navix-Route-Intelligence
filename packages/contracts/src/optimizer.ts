@@ -5,7 +5,7 @@
 import type { VehicleType } from './fleet';
 import type { DeliveryPriority, TimeWindow } from './delivery';
 
-export type OptimizationStrategyName = 'nearest-neighbor-2opt' | 'or-opt-2opt';
+export type OptimizationStrategyName = 'nearest-neighbor-2opt' | 'or-opt-2opt' | 'manual';
 
 /** Modo Economia (ADR-0026): objetivo de otimização escolhido pelo usuário. */
 export type EconomyMode = 'time' | 'fuel' | 'tolls' | 'co2';
@@ -17,6 +17,10 @@ export const OPTIMIZATION_STRATEGIES: readonly OptimizationStrategyName[] = [
   // Metaheurística mais forte (VND: Or-opt + 2-opt) — melhor qualidade, mesmo
   // contrato (ADR-0024). Um adaptador OR-Tools nativo entraria pela mesma port.
   'or-opt-2opt',
+  // Ordem manual (identidade): preserva exatamente a sequência informada pelo
+  // cliente — fundação do Routing Strategy Engine (ADR-0062). O motor computa
+  // métricas/score/janelas para a ordem escolhida à mão, sem reordenar.
+  'manual',
 ];
 
 export interface OriginInput {
