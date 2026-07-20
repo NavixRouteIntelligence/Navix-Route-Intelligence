@@ -393,6 +393,55 @@ class _OptimizeMineButton extends StatelessWidget {
   }
 }
 
+/// Indicador "ao vivo" do painel (M2). Mostra o pulso quando está recebendo
+/// atualizações + o frescor ("há Xs"); tocar pausa/retoma o tempo real.
+class _LivePill extends StatelessWidget {
+  const _LivePill();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return BlocBuilder<DriverDashboardCubit, DriverDashboardState>(
+      buildWhen: (p, c) => p.live != c.live || p.lastUpdatedAt != c.lastUpdatedAt,
+      builder: (context, state) {
+        final t = context.tokens;
+        final live = state.live;
+        final color = live ? t.accent : t.muted;
+        final age = state.lastUpdatedAt;
+        final label = live
+            ? (age != null ? '${l10n.live} · ${_fmtAge(age)}' : l10n.live)
+            : l10n.paused;
+        return Semantics(
+          button: true,
+          label: label,
+          child: Material(
+            color: color.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(999),
+            child: InkWell(
+              onTap: () => context.read<DriverDashboardCubit>().toggleLive(),
+              borderRadius: BorderRadius.circular(999),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (live)
+                      _LiveDot(color: color, animate: true)
+                    else
+                      Icon(Icons.pause, size: 12, color: color),
+                    const SizedBox(width: 6),
+                    Text(label, style: TextStyle(color: color, fontSize: 11.5, fontWeight: FontWeight.w600)),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
 class _RouteHero extends StatelessWidget {
   const _RouteHero({required this.data});
   final DriverDashboardData data;
@@ -407,7 +456,12 @@ class _RouteHero extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const NavixSectionHeader(title: 'Minha rota', icon: Icons.alt_route_outlined),
+          const Row(
+            children: [
+              Expanded(child: NavixSectionHeader(title: 'Minha rota', icon: Icons.alt_route_outlined)),
+              _LivePill(),
+            ],
+          ),
           Row(
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
