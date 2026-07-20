@@ -58,5 +58,8 @@
   "manualRouteReoptimize": "Otimização inteligente",
   "manualRouteEmptyTitle": "Paradas insuficientes",
   "manualRouteEmptyDescription": "Você precisa de ao menos duas paradas geocodificadas para reordenar.",
-  "manualRouteLoadError": "Não foi possível carregar as paradas."
+  "manualRouteLoadError": "Não foi possível carregar as paradas.",
+  "offlineBanner": "Você está offline — mostrando a última atualização.",
+  "offlineTitle": "Sem conexão",
+  "offlineDescription": "Você está offline. Sua rota reaparece quando a conexão voltar."
 }
