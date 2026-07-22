@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 
+import '../../../app/shell/adaptive_nav_scaffold.dart';
 import '../../../app/theme/navix_tokens.dart';
 import '../../../core/ui/navix_card.dart';
 import '../../../core/ui/navix_section_header.dart';
@@ -25,7 +26,7 @@ class FinancePage extends StatelessWidget {
     return BlocProvider(
       create: (_) => GetIt.instance<FinanceCubit>()..load(),
       child: Scaffold(
-        appBar: AppBar(title: Text(l10n.finTitle)),
+        appBar: AppBar(leading: const NavLeading(), title: Text(l10n.finTitle)),
         body: BlocConsumer<FinanceCubit, FinanceState>(
           listenWhen: (p, c) => p.error != c.error && c.error != null,
           listener: (context, state) => ScaffoldMessenger.of(context)
