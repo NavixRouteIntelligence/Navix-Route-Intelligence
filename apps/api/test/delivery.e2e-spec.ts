@@ -24,6 +24,7 @@ import type {
 } from '../src/modules/delivery/domain/ports/delivery-repository.port';
 import type { NormalizedSync } from '../src/shared/kernel/sync';
 import { DeliveryController } from '../src/modules/delivery/interface/delivery.controller';
+import { GetDeliveryInsightsUseCase } from '../src/modules/delivery/application/get-delivery-insights.use-case';
 
 /** Repositório em memória — permite testar o HTTP sem banco. */
 class InMemoryDeliveryRepository implements DeliveryRepositoryPort {
@@ -110,6 +111,7 @@ describe('Delivery (e2e)', () => {
       providers: [
         CreateDeliveryUseCase,
         GetDeliveryUseCase,
+        GetDeliveryInsightsUseCase,
         ListDeliveriesUseCase,
         SyncDeliveriesUseCase,
         UpdateDeliveryUseCase,

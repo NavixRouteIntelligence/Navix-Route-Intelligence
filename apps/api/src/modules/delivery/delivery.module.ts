@@ -5,6 +5,7 @@ import { FleetModule } from '../fleet/fleet.module';
 import { ChangeDeliveryStatusUseCase } from './application/change-delivery-status.use-case';
 import { CreateDeliveryUseCase } from './application/create-delivery.use-case';
 import { DeleteDeliveryUseCase } from './application/delete-delivery.use-case';
+import { GetDeliveryInsightsUseCase } from './application/get-delivery-insights.use-case';
 import { GetDeliveryUseCase } from './application/get-delivery.use-case';
 import { ListDeliveriesUseCase } from './application/list-deliveries.use-case';
 import { SyncDeliveriesUseCase } from './application/sync-deliveries.use-case';
@@ -28,6 +29,7 @@ import { DeliveryController } from './interface/delivery.controller';
   providers: [
     CreateDeliveryUseCase,
     GetDeliveryUseCase,
+    GetDeliveryInsightsUseCase,
     ListDeliveriesUseCase,
     SyncDeliveriesUseCase,
     UpdateDeliveryUseCase,

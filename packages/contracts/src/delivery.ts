@@ -127,3 +127,31 @@ export interface UpdateDeliveryRequest {
 export interface ChangeDeliveryStatusRequest {
   status: DeliveryStatus;
 }
+
+// ---------- Insights de entregas (FASE 3, F2 — melhor região/horário) ----------
+
+/** Volume de entregas concluídas por cidade. */
+export interface RegionStat {
+  city: string;
+  deliveries: number;
+}
+
+/** Volume de entregas concluídas por hora do dia (0–23, UTC). */
+export interface HourStat {
+  hour: number;
+  deliveries: number;
+}
+
+/**
+ * Padrões de entrega de um período (FASE 3, F2): onde e quando o motorista mais
+ * conclui entregas. `bestRegion`/`bestHour` são os de maior volume; `null` sem dados.
+ */
+export interface DeliveryInsights {
+  from: string;
+  to: string;
+  totalDelivered: number;
+  topRegions: RegionStat[];
+  byHour: HourStat[];
+  bestRegion: string | null;
+  bestHour: number | null;
+}
