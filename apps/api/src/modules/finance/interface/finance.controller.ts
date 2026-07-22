@@ -15,7 +15,9 @@ import type {
   AuthenticatedUser,
   CollectionResponse,
   FinancialEntry as FinancialEntryView,
+  FinancialHistory,
   FinancialSummary,
+  HistoryGranularity,
   ResourceResponse,
 } from '@navix/contracts';
 
@@ -26,6 +28,7 @@ import { Roles } from '../../../shared/security/roles.decorator';
 import { RolesGuard } from '../../../shared/security/roles.guard';
 import { CreateFinancialEntryUseCase } from '../application/create-financial-entry.use-case';
 import { DeleteFinancialEntryUseCase } from '../application/delete-financial-entry.use-case';
+import { GetFinancialHistoryUseCase } from '../application/get-financial-history.use-case';
 import { GetFinancialSummaryUseCase } from '../application/get-financial-summary.use-case';
 import { ListFinancialEntriesUseCase } from '../application/list-financial-entries.use-case';
 import { CreateFinancialEntryDto } from './dto/create-financial-entry.dto';
@@ -55,6 +58,7 @@ export class FinanceController {
     private readonly listEntries: ListFinancialEntriesUseCase,
     private readonly deleteEntry: DeleteFinancialEntryUseCase,
     private readonly getSummary: GetFinancialSummaryUseCase,
+    private readonly getHistory: GetFinancialHistoryUseCase,
   ) {}
 
   private range(query: PeriodQueryDto): { from: Date; to: Date } {
@@ -93,6 +97,23 @@ export class FinanceController {
   ): Promise<ResourceResponse<FinancialSummary>> {
     const { from, to } = this.range(query);
     const data = await this.getSummary.execute(user.tenantId, from, to);
+    return { data };
+  }
+
+  @Get('history')
+  async history(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('granularity') granularity?: string,
+    @Query() query?: PeriodQueryDto,
+  ): Promise<ResourceResponse<FinancialHistory>> {
+    const g: HistoryGranularity = granularity === 'week' ? 'week' : 'month';
+    const to = query?.to ? endOfDay(query!.to.slice(0, 10)) : new Date();
+    // Default: 6 meses (mês) ou 12 semanas (semana).
+    const spanDays = g === 'week' ? 12 * 7 : 183;
+    const from = query?.from
+      ? startOfDay(query!.from.slice(0, 10))
+      : new Date(to.getTime() - spanDays * 24 * 60 * 60 * 1000);
+    const data = await this.getHistory.execute(user.tenantId, from, to, g);
     return { data };
   }
 

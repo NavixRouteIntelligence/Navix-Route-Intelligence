@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { DeliveryModule } from '../delivery/delivery.module';
 import { CreateFinancialEntryUseCase } from './application/create-financial-entry.use-case';
 import { DeleteFinancialEntryUseCase } from './application/delete-financial-entry.use-case';
+import { GetFinancialHistoryUseCase } from './application/get-financial-history.use-case';
 import { GetFinancialSummaryUseCase } from './application/get-financial-summary.use-case';
 import { ListFinancialEntriesUseCase } from './application/list-financial-entries.use-case';
 import { DELIVERY_COUNT } from './application/ports/delivery-count.port';
@@ -26,6 +27,7 @@ import { FinanceController } from './interface/finance.controller';
     ListFinancialEntriesUseCase,
     DeleteFinancialEntryUseCase,
     GetFinancialSummaryUseCase,
+    GetFinancialHistoryUseCase,
     { provide: FINANCIAL_ENTRY_REPOSITORY, useClass: FinancialEntryRepository },
     { provide: DELIVERY_COUNT, useClass: DeliveryCountGateway },
   ],

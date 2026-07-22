@@ -175,5 +175,6 @@
   "profileFinanceSubtitle": "Cost/km, profit and history",
   "finInsights": "Insights",
   "finBestRegion": "Best region",
-  "finBestHour": "Best hour"
+  "finBestHour": "Best hour",
+  "finHistory": "History"
 }

@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/error/failure.dart';
 import '../data/finance_repository.dart';
 import '../domain/finance_models.dart';
+import '../domain/history_models.dart';
 import '../domain/insights_models.dart';
 
 enum FinanceStatus { loading, ready, error }
@@ -14,6 +15,7 @@ class FinanceState extends Equatable {
     this.summary = const FinancialSummary(),
     this.entries = const [],
     this.insights = const DeliveryInsights(),
+    this.history = const FinancialHistory(),
     this.busy = false,
     this.error,
   });
@@ -22,6 +24,7 @@ class FinanceState extends Equatable {
   final FinancialSummary summary;
   final List<FinancialEntry> entries;
   final DeliveryInsights insights;
+  final FinancialHistory history;
   final bool busy;
   final String? error;
 
@@ -30,6 +33,7 @@ class FinanceState extends Equatable {
     FinancialSummary? summary,
     List<FinancialEntry>? entries,
     DeliveryInsights? insights,
+    FinancialHistory? history,
     bool? busy,
     String? error,
     bool clearError = false,
@@ -39,13 +43,14 @@ class FinanceState extends Equatable {
       summary: summary ?? this.summary,
       entries: entries ?? this.entries,
       insights: insights ?? this.insights,
+      history: history ?? this.history,
       busy: busy ?? this.busy,
       error: clearError ? null : (error ?? this.error),
     );
   }
 
   @override
-  List<Object?> get props => [status, summary, entries, insights, busy, error];
+  List<Object?> get props => [status, summary, entries, insights, history, busy, error];
 }
 
 /// Gerencia as finanças do motorista (FASE 3, F1b). `load` carrega resumo +
@@ -61,7 +66,8 @@ class FinanceCubit extends Cubit<FinanceState> {
       final summary = await _repository.summary();
       final entries = await _repository.entries();
       final insights = await _repository.insights();
-      emit(FinanceState(status: FinanceStatus.ready, summary: summary, entries: entries, insights: insights));
+      final history = await _repository.history();
+      emit(FinanceState(status: FinanceStatus.ready, summary: summary, entries: entries, insights: insights, history: history));
     } on Failure catch (f) {
       emit(FinanceState(status: FinanceStatus.error, error: f.message));
     } catch (_) {
