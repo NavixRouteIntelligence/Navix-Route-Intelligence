@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 
+import '../../../app/shell/adaptive_nav_scaffold.dart';
 import '../../../app/theme/navix_tokens.dart';
 import '../../../core/theme/theme_cubit.dart';
 import '../../../core/ui/navix_card.dart';
@@ -390,6 +391,8 @@ class _TopBar extends StatelessWidget {
     final (color, label) = running ? (t.accent, 'Em rota') : (t.muted, 'Pausado');
     return Row(
       children: [
+        const NavMenuButton(),
+        const SizedBox(width: 4),
         CircleAvatar(radius: 22, backgroundColor: Theme.of(context).colorScheme.primary, child: const Text('CA', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700))),
         const SizedBox(width: 12),
         Expanded(

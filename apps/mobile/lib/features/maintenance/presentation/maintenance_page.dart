@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 
+import '../../../app/shell/adaptive_nav_scaffold.dart';
 import '../../../app/theme/navix_tokens.dart';
 import '../../../core/ui/navix_card.dart';
 import '../../../core/ui/navix_section_header.dart';
@@ -25,7 +26,7 @@ class MaintenancePage extends StatelessWidget {
     return BlocProvider(
       create: (_) => GetIt.instance<MaintenanceCubit>()..load(),
       child: Scaffold(
-        appBar: AppBar(title: Text(l10n.maintTitle)),
+        appBar: AppBar(leading: const NavLeading(), title: Text(l10n.maintTitle)),
         body: BlocConsumer<MaintenanceCubit, MaintenanceState>(
           listenWhen: (p, c) => p.error != c.error && c.error != null,
           listener: (context, state) => ScaffoldMessenger.of(context)

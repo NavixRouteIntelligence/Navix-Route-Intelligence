@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 
+import '../../../app/shell/adaptive_nav_scaffold.dart';
 import '../../../core/theme/theme_cubit.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../../imports/presentation/import_center_page.dart';
@@ -29,6 +30,7 @@ class DriverDeliveriesPage extends StatelessWidget {
         // Builder para obter um context ABAIXO do BlocProvider (lê o cubit no FAB).
         builder: (context) => Scaffold(
           appBar: AppBar(
+            leading: const NavLeading(),
             title: Text(l10n.navDeliveries),
             actions: [
               IconButton(
