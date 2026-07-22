@@ -26,6 +26,26 @@ import {
 import { PASSWORD_HASHER, type PasswordHasherPort } from './ports/password-hasher.port';
 import { TOKEN_SERVICE, type TokenServicePort } from './ports/token-service.port';
 
+/** Índice único global de e-mail (lower(email)) — ver migração TenantSlugAndEmailIdentity. */
+const USER_EMAIL_CONSTRAINT = 'uq_users_email_lower';
+
+/**
+ * Detecta violação de índice único do Postgres (SQLSTATE 23505) para uma
+ * constraint/índice específico. TypeORM embrulha o erro do driver, então
+ * checamos tanto o topo quanto `driverError`. Erros que não são do banco
+ * (ex.: `ConflictError` do check preventivo) não têm `code`/`constraint`,
+ * então nunca casam.
+ */
+function isUniqueViolation(err: unknown, constraint: string): boolean {
+  const e = err as {
+    code?: string;
+    constraint?: string;
+    driverError?: { code?: string; constraint?: string };
+  };
+  const driver = e?.driverError ?? e;
+  return driver?.code === '23505' && driver?.constraint === constraint;
+}
+
 /**
  * Criação de conta com escolha de perfil (Motorista Autônomo × Empresa).
  *
@@ -73,26 +93,39 @@ export class RegisterUseCase {
     // Sufixo do id garante unicidade sem consulta extra nem corrida.
     const slug = `${slugify(organizationName)}-${tenantId.replace(/-/g, '').slice(0, 6)}`;
 
-    await this.dataSource.transaction(async (manager) => {
-      // E-mail é identidade global: rejeita duplicata com erro amigável (o índice
-      // único do banco é a rede de segurança contra corrida).
-      const existing = (await manager.query(
-        `SELECT 1 FROM users WHERE LOWER(email) = LOWER($1) LIMIT 1`,
-        [email],
-      )) as unknown[];
-      if (existing.length > 0) {
+    try {
+      await this.dataSource.transaction(async (manager) => {
+        // E-mail é identidade global: rejeita duplicata com erro amigável (o índice
+        // único do banco é a rede de segurança contra corrida).
+        const existing = (await manager.query(
+          `SELECT 1 FROM users WHERE LOWER(email) = LOWER($1) LIMIT 1`,
+          [email],
+        )) as unknown[];
+        if (existing.length > 0) {
+          throw new ConflictError('E-mail já cadastrado.');
+        }
+        await manager.query(
+          `INSERT INTO tenants (id, name, account_type, slug) VALUES ($1, $2, $3, $4)`,
+          [tenantId, organizationName, accountType, slug],
+        );
+        await manager.query(
+          `INSERT INTO users (id, tenant_id, email, password_hash, status, roles)
+             VALUES ($1, $2, $3, $4, 'active', $5)`,
+          [userId, tenantId, email, passwordHash, roles],
+        );
+      });
+    } catch (err) {
+      // Corrida: dois cadastros simultâneos com o mesmo e-mail podem passar pelo
+      // SELECT preventivo (ambos vazios) e só colidir no índice único global.
+      // Mapeia o 23505 para o mesmo 409 amigável. E-mail duplicado é definitivo:
+      // não há retry (diferente de uma colisão aleatória de identificador).
+      // `ConflictError` do check preventivo não casa (não é erro do banco) e é
+      // re-lançado intacto.
+      if (isUniqueViolation(err, USER_EMAIL_CONSTRAINT)) {
         throw new ConflictError('E-mail já cadastrado.');
       }
-      await manager.query(
-        `INSERT INTO tenants (id, name, account_type, slug) VALUES ($1, $2, $3, $4)`,
-        [tenantId, organizationName, accountType, slug],
-      );
-      await manager.query(
-        `INSERT INTO users (id, tenant_id, email, password_hash, status, roles)
-           VALUES ($1, $2, $3, $4, 'active', $5)`,
-        [userId, tenantId, email, passwordHash, roles],
-      );
-    });
+      throw err;
+    }
 
     const access = await this.tokens.signAccessToken({ sub: userId, tenantId, roles });
     const refresh = this.tokens.issueRefreshToken(userId);

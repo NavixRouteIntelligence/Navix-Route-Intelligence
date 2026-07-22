@@ -7,13 +7,25 @@ import type { PasswordHasherPort } from './ports/password-hasher.port';
 import type { TokenServicePort } from './ports/token-service.port';
 import { RegisterUseCase } from './register.use-case';
 
-function build(opts: { emailExists?: boolean } = {}) {
+/** Simula o QueryFailedError (SQLSTATE 23505) do Postgres para um índice único. */
+function uniqueViolation(constraint: string): Error {
+  const err = new Error('duplicate key value violates unique constraint') as Error & {
+    code: string;
+    constraint: string;
+  };
+  err.code = '23505';
+  err.constraint = constraint;
+  return err;
+}
+
+function build(opts: { emailExists?: boolean; failUsersInsert?: Error } = {}) {
   const queries: { sql: string; params: unknown[] }[] = [];
   const dataSource = {
     transaction: async (fn: (m: unknown) => Promise<unknown>) =>
       fn({
         query: async (sql: string, params: unknown[]) => {
           queries.push({ sql, params });
+          if (opts.failUsersInsert && sql.includes('INSERT INTO users')) throw opts.failUsersInsert;
           if (sql.includes('SELECT 1 FROM users')) return opts.emailExists ? [{ one: 1 }] : [];
           return [];
         },
@@ -82,6 +94,22 @@ describe('RegisterUseCase', () => {
         organizationName: 'ACME Log',
       }),
     ).rejects.toBeInstanceOf(ConflictError);
+  });
+
+  it('corrida: violação do índice único de e-mail vira ConflictError (sem retry)', async () => {
+    const { uc, queries } = build({ failUsersInsert: uniqueViolation('uq_users_email_lower') });
+    await expect(
+      uc.execute({
+        accountType: 'company',
+        name: 'Ana',
+        email: 'race@acme.com',
+        password: 'supersecret',
+        organizationName: 'ACME Log',
+      }),
+    ).rejects.toBeInstanceOf(ConflictError);
+
+    // E-mail duplicado é definitivo: não reprocessa (exatamente 1 insert de tenant).
+    expect(queries.filter((q) => q.sql.includes('INSERT INTO tenants'))).toHaveLength(1);
   });
 
   it('motorista autônomo: cria organização pessoal + usuário driver', async () => {
