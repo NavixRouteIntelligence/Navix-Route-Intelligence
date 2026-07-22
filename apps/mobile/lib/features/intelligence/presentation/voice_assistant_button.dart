@@ -21,6 +21,9 @@ class VoiceAssistantButton extends StatelessWidget {
           _ => 'Falar',
         };
         return FloatingActionButton.extended(
+          // Tag única: as abas vivem juntas num IndexedStack, e FABs com a tag
+          // padrão colidem no Hero ao animar uma rota (ex.: abrir o Drawer).
+          heroTag: 'fab-voice-assistant',
           onPressed: busy ? null : () => context.read<VoiceAssistantCubit>().start(),
           backgroundColor: busy ? t.danger : Theme.of(context).colorScheme.primary,
           icon: Icon(busy ? Icons.mic : Icons.mic_none_outlined),

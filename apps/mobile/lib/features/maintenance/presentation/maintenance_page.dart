@@ -52,6 +52,7 @@ class MaintenancePage extends StatelessWidget {
           builder: (context, state) {
             if (state.status != MaintenanceStatus.ready) return const SizedBox.shrink();
             return FloatingActionButton.extended(
+              heroTag: 'fab-maintenance',
               onPressed: state.busy ? null : () => _add(context),
               icon: const Icon(Icons.add),
               label: Text(l10n.maintAddTitle),

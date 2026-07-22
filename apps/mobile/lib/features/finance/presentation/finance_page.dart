@@ -45,6 +45,7 @@ class FinancePage extends StatelessWidget {
         ),
         floatingActionButton: BlocBuilder<FinanceCubit, FinanceState>(
           builder: (context, state) => FloatingActionButton.extended(
+            heroTag: 'fab-finance',
             onPressed: state.busy ? null : () => _add(context),
             icon: const Icon(Icons.add),
             label: Text(l10n.finAddTitle),

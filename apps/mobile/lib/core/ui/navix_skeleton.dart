@@ -15,10 +15,17 @@ class NavixSkeleton extends StatefulWidget {
 }
 
 class _NavixSkeletonState extends State<NavixSkeleton> with SingleTickerProviderStateMixin {
-  late final AnimationController _controller = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 900),
-  )..repeat(reverse: true);
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    // Criado no initState (não em `late final` preguiçoso): se o widget for
+    // descartado sem nunca ter construído, o dispose() criaria o controller
+    // sobre um elemento já desativado. Ver _DotState em nav_header.dart.
+    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 900))
+      ..repeat(reverse: true);
+  }
 
   @override
   void dispose() {

@@ -137,54 +137,55 @@ class AdaptiveNavScaffoldState extends State<AdaptiveNavScaffold> {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final wide = constraints.maxWidth >= widget.breakpoint;
-        final body = IndexedStack(
-          index: _index,
-          children: widget.tabs.map((t) => t.page).toList(),
-        );
-        final drawer = _NavDrawer(
+    // A largura vem do MediaQuery, NÃO de um LayoutBuilder: o LayoutBuilder
+    // reconstrói na fase de *layout*, e ter o Scaffold com GlobalKey + o
+    // InheritedWidget lá dentro corrompia a lista de elementos inativos ao
+    // descartar o Drawer (assert `_elements.contains(element)`). O shell ocupa
+    // a janela inteira, então MediaQuery e constraints coincidem.
+    final wide = MediaQuery.sizeOf(context).width >= widget.breakpoint;
+    final body = IndexedStack(
+      index: _index,
+      children: widget.tabs.map((t) => t.page).toList(),
+    );
+
+    return AdaptiveNavScope(
+      state: this,
+      child: Scaffold(
+        key: _scaffoldKey,
+        drawer: _NavDrawer(
           header: widget.header,
           menu: widget.menu,
           currentIndex: _index,
-        );
-
-        final scaffold = Scaffold(
-          key: _scaffoldKey,
-          drawer: drawer,
-          body: wide
-              ? Row(
-                  children: [
-                    _NavRail(
-                      tabs: widget.tabs,
-                      index: _index,
-                      onSelect: selectTab,
-                      onMenu: openDrawer,
+        ),
+        body: wide
+            ? Row(
+                children: [
+                  _NavRail(
+                    tabs: widget.tabs,
+                    index: _index,
+                    onSelect: selectTab,
+                    onMenu: openDrawer,
+                  ),
+                  const VerticalDivider(width: 1, thickness: 1),
+                  Expanded(child: body),
+                ],
+              )
+            : body,
+        bottomNavigationBar: wide
+            ? null
+            : NavigationBar(
+                selectedIndex: _index,
+                onDestinationSelected: selectTab,
+                destinations: [
+                  for (final t in widget.tabs)
+                    NavigationDestination(
+                      icon: Icon(t.icon),
+                      selectedIcon: Icon(t.selectedIcon),
+                      label: t.label,
                     ),
-                    const VerticalDivider(width: 1, thickness: 1),
-                    Expanded(child: body),
-                  ],
-                )
-              : body,
-          bottomNavigationBar: wide
-              ? null
-              : NavigationBar(
-                  selectedIndex: _index,
-                  onDestinationSelected: selectTab,
-                  destinations: [
-                    for (final t in widget.tabs)
-                      NavigationDestination(
-                        icon: Icon(t.icon),
-                        selectedIcon: Icon(t.selectedIcon),
-                        label: t.label,
-                      ),
-                  ],
-                ),
-        );
-
-        return AdaptiveNavScope(state: this, child: scaffold);
-      },
+                ],
+              ),
+      ),
     );
   }
 }
