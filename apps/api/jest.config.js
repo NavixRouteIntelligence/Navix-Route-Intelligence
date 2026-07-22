@@ -16,6 +16,8 @@ module.exports = {
     '!src/main-worker.ts',
     '!src/**/*.spec.ts',
     '!src/database/migrations/**',
+    // Seeds/utilitários de dev (não são código de aplicação a cobrir).
+    '!src/database/seed*.ts',
   ],
   coverageDirectory: 'coverage',
   // Piso de cobertura OBRIGATÓRIO (ratchet): a build falha se cair abaixo disto.
