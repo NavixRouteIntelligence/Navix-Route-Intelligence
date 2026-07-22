@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 
 import '../../../core/network/dio_failure_mapper.dart';
 import '../domain/finance_models.dart';
+import '../domain/history_models.dart';
 import '../domain/insights_models.dart';
 
 /// Acesso ao ledger financeiro (FASE 3): resumo (custo/km, lucro/entrega) e
@@ -26,6 +27,16 @@ class FinanceRepository {
       final res = await _dio.get<dynamic>('/deliveries/insights');
       final data = res.data is Map<String, dynamic> ? (res.data as Map<String, dynamic>)['data'] : null;
       return data is Map<String, dynamic> ? DeliveryInsights.fromJson(data) : const DeliveryInsights();
+    } on DioException catch (e) {
+      throw mapDioException(e);
+    }
+  }
+
+  Future<FinancialHistory> history({String granularity = 'month'}) async {
+    try {
+      final res = await _dio.get<dynamic>('/finance/history', queryParameters: {'granularity': granularity});
+      final data = res.data is Map<String, dynamic> ? (res.data as Map<String, dynamic>)['data'] : null;
+      return data is Map<String, dynamic> ? FinancialHistory.fromJson(data) : const FinancialHistory();
     } on DioException catch (e) {
       throw mapDioException(e);
     }

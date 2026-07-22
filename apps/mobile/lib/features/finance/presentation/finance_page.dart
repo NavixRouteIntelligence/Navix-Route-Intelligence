@@ -8,6 +8,7 @@ import '../../../core/ui/navix_section_header.dart';
 import '../../../core/ui/navix_states.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../domain/finance_models.dart';
+import '../domain/history_models.dart';
 import '../domain/insights_models.dart';
 import 'add_finance_entry_sheet.dart';
 import 'finance_cubit.dart';
@@ -80,6 +81,11 @@ class _Content extends StatelessWidget {
           const SizedBox(height: 12),
           _Totals(summary: s),
           const SizedBox(height: 12),
+          if (state.history.hasData) ...[
+            NavixSectionHeader(title: l10n.finHistory, icon: Icons.show_chart),
+            _HistoryCard(history: state.history),
+            const SizedBox(height: 12),
+          ],
           if (state.insights.hasData) ...[
             NavixSectionHeader(title: l10n.finInsights, icon: Icons.insights_outlined),
             _InsightsCard(insights: state.insights),
@@ -157,6 +163,112 @@ class _Totals extends StatelessWidget {
         cell(l10n.finBalance, summary.balance, summary.balance >= 0 ? t.success : t.danger),
       ]),
     );
+  }
+}
+
+/// Histórico financeiro (F3): receita (verde) e despesa (vermelho) por período,
+/// em barras, com legenda. Mostra os últimos períodos.
+class _HistoryCard extends StatelessWidget {
+  const _HistoryCard({required this.history});
+  final FinancialHistory history;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    final l10n = AppLocalizations.of(context);
+    // Últimos 8 períodos (o backend já devolve ordenado do mais antigo ao recente).
+    final points = history.points.length > 8
+        ? history.points.sublist(history.points.length - 8)
+        : history.points;
+    final max = points.fold<double>(
+      0,
+      (m, p) => [m, p.income, p.expense].reduce((a, b) => a > b ? a : b),
+    );
+    return NavixCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            height: 96,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: points.map((p) => Expanded(child: _PeriodBars(point: p, max: max, income: t.success, expense: t.danger, track: t.surfaceAlt))).toList(),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(children: [
+            _LegendDot(color: t.success, label: l10n.finIncome),
+            const SizedBox(width: 16),
+            _LegendDot(color: t.danger, label: l10n.finExpense),
+          ]),
+        ],
+      ),
+    );
+  }
+}
+
+class _PeriodBars extends StatelessWidget {
+  const _PeriodBars({required this.point, required this.max, required this.income, required this.expense, required this.track});
+  final FinancialHistoryPoint point;
+  final double max;
+  final Color income;
+  final Color expense;
+  final Color track;
+
+  double _h(double v) => max <= 0 ? 4 : (4 + (v / max) * 64).clamp(4, 68).toDouble();
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    // Rótulo curto: 'MM' do mês ou 'dd/MM' da semana.
+    final parts = point.period.split('-');
+    final label = parts.length >= 3 ? '${parts[2]}/${parts[1]}' : (parts.length == 2 ? parts[1] : point.period);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 3),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              _Bar(height: _h(point.income), color: income),
+              const SizedBox(width: 2),
+              _Bar(height: _h(point.expense), color: expense),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(label, style: TextStyle(fontSize: 9, color: t.muted)),
+        ],
+      ),
+    );
+  }
+}
+
+class _Bar extends StatelessWidget {
+  const _Bar({required this.height, required this.color});
+  final double height;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(width: 7, height: height, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2)));
+  }
+}
+
+class _LegendDot extends StatelessWidget {
+  const _LegendDot({required this.color, required this.label});
+  final Color color;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+      const SizedBox(width: 5),
+      Text(label, style: TextStyle(fontSize: 11, color: t.muted)),
+    ]);
   }
 }
 

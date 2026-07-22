@@ -57,3 +57,25 @@ export interface FinancialSummary {
   deliveries: number;
   profitPerDelivery: number | null;
 }
+
+/** Granularidade do histórico financeiro (FASE 3, F3). */
+export type HistoryGranularity = 'week' | 'month';
+
+export const HISTORY_GRANULARITIES: readonly HistoryGranularity[] = ['week', 'month'];
+
+/** Um ponto da série: receita/despesa/saldo do período. */
+export interface FinancialHistoryPoint {
+  /** Chave do período: 'YYYY-MM' (mês) ou 'YYYY-MM-DD' (segunda-feira da semana, UTC). */
+  period: string;
+  income: number;
+  expense: number;
+  balance: number;
+}
+
+/** Histórico financeiro por período (FASE 3, F3), do mais antigo ao mais recente. */
+export interface FinancialHistory {
+  granularity: HistoryGranularity;
+  from: string;
+  to: string;
+  points: FinancialHistoryPoint[];
+}

@@ -4,6 +4,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:navix_mobile/core/error/failure.dart';
 import 'package:navix_mobile/features/finance/data/finance_repository.dart';
 import 'package:navix_mobile/features/finance/domain/finance_models.dart';
+import 'package:navix_mobile/features/finance/domain/history_models.dart';
 import 'package:navix_mobile/features/finance/domain/insights_models.dart';
 import 'package:navix_mobile/features/finance/presentation/finance_cubit.dart';
 
@@ -34,6 +35,7 @@ void main() {
       when(() => repo.summary()).thenAnswer((_) async => summary);
       when(() => repo.entries()).thenAnswer((_) async => [entry]);
       when(() => repo.insights()).thenAnswer((_) async => const DeliveryInsights());
+      when(() => repo.history(granularity: any(named: 'granularity'))).thenAnswer((_) async => const FinancialHistory());
       return FinanceCubit(repo);
     },
     act: (c) => c.load(),
@@ -75,6 +77,7 @@ void main() {
       when(() => repo.summary()).thenAnswer((_) async => summary);
       when(() => repo.entries()).thenAnswer((_) async => [entry]);
       when(() => repo.insights()).thenAnswer((_) async => const DeliveryInsights());
+      when(() => repo.history(granularity: any(named: 'granularity'))).thenAnswer((_) async => const FinancialHistory());
       when(() => repo.addEntry(any())).thenAnswer((_) async {});
       return FinanceCubit(repo);
     },
@@ -94,6 +97,7 @@ void main() {
       when(() => repo.summary()).thenAnswer((_) async => summary);
       when(() => repo.entries()).thenAnswer((_) async => [entry]);
       when(() => repo.insights()).thenAnswer((_) async => const DeliveryInsights());
+      when(() => repo.history(granularity: any(named: 'granularity'))).thenAnswer((_) async => const FinancialHistory());
       when(() => repo.deleteEntry(any())).thenAnswer((_) async {});
       return FinanceCubit(repo);
     },

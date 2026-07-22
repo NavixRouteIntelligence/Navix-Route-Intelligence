@@ -131,5 +131,6 @@
   "profileFinanceSubtitle": "Coste/km, beneficio e historial",
   "finInsights": "Insights",
   "finBestRegion": "Mejor región",
-  "finBestHour": "Mejor hora"
+  "finBestHour": "Mejor hora",
+  "finHistory": "Historial"
 }
