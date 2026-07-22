@@ -72,7 +72,7 @@ void main() {
     await cubit.loadDeliveries();
     await cubit.optimize();
     expect(cubit.state.step, OptimizerStep.deliveries); // não avançou
-    expect(cubit.state.error, 'Sem conexão com o servidor.');
+    expect(cubit.state.error, const NetworkFailure());
   });
 
   // S3 — caminho do MOTORISTA (/route-plans/mine): mesmo fluxo, só o escopo muda.
@@ -119,6 +119,6 @@ void main() {
 
     expect(cubit.state.optimizing, isFalse);
     expect(cubit.state.step, OptimizerStep.deliveries);
-    expect(cubit.state.error, 'A otimização falhou.');
+    expect(cubit.state.error, const ServerFailure('A otimização falhou.'));
   });
 }

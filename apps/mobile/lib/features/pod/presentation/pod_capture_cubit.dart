@@ -26,7 +26,7 @@ class PodCaptureState extends Equatable {
   final bool submitting;
   final bool done;
   final bool queued; // salvo offline, aguardando sincronização
-  final String? error;
+  final Failure? error;
 
   PodCaptureState copyWith({
     GpsStatus? gps,
@@ -35,7 +35,7 @@ class PodCaptureState extends Equatable {
     bool? submitting,
     bool? done,
     bool? queued,
-    String? error,
+    Failure? error,
     bool clearError = false,
   }) {
     return PodCaptureState(
@@ -109,9 +109,9 @@ class PodCaptureCubit extends Cubit<PodCaptureState> {
       await _queue.enqueue(submission);
       emit(state.copyWith(submitting: false, done: true, queued: true));
     } on Failure catch (f) {
-      emit(state.copyWith(submitting: false, error: f.message));
+      emit(state.copyWith(submitting: false, error: f));
     } catch (_) {
-      emit(state.copyWith(submitting: false, error: 'Não foi possível registrar o comprovante.'));
+      emit(state.copyWith(submitting: false, error: const UnknownFailure()));
     }
   }
 }

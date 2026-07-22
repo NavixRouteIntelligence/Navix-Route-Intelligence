@@ -22,7 +22,7 @@ class DriverDashboardState extends Equatable {
 
   final DriverDashboardStatus status;
   final DriverDashboardData? data;
-  final String? error;
+  final Failure? error;
 
   /// Recebendo atualizações em tempo real (M2). Quando falso, o auto refresh
   /// está pausado (economia de bateria/dados) e o painel fica estático.
@@ -38,7 +38,7 @@ class DriverDashboardState extends Equatable {
   DriverDashboardState copyWith({
     DriverDashboardStatus? status,
     DriverDashboardData? data,
-    String? error,
+    Failure? error,
     bool? live,
     bool? online,
     DateTime? lastUpdatedAt,
@@ -97,10 +97,10 @@ class DriverDashboardCubit extends Cubit<DriverDashboardState> {
       ));
     } on Failure catch (f) {
       if (silent && state.data != null) return; // mantém o que já está na tela
-      emit(state.copyWith(status: DriverDashboardStatus.error, error: f.message));
+      emit(state.copyWith(status: DriverDashboardStatus.error, error: f));
     } catch (_) {
       if (silent && state.data != null) return;
-      emit(state.copyWith(status: DriverDashboardStatus.error, error: 'Erro inesperado.'));
+      emit(state.copyWith(status: DriverDashboardStatus.error, error: const UnknownFailure()));
     }
   }
 

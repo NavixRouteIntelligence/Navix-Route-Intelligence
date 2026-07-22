@@ -175,5 +175,15 @@
   "destCompany": "Empresas",
   "destHospital": "Salud",
   "destMall": "Centros comerciales",
-  "destOther": "Otros"
+  "destOther": "Otros",
+  "errorNetwork": "Sin conexión con el servidor.",
+  "errorSessionExpired": "Tu sesión expiró. Inicia sesión de nuevo.",
+  "errorCache": "No se pudieron leer los datos guardados en este dispositivo.",
+  "errorServer": "El servidor no pudo completar la solicitud.",
+  "errorValidation": "Algunos datos no son válidos.",
+  "errorUnknown": "Ocurrió un error inesperado.",
+  "errorLocationDisabled": "Activa la ubicación del dispositivo para compartirla.",
+  "errorLocationDenied": "Permiso de ubicación denegado.",
+  "errorLocationBlocked": "El permiso de ubicación está bloqueado en Ajustes.",
+  "errorOptimizationTimeout": "La optimización está tardando más de lo esperado. Inténtalo de nuevo."
 }

@@ -44,7 +44,7 @@ void main() {
     final cubit = FleetTrackingCubit(repo, interval: const Duration(hours: 1));
     await cubit.load();
     expect(cubit.state.status, FleetStatus.error);
-    expect(cubit.state.error, 'Sem conexão com o servidor.');
+    expect(cubit.state.error, const NetworkFailure());
     await cubit.close();
   });
 

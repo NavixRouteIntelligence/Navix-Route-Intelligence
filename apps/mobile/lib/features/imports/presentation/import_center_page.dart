@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 
+import '../../../core/error/failure_l10n.dart';
 import '../../../app/theme/navix_tokens.dart';
 import '../../../core/theme/theme_cubit.dart';
 import '../../../core/ui/navix_card.dart';
@@ -52,7 +53,7 @@ class _ImportView extends StatelessWidget {
         listener: (context, state) {
           ScaffoldMessenger.of(context)
             ..hideCurrentSnackBar()
-            ..showSnackBar(SnackBar(content: Text(state.error!)));
+            ..showSnackBar(SnackBar(content: Text(context.failureText(state.error!))));
         },
         builder: (context, state) {
           final child = switch (state.step) {

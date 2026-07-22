@@ -55,7 +55,7 @@ class OptimizerRepository {
         if (serviceTimeMinutes != null) 'serviceTimeMinutes': serviceTimeMinutes,
       });
       final jobId = _dataOf(res)['jobId'] as String? ?? '';
-      if (jobId.isEmpty) throw const ServerFailure('Resposta de otimização sem jobId.');
+      if (jobId.isEmpty) throw const ServerFailure(); // resposta sem jobId
       final planId = await _awaitPlan(jobId);
       return await _fetchPlan(planId);
     } on DioException catch (e) {
@@ -105,7 +105,7 @@ class OptimizerRepository {
         if (smart) 'smart': true,
       });
       final jobId = _dataOf(res)['jobId'] as String? ?? '';
-      if (jobId.isEmpty) throw const ServerFailure('Resposta de otimização sem jobId.');
+      if (jobId.isEmpty) throw const ServerFailure(); // resposta sem jobId
       final planId = await _awaitPlan(jobId);
       return await _fetchPlan(planId);
     } on DioException catch (e) {
@@ -142,14 +142,14 @@ class OptimizerRepository {
         case 'succeeded':
           final planId = data['routePlanId'] as String?;
           if (planId != null && planId.isNotEmpty) return planId;
-          throw const ServerFailure('Otimização concluída sem plano.');
+          throw const ServerFailure(); // concluída sem plano
         case 'failed':
-          throw ServerFailure((data['error'] as String?) ?? 'A otimização falhou.');
+          throw ServerFailure(data['error'] as String?);
         default:
           await Future<void>.delayed(_pollInterval);
       }
     }
-    throw const ServerFailure('A otimização demorou mais que o esperado. Tente de novo.');
+    throw const OptimizationTimeoutFailure();
   }
 
   Future<RoutePlanResult> _fetchPlan(String id) async {

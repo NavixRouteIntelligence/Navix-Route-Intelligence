@@ -62,7 +62,7 @@ void main() {
     act: (c) => c.load(),
     expect: () => const [
       DeliveriesState(status: DeliveriesStatus.loading),
-      DeliveriesState(status: DeliveriesStatus.error, error: 'Sem conexão com o servidor.'),
+      DeliveriesState(status: DeliveriesStatus.error, error: NetworkFailure()),
     ],
   );
 

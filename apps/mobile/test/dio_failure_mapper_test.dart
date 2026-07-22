@@ -24,7 +24,6 @@ void main() {
         unauthorized: const InvalidCredentialsFailure(),
       );
       expect(f, isA<InvalidCredentialsFailure>());
-      expect(f.message, isNot(contains('Sessão expirada')));
     });
 
     test('o override não afeta outros status', () {
@@ -35,7 +34,7 @@ void main() {
         unauthorized: const InvalidCredentialsFailure(),
       );
       expect(f, isA<ValidationFailure>());
-      expect(f.message, 'Bad Request Exception');
+      expect(f.detail, 'Bad Request Exception');
     });
 
     test('erro de conexão continua sendo falha de rede', () {

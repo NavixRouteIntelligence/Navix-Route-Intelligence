@@ -88,7 +88,7 @@ void main() {
     act: (c) => c.load(),
     expect: () => const [
       DriverDashboardState(status: DriverDashboardStatus.loading),
-      DriverDashboardState(status: DriverDashboardStatus.error, error: 'Sem conexão com o servidor.'),
+      DriverDashboardState(status: DriverDashboardStatus.error, error: NetworkFailure()),
     ],
   );
 

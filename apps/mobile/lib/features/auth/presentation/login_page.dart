@@ -3,6 +3,7 @@ import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/error/failure.dart';
+import '../../../core/error/failure_l10n.dart';
 import '../../../core/security/biometric_service.dart';
 import '../../../core/session/session_cubit.dart';
 import '../../../core/ui/navix_button.dart';
@@ -64,14 +65,9 @@ class _LoginPageState extends State<LoginPage> {
       // Navegação é feita pela guarda do router ao mudar a sessão.
     } on Failure catch (f) {
       if (!mounted) return;
-      // Credencial inválida é o único caso comum o bastante para merecer texto
-      // localizado; as demais falhas usam a mensagem da camada de domínio.
-      final message = f is InvalidCredentialsFailure
-          ? AppLocalizations.of(context).loginInvalidCredentials
-          : f.message;
-      setState(() => _error = message);
+      setState(() => _error = context.failureText(f));
     } catch (_) {
-      if (mounted) setState(() => _error = 'Falha ao entrar.');
+      if (mounted) setState(() => _error = AppLocalizations.of(context).errorUnknown);
     } finally {
       if (mounted) setState(() => _submitting = false);
     }

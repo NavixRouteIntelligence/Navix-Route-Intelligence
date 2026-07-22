@@ -6,6 +6,7 @@ import 'package:get_it/get_it.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:signature/signature.dart';
 
+import '../../../core/error/failure_l10n.dart';
 import '../../../app/theme/navix_tokens.dart';
 import 'pod_capture_cubit.dart';
 import 'pod_sync_cubit.dart';
@@ -93,7 +94,7 @@ class _PodSheetState extends State<_PodSheet> {
         } else if (s.error != null) {
           ScaffoldMessenger.of(context)
             ..hideCurrentSnackBar()
-            ..showSnackBar(SnackBar(content: Text(s.error!)));
+            ..showSnackBar(SnackBar(content: Text(context.failureText(s.error!))));
         }
       },
       child: Padding(

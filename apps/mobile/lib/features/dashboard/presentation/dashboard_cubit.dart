@@ -12,9 +12,9 @@ class DashboardState extends Equatable {
 
   final DashboardStatus status;
   final DashboardData? data;
-  final String? error;
+  final Failure? error;
 
-  DashboardState copyWith({DashboardStatus? status, DashboardData? data, String? error}) =>
+  DashboardState copyWith({DashboardStatus? status, DashboardData? data, Failure? error}) =>
       DashboardState(status: status ?? this.status, data: data ?? this.data, error: error);
 
   @override
@@ -32,9 +32,9 @@ class DashboardCubit extends Cubit<DashboardState> {
       final data = await _repository.load();
       emit(DashboardState(status: DashboardStatus.success, data: data));
     } on Failure catch (f) {
-      emit(DashboardState(status: DashboardStatus.error, error: f.message));
+      emit(DashboardState(status: DashboardStatus.error, error: f));
     } catch (_) {
-      emit(const DashboardState(status: DashboardStatus.error, error: 'Erro inesperado.'));
+      emit(const DashboardState(status: DashboardStatus.error, error: UnknownFailure()));
     }
   }
 }

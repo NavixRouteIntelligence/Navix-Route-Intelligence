@@ -6,6 +6,8 @@ import 'package:get_it/get_it.dart';
 
 import '../../../app/shell/adaptive_nav_scaffold.dart';
 import '../../../app/theme/navix_tokens.dart';
+import '../../../core/error/failure.dart';
+import '../../../core/error/failure_l10n.dart';
 import '../../../core/theme/theme_cubit.dart';
 import '../../../core/ui/navix_card.dart';
 import '../../../core/ui/navix_donut.dart';
@@ -177,12 +179,12 @@ class _DriverViewState extends State<_DriverView> {
             } else if (s.status == VoiceStatus.unsupported) {
               _snack('Comando de voz indisponível neste dispositivo.');
             } else if (s.status == VoiceStatus.error && s.error != null) {
-              _snack(s.error!);
+              _snack(context.failureText(s.error!));
             }
           },
           child: BlocListener<LocationSharingCubit, LocationSharingState>(
           listenWhen: (p, c) => p.error != c.error && c.error != null,
-          listener: (context, s) => _snack(s.error!),
+          listener: (context, s) => _snack(context.failureText(s.error!)),
           child: BlocConsumer<DriverDashboardCubit, DriverDashboardState>(
             listener: (context, state) => _syncStopTimer(state.data),
             builder: (context, state) {
@@ -190,7 +192,7 @@ class _DriverViewState extends State<_DriverView> {
                 DriverDashboardStatus.loading => const _LoadingView(),
                 DriverDashboardStatus.error => state.online
                     ? NavixErrorState(
-                        description: state.error ?? 'Não foi possível carregar.',
+                        description: context.failureText(state.error ?? const UnknownFailure()),
                         onRetry: () => context.read<DriverDashboardCubit>().load(),
                       )
                     : NavixErrorState(

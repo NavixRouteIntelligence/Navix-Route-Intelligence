@@ -12,7 +12,7 @@ class StopIntelligenceState extends Equatable {
 
   final StopIntelligenceStatus status;
   final StopIntelligence? data;
-  final String? error;
+  final Failure? error;
 
   @override
   List<Object?> get props => [status, data, error];
@@ -41,9 +41,9 @@ class StopIntelligenceCubit extends Cubit<StopIntelligenceState> {
       );
       emit(StopIntelligenceState(status: StopIntelligenceStatus.success, data: data));
     } on Failure catch (f) {
-      emit(StopIntelligenceState(status: StopIntelligenceStatus.error, error: f.message));
+      emit(StopIntelligenceState(status: StopIntelligenceStatus.error, error: f));
     } catch (_) {
-      emit(const StopIntelligenceState(status: StopIntelligenceStatus.error, error: 'Erro inesperado.'));
+      emit(const StopIntelligenceState(status: StopIntelligenceStatus.error, error: UnknownFailure()));
     }
   }
 }

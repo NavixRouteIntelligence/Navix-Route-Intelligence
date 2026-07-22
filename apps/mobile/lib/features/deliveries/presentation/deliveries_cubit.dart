@@ -21,14 +21,14 @@ class DeliveriesState extends Equatable {
   final int total;
   /// Filtro de status ativo (`null` = todas).
   final String? filter;
-  final String? error;
+  final Failure? error;
 
   DeliveriesState copyWith({
     DeliveriesStatus? status,
     List<DeliverySummary>? items,
     int? total,
     Object? filter = _sentinel,
-    String? error,
+    Failure? error,
   }) =>
       DeliveriesState(
         status: status ?? this.status,
@@ -61,9 +61,9 @@ class DeliveriesCubit extends Cubit<DeliveriesState> {
         filter: nextFilter,
       ));
     } on Failure catch (f) {
-      emit(state.copyWith(status: DeliveriesStatus.error, error: f.message, filter: nextFilter));
+      emit(state.copyWith(status: DeliveriesStatus.error, error: f, filter: nextFilter));
     } catch (_) {
-      emit(state.copyWith(status: DeliveriesStatus.error, error: 'Erro inesperado.', filter: nextFilter));
+      emit(state.copyWith(status: DeliveriesStatus.error, error: const UnknownFailure(), filter: nextFilter));
     }
   }
 

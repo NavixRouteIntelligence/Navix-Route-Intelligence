@@ -243,5 +243,18 @@
   "destCompany": "Companies",
   "destHospital": "Healthcare",
   "destMall": "Malls",
-  "destOther": "Others"
+  "destOther": "Others",
+  "errorNetwork": "No connection to the server.",
+  "errorSessionExpired": "Your session expired. Sign in again.",
+  "errorCache": "Couldn't read the data saved on this device.",
+  "errorServer": "The server couldn't complete the request.",
+  "errorValidation": "Some of the data isn't valid.",
+  "errorUnknown": "Something went wrong.",
+  "errorLocationDisabled": "Turn on location on your device to share it.",
+  "errorLocationDenied": "Location permission denied.",
+  "errorLocationBlocked": "Location permission is blocked in Settings.",
+  "@errorServer": {
+    "description": "Fallback when the API sends no message of its own"
+  },
+  "errorOptimizationTimeout": "The optimization is taking longer than expected. Try again."
 }

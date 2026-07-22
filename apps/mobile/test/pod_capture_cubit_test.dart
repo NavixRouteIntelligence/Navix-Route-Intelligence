@@ -46,7 +46,7 @@ void main() {
   });
 
   test('captureLocation falha: gps error', () async {
-    when(() => location.current()).thenThrow(const LocationException('negada'));
+    when(() => location.current()).thenThrow(const LocationException(LocationErrorReason.permissionDenied));
     final cubit = build();
     await cubit.captureLocation();
     expect(cubit.state.gps, GpsStatus.error);

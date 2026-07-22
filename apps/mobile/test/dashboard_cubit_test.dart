@@ -50,7 +50,7 @@ void main() {
     act: (c) => c.load(),
     expect: () => const [
       DashboardState(status: DashboardStatus.loading),
-      DashboardState(status: DashboardStatus.error, error: 'Sem conexão com o servidor.'),
+      DashboardState(status: DashboardStatus.error, error: NetworkFailure()),
     ],
   );
 }

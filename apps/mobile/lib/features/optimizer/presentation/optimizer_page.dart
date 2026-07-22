@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 
+import '../../../core/error/failure_l10n.dart';
 import '../../../app/theme/navix_tokens.dart';
 import '../../../core/ui/navix_card.dart';
 import '../../../core/ui/navix_donut.dart';
@@ -46,7 +47,7 @@ class _OptimizerView extends StatelessWidget {
         listenWhen: (p, c) => p.error != c.error && c.error != null,
         listener: (context, s) => ScaffoldMessenger.of(context)
           ..hideCurrentSnackBar()
-          ..showSnackBar(SnackBar(content: Text(s.error!))),
+          ..showSnackBar(SnackBar(content: Text(context.failureText(s.error!)))),
         builder: (context, state) {
           final child = switch (state.step) {
             OptimizerStep.deliveries => _DeliveriesStep(state: state),

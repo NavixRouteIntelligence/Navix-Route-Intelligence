@@ -19,7 +19,7 @@ class ManualRouteState extends Equatable {
   final ManualRouteStatus status;
   final List<EditableStop> stops;
   final RoutePlanResult? result;
-  final String? error;
+  final Failure? error;
 
   int get lockedCount => stops.where((s) => s.locked).length;
   bool get canSubmit => stops.length >= 2;
@@ -28,7 +28,7 @@ class ManualRouteState extends Equatable {
     ManualRouteStatus? status,
     List<EditableStop>? stops,
     RoutePlanResult? result,
-    String? error,
+    Failure? error,
     bool clearError = false,
   }) {
     return ManualRouteState(
@@ -58,9 +58,9 @@ class ManualRouteCubit extends Cubit<ManualRouteState> {
       final stops = await _repository.activeStops();
       emit(ManualRouteState(status: ManualRouteStatus.ready, stops: stops));
     } on Failure catch (f) {
-      emit(ManualRouteState(status: ManualRouteStatus.error, error: f.message));
+      emit(ManualRouteState(status: ManualRouteStatus.error, error: f));
     } catch (_) {
-      emit(const ManualRouteState(status: ManualRouteStatus.error, error: 'Não foi possível carregar as paradas.'));
+      emit(const ManualRouteState(status: ManualRouteStatus.error, error: UnknownFailure()));
     }
   }
 
@@ -102,9 +102,9 @@ class ManualRouteCubit extends Cubit<ManualRouteState> {
       );
       emit(state.copyWith(status: ManualRouteStatus.success, result: result));
     } on Failure catch (f) {
-      emit(state.copyWith(status: ManualRouteStatus.ready, error: f.message));
+      emit(state.copyWith(status: ManualRouteStatus.ready, error: f));
     } catch (_) {
-      emit(state.copyWith(status: ManualRouteStatus.ready, error: 'Não foi possível salvar a rota.'));
+      emit(state.copyWith(status: ManualRouteStatus.ready, error: const UnknownFailure()));
     }
   }
 }

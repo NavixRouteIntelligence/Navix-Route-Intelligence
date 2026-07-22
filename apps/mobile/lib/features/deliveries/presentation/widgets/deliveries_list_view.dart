@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../core/error/failure_l10n.dart';
 import '../../../../app/theme/navix_tokens.dart';
 import '../../../../core/ui/navix_card.dart';
 import '../../../../core/ui/navix_skeleton.dart';
@@ -83,7 +84,7 @@ class _Body extends StatelessWidget {
           case DeliveriesStatus.error:
             return NavixErrorState(
               title: l10n.deliveriesErrorTitle,
-              description: state.error ?? l10n.deliveriesRetry,
+              description: state.error == null ? l10n.deliveriesRetry : context.failureText(state.error!),
               retryLabel: l10n.deliveriesRetry,
               onRetry: () => context.read<DeliveriesCubit>().load(),
             );

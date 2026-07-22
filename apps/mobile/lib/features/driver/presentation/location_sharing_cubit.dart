@@ -12,10 +12,10 @@ class LocationSharingState extends Equatable {
 
   final bool sharing;
   final bool busy;
-  final String? error;
+  final Failure? error;
   final DateTime? lastSentAt;
 
-  LocationSharingState copyWith({bool? sharing, bool? busy, String? error, DateTime? lastSentAt, bool clearError = false}) {
+  LocationSharingState copyWith({bool? sharing, bool? busy, Failure? error, DateTime? lastSentAt, bool clearError = false}) {
     return LocationSharingState(
       sharing: sharing ?? this.sharing,
       busy: busy ?? this.busy,
@@ -48,11 +48,11 @@ class LocationSharingCubit extends Cubit<LocationSharingState> {
       emit(state.copyWith(sharing: true, busy: false, lastSentAt: DateTime.now()));
       _timer = Timer.periodic(_interval, (_) => _tick());
     } on LocationException catch (e) {
-      emit(state.copyWith(busy: false, error: e.message));
+      emit(state.copyWith(busy: false, error: LocationFailure(e.reason)));
     } on Failure catch (f) {
-      emit(state.copyWith(busy: false, error: f.message));
+      emit(state.copyWith(busy: false, error: f));
     } catch (_) {
-      emit(state.copyWith(busy: false, error: 'Não foi possível iniciar o compartilhamento.'));
+      emit(state.copyWith(busy: false, error: const UnknownFailure()));
     }
   }
 

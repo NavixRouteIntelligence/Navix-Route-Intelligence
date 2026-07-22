@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:navix_mobile/core/error/failure.dart';
 import 'package:navix_mobile/core/location/location_service.dart';
 import 'package:navix_mobile/features/driver/data/tracking_repository.dart';
 import 'package:navix_mobile/features/driver/presentation/location_sharing_cubit.dart';
@@ -40,13 +41,13 @@ void main() {
   });
 
   test('start com permissão negada: não compartilha e emite erro', () async {
-    when(() => location.current()).thenThrow(const LocationException('Permissão de localização negada.'));
+    when(() => location.current()).thenThrow(const LocationException(LocationErrorReason.permissionDenied));
 
     final cubit = build();
     await cubit.start();
 
     expect(cubit.state.sharing, isFalse);
-    expect(cubit.state.error, 'Permissão de localização negada.');
+    expect(cubit.state.error, const LocationFailure(LocationErrorReason.permissionDenied));
     verifyNever(() => tracking.sendPosition(any(), status: any(named: 'status')));
 
     await cubit.close();

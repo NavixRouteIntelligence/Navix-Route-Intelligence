@@ -67,7 +67,7 @@ void main() {
     act: (c) => c.load(),
     expect: () => const [
       FinanceState(status: FinanceStatus.loading),
-      FinanceState(status: FinanceStatus.error, error: 'Sem conexão com o servidor.'),
+      FinanceState(status: FinanceStatus.error, error: NetworkFailure()),
     ],
   );
 

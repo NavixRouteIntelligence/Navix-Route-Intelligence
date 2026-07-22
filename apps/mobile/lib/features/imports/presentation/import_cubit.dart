@@ -25,7 +25,7 @@ class ImportState extends Equatable {
   final ImportConfirmation? confirmation;
   final List<ImportBatch> history;
   final bool historyLoading;
-  final String? error;
+  final Failure? error;
 
   ImportState copyWith({
     ImportStep? step,
@@ -34,7 +34,7 @@ class ImportState extends Equatable {
     ImportConfirmation? confirmation,
     List<ImportBatch>? history,
     bool? historyLoading,
-    String? error,
+    Failure? error,
     bool clearError = false,
   }) {
     return ImportState(
@@ -63,7 +63,7 @@ class ImportCubit extends Cubit<ImportState> {
       final batches = await _repository.list();
       emit(state.copyWith(history: batches, historyLoading: false));
     } on Failure catch (f) {
-      emit(state.copyWith(historyLoading: false, error: f.message));
+      emit(state.copyWith(historyLoading: false, error: f));
     } catch (_) {
       emit(state.copyWith(historyLoading: false));
     }
@@ -75,9 +75,9 @@ class ImportCubit extends Cubit<ImportState> {
       final preview = await _repository.preview(path: path, filename: filename);
       emit(state.copyWith(busy: false, step: ImportStep.preview, preview: preview));
     } on Failure catch (f) {
-      emit(state.copyWith(busy: false, error: f.message));
+      emit(state.copyWith(busy: false, error: f));
     } catch (_) {
-      emit(state.copyWith(busy: false, error: 'Não foi possível ler o arquivo.'));
+      emit(state.copyWith(busy: false, error: const UnknownFailure()));
     }
   }
 
@@ -91,9 +91,9 @@ class ImportCubit extends Cubit<ImportState> {
       emit(state.copyWith(busy: false, step: ImportStep.done, confirmation: result));
       await loadHistory();
     } on Failure catch (f) {
-      emit(state.copyWith(busy: false, error: f.message));
+      emit(state.copyWith(busy: false, error: f));
     } catch (_) {
-      emit(state.copyWith(busy: false, error: 'Não foi possível confirmar a importação.'));
+      emit(state.copyWith(busy: false, error: const UnknownFailure()));
     }
   }
 

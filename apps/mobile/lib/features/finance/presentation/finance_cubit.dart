@@ -26,7 +26,7 @@ class FinanceState extends Equatable {
   final DeliveryInsights insights;
   final FinancialHistory history;
   final bool busy;
-  final String? error;
+  final Failure? error;
 
   FinanceState copyWith({
     FinanceStatus? status,
@@ -35,7 +35,7 @@ class FinanceState extends Equatable {
     DeliveryInsights? insights,
     FinancialHistory? history,
     bool? busy,
-    String? error,
+    Failure? error,
     bool clearError = false,
   }) {
     return FinanceState(
@@ -69,9 +69,9 @@ class FinanceCubit extends Cubit<FinanceState> {
       final history = await _repository.history();
       emit(FinanceState(status: FinanceStatus.ready, summary: summary, entries: entries, insights: insights, history: history));
     } on Failure catch (f) {
-      emit(FinanceState(status: FinanceStatus.error, error: f.message));
+      emit(FinanceState(status: FinanceStatus.error, error: f));
     } catch (_) {
-      emit(const FinanceState(status: FinanceStatus.error, error: 'Erro inesperado.'));
+      emit(const FinanceState(status: FinanceStatus.error, error: UnknownFailure()));
     }
   }
 
@@ -81,9 +81,9 @@ class FinanceCubit extends Cubit<FinanceState> {
       final summary = await _repository.summary();
       emit(state.copyWith(status: FinanceStatus.ready, summary: summary));
     } on Failure catch (f) {
-      emit(state.copyWith(status: FinanceStatus.error, error: f.message));
+      emit(state.copyWith(status: FinanceStatus.error, error: f));
     } catch (_) {
-      emit(state.copyWith(status: FinanceStatus.error, error: 'Erro inesperado.'));
+      emit(state.copyWith(status: FinanceStatus.error, error: const UnknownFailure()));
     }
   }
 
@@ -99,9 +99,9 @@ class FinanceCubit extends Cubit<FinanceState> {
       final entries = await _repository.entries();
       emit(state.copyWith(busy: false, summary: summary, entries: entries));
     } on Failure catch (f) {
-      emit(state.copyWith(busy: false, error: f.message));
+      emit(state.copyWith(busy: false, error: f));
     } catch (_) {
-      emit(state.copyWith(busy: false, error: 'Não foi possível salvar.'));
+      emit(state.copyWith(busy: false, error: const UnknownFailure()));
     }
   }
 }

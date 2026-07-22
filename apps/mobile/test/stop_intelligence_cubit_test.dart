@@ -61,7 +61,7 @@ void main() {
     act: (c) => c.load(latitude: 0, longitude: 0),
     expect: () => const [
       StopIntelligenceState(status: StopIntelligenceStatus.loading),
-      StopIntelligenceState(status: StopIntelligenceStatus.error, error: 'Sem conexão com o servidor.'),
+      StopIntelligenceState(status: StopIntelligenceStatus.error, error: NetworkFailure()),
     ],
   );
 }

@@ -175,5 +175,15 @@
   "destCompany": "Empresas",
   "destHospital": "Saúde",
   "destMall": "Centros comerciais",
-  "destOther": "Outros"
+  "destOther": "Outros",
+  "errorNetwork": "Sem ligação ao servidor.",
+  "errorSessionExpired": "A sua sessão expirou. Inicie sessão novamente.",
+  "errorCache": "Não foi possível ler os dados guardados neste dispositivo.",
+  "errorServer": "O servidor não conseguiu concluir o pedido.",
+  "errorValidation": "Alguns dados não são válidos.",
+  "errorUnknown": "Ocorreu um erro inesperado.",
+  "errorLocationDisabled": "Ative a localização do dispositivo para partilhar.",
+  "errorLocationDenied": "Permissão de localização negada.",
+  "errorLocationBlocked": "Permissão de localização bloqueada nas definições.",
+  "errorOptimizationTimeout": "A otimização está a demorar mais do que o esperado. Tente novamente."
 }
