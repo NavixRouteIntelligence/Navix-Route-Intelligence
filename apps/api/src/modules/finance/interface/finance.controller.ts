@@ -103,15 +103,14 @@ export class FinanceController {
   @Get('history')
   async history(
     @CurrentUser() user: AuthenticatedUser,
-    @Query('granularity') granularity?: string,
-    @Query() query?: PeriodQueryDto,
+    @Query() query: PeriodQueryDto,
   ): Promise<ResourceResponse<FinancialHistory>> {
-    const g: HistoryGranularity = granularity === 'week' ? 'week' : 'month';
-    const to = query?.to ? endOfDay(query!.to.slice(0, 10)) : new Date();
+    const g: HistoryGranularity = query.granularity === 'week' ? 'week' : 'month';
+    const to = query.to ? endOfDay(query.to.slice(0, 10)) : new Date();
     // Default: 6 meses (mês) ou 12 semanas (semana).
     const spanDays = g === 'week' ? 12 * 7 : 183;
-    const from = query?.from
-      ? startOfDay(query!.from.slice(0, 10))
+    const from = query.from
+      ? startOfDay(query.from.slice(0, 10))
       : new Date(to.getTime() - spanDays * 24 * 60 * 60 * 1000);
     const data = await this.getHistory.execute(user.tenantId, from, to, g);
     return { data };
