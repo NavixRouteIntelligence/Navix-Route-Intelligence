@@ -128,5 +128,8 @@
   "finCategoryToll": "Pedágio",
   "finCategoryDelivery": "Entrega",
   "finCategoryOther": "Outro",
-  "profileFinanceSubtitle": "Custo/km, lucro e histórico"
+  "profileFinanceSubtitle": "Custo/km, lucro e histórico",
+  "finInsights": "Insights",
+  "finBestRegion": "Melhor região",
+  "finBestHour": "Melhor horário"
 }
