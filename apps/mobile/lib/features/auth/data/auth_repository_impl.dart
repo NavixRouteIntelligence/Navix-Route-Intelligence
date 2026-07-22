@@ -20,7 +20,8 @@ class AuthRepositoryImpl implements AuthRepository {
       await _persist(session);
       return session;
     } on DioException catch (e) {
-      throw mapDioException(e);
+      // 401 aqui é credencial rejeitada, não sessão expirada.
+      throw mapDioException(e, unauthorized: const InvalidCredentialsFailure());
     }
   }
 
@@ -31,7 +32,7 @@ class AuthRepositoryImpl implements AuthRepository {
       await _persist(session);
       return session;
     } on DioException catch (e) {
-      throw mapDioException(e);
+      throw mapDioException(e, unauthorized: const InvalidCredentialsFailure());
     }
   }
 

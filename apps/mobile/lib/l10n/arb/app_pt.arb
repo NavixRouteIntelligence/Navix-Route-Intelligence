@@ -8,6 +8,7 @@
   "navProfile": "Perfil",
   "loginTitle": "Entrar",
   "loginSubtitle": "Acesse sua operação.",
+  "loginInvalidCredentials": "E-mail ou senha incorretos.",
   "signInAsDriver": "Continuar como Motorista",
   "signInAsCompany": "Continuar como Empresa",
   "signOut": "Sair",
