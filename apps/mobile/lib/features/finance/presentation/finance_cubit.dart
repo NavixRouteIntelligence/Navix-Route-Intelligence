@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/error/failure.dart';
 import '../data/finance_repository.dart';
 import '../domain/finance_models.dart';
+import '../domain/insights_models.dart';
 
 enum FinanceStatus { loading, ready, error }
 
@@ -12,6 +13,7 @@ class FinanceState extends Equatable {
     this.status = FinanceStatus.loading,
     this.summary = const FinancialSummary(),
     this.entries = const [],
+    this.insights = const DeliveryInsights(),
     this.busy = false,
     this.error,
   });
@@ -19,6 +21,7 @@ class FinanceState extends Equatable {
   final FinanceStatus status;
   final FinancialSummary summary;
   final List<FinancialEntry> entries;
+  final DeliveryInsights insights;
   final bool busy;
   final String? error;
 
@@ -26,6 +29,7 @@ class FinanceState extends Equatable {
     FinanceStatus? status,
     FinancialSummary? summary,
     List<FinancialEntry>? entries,
+    DeliveryInsights? insights,
     bool? busy,
     String? error,
     bool clearError = false,
@@ -34,13 +38,14 @@ class FinanceState extends Equatable {
       status: status ?? this.status,
       summary: summary ?? this.summary,
       entries: entries ?? this.entries,
+      insights: insights ?? this.insights,
       busy: busy ?? this.busy,
       error: clearError ? null : (error ?? this.error),
     );
   }
 
   @override
-  List<Object?> get props => [status, summary, entries, busy, error];
+  List<Object?> get props => [status, summary, entries, insights, busy, error];
 }
 
 /// Gerencia as finanças do motorista (FASE 3, F1b). `load` carrega resumo +
@@ -55,7 +60,8 @@ class FinanceCubit extends Cubit<FinanceState> {
     try {
       final summary = await _repository.summary();
       final entries = await _repository.entries();
-      emit(FinanceState(status: FinanceStatus.ready, summary: summary, entries: entries));
+      final insights = await _repository.insights();
+      emit(FinanceState(status: FinanceStatus.ready, summary: summary, entries: entries, insights: insights));
     } on Failure catch (f) {
       emit(FinanceState(status: FinanceStatus.error, error: f.message));
     } catch (_) {

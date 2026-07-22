@@ -8,6 +8,7 @@ import '../../../core/ui/navix_section_header.dart';
 import '../../../core/ui/navix_states.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../domain/finance_models.dart';
+import '../domain/insights_models.dart';
 import 'add_finance_entry_sheet.dart';
 import 'finance_cubit.dart';
 import 'finance_labels.dart';
@@ -79,6 +80,11 @@ class _Content extends StatelessWidget {
           const SizedBox(height: 12),
           _Totals(summary: s),
           const SizedBox(height: 12),
+          if (state.insights.hasData) ...[
+            NavixSectionHeader(title: l10n.finInsights, icon: Icons.insights_outlined),
+            _InsightsCard(insights: state.insights),
+            const SizedBox(height: 12),
+          ],
           NavixSectionHeader(title: l10n.finEntries, icon: Icons.receipt_long_outlined),
           if (state.entries.isEmpty)
             Padding(
@@ -150,6 +156,114 @@ class _Totals extends StatelessWidget {
         cell(l10n.finExpense, summary.totalExpense, t.danger),
         cell(l10n.finBalance, summary.balance, summary.balance >= 0 ? t.success : t.danger),
       ]),
+    );
+  }
+}
+
+/// Insights de padrão de entrega (F2): melhor região, melhor horário e um
+/// mini-gráfico de barras das 24 horas.
+class _InsightsCard extends StatelessWidget {
+  const _InsightsCard({required this.insights});
+  final DeliveryInsights insights;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    final l10n = AppLocalizations.of(context);
+    return NavixCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Expanded(child: _InsightMetric(
+              icon: Icons.place_outlined,
+              label: l10n.finBestRegion,
+              value: insights.bestRegion ?? '—',
+            )),
+            const SizedBox(width: 8),
+            Expanded(child: _InsightMetric(
+              icon: Icons.schedule,
+              label: l10n.finBestHour,
+              value: insights.bestHour == null ? '—' : '${insights.bestHour}h',
+            )),
+          ]),
+          if (insights.byHour.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            SizedBox(height: 56, child: _HourBars(byHour: insights.byHour, color: t.accent, track: t.surfaceAlt)),
+            const SizedBox(height: 4),
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+              Text('0h', style: TextStyle(fontSize: 10, color: t.muted)),
+              Text('12h', style: TextStyle(fontSize: 10, color: t.muted)),
+              Text('23h', style: TextStyle(fontSize: 10, color: t.muted)),
+            ]),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _InsightMetric extends StatelessWidget {
+  const _InsightMetric({required this.icon, required this.label, required this.value});
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(children: [
+          Icon(icon, size: 15, color: t.accent),
+          const SizedBox(width: 6),
+          Expanded(child: Text(label, style: TextStyle(fontSize: 11, color: t.muted))),
+        ]),
+        const SizedBox(height: 4),
+        Text(value, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+      ],
+    );
+  }
+}
+
+/// 24 barras (uma por hora), altura proporcional ao volume. A hora de pico
+/// aparece destacada.
+class _HourBars extends StatelessWidget {
+  const _HourBars({required this.byHour, required this.color, required this.track});
+  final List<HourStat> byHour;
+  final Color color;
+  final Color track;
+
+  @override
+  Widget build(BuildContext context) {
+    final counts = List<int>.filled(24, 0);
+    for (final h in byHour) {
+      if (h.hour >= 0 && h.hour < 24) counts[h.hour] = h.deliveries;
+    }
+    final max = counts.fold<int>(0, (a, b) => b > a ? b : a);
+    return LayoutBuilder(
+      builder: (context, c) {
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: List.generate(24, (h) {
+            final frac = max == 0 ? 0.0 : counts[h] / max;
+            final peak = counts[h] == max && max > 0;
+            return Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 1),
+                child: Container(
+                  height: (4 + frac * 48).clamp(4, 52).toDouble(),
+                  decoration: BoxDecoration(
+                    color: counts[h] == 0 ? track : (peak ? color : color.withValues(alpha: 0.55)),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+            );
+          }),
+        );
+      },
     );
   }
 }

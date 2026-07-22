@@ -4,6 +4,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:navix_mobile/core/error/failure.dart';
 import 'package:navix_mobile/features/finance/data/finance_repository.dart';
 import 'package:navix_mobile/features/finance/domain/finance_models.dart';
+import 'package:navix_mobile/features/finance/domain/insights_models.dart';
 import 'package:navix_mobile/features/finance/presentation/finance_cubit.dart';
 
 class _MockRepo extends Mock implements FinanceRepository {}
@@ -32,6 +33,7 @@ void main() {
     build: () {
       when(() => repo.summary()).thenAnswer((_) async => summary);
       when(() => repo.entries()).thenAnswer((_) async => [entry]);
+      when(() => repo.insights()).thenAnswer((_) async => const DeliveryInsights());
       return FinanceCubit(repo);
     },
     act: (c) => c.load(),
@@ -72,6 +74,7 @@ void main() {
     build: () {
       when(() => repo.summary()).thenAnswer((_) async => summary);
       when(() => repo.entries()).thenAnswer((_) async => [entry]);
+      when(() => repo.insights()).thenAnswer((_) async => const DeliveryInsights());
       when(() => repo.addEntry(any())).thenAnswer((_) async {});
       return FinanceCubit(repo);
     },
@@ -90,6 +93,7 @@ void main() {
     build: () {
       when(() => repo.summary()).thenAnswer((_) async => summary);
       when(() => repo.entries()).thenAnswer((_) async => [entry]);
+      when(() => repo.insights()).thenAnswer((_) async => const DeliveryInsights());
       when(() => repo.deleteEntry(any())).thenAnswer((_) async {});
       return FinanceCubit(repo);
     },

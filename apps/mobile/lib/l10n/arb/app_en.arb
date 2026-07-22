@@ -88,8 +88,12 @@
   "@earningsBreakdown": {
     "description": "Earnings breakdown line",
     "placeholders": {
-      "deliveries": { "type": "int" },
-      "km": { "type": "String" }
+      "deliveries": {
+        "type": "int"
+      },
+      "km": {
+        "type": "String"
+      }
     }
   },
   "earningsTariffTitle": "Your rate",
@@ -123,11 +127,19 @@
   "maintStatusOk": "OK",
   "maintNDays": "{count} days",
   "@maintNDays": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "maintNKm": "{km} km",
   "@maintNKm": {
-    "placeholders": { "km": { "type": "int" } }
+    "placeholders": {
+      "km": {
+        "type": "int"
+      }
+    }
   },
   "maintTypeOilChange": "Oil change",
   "maintTypeRevision": "Revision",
@@ -160,5 +172,8 @@
   "finCategoryToll": "Toll",
   "finCategoryDelivery": "Delivery",
   "finCategoryOther": "Other",
-  "profileFinanceSubtitle": "Cost/km, profit and history"
+  "profileFinanceSubtitle": "Cost/km, profit and history",
+  "finInsights": "Insights",
+  "finBestRegion": "Best region",
+  "finBestHour": "Best hour"
 }

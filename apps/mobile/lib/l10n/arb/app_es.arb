@@ -128,5 +128,8 @@
   "finCategoryToll": "Peaje",
   "finCategoryDelivery": "Entrega",
   "finCategoryOther": "Otro",
-  "profileFinanceSubtitle": "Coste/km, beneficio e historial"
+  "profileFinanceSubtitle": "Coste/km, beneficio e historial",
+  "finInsights": "Insights",
+  "finBestRegion": "Mejor región",
+  "finBestHour": "Mejor hora"
 }
