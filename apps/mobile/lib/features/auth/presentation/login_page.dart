@@ -63,7 +63,13 @@ class _LoginPageState extends State<LoginPage> {
       );
       // Navegação é feita pela guarda do router ao mudar a sessão.
     } on Failure catch (f) {
-      if (mounted) setState(() => _error = f.message);
+      if (!mounted) return;
+      // Credencial inválida é o único caso comum o bastante para merecer texto
+      // localizado; as demais falhas usam a mensagem da camada de domínio.
+      final message = f is InvalidCredentialsFailure
+          ? AppLocalizations.of(context).loginInvalidCredentials
+          : f.message;
+      setState(() => _error = message);
     } catch (_) {
       if (mounted) setState(() => _error = 'Falha ao entrar.');
     } finally {

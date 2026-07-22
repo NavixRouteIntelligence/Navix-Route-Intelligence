@@ -3,7 +3,11 @@ import 'package:dio/dio.dart';
 import '../error/failure.dart';
 
 /// Converte uma [DioException] na [Failure] de domínio correspondente.
-Failure mapDioException(DioException e) {
+///
+/// [unauthorized] permite ao chamador trocar o significado do 401: em endpoints
+/// autenticados ele é "sessão expirada" (padrão), mas no login/registro é
+/// "credencial inválida" — não havia sessão para expirar.
+Failure mapDioException(DioException e, {Failure? unauthorized}) {
   switch (e.type) {
     case DioExceptionType.connectionTimeout:
     case DioExceptionType.receiveTimeout:
@@ -13,7 +17,7 @@ Failure mapDioException(DioException e) {
     case DioExceptionType.badResponse:
       final status = e.response?.statusCode;
       final message = _extractMessage(e.response?.data) ?? 'Erro no servidor.';
-      if (status == 401) return const UnauthorizedFailure();
+      if (status == 401) return unauthorized ?? const UnauthorizedFailure();
       if (status == 400 || status == 409 || status == 422) return ValidationFailure(message);
       return ServerFailure(message, statusCode: status);
     default:

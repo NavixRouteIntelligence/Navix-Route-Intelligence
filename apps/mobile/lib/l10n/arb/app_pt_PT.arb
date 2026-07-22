@@ -18,6 +18,7 @@
   "statusOffline": "Offline",
   "loginTitle": "Entrar",
   "loginSubtitle": "Aceda à sua operação.",
+  "loginInvalidCredentials": "E-mail ou palavra-passe incorretos.",
   "signInAsDriver": "Continuar como Motorista",
   "signInAsCompany": "Continuar como Empresa",
   "signOut": "Terminar sessão",

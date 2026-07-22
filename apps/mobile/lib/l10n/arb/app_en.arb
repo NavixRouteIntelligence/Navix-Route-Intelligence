@@ -21,6 +21,7 @@
   "statusOffline": "Offline",
   "loginTitle": "Sign in",
   "loginSubtitle": "Access your operation.",
+  "loginInvalidCredentials": "Incorrect email or password.",
   "signInAsDriver": "Continue as Driver",
   "signInAsCompany": "Continue as Company",
   "signOut": "Sign out",

@@ -18,6 +18,7 @@
   "statusOffline": "Desconectado",
   "loginTitle": "Iniciar sesión",
   "loginSubtitle": "Accede a tu operación.",
+  "loginInvalidCredentials": "Correo o contraseña incorrectos.",
   "signInAsDriver": "Continuar como Conductor",
   "signInAsCompany": "Continuar como Empresa",
   "signOut": "Cerrar sesión",

@@ -26,6 +26,13 @@ class UnauthorizedFailure extends Failure {
   const UnauthorizedFailure([super.message = 'Sessão expirada.']);
 }
 
+/// 401 vindo do **login/registro**: não havia sessão para expirar — a credencial
+/// é que foi rejeitada. Distinguir de [UnauthorizedFailure] evita dizer "Sessão
+/// expirada" a quem acabou de errar a senha.
+class InvalidCredentialsFailure extends Failure {
+  const InvalidCredentialsFailure([super.message = 'E-mail ou senha incorretos.']);
+}
+
 class ValidationFailure extends Failure {
   const ValidationFailure(super.message);
 }
