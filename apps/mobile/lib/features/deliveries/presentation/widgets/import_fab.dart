@@ -14,6 +14,8 @@ class ImportFab extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return FloatingActionButton.extended(
+      // Ver nota em VoiceAssistantButton: tags de Hero únicas por aba.
+      heroTag: 'fab-import',
       onPressed: onPressed,
       icon: const Icon(Icons.upload_file_outlined),
       label: Text(l10n.importAction),

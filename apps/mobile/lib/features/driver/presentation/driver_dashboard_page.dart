@@ -9,6 +9,7 @@ import '../../../app/theme/navix_tokens.dart';
 import '../../../core/theme/theme_cubit.dart';
 import '../../../core/ui/navix_card.dart';
 import '../../../core/ui/navix_donut.dart';
+import '../../../core/ui/navix_pulse_dot.dart';
 import '../../../core/ui/navix_section_header.dart';
 import '../../../core/ui/navix_skeleton.dart';
 import '../../../core/ui/navix_states.dart';
@@ -402,7 +403,7 @@ class _TopBar extends StatelessWidget {
               const Text('Olá, motorista', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
               const SizedBox(height: 4),
               Row(mainAxisSize: MainAxisSize.min, children: [
-                _LiveDot(color: color, animate: running),
+                NavixPulseDot(color: color, animate: running),
                 const SizedBox(width: 6),
                 Text(label, style: TextStyle(color: color, fontSize: 12.5, fontWeight: FontWeight.w600)),
               ]),
@@ -485,7 +486,7 @@ class _LivePill extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (live)
-                      _LiveDot(color: color, animate: true)
+                      NavixPulseDot(color: color, animate: true)
                     else
                       Icon(Icons.pause, size: 12, color: color),
                     const SizedBox(width: 6),
@@ -735,7 +736,7 @@ class _MiniMap extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.85), borderRadius: BorderRadius.circular(999), border: Border.all(color: t.accent.withValues(alpha: 0.4))),
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  _LiveDot(color: t.accent, animate: true),
+                  NavixPulseDot(color: t.accent, animate: true),
                   const SizedBox(width: 6),
                   Text('ao vivo', style: TextStyle(color: t.accent, fontSize: 11.5, fontWeight: FontWeight.w600)),
                 ]),
@@ -1093,46 +1094,6 @@ class _ActionBar extends StatelessWidget {
 // ---------------------------------------------------------------------------
 // Sub-widgets utilitários
 // ---------------------------------------------------------------------------
-
-class _LiveDot extends StatefulWidget {
-  const _LiveDot({required this.color, required this.animate});
-  final Color color;
-  final bool animate;
-
-  @override
-  State<_LiveDot> createState() => _LiveDotState();
-}
-
-class _LiveDotState extends State<_LiveDot> with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 1600))..repeat();
-
-  @override
-  void dispose() {
-    _c.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final dot = Container(width: 8, height: 8, decoration: BoxDecoration(color: widget.color, shape: BoxShape.circle));
-    if (!widget.animate) return dot;
-    return AnimatedBuilder(
-      animation: _c,
-      builder: (context, child) => SizedBox(
-        width: 8,
-        height: 8,
-        child: Stack(alignment: Alignment.center, clipBehavior: Clip.none, children: [
-          Opacity(
-            opacity: (1 - _c.value) * 0.6,
-            child: Container(width: 8 + _c.value * 10, height: 8 + _c.value * 10, decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: widget.color))),
-          ),
-          child!,
-        ]),
-      ),
-      child: dot,
-    );
-  }
-}
 
 class _MiniStat extends StatelessWidget {
   const _MiniStat({required this.value, required this.label});

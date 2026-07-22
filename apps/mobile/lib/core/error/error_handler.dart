@@ -15,6 +15,10 @@ class AppErrorHandler {
   void install() {
     FlutterError.onError = (FlutterErrorDetails details) {
       _logger.error('FlutterError: ${details.exceptionAsString()}', details.exception, details.stack);
+      // Sem isto o stack trace NUNCA chega ao console: substituir onError
+      // desliga a apresentação padrão do Flutter, e um crash de árvore vira uma
+      // tela cinza sem diagnóstico. Fora de release, sempre apresentar.
+      if (!kReleaseMode) FlutterError.presentError(details);
     };
 
     // Erros da plataforma (engine) que não passam pelo Flutter framework.

@@ -6,6 +6,7 @@ import '../../core/session/session_cubit.dart';
 import '../../core/session/session_state.dart';
 import '../../features/driver/presentation/location_sharing_cubit.dart';
 import '../../l10n/gen/app_localizations.dart';
+import '../../core/ui/navix_pulse_dot.dart';
 import '../theme/navix_tokens.dart';
 
 /// Cabeçalho do menu lateral: avatar, nome e estado (Online / Em Rota / Offline).
@@ -81,7 +82,7 @@ class _StatusPill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(color: color.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(999)),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
-        _Dot(color: color, animate: live),
+        NavixPulseDot(color: color, animate: live),
         const SizedBox(width: 6),
         Text(label, style: TextStyle(color: color, fontSize: 11.5, fontWeight: FontWeight.w600)),
       ]),
@@ -100,50 +101,6 @@ class _StatusPill extends StatelessWidget {
       builder: (context, state) => state.sharing
           ? _pill(context, color: t.accent, label: l10n.statusEnRoute, live: true)
           : _pill(context, color: t.success, label: l10n.statusOnline, live: false),
-    );
-  }
-}
-
-class _Dot extends StatefulWidget {
-  const _Dot({required this.color, required this.animate});
-  final Color color;
-  final bool animate;
-
-  @override
-  State<_Dot> createState() => _DotState();
-}
-
-class _DotState extends State<_Dot> with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 1600))..repeat();
-
-  @override
-  void dispose() {
-    _c.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final dot = Container(width: 8, height: 8, decoration: BoxDecoration(color: widget.color, shape: BoxShape.circle));
-    if (!widget.animate) return dot;
-    return AnimatedBuilder(
-      animation: _c,
-      builder: (context, child) => SizedBox(
-        width: 8,
-        height: 8,
-        child: Stack(alignment: Alignment.center, clipBehavior: Clip.none, children: [
-          Opacity(
-            opacity: (1 - _c.value) * 0.6,
-            child: Container(
-              width: 8 + _c.value * 10,
-              height: 8 + _c.value * 10,
-              decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: widget.color)),
-            ),
-          ),
-          child!,
-        ]),
-      ),
-      child: dot,
     );
   }
 }
