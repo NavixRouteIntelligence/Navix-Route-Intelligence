@@ -22,10 +22,11 @@ class ImportRepository {
     }
   }
 
-  /// Confirma o lote, criando as entregas. Se [optimize], dispara o otimizador.
-  Future<ImportConfirmation> confirm(String batchId, {bool optimize = false}) async {
+  /// Confirma o lote, criando as entregas. A rota é preparada automaticamente
+  /// pela IA no backend (ADR-0074) — não há opt-in nem botão "Otimizar".
+  Future<ImportConfirmation> confirm(String batchId) async {
     try {
-      final res = await _dio.post<dynamic>('/imports/$batchId/confirm', data: {'optimize': optimize});
+      final res = await _dio.post<dynamic>('/imports/$batchId/confirm', data: const <String, dynamic>{});
       return ImportConfirmation.fromJson(_map(res));
     } on DioException catch (e) {
       throw mapDioException(e);

@@ -200,13 +200,29 @@ class _PreviewStep extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 16),
+              // A otimização deixou de ser uma escolha (ADR-0074): a IA prepara a
+              // rota sozinha ao confirmar. O card informa o que vai acontecer em
+              // vez de pedir uma decisão que o utilizador não precisa tomar.
               NavixCard(
-                child: SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  value: state.optimize,
-                  onChanged: (v) => context.read<ImportCubit>().toggleOptimize(v),
-                  title: const Text('Otimizar rota após importar', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-                  subtitle: Text('Gera um plano com o Route Optimizer', style: TextStyle(color: t.muted, fontSize: 12)),
+                child: Row(
+                  children: [
+                    Icon(Icons.auto_awesome, size: 20, color: t.accent),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('A rota é preparada automaticamente',
+                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Ao confirmar, a IA organiza as entregas e define a melhor sequência.',
+                            style: TextStyle(color: t.muted, fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 16),

@@ -94,17 +94,18 @@ export class ImportController {
   @Post(':id/confirm')
   @Roles('admin', 'dispatcher', 'driver')
   @Idempotent()
-  @ApiOperation({ summary: 'Confirma a importação: cria entregas e (opcional) otimiza' })
+  @ApiOperation({ summary: 'Confirma a importação: cria entregas e prepara a rota automaticamente' })
   confirmHandler(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: ConfirmImportDto,
+    // `dto` segue no contrato só para aceitar o `optimize` legado sem 400; o
+    // valor é ignorado — a IA sempre prepara a rota (ADR-0074).
+    @Body() _dto: ConfirmImportDto,
   ): Promise<ConfirmImportResponse> {
     return this.confirm.execute({
       tenantId: user.tenantId,
       actorId: user.id,
       batchId: id,
-      optimize: dto.optimize ?? false,
     });
   }
 

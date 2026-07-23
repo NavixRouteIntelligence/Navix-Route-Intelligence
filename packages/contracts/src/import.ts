@@ -111,7 +111,12 @@ export interface ImportPreviewResponse {
 }
 
 export interface ConfirmImportRequest {
-  /** Se true, dispara o Route Optimizer com as entregas criadas. */
+  /**
+   * @deprecated Ignorado desde a IA automática (ADR-0074). A otimização deixou
+   * de ser opcional: confirmar a importação **sempre** prepara a rota quando há
+   * pelo menos duas entregas georreferenciadas. O campo segue aceito apenas
+   * para não quebrar clientes antigos sob `forbidNonWhitelisted`.
+   */
   optimize?: boolean;
 }
 

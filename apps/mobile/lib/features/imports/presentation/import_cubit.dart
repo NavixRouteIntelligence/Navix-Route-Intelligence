@@ -12,7 +12,6 @@ class ImportState extends Equatable {
   const ImportState({
     this.step = ImportStep.upload,
     this.busy = false,
-    this.optimize = false,
     this.preview,
     this.confirmation,
     this.history = const [],
@@ -22,7 +21,6 @@ class ImportState extends Equatable {
 
   final ImportStep step;
   final bool busy; // upload/preview/confirm em andamento
-  final bool optimize; // otimizar rota após importar
   final ImportPreview? preview;
   final ImportConfirmation? confirmation;
   final List<ImportBatch> history;
@@ -32,7 +30,6 @@ class ImportState extends Equatable {
   ImportState copyWith({
     ImportStep? step,
     bool? busy,
-    bool? optimize,
     ImportPreview? preview,
     ImportConfirmation? confirmation,
     List<ImportBatch>? history,
@@ -43,7 +40,6 @@ class ImportState extends Equatable {
     return ImportState(
       step: step ?? this.step,
       busy: busy ?? this.busy,
-      optimize: optimize ?? this.optimize,
       preview: preview ?? this.preview,
       confirmation: confirmation ?? this.confirmation,
       history: history ?? this.history,
@@ -53,7 +49,7 @@ class ImportState extends Equatable {
   }
 
   @override
-  List<Object?> get props => [step, busy, optimize, preview, confirmation, history, historyLoading, error];
+  List<Object?> get props => [step, busy, preview, confirmation, history, historyLoading, error];
 }
 
 class ImportCubit extends Cubit<ImportState> {
@@ -85,14 +81,13 @@ class ImportCubit extends Cubit<ImportState> {
     }
   }
 
-  void toggleOptimize(bool value) => emit(state.copyWith(optimize: value));
 
   Future<void> confirm() async {
     final batch = state.preview?.batch;
     if (batch == null) return;
     emit(state.copyWith(busy: true, clearError: true));
     try {
-      final result = await _repository.confirm(batch.id, optimize: state.optimize);
+      final result = await _repository.confirm(batch.id);
       emit(state.copyWith(busy: false, step: ImportStep.done, confirmation: result));
       await loadHistory();
     } on Failure catch (f) {
