@@ -28,7 +28,7 @@ class OptimizerState extends Equatable {
   final double serviceTimeMinutes;
   final bool optimizing;
   final RoutePlanResult? result;
-  final String? error;
+  final Failure? error;
 
   int get selectableCount => deliveries.where((d) => d.geocoded).length;
   int get ignoredCount => deliveries.where((d) => !d.geocoded).length;
@@ -43,7 +43,7 @@ class OptimizerState extends Equatable {
     double? serviceTimeMinutes,
     bool? optimizing,
     RoutePlanResult? result,
-    String? error,
+    Failure? error,
     bool clearError = false,
   }) {
     return OptimizerState(
@@ -76,9 +76,9 @@ class OptimizerCubit extends Cubit<OptimizerState> {
       final preselected = items.where((d) => d.geocoded).map((d) => d.id).toSet();
       emit(state.copyWith(loadingDeliveries: false, deliveries: items, selected: preselected));
     } on Failure catch (f) {
-      emit(state.copyWith(loadingDeliveries: false, error: f.message));
+      emit(state.copyWith(loadingDeliveries: false, error: f));
     } catch (_) {
-      emit(state.copyWith(loadingDeliveries: false, error: 'Não foi possível carregar as entregas.'));
+      emit(state.copyWith(loadingDeliveries: false, error: const UnknownFailure()));
     }
   }
 
@@ -110,9 +110,9 @@ class OptimizerCubit extends Cubit<OptimizerState> {
       );
       emit(state.copyWith(optimizing: false, step: OptimizerStep.result, result: result));
     } on Failure catch (f) {
-      emit(state.copyWith(optimizing: false, error: f.message));
+      emit(state.copyWith(optimizing: false, error: f));
     } catch (_) {
-      emit(state.copyWith(optimizing: false, error: 'Não foi possível otimizar a rota.'));
+      emit(state.copyWith(optimizing: false, error: const UnknownFailure()));
     }
   }
 

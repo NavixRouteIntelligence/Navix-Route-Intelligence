@@ -149,7 +149,7 @@ void main() {
     },
     verify: (c) {
       expect(c.state.status, ManualRouteStatus.ready);
-      expect(c.state.error, 'Sem conexão com o servidor.');
+      expect(c.state.error, const NetworkFailure());
       expect(c.state.stops, stops);
     },
   );

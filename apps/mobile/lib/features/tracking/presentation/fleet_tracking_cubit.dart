@@ -22,7 +22,7 @@ class FleetTrackingState extends Equatable {
 
   final FleetStatus status;
   final FleetSnapshot? snapshot;
-  final String? error;
+  final Failure? error;
   final String? selectedId;
   final List<TrackPoint> history;
   final bool historyLoading;
@@ -54,7 +54,7 @@ class FleetTrackingState extends Equatable {
   FleetTrackingState copyWith({
     FleetStatus? status,
     FleetSnapshot? snapshot,
-    String? error,
+    Failure? error,
     String? selectedId,
     List<TrackPoint>? history,
     bool? historyLoading,
@@ -93,9 +93,9 @@ class FleetTrackingCubit extends Cubit<FleetTrackingState> {
       emit(state.copyWith(status: FleetStatus.success, snapshot: snap));
       if (state.live) _startTimer();
     } on Failure catch (f) {
-      emit(state.copyWith(status: FleetStatus.error, error: f.message));
+      emit(state.copyWith(status: FleetStatus.error, error: f));
     } catch (_) {
-      emit(state.copyWith(status: FleetStatus.error, error: 'Erro inesperado.'));
+      emit(state.copyWith(status: FleetStatus.error, error: const UnknownFailure()));
     }
   }
 

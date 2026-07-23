@@ -64,7 +64,7 @@ void main() {
     act: (c) => c.load(),
     expect: () => [
       const MaintenanceState(status: MaintenanceStatus.loading),
-      const MaintenanceState(status: MaintenanceStatus.error, error: 'Sem conexão com o servidor.'),
+      const MaintenanceState(status: MaintenanceStatus.error, error: NetworkFailure()),
     ],
   );
 

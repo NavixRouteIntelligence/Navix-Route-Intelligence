@@ -10,12 +10,26 @@ class LocationSample {
   final double? heading;
 }
 
-/// Erro de localização apresentável ao usuário.
+/// Por que a localização não está disponível. É o motivo, não o texto: cada
+/// caso pede uma ação diferente do usuário e a tradução sai no ponto de
+/// exibição (ver `core/error/failure_l10n.dart`).
+enum LocationErrorReason {
+  /// Serviço de localização desligado no dispositivo.
+  serviceDisabled,
+
+  /// Permissão negada nesta sessão — dá para pedir de novo.
+  permissionDenied,
+
+  /// Permissão negada permanentemente — só nas configurações do sistema.
+  permissionBlocked,
+}
+
+/// Localização indisponível. Vira [LocationFailure] na camada de apresentação.
 class LocationException implements Exception {
-  const LocationException(this.message);
-  final String message;
+  const LocationException(this.reason);
+  final LocationErrorReason reason;
   @override
-  String toString() => message;
+  String toString() => 'LocationException(${reason.name})';
 }
 
 /// Abstração fina sobre o geolocator — facilita testes e isola a plataforma.
@@ -23,10 +37,10 @@ class LocationService {
   const LocationService();
 
   /// Garante serviço + permissão e retorna a posição atual. Lança
-  /// [LocationException] com mensagem amigável quando indisponível.
+  /// [LocationException] com o motivo quando indisponível.
   Future<LocationSample> current() async {
     if (!await Geolocator.isLocationServiceEnabled()) {
-      throw const LocationException('Ative a localização do dispositivo para compartilhar.');
+      throw const LocationException(LocationErrorReason.serviceDisabled);
     }
 
     var permission = await Geolocator.checkPermission();
@@ -34,10 +48,10 @@ class LocationService {
       permission = await Geolocator.requestPermission();
     }
     if (permission == LocationPermission.denied) {
-      throw const LocationException('Permissão de localização negada.');
+      throw const LocationException(LocationErrorReason.permissionDenied);
     }
     if (permission == LocationPermission.deniedForever) {
-      throw const LocationException('Permissão de localização bloqueada nas configurações.');
+      throw const LocationException(LocationErrorReason.permissionBlocked);
     }
 
     final pos = await Geolocator.getCurrentPosition(

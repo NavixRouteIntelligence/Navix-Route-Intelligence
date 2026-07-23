@@ -24,7 +24,7 @@ class MaintenanceState extends Equatable {
 
   /// Uma mutação (adicionar/apagar/hodômetro) está em andamento.
   final bool busy;
-  final String? error;
+  final Failure? error;
 
   MaintenanceState copyWith({
     MaintenanceStatus? status,
@@ -32,7 +32,7 @@ class MaintenanceState extends Equatable {
     List<MaintenanceRecord>? records,
     List<MaintenanceReminder>? reminders,
     bool? busy,
-    String? error,
+    Failure? error,
     bool clearError = false,
   }) {
     return MaintenanceState(
@@ -73,9 +73,9 @@ class MaintenanceCubit extends Cubit<MaintenanceState> {
         reminders: reminders,
       ));
     } on Failure catch (f) {
-      emit(MaintenanceState(status: MaintenanceStatus.error, error: f.message));
+      emit(MaintenanceState(status: MaintenanceStatus.error, error: f));
     } catch (_) {
-      emit(const MaintenanceState(status: MaintenanceStatus.error, error: 'Erro inesperado.'));
+      emit(const MaintenanceState(status: MaintenanceStatus.error, error: UnknownFailure()));
     }
   }
 
@@ -109,9 +109,9 @@ class MaintenanceCubit extends Cubit<MaintenanceState> {
         vehicle: refreshed ?? vehicle,
       ));
     } on Failure catch (f) {
-      emit(state.copyWith(busy: false, error: f.message));
+      emit(state.copyWith(busy: false, error: f));
     } catch (_) {
-      emit(state.copyWith(busy: false, error: 'Não foi possível salvar.'));
+      emit(state.copyWith(busy: false, error: const UnknownFailure()));
     }
   }
 }

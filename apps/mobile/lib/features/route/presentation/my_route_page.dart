@@ -4,6 +4,7 @@ import 'package:get_it/get_it.dart';
 
 import '../../../app/shell/adaptive_nav_scaffold.dart';
 import '../../../app/theme/navix_tokens.dart';
+import '../../../core/error/failure_l10n.dart';
 import '../../../core/ui/navix_card.dart';
 import '../../../core/ui/navix_section_header.dart';
 import '../../../core/ui/navix_states.dart';
@@ -31,7 +32,7 @@ class MyRoutePage extends StatelessWidget {
           builder: (context, state) => switch (state.status) {
             MyRouteLoadStatus.loading => const Center(child: CircularProgressIndicator()),
             MyRouteLoadStatus.error => NavixErrorState(
-                description: state.error ?? l10n.routeLoadError,
+                description: state.error == null ? l10n.routeLoadError : context.failureText(state.error!),
                 onRetry: () => context.read<MyRouteCubit>().load(),
               ),
             MyRouteLoadStatus.ready => _Content(state: state),

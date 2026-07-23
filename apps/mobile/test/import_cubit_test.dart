@@ -71,7 +71,7 @@ void main() {
     act: (c) => c.loadHistory(),
     expect: () => const [
       ImportState(historyLoading: true),
-      ImportState(error: 'Sem conexão com o servidor.'),
+      ImportState(error: NetworkFailure()),
     ],
   );
 }

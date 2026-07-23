@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 
+import '../../../core/error/failure.dart';
+import '../../../core/error/failure_l10n.dart';
 import '../../../app/theme/navix_tokens.dart';
 import '../../../core/ui/navix_card.dart';
 import '../../../core/ui/navix_section_header.dart';
@@ -62,7 +64,7 @@ class _FleetView extends StatelessWidget {
             FleetStatus.loading => const _LoadingView(),
             FleetStatus.error => Center(
                 child: NavixErrorState(
-                  description: state.error ?? 'Não foi possível carregar a frota.',
+                  description: context.failureText(state.error ?? const UnknownFailure()),
                   onRetry: () => context.read<FleetTrackingCubit>().load(),
                 ),
               ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 
+import '../../../core/error/failure_l10n.dart';
 import '../../../app/theme/navix_tokens.dart';
 import '../../../core/ui/navix_card.dart';
 import '../../../core/ui/navix_states.dart';
@@ -32,14 +33,14 @@ class ManualRoutePage extends StatelessWidget {
             } else if (state.error != null) {
               ScaffoldMessenger.of(context)
                 ..hideCurrentSnackBar()
-                ..showSnackBar(SnackBar(content: Text(state.error!)));
+                ..showSnackBar(SnackBar(content: Text(context.failureText(state.error!))));
             }
           },
           builder: (context, state) {
             return switch (state.status) {
               ManualRouteStatus.loading => const Center(child: CircularProgressIndicator()),
               ManualRouteStatus.error => NavixErrorState(
-                  description: state.error ?? l10n.manualRouteLoadError,
+                  description: state.error == null ? l10n.manualRouteLoadError : context.failureText(state.error!),
                   onRetry: () => context.read<ManualRouteCubit>().load(),
                 ),
               _ => state.stops.length < 2

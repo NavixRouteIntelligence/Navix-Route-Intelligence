@@ -90,7 +90,7 @@ void main() {
     expect: () => [
       const VoiceAssistantState(status: VoiceStatus.listening),
       const VoiceAssistantState(status: VoiceStatus.thinking, transcript: 'oi'),
-      const VoiceAssistantState(status: VoiceStatus.error, error: 'Sem conexão com o servidor.'),
+      const VoiceAssistantState(status: VoiceStatus.error, error: NetworkFailure()),
     ],
   );
 }

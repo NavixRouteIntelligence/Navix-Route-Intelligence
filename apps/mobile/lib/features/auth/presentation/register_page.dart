@@ -3,6 +3,7 @@ import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/error/failure.dart';
+import '../../../core/error/failure_l10n.dart';
 import '../../../core/session/session_cubit.dart';
 import '../../../core/ui/navix_button.dart';
 import '../../../l10n/gen/app_localizations.dart';
@@ -53,9 +54,9 @@ class _RegisterPageState extends State<RegisterPage> {
         ),
       );
     } on Failure catch (f) {
-      if (mounted) setState(() => _error = f.message);
+      if (mounted) setState(() => _error = context.failureText(f));
     } catch (_) {
-      if (mounted) setState(() => _error = 'Falha ao criar a conta.');
+      if (mounted) setState(() => _error = AppLocalizations.of(context).errorUnknown);
     } finally {
       if (mounted) setState(() => _submitting = false);
     }

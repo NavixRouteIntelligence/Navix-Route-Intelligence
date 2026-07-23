@@ -21,13 +21,14 @@ class MyRouteState extends Equatable {
   /// Tipos de grupo abertos na lista (a expansão é estado de UI, não de dados).
   final Set<String> expanded;
 
-  final String? error;
+  /// A falha em si; a tradução acontece na UI (ver `failure_l10n.dart`).
+  final Failure? error;
 
   MyRouteState copyWith({
     MyRouteLoadStatus? status,
     MyRoute? route,
     Set<String>? expanded,
-    String? error,
+    Failure? error,
   }) =>
       MyRouteState(
         status: status ?? this.status,
@@ -51,7 +52,7 @@ class MyRouteCubit extends Cubit<MyRouteState> {
       final route = await _repository.load();
       emit(state.copyWith(status: MyRouteLoadStatus.ready, route: route));
     } on Failure catch (f) {
-      emit(state.copyWith(status: MyRouteLoadStatus.error, error: f.message));
+      emit(state.copyWith(status: MyRouteLoadStatus.error, error: f));
     }
   }
 

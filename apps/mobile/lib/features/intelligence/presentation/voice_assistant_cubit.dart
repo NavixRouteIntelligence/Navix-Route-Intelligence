@@ -42,9 +42,9 @@ class VoiceAssistantState extends Equatable {
   final String? transcript;
   final VoiceCommand? command;
   final String? reply;
-  final String? error;
+  final Failure? error;
 
-  VoiceAssistantState copyWith({VoiceStatus? status, String? transcript, VoiceCommand? command, String? reply, String? error}) {
+  VoiceAssistantState copyWith({VoiceStatus? status, String? transcript, VoiceCommand? command, String? reply, Failure? error}) {
     return VoiceAssistantState(
       status: status ?? this.status,
       transcript: transcript ?? this.transcript,
@@ -96,9 +96,9 @@ class VoiceAssistantCubit extends Cubit<VoiceAssistantState> {
       ));
       await _speech.speak(reply, localeId: ttsLocale);
     } on Failure catch (f) {
-      emit(VoiceAssistantState(status: VoiceStatus.error, error: f.message));
+      emit(VoiceAssistantState(status: VoiceStatus.error, error: f));
     } catch (_) {
-      emit(const VoiceAssistantState(status: VoiceStatus.error, error: 'Erro inesperado.'));
+      emit(const VoiceAssistantState(status: VoiceStatus.error, error: UnknownFailure()));
     }
   }
 

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 
+import '../../../core/error/failure.dart';
+import '../../../core/error/failure_l10n.dart';
 import '../../../app/theme/navix_tokens.dart';
 import '../../../core/theme/theme_cubit.dart';
 import '../../../core/ui/navix_button.dart';
@@ -59,7 +61,7 @@ class _DashboardView extends StatelessWidget {
           final child = switch (state.status) {
             DashboardStatus.loading => const _LoadingView(),
             DashboardStatus.error => NavixErrorState(
-                description: state.error ?? 'Não foi possível carregar.',
+                description: context.failureText(state.error ?? const UnknownFailure()),
                 onRetry: () => context.read<DashboardCubit>().load(),
               ),
             DashboardStatus.success => (state.data?.isEmpty ?? true)

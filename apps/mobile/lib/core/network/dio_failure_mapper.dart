@@ -16,10 +16,12 @@ Failure mapDioException(DioException e, {Failure? unauthorized}) {
       return const NetworkFailure();
     case DioExceptionType.badResponse:
       final status = e.response?.statusCode;
-      final message = _extractMessage(e.response?.data) ?? 'Erro no servidor.';
+      // Sem mensagem da API o detalhe fica nulo: a UI cai no texto localizado
+      // do tipo, em vez de um "Erro no servidor." fixo em português.
+      final detail = _extractMessage(e.response?.data);
       if (status == 401) return unauthorized ?? const UnauthorizedFailure();
-      if (status == 400 || status == 409 || status == 422) return ValidationFailure(message);
-      return ServerFailure(message, statusCode: status);
+      if (status == 400 || status == 409 || status == 422) return ValidationFailure(detail);
+      return ServerFailure(detail, status);
     default:
       return const UnknownFailure();
   }

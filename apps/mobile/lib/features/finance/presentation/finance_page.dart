@@ -4,6 +4,7 @@ import 'package:get_it/get_it.dart';
 
 import '../../../app/shell/adaptive_nav_scaffold.dart';
 import '../../../app/theme/navix_tokens.dart';
+import '../../../core/error/failure_l10n.dart';
 import '../../../core/ui/navix_card.dart';
 import '../../../core/ui/navix_section_header.dart';
 import '../../../core/ui/navix_states.dart';
@@ -31,12 +32,12 @@ class FinancePage extends StatelessWidget {
           listenWhen: (p, c) => p.error != c.error && c.error != null,
           listener: (context, state) => ScaffoldMessenger.of(context)
             ..hideCurrentSnackBar()
-            ..showSnackBar(SnackBar(content: Text(state.error!))),
+            ..showSnackBar(SnackBar(content: Text(context.failureText(state.error!)))),
           builder: (context, state) {
             return switch (state.status) {
               FinanceStatus.loading => const Center(child: CircularProgressIndicator()),
               FinanceStatus.error => NavixErrorState(
-                  description: state.error ?? l10n.finLoadError,
+                  description: state.error == null ? l10n.finLoadError : context.failureText(state.error!),
                   onRetry: () => context.read<FinanceCubit>().load(),
                 ),
               FinanceStatus.ready => _Content(state: state),
