@@ -121,6 +121,30 @@ export interface RouteStopView {
   destinationType?: DestinationType;
 }
 
+/**
+ * **Grupo Inteligente** (ADR-0075): as paradas de um mesmo tipo de destino,
+ * agregadas. A IA não reordena a rota para juntar os grupos — ela otimiza a
+ * sequência e o grupo é a *leitura* dessa sequência por categoria, para o
+ * motorista saber o que vem pela frente ("4 comércios, depois 6 casas").
+ *
+ * `distanceKm` e `timeMinutes` **particionam exatamente** o total da rota: cada
+ * parada atribui ao seu grupo a perna de chegada e o tempo até ela.
+ */
+export interface RouteGroupView {
+  /** Tipo do destino. `other` agrega o que não foi classificado. */
+  type: DestinationType;
+  /** Ordem em que a rota encontra o grupo pela primeira vez (1..N). */
+  order: number;
+  /** Quantidade de paradas no grupo. */
+  stops: number;
+  /** Sequências das paradas (`RouteStopView.sequence`), em ordem de rota. */
+  sequences: number[];
+  /** Distância atribuível ao grupo (soma das pernas de chegada), km. */
+  distanceKm: number;
+  /** Tempo atribuível ao grupo (soma dos avanços de ETA), minutos. */
+  timeMinutes: number;
+}
+
 export interface RouteMetrics {
   totalDistanceKm: number;
   totalTimeMinutes: number;
@@ -190,6 +214,11 @@ export interface RoutePlan {
   params: RoutePlanParams;
   /** Paradas na ordem final. Em plano multi-veículo, é a concatenação de `routes`. */
   stops: RouteStopView[];
+  /**
+   * Grupos Inteligentes derivados de [stops] (ADR-0075). Computado na leitura —
+   * não é persistido, então planos antigos também ganham os grupos.
+   */
+  groups: RouteGroupView[];
   /** Métricas agregadas (soma entre veículos, no caso multi-veículo). */
   metrics: RouteMetrics;
   baseline: RouteMetrics;
