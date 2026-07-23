@@ -5,9 +5,11 @@ import 'package:go_router/go_router.dart';
 
 import '../core/config/app_config.dart';
 import '../core/session/session_cubit.dart';
+import '../core/session/session_state.dart';
 import '../core/theme/theme_cubit.dart';
 import '../l10n/gen/app_localizations.dart';
 import 'router/app_router.dart';
+import 'splash/splash_gate.dart';
 import 'theme/app_theme.dart';
 
 /// Raiz do app: tema, i18n e roteamento. Recebe as dependências já resolvidas.
@@ -45,6 +47,16 @@ class _NavixAppState extends State<NavixApp> {
         routerConfig: _router,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
+        // A abertura fica ACIMA do roteador: o app monta e restaura a sessão
+        // por baixo enquanto a encenação acontece, então ela não acrescenta
+        // tempo de partida — só ocupa o tempo que já era de carregamento.
+        builder: (context, child) => BlocBuilder<SessionCubit, SessionState>(
+          bloc: widget.session,
+          builder: (context, s) => SplashGate(
+            isDataReady: s.status != SessionStatus.unknown,
+            child: child ?? const SizedBox.shrink(),
+          ),
+        ),
       ),
     );
   }
