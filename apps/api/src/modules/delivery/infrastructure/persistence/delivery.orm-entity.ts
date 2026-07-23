@@ -69,6 +69,9 @@ export class DeliveryOrmEntity {
   @Column('text', { nullable: true })
   notes!: string | null;
 
+  @Column('text', { nullable: true })
+  recipient!: string | null;
+
   @Column('timestamptz', { name: 'created_at' })
   createdAt!: Date;
 

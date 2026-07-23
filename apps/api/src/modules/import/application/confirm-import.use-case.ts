@@ -52,6 +52,7 @@ export class ConfirmImportUseCase {
         longitude: row.longitude,
         priority: row.priority,
         notes: row.notes,
+        recipient: row.recipient,
       });
       deliveryIds.push(id);
     }

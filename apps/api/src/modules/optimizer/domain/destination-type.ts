@@ -51,13 +51,24 @@ function normalize(text: string): string {
 }
 
 /**
- * Classifica um destino a partir do texto do endereço (rua, complemento, cidade…).
+ * Classifica um destino a partir do texto do endereço e, quando houver, do
+ * **nome de quem recebe** (ADR-0076).
+ *
+ * O destinatário costuma ser o único sinal disponível: endereços reais são
+ * "Av. Paulista, 1000" — sem "loja", "casa" ou "apartamento" —, então casar só
+ * o endereço devolvia `null` para praticamente tudo e jogava toda a rota no
+ * grupo "outros". "Acme Ltda" resolve o que o endereço não resolve.
+ *
  * Determinística; retorna `null` quando nada casa (cai no default global — não
  * "chuta" residência). É a base da classificação automática (RSE-3).
  */
-export function classifyDestination(text?: string | null): DestinationType | null {
-  if (!text) return null;
-  const hay = normalize(text);
+export function classifyDestination(
+  text?: string | null,
+  recipient?: string | null,
+): DestinationType | null {
+  const combined = [text, recipient].filter((p): p is string => !!p && p.length > 0).join(' ');
+  if (!combined) return null;
+  const hay = normalize(combined);
   for (const [type, words] of KEYWORDS) {
     for (const w of words) {
       if (hay.includes(w)) return type;

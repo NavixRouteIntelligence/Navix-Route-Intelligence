@@ -45,3 +45,30 @@ describe('destination-type (ADR-0064)', () => {
     });
   });
 });
+
+describe('classifyDestination com destinatário (ADR-0076)', () => {
+  it('classifica pelo destinatário quando o endereço não tem sinal', () => {
+    // O caso real que jogava tudo em "outros": endereços brasileiros/portugueses
+    // não contêm "loja"/"casa"/"apartamento".
+    expect(classifyDestination('Av. Paulista, 1000')).toBeNull();
+    expect(classifyDestination('Av. Paulista, 1000', 'Acme Ltda')).toBe('company');
+  });
+
+  it('reconhece comércio e saúde pelo nome de quem recebe', () => {
+    expect(classifyDestination('Rua Augusta, 900', 'Padaria do Zé')).toBe('commerce');
+    expect(classifyDestination('Rua Vergueiro, 3000', 'Hospital São Luiz')).toBe('hospital');
+  });
+
+  it('o endereço continua valendo sozinho', () => {
+    expect(classifyDestination('Shopping Center Norte, Loja 12')).toBe('mall');
+  });
+
+  it('destinatário sem sinal não inventa classificação', () => {
+    expect(classifyDestination('Rua A, 10', 'João Silva')).toBeNull();
+  });
+
+  it('sem endereço nem destinatário devolve null', () => {
+    expect(classifyDestination(null, null)).toBeNull();
+    expect(classifyDestination('', '')).toBeNull();
+  });
+});
