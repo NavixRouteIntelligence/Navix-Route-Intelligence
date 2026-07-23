@@ -13,6 +13,7 @@ import { Address } from './value-objects/address';
 import { TimeWindow } from './value-objects/time-window';
 
 const MAX_NOTES = 2000;
+const MAX_RECIPIENT = 200;
 
 export interface DeliveryProps {
   id: string;
@@ -25,6 +26,8 @@ export interface DeliveryProps {
   vehicleId: string | null;
   routeId: string | null;
   notes: string | null;
+  /** Quem recebe. Nulo quando a origem não informou (ADR-0076). */
+  recipient: string | null;
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
@@ -39,6 +42,7 @@ export interface CreateDeliveryInput {
   vehicleId?: string | null;
   routeId?: string | null;
   notes?: string | null;
+  recipient?: string | null;
 }
 
 export interface UpdateDeliveryInput {
@@ -49,6 +53,7 @@ export interface UpdateDeliveryInput {
   vehicleId?: string | null;
   routeId?: string | null;
   notes?: string | null;
+  recipient?: string | null;
 }
 
 /**
@@ -72,6 +77,7 @@ export class Delivery {
       vehicleId: input.vehicleId ?? null,
       routeId: input.routeId ?? null,
       notes: Delivery.normalizeNotes(input.notes ?? null),
+      recipient: Delivery.normalizeRecipient(input.recipient ?? null),
       createdAt: now,
       updatedAt: now,
       deletedAt: null,
@@ -88,6 +94,7 @@ export class Delivery {
     if (input.timeWindow !== undefined) this.props.timeWindow = TimeWindow.create(input.timeWindow);
     if (input.priority !== undefined) this.props.priority = Delivery.validatePriority(input.priority);
     if (input.notes !== undefined) this.props.notes = Delivery.normalizeNotes(input.notes);
+    if (input.recipient !== undefined) this.props.recipient = Delivery.normalizeRecipient(input.recipient);
     if (input.driverId !== undefined) this.props.driverId = input.driverId;
     if (input.vehicleId !== undefined) this.props.vehicleId = input.vehicleId;
     if (input.routeId !== undefined) this.props.routeId = input.routeId;
@@ -139,6 +146,14 @@ export class Delivery {
       throw new ValidationError(`Prioridade inválida: ${priority}.`);
     }
     return priority;
+  }
+
+  /** Apara e limita; vazio vira nulo (não guarda string em branco). */
+  private static normalizeRecipient(recipient: string | null): string | null {
+    if (recipient === null) return null;
+    const value = recipient.trim();
+    if (value.length === 0) return null;
+    return value.length > MAX_RECIPIENT ? value.slice(0, MAX_RECIPIENT) : value;
   }
 
   private static normalizeNotes(notes: string | null): string | null {

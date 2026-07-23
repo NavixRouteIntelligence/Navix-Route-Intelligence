@@ -31,7 +31,7 @@ export class DeliveryGateway implements DeliveryGatewayPort {
 function toStop(s: DeliveryStopDto): OptimizerDeliveryStop {
   // Classificação automática do destino a partir do endereço (ADR-0064). Fica no
   // Optimizer (não no Delivery) para não inverter a direção da dependência.
-  const destinationType = classifyDestination(s.addressText);
+  const destinationType = classifyDestination(s.addressText, s.recipient);
   return {
     id: s.id,
     latitude: s.latitude,

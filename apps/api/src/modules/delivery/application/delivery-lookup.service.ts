@@ -20,6 +20,12 @@ export interface DeliveryStopDto {
    * entre módulos (ADR-0064). Ausente quando não há endereço textual.
    */
   addressText?: string;
+  /**
+   * Nome de quem recebe — **dado**, não classificação, pela mesma razão de
+   * [addressText]. "Acme Ltda" identifica uma empresa que o endereço sozinho
+   * não revela (ADR-0076). Ausente quando a origem não informou.
+   */
+  recipient?: string;
 }
 
 /**
@@ -97,6 +103,7 @@ export class DeliveryLookupService implements DeliveryLookupPort {
         end: s.timeWindow.end.toISOString(),
       },
       ...(addressText ? { addressText } : {}),
+      ...(s.recipient ? { recipient: s.recipient } : {}),
     };
   }
 }

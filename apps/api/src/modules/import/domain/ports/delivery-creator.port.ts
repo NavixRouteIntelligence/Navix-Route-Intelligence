@@ -15,6 +15,8 @@ export interface CreateDeliveryData {
   longitude: number;
   priority: DeliveryPriority;
   notes: string | null;
+  /** Quem recebe (ADR-0076). Sinal-chave para classificar o destino. */
+  recipient: string | null;
 }
 
 /** Porta anti-corrupção do Import para o contexto Delivery. */
