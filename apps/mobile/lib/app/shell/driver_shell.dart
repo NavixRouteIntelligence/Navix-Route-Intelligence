@@ -3,7 +3,7 @@ import 'package:get_it/get_it.dart';
 
 import '../../core/session/session_cubit.dart';
 import '../../features/deliveries/presentation/driver_deliveries_page.dart';
-import '../../features/driver/presentation/driver_dashboard_page.dart';
+import '../../features/route/presentation/my_route_page.dart';
 import '../../features/finance/presentation/finance_page.dart';
 import '../../features/maintenance/presentation/maintenance_page.dart';
 import '../../l10n/gen/app_localizations.dart';
@@ -27,7 +27,7 @@ class DriverShell extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
 
     final tabs = [
-      NavTab(icon: Icons.navigation_outlined, selectedIcon: Icons.navigation, label: l10n.navRoute, page: const DriverDashboardPage()),
+      NavTab(icon: Icons.navigation_outlined, selectedIcon: Icons.navigation, label: l10n.navRoute, page: const MyRoutePage()),
       NavTab(icon: Icons.inventory_2_outlined, selectedIcon: Icons.inventory_2, label: l10n.navDeliveries, page: const DriverDeliveriesPage()),
       NavTab(icon: Icons.directions_car_outlined, selectedIcon: Icons.directions_car, label: l10n.navVehicle, page: const MaintenancePage()),
       NavTab(icon: Icons.account_balance_wallet_outlined, selectedIcon: Icons.account_balance_wallet, label: l10n.navFinance, page: const FinancePage()),

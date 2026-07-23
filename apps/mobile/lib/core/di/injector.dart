@@ -18,6 +18,8 @@ import '../../features/intelligence/data/intelligence_repository.dart';
 import '../../features/intelligence/presentation/stop_intelligence_cubit.dart';
 import '../../features/intelligence/presentation/voice_assistant_cubit.dart';
 import '../voice/speech_service.dart';
+import '../../features/route/data/my_route_repository.dart';
+import '../../features/route/presentation/my_route_cubit.dart';
 import '../../features/optimizer/data/optimizer_repository.dart';
 import '../../features/earnings/data/tariff_store.dart';
 import '../../features/earnings/presentation/earnings_cubit.dart';
@@ -121,6 +123,10 @@ Future<void> configureDependencies(AppConfig config) async {
       () => FleetTrackingRepository(getIt<DioClient>().apiDio),
     )
     ..registerFactory<FleetTrackingCubit>(() => FleetTrackingCubit(getIt<FleetTrackingRepository>()))
+    ..registerLazySingleton<MyRouteRepository>(
+      () => MyRouteRepository(getIt<DioClient>().apiDio),
+    )
+    ..registerFactory<MyRouteCubit>(() => MyRouteCubit(getIt<MyRouteRepository>()))
     ..registerLazySingleton<OptimizerRepository>(
       () => OptimizerRepository(getIt<DioClient>().apiDio),
     )
