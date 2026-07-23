@@ -48,7 +48,7 @@ void main() {
   blocTest<ImportCubit, ImportState>(
     'confirm com sucesso: vai para done e recarrega histórico',
     build: () {
-      when(() => repo.confirm('batch-1', optimize: false)).thenAnswer((_) async => confirmation);
+      when(() => repo.confirm('batch-1')).thenAnswer((_) async => confirmation);
       when(() => repo.list(pageSize: any(named: 'pageSize'))).thenAnswer((_) async => history);
       return ImportCubit(repo);
     },

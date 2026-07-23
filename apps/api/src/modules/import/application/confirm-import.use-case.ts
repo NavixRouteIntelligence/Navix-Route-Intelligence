@@ -14,11 +14,13 @@ import {
 import { ROUTE_ESTIMATOR, type RouteEstimatorPort } from '../domain/ports/route-estimator.port';
 import { toBatchView } from './mappers/import.mapper';
 
+/** Mínimo de paradas para haver rota a otimizar (com uma só não há sequência). */
+const MIN_STOPS_TO_OPTIMIZE = 2;
+
 export interface ConfirmImportCommand {
   tenantId: string;
   actorId: string;
   batchId: string;
-  optimize: boolean;
 }
 
 @Injectable()
@@ -54,9 +56,17 @@ export class ConfirmImportUseCase {
       deliveryIds.push(id);
     }
 
+    // A IA é o motor padrão (ADR-0074): confirmar a importação SEMPRE prepara a
+    // rota — não há mais opt-in nem botão "Otimizar". Se a preparação falhar, a
+    // importação não pode ser perdida: as entregas já foram criadas e ficam
+    // válidas sem plano; o app trata `routePlanId: null` como "ainda sem rota".
     let routePlanId: string | null = null;
-    if (command.optimize && deliveryIds.length >= 2) {
-      routePlanId = await this.estimator.optimize(command.tenantId, command.actorId, deliveryIds);
+    if (deliveryIds.length >= MIN_STOPS_TO_OPTIMIZE) {
+      try {
+        routePlanId = await this.estimator.optimize(command.tenantId, command.actorId, deliveryIds);
+      } catch {
+        routePlanId = null;
+      }
     }
 
     batch.markImported(deliveryIds.length, routePlanId);

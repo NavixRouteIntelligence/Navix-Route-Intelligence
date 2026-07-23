@@ -27,7 +27,6 @@ export default function ImportsPage() {
   const qc = useQueryClient();
   const { toast } = useToast();
   const [preview, setPreview] = useState<ImportPreviewResponse | null>(null);
-  const [optimize, setOptimize] = useState(true);
 
   const history = useQuery({
     queryKey: ['imports', { page: 1 }],
@@ -44,7 +43,7 @@ export default function ImportsPage() {
   });
 
   const confirm = useMutation({
-    mutationFn: () => importsApi.confirm(preview!.batch.id, { optimize }),
+    mutationFn: () => importsApi.confirm(preview!.batch.id),
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ['imports'] });
       qc.invalidateQueries({ queryKey: ['deliveries'] });
@@ -117,16 +116,13 @@ export default function ImportsPage() {
 
           <Card>
             <CardContent className="flex flex-wrap items-center justify-between gap-4 pt-6">
-              <label className="flex cursor-pointer items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={optimize}
-                  onChange={(e) => setOptimize(e.target.checked)}
-                  className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
-                />
-                <RouteIcon className="h-4 w-4 text-muted-foreground" aria-hidden />
-                Otimizar rota automaticamente após importar
-              </label>
+              {/* A otimização deixou de ser uma escolha (ADR-0074): a IA prepara
+                  a rota sozinha ao confirmar. Informa o que vai acontecer em vez
+                  de pedir uma decisão que o utilizador não precisa tomar. */}
+              <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                <RouteIcon className="h-4 w-4 shrink-0" aria-hidden />
+                Ao confirmar, a IA organiza as entregas e define a melhor sequência.
+              </p>
               <div className="flex gap-2">
                 <Button variant="outline" onClick={reset} disabled={confirm.isPending}>
                   Cancelar
