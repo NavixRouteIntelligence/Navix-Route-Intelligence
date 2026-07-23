@@ -187,5 +187,61 @@
   "finInsights": "Insights",
   "finBestRegion": "Best region",
   "finBestHour": "Best hour",
-  "finHistory": "History"
+  "finHistory": "History",
+  "routeLoadError": "Could not load your route.",
+  "routeReadyByAi": "Route prepared by AI",
+  "routeStatusReady": "Ready",
+  "routeStops": "stops",
+  "routeDistance": "distance",
+  "routeTime": "estimated",
+  "routeSavings": "Saves {km} km ({pct}%) versus the original order",
+  "@routeSavings": {
+    "placeholders": {
+      "km": {
+        "type": "String"
+      },
+      "pct": {
+        "type": "String"
+      }
+    }
+  },
+  "routeUpdatedAt": "Updated {when}",
+  "@routeUpdatedAt": {
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "routeGroups": "Smart groups",
+  "routeGroupStops": "{count, plural, =1{1 stop} other{{count} stops}}",
+  "@routeGroupStops": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "routeAiTitle": "How this route was prepared",
+  "routeAiSubtitle": "The AI organised your deliveries automatically, considering:",
+  "routePreparingTitle": "Preparing your route",
+  "routePreparingDesc": "The AI is organising your deliveries. Pull down to refresh.",
+  "routeEmptyTitle": "No route yet",
+  "routeEmptyDesc": "Import at least two deliveries and the AI prepares the route automatically.",
+  "factorDistance": "Distance",
+  "factorRegion": "Region",
+  "factorHistory": "Historical patterns",
+  "factorDestinationType": "Destination type",
+  "factorTimeWindow": "Time windows",
+  "factorPriority": "Priority",
+  "factorCapacity": "Capacity",
+  "factorVehicle": "Vehicle profile",
+  "destCommerce": "Commerce",
+  "destResidence": "Houses",
+  "destApartment": "Apartments",
+  "destCondo": "Condos",
+  "destCompany": "Companies",
+  "destHospital": "Healthcare",
+  "destMall": "Malls",
+  "destOther": "Others"
 }
