@@ -9,25 +9,37 @@ import '../../../core/ui/navix_card.dart';
 import '../../../core/ui/navix_section_header.dart';
 import '../../../core/ui/navix_states.dart';
 import '../../../l10n/gen/app_localizations.dart';
+import '../../intelligence/presentation/voice_assistant_button.dart';
+import '../../intelligence/presentation/voice_assistant_cubit.dart';
+import '../../pod/presentation/pod_capture_sheet.dart';
+import '../../pod/presentation/pod_sync_cubit.dart';
 import '../domain/my_route.dart';
 import 'destination_labels.dart';
 import 'my_route_cubit.dart';
 
-/// **Minha Rota** (ADR-0076): a rota que a IA já preparou.
+/// **Minha Rota** (ADR-0076): a rota que a IA já preparou, e o posto operacional
+/// do motorista.
 ///
 /// Não há botão "Otimizar" — desde a ADR-0074 a preparação acontece sozinha na
-/// confirmação da importação. Esta tela só mostra o resultado: o resumo, o que
-/// a IA levou em conta e os Grupos Inteligentes.
+/// confirmação da importação. Além do resumo, dos fatores da IA e dos Grupos
+/// Inteligentes, concentra as ações de operação (registrar entrega, voz) que
+/// antes viviam numa tela de dashboard separada.
 class MyRoutePage extends StatelessWidget {
   const MyRoutePage({super.key});
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return BlocProvider(
-      create: (_) => GetIt.instance<MyRouteCubit>()..load(),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(create: (_) => GetIt.instance<MyRouteCubit>()..load()),
+        BlocProvider(create: (_) => GetIt.instance<VoiceAssistantCubit>()),
+        // Singleton: vive enquanto o app vive; não é fechado aqui.
+        BlocProvider.value(value: GetIt.instance<PodSyncCubit>()),
+      ],
       child: Scaffold(
         appBar: AppBar(leading: const NavLeading(), title: Text(l10n.navRoute)),
+        floatingActionButton: const VoiceAssistantButton(),
         body: BlocBuilder<MyRouteCubit, MyRouteState>(
           builder: (context, state) => switch (state.status) {
             MyRouteLoadStatus.loading => const Center(child: CircularProgressIndicator()),
@@ -37,6 +49,50 @@ class MyRoutePage extends StatelessWidget {
               ),
             MyRouteLoadStatus.ready => _Content(state: state),
           },
+        ),
+        bottomNavigationBar: BlocBuilder<MyRouteCubit, MyRouteState>(
+          buildWhen: (p, c) => p.route.next != c.route.next || p.status != c.status,
+          builder: (context, state) => _RegisterBar(next: state.route.next),
+        ),
+      ),
+    );
+  }
+}
+
+/// Barra de ação operacional: registrar a próxima entrega (POD). Fica desativada
+/// quando não há entrega pendente — rota concluída ou ainda a preparar.
+class _RegisterBar extends StatelessWidget {
+  const _RegisterBar({required this.next});
+  final NextDelivery? next;
+
+  Future<void> _register(BuildContext context) async {
+    final target = next;
+    if (target == null) return;
+    final cubit = context.read<MyRouteCubit>();
+    final registered = await showPodCaptureSheet(
+      context,
+      deliveryId: target.id,
+      deliveryLabel: target.label.isEmpty ? null : target.label,
+    );
+    if (registered == true && context.mounted) {
+      // A entrega registrada dispara reotimização no backend (ADR-0023): recarrega
+      // para refletir o novo plano e a próxima parada.
+      GetIt.instance<PodSyncCubit>().refresh();
+      await cubit.load();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return SafeArea(
+      minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+      child: SizedBox(
+        width: double.infinity,
+        child: FilledButton.icon(
+          onPressed: next == null ? null : () => _register(context),
+          icon: const Icon(Icons.camera_alt_outlined),
+          label: Text(next == null ? l10n.routeNoPending : l10n.routeRegisterDelivery),
         ),
       ),
     );

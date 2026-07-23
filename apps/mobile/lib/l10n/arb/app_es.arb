@@ -185,5 +185,7 @@
   "errorLocationDisabled": "Activa la ubicación del dispositivo para compartirla.",
   "errorLocationDenied": "Permiso de ubicación denegado.",
   "errorLocationBlocked": "El permiso de ubicación está bloqueado en Ajustes.",
-  "errorOptimizationTimeout": "La optimización está tardando más de lo esperado. Inténtalo de nuevo."
+  "errorOptimizationTimeout": "La optimización está tardando más de lo esperado. Inténtalo de nuevo.",
+  "routeRegisterDelivery": "Registrar entrega",
+  "routeNoPending": "Sin entregas pendientes"
 }
