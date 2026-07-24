@@ -33,6 +33,7 @@ class MyRouteRepository {
 
       final byId = {for (final d in items) (d['id'] as String? ?? ''): d};
       final planStops = (plan['stops'] as List?)?.whereType<Map<String, dynamic>>().toList() ?? const [];
+      final stops = planStops.map((s) => _stop(s, byId)).toList();
 
       return MyRoute(
         status: MyRouteStatus.ready,
@@ -44,11 +45,26 @@ class MyRouteRepository {
         updatedAt: DateTime.tryParse(plan['createdAt'] as String? ?? '')?.toLocal(),
         groups: (plan['groups'] as List?)?.whereType<Map<String, dynamic>>().map(RouteGroup.fromJson).toList() ??
             const [],
-        stops: planStops.map((s) => _stop(s, byId)).toList(),
+        stops: stops,
+        next: _nextDelivery(stops, byId),
       );
     } on DioException catch (e) {
       throw mapDioException(e);
     }
+  }
+
+  /// A primeira parada da rota cuja entrega ainda não foi concluída — o alvo do
+  /// "Registrar entrega". Percorre em ordem de sequência (as paradas já vêm
+  /// ordenadas do plano).
+  NextDelivery? _nextDelivery(List<RouteStopInfo> stops, Map<String, Map<String, dynamic>> byId) {
+    for (final s in stops) {
+      final status = byId[s.deliveryId]?['status'] as String?;
+      if (status != 'delivered' && status != 'failed') {
+        final label = s.addressLine.isEmpty ? s.cityLine : s.addressLine;
+        return NextDelivery(id: s.deliveryId, label: label);
+      }
+    }
+    return null;
   }
 
   RouteStopInfo _stop(Map<String, dynamic> stop, Map<String, Map<String, dynamic>> byId) {

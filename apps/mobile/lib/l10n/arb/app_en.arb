@@ -256,5 +256,7 @@
   "@errorServer": {
     "description": "Fallback when the API sends no message of its own"
   },
-  "errorOptimizationTimeout": "The optimization is taking longer than expected. Try again."
+  "errorOptimizationTimeout": "The optimization is taking longer than expected. Try again.",
+  "routeRegisterDelivery": "Register delivery",
+  "routeNoPending": "No pending delivery"
 }

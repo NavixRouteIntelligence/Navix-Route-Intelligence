@@ -71,6 +71,18 @@ class RouteStopInfo extends Equatable {
   List<Object?> get props => [sequence, deliveryId, addressLine, cityLine, etaMinutes];
 }
 
+/// A próxima entrega a registrar — a parada pendente mais à frente na rota.
+/// É o alvo do POD ("Registrar entrega"): sem ela, não há o que registrar.
+class NextDelivery extends Equatable {
+  const NextDelivery({required this.id, required this.label});
+
+  final String id;
+  final String label;
+
+  @override
+  List<Object?> get props => [id, label];
+}
+
 /// A rota preparada pela IA, como o motorista a vê.
 class MyRoute extends Equatable {
   const MyRoute({
@@ -83,6 +95,7 @@ class MyRoute extends Equatable {
     this.updatedAt,
     this.groups = const [],
     this.stops = const [],
+    this.next,
   });
 
   const MyRoute.empty() : this(status: MyRouteStatus.empty);
@@ -103,6 +116,9 @@ class MyRoute extends Equatable {
   final List<RouteGroup> groups;
   final List<RouteStopInfo> stops;
 
+  /// Próxima entrega pendente; null quando a rota terminou.
+  final NextDelivery? next;
+
   bool get isReady => status == MyRouteStatus.ready;
 
   /// Paradas de um grupo, na ordem da rota.
@@ -114,5 +130,5 @@ class MyRoute extends Equatable {
 
   @override
   List<Object?> get props =>
-      [status, totalStops, distanceKm, timeMinutes, savedKm, savedPct, updatedAt, groups, stops];
+      [status, totalStops, distanceKm, timeMinutes, savedKm, savedPct, updatedAt, groups, stops, next];
 }
