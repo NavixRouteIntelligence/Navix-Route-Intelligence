@@ -152,9 +152,23 @@ certificado:
    | (role OIDC de deploy — criada fora desta planta) | Secret `AWS_DEPLOY_ROLE_ARN` |
 
 4. Complete os passos pós-apply do [`README do Terraform`](../../infra/terraform/README.md):
-   preencher `JWT_PRIVATE_KEY`/`JWT_PUBLIC_KEY`/`ENCRYPTION_KEK` no Secrets Manager,
-   habilitar as extensões do Postgres e criar o role de aplicação
-   `NOSUPERUSER NOBYPASSRLS`.
+   preencher o material criptográfico no Secrets Manager (segredo
+   `<env>/app-keys`) e habilitar as extensões do Postgres.
+
+   São **cinco** chaves, todas exigidas em produção por `assertProductionConfig`
+   — com qualquer uma vazia a API **derruba o boot de propósito**:
+
+   | Chave | Por que é obrigatória |
+   |-------|-----------------------|
+   | `JWT_PRIVATE_KEY` / `JWT_PUBLIC_KEY` | sem elas cada instância gera um par efêmero e rejeita os tokens das outras (login intermitente) |
+   | `JWT_KEY_ID` | identifica o par; sustenta rotação de chave |
+   | `MEDIA_URL_SECRET` | assina as URLs de POD; sem ele cada instância rejeita os links das demais |
+   | `ENCRYPTION_KEK` | chave-mestra de criptografia (mín. 16 chars) |
+
+   > O role de aplicação `navix_app` **não** é criado à mão: a migração
+   > `CreateAppRole` o cria a partir de `DB_APP_USER`/`DB_APP_PASSWORD`, que a
+   > task de migração herda da task definition da API (ADR-0080). Migração e
+   > runtime usam necessariamente a mesma credencial.
 
 ---
 
