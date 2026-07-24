@@ -258,5 +258,14 @@
   },
   "errorOptimizationTimeout": "The optimization is taking longer than expected. Try again.",
   "routeRegisterDelivery": "Register delivery",
-  "routeNoPending": "No pending delivery"
+  "routeNoPending": "No pending delivery",
+  "routeReorganize": "Reorganise route",
+  "routeReorganizing": "Reorganising…",
+  "routeReorganized": "Route reorganised.",
+  "routeRecommended": "Recommended",
+  "routeReorgAi": "AI (Recommended)",
+  "routeReorgAiDesc": "Let the AI choose the best order again.",
+  "routeReorgManual": "Manual",
+  "routeReorgManualDesc": "Drag the stops into the order you want.",
+  "commonSave": "Save"
 }

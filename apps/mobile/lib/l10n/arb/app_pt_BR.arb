@@ -187,5 +187,14 @@
   "errorLocationBlocked": "Permissão de localização bloqueada nas configurações.",
   "errorOptimizationTimeout": "A otimização está demorando mais que o esperado. Tente de novo.",
   "routeRegisterDelivery": "Registrar entrega",
-  "routeNoPending": "Sem entregas pendentes"
+  "routeNoPending": "Sem entregas pendentes",
+  "routeReorganize": "Reorganizar rota",
+  "routeReorganizing": "Reorganizando…",
+  "routeReorganized": "Rota reorganizada.",
+  "routeRecommended": "Recomendado",
+  "routeReorgAi": "IA (Recomendado)",
+  "routeReorgAiDesc": "Deixe a IA escolher a melhor ordem de novo.",
+  "routeReorgManual": "Manual",
+  "routeReorgManualDesc": "Arraste as paradas para a ordem que quiser.",
+  "commonSave": "Salvar"
 }
