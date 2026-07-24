@@ -32,7 +32,7 @@ resource "aws_secretsmanager_secret" "app_keys" {
 }
 
 resource "aws_secretsmanager_secret_version" "app_keys_placeholder" {
-  secret_id     = aws_secretsmanager_secret.app_keys.id
+  secret_id = aws_secretsmanager_secret.app_keys.id
   secret_string = jsonencode({
     JWT_PRIVATE_KEY = "PREENCHER_NO_CONSOLE"
     JWT_PUBLIC_KEY  = "PREENCHER_NO_CONSOLE"

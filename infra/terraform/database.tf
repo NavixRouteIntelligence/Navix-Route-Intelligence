@@ -56,7 +56,7 @@ resource "aws_db_instance" "this" {
   final_snapshot_identifier = "${local.name}-pg-final"
 
   # --- Observabilidade ---
-  performance_insights_enabled = true
+  performance_insights_enabled    = true
   enabled_cloudwatch_logs_exports = ["postgresql"]
 
   lifecycle {
