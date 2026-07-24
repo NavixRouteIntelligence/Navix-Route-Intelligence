@@ -1,5 +1,5 @@
 import type { AppConfigService } from '../../../../shared/config/app-config.service';
-import { BullOptimizationJobQueue } from './bull-optimization-job.queue';
+import { BullOptimizationJobQueue, ENQUEUE_TIMEOUT_MS } from './bull-optimization-job.queue';
 import { BULL_PREFIX, OPTIMIZATION_QUEUE_NAME } from './bull-connection';
 
 // Mock do BullMQ: o teste verifica o CONTRATO que passamos à fila (durabilidade,
@@ -79,6 +79,27 @@ describe('BullOptimizationJobQueue', () => {
     const queue = new BullOptimizationJobQueue(config());
 
     await expect(queue.enqueue('job-1', 'tenant-a')).rejects.toThrow('ECONNREFUSED');
+  });
+
+  // O caso que o mock "rejeita na hora" NÃO cobre e que motivou o timeout: com
+  // o Redis fora, a conexão do BullMQ (maxRetriesPerRequest: null + offline
+  // queue ligado) NÃO rejeita — bufferiza esperando reconexão. Como o enqueue é
+  // aguardado dentro da transação do request, sem teto a requisição ficaria
+  // pendurada segurando uma transação aberta (ADR-0081).
+  it('não espera para sempre quando o Redis não responde (Redis fora)', async () => {
+    jest.useFakeTimers();
+    try {
+      add.mockReturnValue(new Promise(() => undefined)); // nunca resolve, como o offline queue
+      const queue = new BullOptimizationJobQueue(config());
+
+      const enqueued = queue.enqueue('job-1', 'tenant-a');
+      const assertion = expect(enqueued).rejects.toThrow(/Timeout de \d+ms/);
+
+      await jest.advanceTimersByTimeAsync(ENQUEUE_TIMEOUT_MS);
+      await assertion;
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('fecha a conexão no shutdown (não vaza cliente Redis)', async () => {

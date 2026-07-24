@@ -64,9 +64,22 @@ processamento — o BullMQ deduplica pelo id.
 - *Crash do worker* — o BullMQ detecta o job travado (*stalled*) e o redelivera.
   Na retomada o worker chama `resetForRetry`, que devolve o job de `running` para
   `queued` — sem isso o `claim` barraria o reprocessamento.
-- *Redis fora no momento de enfileirar* — o `enqueue` **rejeita**, a exceção sobe
-  e a transação do request desfaz o job recém-criado. O cliente recebe o erro na
-  hora, em vez de um `202` com um `jobId` eternamente `queued` (ADR-0081).
+- *Redis fora no momento de enfileirar* — o `enqueue` **rejeita** (com teto de
+  5s, ver abaixo), a exceção sobe e a transação do request desfaz o job
+  recém-criado. O cliente recebe o erro na hora, em vez de um `202` com um
+  `jobId` eternamente `queued` (ADR-0081).
+
+  > **Por que um timeout explícito.** A conexão do BullMQ exige
+  > `maxRetriesPerRequest: null` e mantém o *offline queue* do ioredis ligado:
+  > com o Redis fora, o `add` **não rejeita — fica bufferizado** esperando
+  > reconexão. Como o `enqueue` é aguardado dentro da transação do request, sem
+  > teto a requisição ficaria pendurada segurando uma transação aberta (pressão
+  > no pool de conexões). O teto vive no call site, não na conexão: o mesmo
+  > `bullConnection` serve o Worker, que **precisa** de comandos bloqueantes.
+  >
+  > Se o `add` completar depois do timeout, sobra um job no Redis apontando para
+  > uma linha que o rollback desfez. O worker já trata: `execute` devolve
+  > `false`, ele lança, e o BullMQ reenfileira até esgotar as tentativas.
 
 **Retry/backoff.** `OPTIMIZER_JOB_ATTEMPTS` (default 3) tentativas com backoff
 exponencial a partir de `OPTIMIZER_JOB_BACKOFF_MS` (default 1000ms).
