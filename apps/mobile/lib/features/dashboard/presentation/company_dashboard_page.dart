@@ -15,7 +15,6 @@ import '../../../core/ui/navix_section_header.dart';
 import '../../../core/ui/navix_skeleton.dart';
 import '../../../core/ui/navix_states.dart';
 import '../../../core/ui/navix_status_pill.dart';
-import '../../optimizer/presentation/optimizer_page.dart';
 import '../domain/dashboard_data.dart';
 import 'dashboard_cubit.dart';
 
@@ -86,10 +85,6 @@ class _Content extends StatelessWidget {
   const _Content({required this.data});
   final DashboardData data;
 
-  void _openOptimizer(BuildContext context) {
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const OptimizerPage()));
-  }
-
   void _soon(BuildContext context, String msg) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
@@ -108,26 +103,13 @@ class _Content extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // Ações rápidas (1 toque).
-          Row(
-            children: [
-              Expanded(
-                child: NavixButton(
-                  label: 'Importar',
-                  variant: NavixButtonVariant.outline,
-                  icon: Icons.upload_outlined,
-                  onPressed: () => _soon(context, 'Import Center em breve no app.'),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: NavixButton(
-                  label: 'Otimizar',
-                  icon: Icons.bolt_outlined,
-                  onPressed: () => _openOptimizer(context),
-                ),
-              ),
-            ],
+          // Ação rápida. A otimização deixou de ser um botão (ADR-0074): a IA
+          // prepara as rotas sozinha na importação. Sobra Importar.
+          NavixButton(
+            label: 'Importar',
+            variant: NavixButtonVariant.outline,
+            icon: Icons.upload_outlined,
+            onPressed: () => _soon(context, 'Import Center em breve no app.'),
           ),
           const SizedBox(height: 16),
 
@@ -210,18 +192,15 @@ class _Content extends StatelessWidget {
           ),
           const SizedBox(height: 16),
 
-          // Route Optimizer.
+          // Rotas preparadas pela IA. Sem botão "Otimizar" (ADR-0074): a IA
+          // prepara as rotas na importação; aqui só se acompanha o resultado.
           NavixCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                NavixSectionHeader(
-                  title: 'Route Optimizer',
-                  icon: Icons.navigation_outlined,
-                  trailing: TextButton(
-                    onPressed: () => _openOptimizer(context),
-                    child: const Text('Otimizar'),
-                  ),
+                const NavixSectionHeader(
+                  title: 'Rotas preparadas pela IA',
+                  icon: Icons.auto_awesome_outlined,
                 ),
                 if (data.recentPlans.isEmpty)
                   Text('Nenhuma rota gerada.', style: TextStyle(color: t.muted))

@@ -7,9 +7,7 @@ import '../../features/dashboard/data/dashboard_repository.dart';
 import '../../features/dashboard/presentation/dashboard_cubit.dart';
 import '../../features/deliveries/data/deliveries_repository.dart';
 import '../../features/deliveries/presentation/deliveries_cubit.dart';
-import '../../features/driver/data/driver_dashboard_repository.dart';
 import '../../features/driver/data/tracking_repository.dart';
-import '../../features/driver/presentation/driver_dashboard_cubit.dart';
 import '../../features/driver/presentation/location_sharing_cubit.dart';
 import '../location/location_service.dart';
 import '../../features/imports/data/import_repository.dart';
@@ -20,15 +18,12 @@ import '../../features/intelligence/presentation/voice_assistant_cubit.dart';
 import '../voice/speech_service.dart';
 import '../../features/route/data/my_route_repository.dart';
 import '../../features/route/presentation/my_route_cubit.dart';
-import '../../features/optimizer/data/optimizer_repository.dart';
 import '../../features/earnings/data/tariff_store.dart';
 import '../../features/earnings/presentation/earnings_cubit.dart';
 import '../../features/finance/data/finance_repository.dart';
 import '../../features/finance/presentation/finance_cubit.dart';
 import '../../features/maintenance/data/maintenance_repository.dart';
 import '../../features/maintenance/presentation/maintenance_cubit.dart';
-import '../../features/optimizer/presentation/manual_route_cubit.dart';
-import '../../features/optimizer/presentation/optimizer_cubit.dart';
 import '../../features/pod/data/pod_queue_store.dart';
 import '../../features/pod/data/pod_repository.dart';
 import '../../features/pod/presentation/pod_capture_cubit.dart';
@@ -88,15 +83,6 @@ Future<void> configureDependencies(AppConfig config) async {
       () => DeliveriesRepository(getIt<DioClient>().apiDio),
     )
     ..registerFactory<DeliveriesCubit>(() => DeliveriesCubit(getIt<DeliveriesRepository>()))
-    ..registerLazySingleton<DriverDashboardRepository>(
-      () => DriverDashboardRepository(getIt<DioClient>().apiDio),
-    )
-    ..registerFactory<DriverDashboardCubit>(
-      () => DriverDashboardCubit(
-        getIt<DriverDashboardRepository>(),
-        connectivity: getIt<ConnectivityService>(),
-      ),
-    )
     ..registerSingleton<LocationService>(const LocationService())
     ..registerLazySingleton<TrackingRepository>(
       () => TrackingRepository(getIt<DioClient>().apiDio),
@@ -127,11 +113,6 @@ Future<void> configureDependencies(AppConfig config) async {
       () => MyRouteRepository(getIt<DioClient>().apiDio),
     )
     ..registerFactory<MyRouteCubit>(() => MyRouteCubit(getIt<MyRouteRepository>()))
-    ..registerLazySingleton<OptimizerRepository>(
-      () => OptimizerRepository(getIt<DioClient>().apiDio),
-    )
-    ..registerFactory<OptimizerCubit>(() => OptimizerCubit(getIt<OptimizerRepository>()))
-    ..registerFactory<ManualRouteCubit>(() => ManualRouteCubit(getIt<OptimizerRepository>()))
     ..registerLazySingleton<TariffStore>(() => TariffStore())
     ..registerFactory<EarningsCubit>(() => EarningsCubit(getIt<TariffStore>()))
     ..registerLazySingleton<MaintenanceRepository>(
