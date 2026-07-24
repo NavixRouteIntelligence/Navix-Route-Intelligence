@@ -195,10 +195,12 @@ jobs:
 
       # Versão fixada para reprodutibilidade: o resultado do analyze depende da
       # versão do SDK, então "sem issues" só é estável com o Flutter pinado.
-      # Satisfaz o pubspec (sdk >=3.3.0 <4.0.0, flutter >=3.19.0).
+      # 3.29.3 (Dart 3.7.x) satisfaz o pubspec (sdk >=3.3.0 <4.0.0) e traz o
+      # intl 0.20.x que o app exige — o flutter_localizations fixa o intl por
+      # versão do SDK, então um Flutter mais antigo não resolve as dependências.
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: 3.24.5
+          flutter-version: 3.29.3
           channel: stable
           cache: true
 
