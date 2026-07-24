@@ -18,7 +18,6 @@ const QUICK = [
   { href: '/imports', label: 'Importar', icon: Upload },
   { href: '/fleet/drivers', label: 'Motoristas', icon: Users },
   { href: '/fleet/vehicles', label: 'Veículos', icon: Truck },
-  { href: '/optimizer', label: 'Otimizador', icon: Route },
   { href: '/tracking', label: 'Rastreamento', icon: Radio },
 ];
 

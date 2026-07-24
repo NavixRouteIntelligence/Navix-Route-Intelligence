@@ -19,7 +19,6 @@ import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useEffect, useRef, useState } from 'react';
 
-import { AiRouteOptimizer } from '@/components/driver/ai-route-optimizer';
 import { DriverInsights } from '@/components/driver/driver-insights';
 import { DriverStopIntelligence } from '@/components/driver/driver-stop-intelligence';
 import { VoiceAssistantButton } from '@/components/driver/voice-assistant-button';
@@ -280,13 +279,7 @@ export default function DriverDashboardPage() {
         </CardContent>
       </Card>
 
-      {/* Otimização inteligente da rota (mesmo motor das Empresas) */}
-      <AiRouteOptimizer
-        onOptimized={() => qc.invalidateQueries({ queryKey: ['driver-route'] })}
-        onStartTracking={() => {
-          if (!share.sharing) share.toggle();
-        }}
-      />
+      {/* Sem otimizador manual (ADR-0077): a IA prepara a rota na importação. */}
 
       {/* KPIs */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

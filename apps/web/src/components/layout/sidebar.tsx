@@ -6,7 +6,6 @@ import {
   Navigation,
   Package,
   Radio,
-  Route,
   Settings,
   Truck,
   Upload,
@@ -37,7 +36,6 @@ const ADMIN_NAV: NavItem[] = [
   { href: '/imports', label: 'nav.imports', icon: Upload },
   { href: '/fleet/drivers', label: 'nav.drivers', icon: Users },
   { href: '/fleet/vehicles', label: 'nav.vehicles', icon: Truck },
-  { href: '/optimizer', label: 'nav.optimizer', icon: Route },
   { href: '/tracking', label: 'nav.tracking', icon: Radio },
   { href: '/settings', label: 'nav.settings', icon: Settings },
 ];
