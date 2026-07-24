@@ -28,13 +28,16 @@ vender o que não se pode entregar. Por isso, toda feature abaixo carrega um mar
 ### Duas correções de premissa
 
 **1. O custo de mapas hoje NÃO está mitigado.** O
-[`custo-por-tenant.md`](../infrastructure/custo-por-tenant.md) diz que a chamada ao
-provedor de mapas é "mitigada pelo cache de matriz por geohash — já na arquitetura".
-**Isso não é verdade no código atual:** não há nenhum cache no
-`MapboxRoutingProvider` nem qualquer uso de geohash no repositório. O cache é escopo
-previsto da Fase 1 do roadmap, não implementado. Enquanto não existir, cada
+[`custo-por-tenant.md`](../infrastructure/custo-por-tenant.md) afirmava que a chamada
+ao provedor de mapas era "mitigada pelo cache de matriz por geohash — já na
+arquitetura". **Não era verdade:** não há cache no `MapboxRoutingProvider` nem
+qualquer uso de geohash no código (a palavra só aparece em documentação). O cache é
+escopo previsto da Fase 1 do roadmap, nunca implementado. Enquanto não existir, cada
 otimização com `MAPS_PROVIDER=mapbox` paga chamada cheia — o que muda a conta do tier
 que promete precisão de trânsito real.
+
+> O documento de custo **já foi corrigido** (o cache virou uma ação pendente lá).
+> Este parágrafo fica como registro da premissa que sustentava o modelo anterior.
 
 **2. O default do produto é gratuito em mapas.** `MAPS_PROVIDER` tem default
 `haversine` (cálculo geométrico local, custo externo **zero**). O Mapbox é opt-in.
