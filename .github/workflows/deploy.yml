@@ -1,0 +1,112 @@
+# ---------------------------------------------------------------------------
+# Deploy contínuo (CD) — o que a Auditoria 5 apontava como INEXISTENTE (R2).
+# A cada push na branch `main` (após a CI passar), builda as imagens, publica
+# no ECR e atualiza os serviços ECS (api, worker, web) em Frankfurt.
+#
+# Requer estes secrets no GitHub (Settings -> Secrets and variables -> Actions):
+#   AWS_DEPLOY_ROLE_ARN  -> role IAM assumível via OIDC (sem chave estática)
+#   (as imagens e nomes de recurso vêm dos outputs do Terraform)
+# ---------------------------------------------------------------------------
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: ["CI"]      # só roda se a CI (lint/testes) passou
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:        # permite deploy manual pela aba Actions
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  id-token: write          # para autenticar na AWS via OIDC
+  contents: read
+
+env:
+  AWS_REGION: eu-central-1
+  ECR_API: navix-api
+  ECR_WEB: navix-web
+  ECS_CLUSTER: navix-production
+
+jobs:
+  deploy:
+    name: Build, publicar e implantar
+    runs-on: ubuntu-latest
+    # Não implanta se a CI falhou.
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Autenticar na AWS (OIDC, sem chave estática)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login no ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Definir tag da imagem (SHA do commit)
+        id: vars
+        run: echo "tag=${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+
+      # --- Build + push das imagens -----------------------------------------
+      - name: Build e push da API
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+          TAG: ${{ steps.vars.outputs.tag }}
+        run: |
+          docker build -f docker/api.Dockerfile -t "$REGISTRY/$ECR_API:$TAG" .
+          docker push "$REGISTRY/$ECR_API:$TAG"
+
+      - name: Build e push do Web
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+          TAG: ${{ steps.vars.outputs.tag }}
+        run: |
+          docker build -f docker/web.Dockerfile -t "$REGISTRY/$ECR_WEB:$TAG" .
+          docker push "$REGISTRY/$ECR_WEB:$TAG"
+
+      # --- Migração de banco ANTES de trocar a aplicação --------------------
+      # Roda uma task ECS one-off com o comando de migração. Evita que uma
+      # versão nova suba contra um schema antigo.
+      - name: Rodar migrações do banco
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+          TAG: ${{ steps.vars.outputs.tag }}
+        run: |
+          aws ecs run-task \
+            --cluster "$ECS_CLUSTER" \
+            --launch-type FARGATE \
+            --task-definition navix-production-api \
+            --overrides '{"containerOverrides":[{"name":"api","command":["npm","run","migration:run"]}]}' \
+            --network-configuration "awsvpcConfiguration={subnets=[${{ secrets.PRIVATE_SUBNETS }}],securityGroups=[${{ secrets.APP_SG }}]}" \
+            --region "$AWS_REGION"
+
+      # --- Deploy dos três serviços (rolling, com healthcheck) --------------
+      - name: Atualizar serviços ECS
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+          TAG: ${{ steps.vars.outputs.tag }}
+        run: |
+          for svc in api worker web; do
+            echo "Implantando $svc..."
+            aws ecs update-service \
+              --cluster "$ECS_CLUSTER" \
+              --service "$svc" \
+              --force-new-deployment \
+              --region "$AWS_REGION"
+          done
+
+      - name: Aguardar estabilização (rollback automático se falhar healthcheck)
+        run: |
+          aws ecs wait services-stable \
+            --cluster "$ECS_CLUSTER" \
+            --services api worker web \
+            --region "$AWS_REGION"
+
+      - name: Resumo
+        run: echo "✅ Deploy de ${{ steps.vars.outputs.tag }} concluído em $AWS_REGION."
