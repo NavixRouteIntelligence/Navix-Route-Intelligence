@@ -109,12 +109,6 @@ export default function DashboardPage() {
                 Importar
               </Link>
             </Button>
-            <Button asChild variant="accent">
-              <Link href="/optimizer">
-                <Route className="h-4 w-4" />
-                Otimizar rotas
-              </Link>
-            </Button>
           </>
         }
       />
@@ -178,7 +172,7 @@ export default function DashboardPage() {
           <Row icon={<Navigation className="h-4 w-4 text-primary" />} label="Em rota" value={formatNumber(counts.in_route)} />
           <Row icon={<CheckCircle2 className="h-4 w-4 text-success" />} label="Entregues" value={formatNumber(counts.delivered)} />
         </Panel>
-        <Panel title="Otimizador" href="/optimizer" cta="Otimizar rotas">
+        <Panel title="Rotas preparadas pela IA">
           <Row icon={<Route className="h-4 w-4 text-accent" />} label="Rotas geradas" value={formatNumber(plans.data?.meta.total ?? 0)} />
           <Row icon={<Gauge className="h-4 w-4 text-warning" />} label="Score médio" value={`${avgScore}/100`} />
           <Row icon={<Navigation className="h-4 w-4 text-success" />} label="Km economizados" value={`${formatNumber(savedKm, 1)} km`} />
@@ -219,15 +213,17 @@ export default function DashboardPage() {
   );
 }
 
-function Panel({ title, href, cta, children }: { title: string; href: string; cta: string; children: React.ReactNode }) {
+function Panel({ title, href, cta, children }: { title: string; href?: string; cta?: string; children: React.ReactNode }) {
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between">
         <CardTitle>{title}</CardTitle>
-        <Link href={href} className="inline-flex items-center gap-1 text-sm text-primary hover:opacity-80">
-          {cta}
-          <ArrowRight className="h-3.5 w-3.5" />
-        </Link>
+        {href && cta && (
+          <Link href={href} className="inline-flex items-center gap-1 text-sm text-primary hover:opacity-80">
+            {cta}
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+        )}
       </CardHeader>
       <CardContent className="space-y-3">{children}</CardContent>
     </Card>

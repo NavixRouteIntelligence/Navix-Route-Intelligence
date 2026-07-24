@@ -92,7 +92,7 @@ export default function ImportDetailPage() {
         <span className="text-sm text-muted-foreground">{batch.createdDeliveries} entregas criadas</span>
         {batch.routePlanId && (
           <Button asChild variant="ghost" size="sm">
-            <Link href="/optimizer">Ver rota otimizada</Link>
+            <Link href={`/optimizer/${batch.routePlanId}`}>Ver rota preparada</Link>
           </Button>
         )}
       </div>

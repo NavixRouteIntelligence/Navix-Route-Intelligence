@@ -1,26 +1,22 @@
 'use client';
 
 import type { RoutePlan } from '@navix/contracts';
-import { ArrowRight, Route } from 'lucide-react';
-import Link from 'next/link';
+import { Route } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatNumber } from '@/lib/utils';
 
-/** Rotas recentes do otimizador (id curto, paradas, ganho de distância, score). */
+/** Rotas recentes preparadas pela IA (id curto, paradas, ganho de distância, score). */
 export function RecentPlans({ plans, loading }: { plans: RoutePlan[]; loading?: boolean }) {
   const recent = plans.slice(0, 4);
 
   return (
     <Card>
-      <CardHeader className="flex-row items-center justify-between">
-        <CardTitle>Route Optimizer — recentes</CardTitle>
-        <Link href="/optimizer" className="inline-flex items-center gap-1 text-sm text-primary hover:opacity-80">
-          Otimizar
-          <ArrowRight className="h-3.5 w-3.5" />
-        </Link>
+      <CardHeader>
+        {/* Rotas preparadas pela IA — sem CTA de "Otimizar" (ADR-0077). */}
+        <CardTitle>Rotas preparadas pela IA</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         {loading ? (
@@ -30,7 +26,7 @@ export function RecentPlans({ plans, loading }: { plans: RoutePlan[]; loading?: 
             <Skeleton className="h-10 w-full" />
           </>
         ) : recent.length === 0 ? (
-          <EmptyState icon={Route} title="Nenhuma rota" description="Gere uma rota no otimizador." />
+          <EmptyState icon={Route} title="Nenhuma rota" description="Importe entregas e a IA prepara a rota." />
         ) : (
           recent.map((p) => (
             <div key={p.id} className="flex items-center justify-between">
