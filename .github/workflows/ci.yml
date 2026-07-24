@@ -178,3 +178,31 @@ jobs:
 
       - name: Build da imagem do Web
         run: docker build -f docker/web.Dockerfile -t navix-web:ci .
+
+  # ===========================================================================
+  # Infraestrutura como Código: mantém a planta Terraform sempre formatada e
+  # válida, para que o `terraform plan` real (rodado com credenciais, fora da
+  # CI) nunca falhe por drift de sintaxe/formatação. NÃO precisa de credenciais
+  # AWS: init sem backend + validate são offline.
+  # ===========================================================================
+  infra:
+    name: Terraform (fmt + validate)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra/terraform
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.15.8
+
+      - name: Formatação (terraform fmt)
+        run: terraform fmt -check -recursive
+
+      - name: Init sem backend (sem credenciais AWS)
+        run: terraform init -backend=false -input=false
+
+      - name: Validate
+        run: terraform validate -no-color
