@@ -36,3 +36,25 @@ output "app_secret_arn" {
   description = "ARN do segredo com as chaves da aplicação (preencher JWT/KEK)."
   value       = aws_secretsmanager_secret.app_keys.arn
 }
+
+# --- Insumos do pipeline de CD (.github/workflows/deploy.yml) ---------------
+# O deploy roda uma task ECS one-off de migração e precisa saber ONDE colocá-la
+# na rede. Estes outputs são a fonte de verdade desses valores (não são
+# sensíveis: IDs de subnet/SG). Alimente-os como *variables* do GitHub Actions
+# (Settings → Secrets and variables → Actions → Variables): PRIVATE_SUBNETS e
+# APP_SG. Ver docs/infrastructure/terraform-plan-runbook.md.
+
+output "ecs_cluster_name" {
+  description = "Nome do cluster ECS (env ECS_CLUSTER do deploy.yml)."
+  value       = aws_ecs_cluster.this.name
+}
+
+output "private_subnet_ids" {
+  description = "IDs das subnets privadas (CD → PRIVATE_SUBNETS, separados por vírgula)."
+  value       = join(",", module.vpc.private_subnets)
+}
+
+output "app_security_group_id" {
+  description = "ID do security group das tarefas de aplicação (CD → APP_SG)."
+  value       = aws_security_group.app.id
+}
