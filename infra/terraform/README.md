@@ -32,6 +32,11 @@
 
 ## Como aplicar
 
+> 📖 **Passo a passo completo (com bootstrap do state, apply em duas fases pela imagem
+> e validação do certificado):**
+> [`docs/infrastructure/terraform-plan-runbook.md`](../../docs/infrastructure/terraform-plan-runbook.md).
+> O resumo abaixo assume que você já leu o runbook.
+
 ```bash
 cd infra/terraform
 cp terraform.tfvars.example terraform.tfvars   # ajuste os valores
