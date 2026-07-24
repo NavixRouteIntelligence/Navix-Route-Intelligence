@@ -12,6 +12,7 @@ class MyRouteState extends Equatable {
     this.status = MyRouteLoadStatus.loading,
     this.route = const MyRoute.empty(),
     this.expanded = const {},
+    this.reorganizing = false,
     this.error,
   });
 
@@ -21,6 +22,10 @@ class MyRouteState extends Equatable {
   /// Tipos de grupo abertos na lista (a expansão é estado de UI, não de dados).
   final Set<String> expanded;
 
+  /// Uma reorganização está em andamento — bloqueia ações duplicadas e mostra
+  /// progresso. Não é `loading`: a rota atual segue visível por baixo.
+  final bool reorganizing;
+
   /// A falha em si; a tradução acontece na UI (ver `failure_l10n.dart`).
   final Failure? error;
 
@@ -28,17 +33,19 @@ class MyRouteState extends Equatable {
     MyRouteLoadStatus? status,
     MyRoute? route,
     Set<String>? expanded,
+    bool? reorganizing,
     Failure? error,
   }) =>
       MyRouteState(
         status: status ?? this.status,
         route: route ?? this.route,
         expanded: expanded ?? this.expanded,
+        reorganizing: reorganizing ?? this.reorganizing,
         error: error,
       );
 
   @override
-  List<Object?> get props => [status, route, expanded, error];
+  List<Object?> get props => [status, route, expanded, reorganizing, error];
 }
 
 class MyRouteCubit extends Cubit<MyRouteState> {
@@ -60,5 +67,23 @@ class MyRouteCubit extends Cubit<MyRouteState> {
     final next = Set<String>.from(state.expanded);
     if (!next.remove(type)) next.add(type);
     emit(state.copyWith(expanded: next));
+  }
+
+  /// Reorganiza a rota (IA ou manual) e recarrega. [order] é a sequência de
+  /// deliveryIds — para a IA é só o conjunto atual; para manual, a ordem nova.
+  /// Retorna `true` em sucesso, para a UI dar o feedback.
+  Future<bool> reorganize(ReorganizeMode mode, List<String> order) async {
+    if (state.reorganizing || order.length < 2) return false;
+    emit(state.copyWith(reorganizing: true, error: null));
+    try {
+      await _repository.reorganize(mode, order: order);
+      await _repository.load().then(
+            (route) => emit(state.copyWith(reorganizing: false, route: route, status: MyRouteLoadStatus.ready)),
+          );
+      return true;
+    } on Failure catch (f) {
+      emit(state.copyWith(reorganizing: false, error: f));
+      return false;
+    }
   }
 }

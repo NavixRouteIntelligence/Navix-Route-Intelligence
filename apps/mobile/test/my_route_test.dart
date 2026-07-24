@@ -18,6 +18,31 @@ class _FakeApi extends Interceptor {
   }
 }
 
+/// Interceptor para os testes de reorganize: grava as chamadas, responde 202 +
+/// jobId ao POST e devolve o status pedido ao consultar o job.
+class _ReorgApi extends Interceptor {
+  _ReorgApi(this.calls, {required this.jobStatus});
+
+  final List<RequestOptions> calls;
+  final String jobStatus;
+
+  @override
+  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+    calls.add(options);
+    if (options.method == 'POST') {
+      handler.resolve(Response(requestOptions: options, statusCode: 202, data: {
+        'data': {'jobId': 'job-1'}
+      }));
+    } else if (options.path.contains('/jobs/')) {
+      handler.resolve(Response(requestOptions: options, statusCode: 200, data: {
+        'data': {'status': jobStatus, 'routePlanId': 'p1'}
+      }));
+    } else {
+      handler.resolve(Response(requestOptions: options, statusCode: 200, data: {'data': []}));
+    }
+  }
+}
+
 MyRouteRepository repo({
   List<Map<String, dynamic>> plans = const [],
   List<Map<String, dynamic>> deliveries = const [],
@@ -125,6 +150,48 @@ void main() {
     final stops = route.stopsOf(route.groups.first);
 
     expect(stops.map((s) => s.sequence), [1, 3]);
+  });
+
+  group('reorganize', () {
+    // Interceptor que grava os POST /mine e resolve o job na 1ª consulta.
+    test('IA enfileira com smart:true e aguarda o job concluir', () async {
+      final calls = <RequestOptions>[];
+      final dio = Dio(BaseOptions(baseUrl: 'http://localhost'))
+        ..httpClientAdapter = IOHttpClientAdapter()
+        ..interceptors.add(_ReorgApi(calls, jobStatus: 'succeeded'));
+
+      await MyRouteRepository(dio).reorganize(ReorganizeMode.ai, order: ['d1', 'd2']);
+
+      final post = calls.firstWhere((c) => c.method == 'POST');
+      expect(post.path, contains('/route-plans/mine'));
+      expect((post.data as Map)['smart'], true);
+      expect((post.data as Map)['deliveryIds'], ['d1', 'd2']);
+      expect(calls.any((c) => c.path.contains('/jobs/')), isTrue);
+    });
+
+    test('Manual enfileira com strategy:manual e a ordem escolhida', () async {
+      final calls = <RequestOptions>[];
+      final dio = Dio(BaseOptions(baseUrl: 'http://localhost'))
+        ..httpClientAdapter = IOHttpClientAdapter()
+        ..interceptors.add(_ReorgApi(calls, jobStatus: 'succeeded'));
+
+      await MyRouteRepository(dio).reorganize(ReorganizeMode.manual, order: ['d2', 'd1']);
+
+      final post = calls.firstWhere((c) => c.method == 'POST');
+      expect((post.data as Map)['strategy'], 'manual');
+      expect((post.data as Map)['deliveryIds'], ['d2', 'd1']);
+    });
+
+    test('job falhado vira erro', () async {
+      final dio = Dio(BaseOptions(baseUrl: 'http://localhost'))
+        ..httpClientAdapter = IOHttpClientAdapter()
+        ..interceptors.add(_ReorgApi(<RequestOptions>[], jobStatus: 'failed'));
+
+      expect(
+        () => MyRouteRepository(dio).reorganize(ReorganizeMode.ai, order: ['d1', 'd2']),
+        throwsA(anything),
+      );
+    });
   });
 
   test('plano sem grupos (backend antigo) não quebra', () async {

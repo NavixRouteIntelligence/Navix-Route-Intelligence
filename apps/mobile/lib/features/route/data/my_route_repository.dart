@@ -1,11 +1,21 @@
 import 'package:dio/dio.dart';
 
+import '../../../core/error/failure.dart';
 import '../../../core/network/dio_failure_mapper.dart';
 import '../domain/my_route.dart';
 
-/// Lê a rota que a IA preparou. Não dispara otimização: desde a ADR-0074 ela
-/// acontece sozinha na confirmação da importação — aqui só se consulta o
-/// resultado.
+/// Como o motorista pediu para reorganizar a rota (ADR-0078).
+enum ReorganizeMode {
+  /// IA (Recomendado): reotimiza com a estratégia mais forte (`smart`).
+  ai,
+
+  /// Manual: preserva exatamente a ordem que o motorista definiu (`manual`).
+  manual,
+}
+
+/// Lê a rota que a IA preparou e, sob pedido, a reorganiza. A otimização não é
+/// mais um botão obrigatório (ADR-0074): acontece sozinha na importação. O
+/// "Reorganizar" é a ação secundária — a IA segue como padrão (ADR-0078).
 class MyRouteRepository {
   MyRouteRepository(this._dio);
 
@@ -13,6 +23,45 @@ class MyRouteRepository {
 
   /// Mínimo de paradas para existir rota (espelha o backend).
   static const _minStops = 2;
+
+  /// Polling do job de otimização (mesmo backend assíncrono do otimizador).
+  static const _pollInterval = Duration(seconds: 1);
+  static const _pollTimeout = Duration(seconds: 90);
+
+  /// Reorganiza a rota e **aguarda** o novo plano ficar pronto.
+  ///
+  /// - [ReorganizeMode.ai]: `smart: true` — a IA reescolhe a ordem.
+  /// - [ReorganizeMode.manual]: `strategy: 'manual'` com [order] (deliveryIds na
+  ///   sequência escolhida pelo motorista), que o backend preserva.
+  ///
+  /// Enfileira em `POST /route-plans/mine` (202 + jobId) e faz polling do job
+  /// até concluir; quem chama recarrega a rota depois.
+  Future<void> reorganize(ReorganizeMode mode, {required List<String> order}) async {
+    try {
+      final body = mode == ReorganizeMode.ai
+          ? {'deliveryIds': order, 'smart': true}
+          : {'deliveryIds': order, 'strategy': 'manual'};
+      final res = await _dio.post<dynamic>('/route-plans/mine', data: body);
+      final jobId = (_map(res)['data'] as Map<String, dynamic>?)?['jobId'] as String?;
+      if (jobId != null) await _awaitJob(jobId);
+    } on DioException catch (e) {
+      throw mapDioException(e);
+    }
+  }
+
+  Future<void> _awaitJob(String jobId) async {
+    final deadline = DateTime.now().add(_pollTimeout);
+    while (DateTime.now().isBefore(deadline)) {
+      await Future<void>.delayed(_pollInterval);
+      final job = _map(await _dio.get<dynamic>('/route-plans/jobs/$jobId'))['data'];
+      final status = job is Map<String, dynamic> ? job['status'] as String? : null;
+      if (status == 'succeeded') return;
+      if (status == 'failed') {
+        throw const ServerFailure('Não foi possível reorganizar a rota.');
+      }
+    }
+    throw const ServerFailure('A reorganização demorou mais que o esperado.');
+  }
 
   Future<MyRoute> load() async {
     try {

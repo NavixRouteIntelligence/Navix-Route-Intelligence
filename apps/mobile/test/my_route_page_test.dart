@@ -145,4 +145,18 @@ void main() {
     final button = tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Register delivery'));
     expect(button.onPressed, isNotNull);
   });
+
+  testWidgets('a ação de reorganizar abre o sheet com IA (padrão) e Manual', (tester) async {
+    await tester.pumpWidget(host());
+    await tester.pumpAndSettle();
+
+    // Ação secundária no AppBar (só com rota pronta e ≥2 paradas).
+    await tester.tap(find.byIcon(Icons.tune));
+    await tester.pumpAndSettle();
+
+    expect(find.text('AI (Recommended)'), findsOneWidget);
+    expect(find.text('Manual'), findsOneWidget);
+    // A IA é marcada como recomendada.
+    expect(find.text('Recommended'), findsWidgets);
+  });
 }
