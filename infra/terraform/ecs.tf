@@ -75,12 +75,29 @@ resource "aws_cloudwatch_log_group" "app" {
 
 # --- Definição reutilizável de container -----------------------------------
 locals {
-  common_secrets = [
-    { name = "DATABASE_URL", valueFrom = "${aws_secretsmanager_secret.app.arn}:DATABASE_URL::" },
-    { name = "REDIS_URL", valueFrom = "${aws_secretsmanager_secret.app.arn}:REDIS_URL::" },
-    { name = "JWT_PRIVATE_KEY", valueFrom = "${aws_secretsmanager_secret.app_keys.arn}:JWT_PRIVATE_KEY::" },
-    { name = "JWT_PUBLIC_KEY", valueFrom = "${aws_secretsmanager_secret.app_keys.arn}:JWT_PUBLIC_KEY::" },
-    { name = "ENCRYPTION_KEK", valueFrom = "${aws_secretsmanager_secret.app_keys.arn}:ENCRYPTION_KEK::" },
+  # As chaves abaixo são exatamente as que o envSchema exige (ver secrets.tf e
+  # apps/api/src/shared/config/env.schema.ts). Derivadas das MESMAS estruturas
+  # que montam o segredo, para que um não saia do outro sem quebrar o plan.
+  app_secret_keys  = keys(local.app_env_secrets)
+  app_key_material = ["JWT_PRIVATE_KEY", "JWT_PUBLIC_KEY", "JWT_KEY_ID", "MEDIA_URL_SECRET", "ENCRYPTION_KEK"]
+
+  common_secrets = concat(
+    [for k in local.app_secret_keys : {
+      name = k, valueFrom = "${aws_secretsmanager_secret.app.arn}:${k}::"
+    }],
+    [for k in local.app_key_material : {
+      name = k, valueFrom = "${aws_secretsmanager_secret.app_keys.arn}:${k}::"
+    }],
+  )
+
+  # Ambiente comum a API e worker: mesma imagem, mesma topologia de fila.
+  common_environment = [
+    { name = "NODE_ENV", value = "production" },
+    # Fila durável no Redis com worker dedicado (ADR-0055). Sem isto o driver
+    # cai no default `inprocess`: a API processaria a otimização no próprio
+    # event loop e o serviço `worker` ficaria ocioso — a separação api/worker
+    # (correção do R3) existiria só no papel.
+    { name = "OPTIMIZER_QUEUE_DRIVER", value = "bullmq" },
   ]
 }
 
@@ -99,12 +116,22 @@ resource "aws_ecs_task_definition" "api" {
     image        = var.api_image
     essential    = true
     portMappings = [{ containerPort = 3000 }]
-    environment = [
-      { name = "NODE_ENV", value = "production" },
+    environment = concat(local.common_environment, [
+      # A app escuta em API_PORT (default 3001). O portMapping, o target group e
+      # o healthcheck usam 3000 — sem fixar aqui, o ALB nunca acharia a porta e
+      # o circuit breaker reverteria todo deploy.
+      { name = "API_PORT", value = "3000" },
+      # Só enfileira; quem processa é o serviço `worker`.
       { name = "OPTIMIZER_WORKER_ENABLED", value = "false" },
       { name = "STORAGE_DRIVER", value = "s3" },
       { name = "S3_BUCKET", value = aws_s3_bucket.pod_media.bucket },
-    ]
+      # Região real do bucket: o default do schema é "auto" (convenção de
+      # Cloudflare R2), que o SDK da AWS não resolve.
+      { name = "S3_REGION", value = var.aws_region },
+      # Path-style é coisa de S3 compatível; no S3 da AWS o certo é virtual-host.
+      { name = "S3_FORCE_PATH_STYLE", value = "false" },
+      # Sem credenciais explícitas de S3: o SDK cai na IAM task role (task_s3).
+    ])
     secrets = local.common_secrets
     logConfiguration = {
       logDriver = "awslogs"
@@ -166,11 +193,18 @@ resource "aws_ecs_task_definition" "worker" {
     name      = "worker"
     image     = var.api_image # mesma imagem da API, comando diferente
     essential = true
-    command   = ["node", "dist/main-worker.js"]
-    environment = [
-      { name = "NODE_ENV", value = "production" },
+    # Caminho relativo ao WORKDIR /repo da imagem (docker/api.Dockerfile), que
+    # copia o build para apps/api/dist. "dist/main-worker.js" não existe lá.
+    command = ["node", "apps/api/dist/main-worker.js"]
+    environment = concat(local.common_environment, [
+      # Este é o processo que consome a fila.
       { name = "OPTIMIZER_WORKER_ENABLED", value = "true" },
-    ]
+      # O worker também grava mídia de POD (mesma task role da API).
+      { name = "STORAGE_DRIVER", value = "s3" },
+      { name = "S3_BUCKET", value = aws_s3_bucket.pod_media.bucket },
+      { name = "S3_REGION", value = var.aws_region },
+      { name = "S3_FORCE_PATH_STYLE", value = "false" },
+    ])
     secrets = local.common_secrets
     logConfiguration = {
       logDriver = "awslogs"
@@ -219,8 +253,19 @@ resource "aws_ecs_task_definition" "web" {
     name         = "web"
     image        = var.web_image
     essential    = true
-    portMappings = [{ containerPort = 3000 }]
-    environment  = [{ name = "NODE_ENV", value = "production" }]
+    portMappings = [{ containerPort = 3000 }] # Next.js `npm run start` usa 3000
+    # O web é um front-end Next.js: NÃO recebe `local.common_secrets`. Ele não
+    # fala com o Postgres nem com o Redis, então injetar as credenciais aqui
+    # ampliaria o raio de exposição sem nenhum ganho (menor privilégio).
+    # As NEXT_PUBLIC_* são assadas no build (docker/web.Dockerfile, build-args);
+    # só o proxy server-side precisa de valor em runtime.
+    environment = [
+      { name = "NODE_ENV", value = "production" },
+      {
+        name  = "API_PROXY_ORIGIN"
+        value = var.domain_name == "" ? "http://${aws_lb.this.dns_name}" : "https://api.${var.domain_name}"
+      },
+    ]
     logConfiguration = {
       logDriver = "awslogs"
       options = {
