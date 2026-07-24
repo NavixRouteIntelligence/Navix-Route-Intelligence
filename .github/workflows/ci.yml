@@ -178,3 +178,40 @@ jobs:
 
       - name: Build da imagem do Web
         run: docker build -f docker/web.Dockerfile -t navix-web:ci .
+
+  # ===========================================================================
+  # App móvel (Flutter): análise estática + testes. Sem este job, um PR que só
+  # toca apps/mobile passava verde sem validar uma linha de Dart (os demais jobs
+  # são todos Node/Docker). Espelha o gate de qualidade do job `test`.
+  # ===========================================================================
+  mobile:
+    name: Flutter (analyze + testes)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      # Versão fixada para reprodutibilidade: o resultado do analyze depende da
+      # versão do SDK, então "sem issues" só é estável com o Flutter pinado.
+      # Satisfaz o pubspec (sdk >=3.3.0 <4.0.0, flutter >=3.19.0).
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.24.5
+          channel: stable
+          cache: true
+
+      - name: Install
+        run: flutter pub get
+
+      # lib/l10n/gen/ é gerado e gitignorado; sem gerar, o analyze não acha as
+      # classes de localização e quebra.
+      - name: Gera localizações (gen-l10n)
+        run: flutter gen-l10n
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Testes
+        run: flutter test
