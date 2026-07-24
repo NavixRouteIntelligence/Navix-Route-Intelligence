@@ -31,10 +31,14 @@ export class InProcessOptimizationJobQueue implements OptimizationJobQueuePort {
     private readonly processor: ProcessOptimizationJobUseCase,
   ) {}
 
-  enqueue(jobId: string, tenantId: string): void {
+  // Assíncrona só para satisfazer o contrato do port (que o driver BullMQ usa
+  // de verdade): agendar um `setTimeout` local não tem como falhar, então
+  // resolve de imediato. O processamento segue fora da requisição.
+  enqueue(jobId: string, tenantId: string): Promise<void> {
     setTimeout(() => {
       void this.run(jobId, tenantId, 0);
     }, FIRST_DELAY_MS);
+    return Promise.resolve();
   }
 
   private async run(jobId: string, tenantId: string, attempt: number): Promise<void> {
