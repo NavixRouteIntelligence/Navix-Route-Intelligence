@@ -1,0 +1,24 @@
+# Copie para terraform.tfvars e ajuste. NÃO versione o terraform.tfvars real.
+
+aws_region  = "eu-central-1" # Frankfurt (UE) — residência de dados GDPR/LGPD
+environment = "staging"      # ou "production"
+domain_name = "navix.pt"     # deixe "" enquanto não tiver domínio
+
+# Banco — comece pequeno; suba no GA sob carga real (ver R4 da auditoria).
+db_instance_class        = "db.t4g.medium"
+db_allocated_storage     = 50
+db_multi_az              = false # true em produção (alta disponibilidade)
+db_backup_retention_days = 14
+
+# Redis
+redis_node_type = "cache.t4g.small"
+
+# Aplicação — quantas cópias de cada serviço.
+api_desired_count    = 2
+worker_desired_count = 1
+web_desired_count    = 2
+
+# Imagens: normalmente deixadas em "" aqui — o pipeline de deploy
+# (.github/workflows/deploy.yml) injeta a tag da imagem a cada release.
+api_image = ""
+web_image = ""
