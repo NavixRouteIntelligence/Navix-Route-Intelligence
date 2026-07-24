@@ -40,16 +40,23 @@ export class BullOptimizationJobQueue implements OptimizationJobQueuePort, OnMod
     });
   }
 
-  enqueue(jobId: string, tenantId: string): void {
+  async enqueue(jobId: string, tenantId: string): Promise<void> {
     // `jobId` como id do BullMQ torna o enqueue idempotente: reenfileirar o
-    // mesmo job (ex.: reotimização) não cria duplicata.
-    void this.queue
-      .add('optimize', { jobId, tenantId }, { jobId })
-      .catch((err) =>
-        this.logger.error(
-          `Falha ao enfileirar job ${jobId}: ${err instanceof Error ? err.message : String(err)}`,
-        ),
+    // mesmo job (ex.: reotimização, ou um retry do request) não cria duplicata.
+    //
+    // A rejeição é PROPAGADA de propósito. Antes o erro era só logado e o
+    // request seguia respondendo 202: com o Redis fora, o job ficava `queued`
+    // no banco para sempre, invisível, e nem um restart o recuperava. Deixando
+    // estourar, a transação do request desfaz a criação do job e o cliente
+    // recebe o erro na hora (ADR-0081).
+    try {
+      await this.queue.add('optimize', { jobId, tenantId }, { jobId });
+    } catch (err) {
+      this.logger.error(
+        `Falha ao enfileirar job ${jobId}: ${err instanceof Error ? err.message : String(err)}`,
       );
+      throw err;
+    }
   }
 
   async onModuleDestroy(): Promise<void> {

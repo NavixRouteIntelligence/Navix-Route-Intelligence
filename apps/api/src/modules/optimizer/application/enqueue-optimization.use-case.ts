@@ -39,7 +39,10 @@ export class EnqueueOptimizationUseCase {
       routePlanId: null,
       error: null,
     });
-    this.queue.enqueue(jobId, tenantId);
+    // Aguardado de propósito: se o agendamento falhar, a exceção sobe e a
+    // transação do request desfaz o job recém-criado. Sem isso o cliente
+    // receberia 202 com um jobId que nunca sairia de `queued` (ADR-0081).
+    await this.queue.enqueue(jobId, tenantId);
     return { jobId, status: 'queued' };
   }
 }

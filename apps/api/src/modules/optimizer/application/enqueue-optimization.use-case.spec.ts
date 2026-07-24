@@ -26,4 +26,21 @@ describe('EnqueueOptimizationUseCase', () => {
     expect(create.mock.calls[0][0].request).not.toHaveProperty('tenantId');
     expect(enqueue).toHaveBeenCalledWith(res.jobId, 't1');
   });
+
+  // Sem isto o cliente receberia 202 com um jobId que nunca sairia de `queued`:
+  // a falha de agendamento precisa derrubar o request para que a transação
+  // desfaça o job criado (ADR-0081).
+  it('propaga a falha de enfileiramento (não responde 202 com job órfão)', async () => {
+    const create = jest.fn().mockResolvedValue(undefined);
+    const enqueue = jest.fn().mockRejectedValue(new Error('Redis indisponível'));
+    const jobs: OptimizationJobRepositoryPort = { create, findById: jest.fn(), update: jest.fn(), claim: jest.fn(), resetForRetry: jest.fn() };
+    const queue: OptimizationJobQueuePort = { enqueue };
+
+    const uc = new EnqueueOptimizationUseCase(jobs, queue);
+
+    await expect(uc.execute({ tenantId: 't1', actorId: 'a1', deliveryIds: ['d1', 'd2'] })).rejects.toThrow(
+      'Redis indisponível',
+    );
+    expect(create).toHaveBeenCalled(); // criado e desfeito pelo rollback da transação
+  });
 });

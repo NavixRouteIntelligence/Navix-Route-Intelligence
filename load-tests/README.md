@@ -86,6 +86,9 @@ Na AWS isso é o serviço `worker` do `infra/terraform/ecs.tf`. Com o worker
 in-process, a otimização compete com o event loop da API e o teste mede uma
 topologia que não é a de produção.
 
+> Passo a passo da topologia (e como verificar que está mesmo separada):
+> [`docs/infrastructure/worker-dedicado.md`](../docs/infrastructure/worker-dedicado.md).
+
 > **Ordem correta:** infraestrutura de produção de pé → `mixed.js` → SLA. Rodar
 > antes disso produz um número que não representa nada.
 
