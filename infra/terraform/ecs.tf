@@ -139,6 +139,15 @@ resource "aws_ecs_service" "api" {
     container_name   = "api"
     container_port   = 3000
   }
+
+  # Rollback automático: se as tarefas novas não passarem no healthcheck, o ECS
+  # reverte sozinho para a última revisão saudável. É o que sustenta a promessa
+  # de rollback do runbook de DR (§3.1) e do pipeline de CD.
+  deployment_circuit_breaker {
+    enable   = true
+    rollback = true
+  }
+
   lifecycle { ignore_changes = [task_definition, desired_count] } # deploy via pipeline
   depends_on = [aws_lb_listener.https]
 }
@@ -185,6 +194,14 @@ resource "aws_ecs_service" "worker" {
     subnets         = module.vpc.private_subnets
     security_groups = [aws_security_group.app.id]
   }
+
+  # O worker não fica atrás do ALB: aqui o circuit breaker protege contra uma
+  # revisão que sobe e morre em loop (crash na inicialização).
+  deployment_circuit_breaker {
+    enable   = true
+    rollback = true
+  }
+
   lifecycle { ignore_changes = [task_definition, desired_count] }
 }
 
@@ -231,6 +248,12 @@ resource "aws_ecs_service" "web" {
     container_name   = "web"
     container_port   = 3000
   }
+
+  deployment_circuit_breaker {
+    enable   = true
+    rollback = true
+  }
+
   lifecycle { ignore_changes = [task_definition, desired_count] }
   depends_on = [aws_lb_listener.https]
 }
