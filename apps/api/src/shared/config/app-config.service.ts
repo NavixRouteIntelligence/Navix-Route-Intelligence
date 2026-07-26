@@ -159,6 +159,8 @@ export class AppConfigService {
       riskZones: parseRiskZones(this.get('OPTIMIZER_RISK_ZONES')),
       queueDriver: this.get('OPTIMIZER_QUEUE_DRIVER'),
       workerEnabled: this.get('OPTIMIZER_WORKER_ENABLED'),
+      delayCheckIntervalMs: this.get('OPTIMIZER_DELAY_CHECK_INTERVAL_MS'),
+      delayThresholdMinutes: this.get('OPTIMIZER_DELAY_THRESHOLD_MINUTES'),
       jobAttempts: this.get('OPTIMIZER_JOB_ATTEMPTS'),
       jobBackoffMs: this.get('OPTIMIZER_JOB_BACKOFF_MS'),
     };

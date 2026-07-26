@@ -102,6 +102,10 @@ export const envSchema = z.object({
     .default('false')
     .transform((v) => v === 'true'),
   OPTIMIZER_REOPTIMIZE_DEBOUNCE_MS: z.coerce.number().int().positive().default(2000),
+  // Detecção de atraso (ADR-0083). O intervalo evita reavaliar a rota a cada
+  // posição recebida; o limiar define o que conta como "atrasado".
+  OPTIMIZER_DELAY_CHECK_INTERVAL_MS: z.coerce.number().int().positive().default(60_000),
+  OPTIMIZER_DELAY_THRESHOLD_MINUTES: z.coerce.number().positive().default(10),
   // Fila de jobs de otimização (ADR-0007/0055). `inprocess` (default): processa
   // no mesmo processo (não durável). `bullmq`: fila durável no Redis com worker,
   // retry/backoff e redelivery em crash — permite escalar o worker à parte.

@@ -3,6 +3,7 @@ import type { DriverPosition } from '../domain/driver-position';
 import type { PositionRepositoryPort } from '../domain/ports/position-repository.port';
 import type { TrackingEventsPort } from '../domain/ports/tracking-events.port';
 import { UpdatePositionUseCase } from './update-position.use-case';
+import { DomainEventBus } from '../../../shared/events/domain-event-bus';
 
 function build() {
   const saved: DriverPosition[] = [];
@@ -17,7 +18,7 @@ function build() {
   const events: TrackingEventsPort & { positionUpdated: jest.Mock } = {
     positionUpdated: jest.fn(),
   };
-  return { uc: new UpdatePositionUseCase(repo, events), saved, events };
+  return { uc: new UpdatePositionUseCase(repo, events, new DomainEventBus()), saved, events };
 }
 
 const base = { tenantId: 't1', driverId: 'u1', latitude: -23.55, longitude: -46.63 };

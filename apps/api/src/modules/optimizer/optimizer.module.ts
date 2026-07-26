@@ -25,6 +25,10 @@ import { DISTANCE_PROVIDER } from './domain/ports/distance-provider.port';
 import { ROUTING_PROVIDER } from './domain/ports/routing-provider.port';
 import { JOB_EVENTS } from './domain/ports/job-events.port';
 import { OPTIMIZATION_JOB_QUEUE } from './domain/ports/optimization-job-queue.port';
+import { DelayDetectionService, ROUTE_DELAY_EVALUATOR } from './application/delay-detection.service';
+import { TENANT_PLAN } from './application/ports/tenant-plan.port';
+import { TenantScopedDelayEvaluator } from './infrastructure/reoptimization/tenant-scoped-delay-evaluator';
+import { TenantPlanRepository } from './infrastructure/persistence/tenant-plan.repository';
 import { OPTIMIZATION_JOB_REPOSITORY } from './domain/ports/optimization-job-repository.port';
 import { OPTIMIZATION_STRATEGIES } from './domain/ports/route-optimization-strategy.port';
 import { ROUTE_PLAN_REPOSITORY } from './domain/ports/route-plan-repository.port';
@@ -71,6 +75,10 @@ import { OptimizerController } from './interface/optimizer.controller';
     ReoptimizeActiveUseCase,
     AutoReoptimizationService,
     { provide: REOPTIMIZATION_TRIGGER, useClass: TenantScopedReoptimizationTrigger },
+    // Reotimização dinâmica (ADR-0083): detector de atraso + gate por plano.
+    DelayDetectionService,
+    { provide: ROUTE_DELAY_EVALUATOR, useClass: TenantScopedDelayEvaluator },
+    { provide: TENANT_PLAN, useClass: TenantPlanRepository },
     StrategyRegistry,
     RouteSolver,
     OptimizerMetrics,
