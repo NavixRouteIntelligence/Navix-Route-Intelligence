@@ -53,6 +53,11 @@ export class ConfirmImportUseCase {
         priority: row.priority,
         notes: row.notes,
         recipient: row.recipient,
+        // Contato do destinatário: telefone e e-mail eram lidos no preview e
+        // DESCARTADOS aqui — o mesmo defeito que a ADR-0076 corrigiu para o
+        // nome. Sem eles não há a quem notificar (ADR-0084).
+        recipientEmail: row.email,
+        recipientPhone: row.phone,
       });
       deliveryIds.push(id);
     }

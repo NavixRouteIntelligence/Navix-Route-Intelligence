@@ -24,6 +24,15 @@ export interface DeliveryDraft {
   longitude: number;
   priority: DeliveryPriority;
   notes: string | null;
+  /**
+   * Destinatário e contato. **Estavam sendo perdidos aqui:** a ADR-0076 levou o
+   * `recipient` até este port, mas o `create` abaixo montava o objeto do caso de
+   * uso sem ele — o nome vindo da importação nunca chegava ao banco. O e-mail e
+   * o telefone (ADR-0084) entram pelo mesmo caminho.
+   */
+  recipient?: string | null;
+  recipientEmail?: string | null;
+  recipientPhone?: string | null;
   timeWindow?: { start: string; end: string };
 }
 
@@ -103,6 +112,9 @@ export class DeliveryWriterService implements DeliveryWriterPort {
       priority: draft.priority,
       timeWindow,
       notes: draft.notes,
+      recipient: draft.recipient ?? null,
+      recipientEmail: draft.recipientEmail ?? null,
+      recipientPhone: draft.recipientPhone ?? null,
     });
     return view.id;
   }

@@ -129,6 +129,21 @@ export const envSchema = z.object({
   // Default vazio → sem efeito (no-op). Parseado/validado em AppConfigService.
   OPTIMIZER_RISK_ZONES: z.string().default('[]'),
 
+  // --- Notificações ao destinatário (ADR-0084) ---
+  // Opt-in: sem isto nenhum aviso sai. O canal é único no MVP (e-mail); SMS e
+  // WhatsApp entram pela mesma port quando houver adaptador.
+  NOTIFICATIONS_ENABLED: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
+  NOTIFICATIONS_CHANNEL: z.enum(['email', 'sms', 'whatsapp']).default('email'),
+  // Idioma dos avisos. O destinatário não tem conta, então não há preferência
+  // dele para consultar — usa-se o idioma do tenant.
+  NOTIFICATIONS_LOCALE: z.enum(['pt-BR', 'pt-PT', 'en', 'es']).default('pt-BR'),
+  // "Está chegando": raio e intervalo entre avaliações por motorista.
+  NOTIFICATIONS_PROXIMITY_RADIUS_KM: z.coerce.number().positive().default(2),
+  NOTIFICATIONS_PROXIMITY_INTERVAL_MS: z.coerce.number().int().positive().default(120_000),
+
   // --- Provedor de mapas/roteamento (ADR-0027) ---
   // `mapbox` usa a Matrix API (requer MAPBOX_TOKEN, já definido acima); qualquer
   // falha cai em Haversine.

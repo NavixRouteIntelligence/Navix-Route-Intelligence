@@ -96,6 +96,7 @@ export class PreviewImportUseCase {
         status,
         recipient,
         phone: p.phone ?? null,
+        email: p.email ?? null,
         orderNumber: p.orderNumber ?? null,
         notes: p.notes ?? null,
         priority: normalizePriority(p.priority),

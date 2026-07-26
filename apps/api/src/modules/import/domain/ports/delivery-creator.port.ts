@@ -17,6 +17,9 @@ export interface CreateDeliveryData {
   notes: string | null;
   /** Quem recebe (ADR-0076). Sinal-chave para classificar o destino. */
   recipient: string | null;
+  /** Contato do destinatário para as notificações (ADR-0084). */
+  recipientEmail?: string | null;
+  recipientPhone?: string | null;
 }
 
 /** Porta anti-corrupção do Import para o contexto Delivery. */

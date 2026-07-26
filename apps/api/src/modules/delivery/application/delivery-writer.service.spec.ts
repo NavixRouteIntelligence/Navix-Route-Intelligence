@@ -149,3 +149,59 @@ describe('DeliveryWriterService.create', () => {
     expect(arg.timeWindow).toEqual(timeWindow);
   });
 });
+
+describe('DeliveryWriterService.create — destinatário e contato', () => {
+  const draft: DeliveryDraft = {
+    tenantId: 'tenant-1',
+    actorId: 'user-1',
+    street: 'Rua A',
+    number: '10',
+    complement: null,
+    city: 'São Paulo',
+    state: 'SP',
+    postalCode: '00000-000',
+    country: 'BR',
+    latitude: -23.5,
+    longitude: -46.6,
+    priority: 'normal',
+    notes: null,
+    recipient: 'Acme Ltda',
+    recipientEmail: 'contato@acme.test',
+    recipientPhone: '+55 11 90000-0000',
+  };
+
+  // Este teste faltava e por isso o defeito passou: a ADR-0076 levou o
+  // `recipient` até o port, mas o `create` montava o objeto do caso de uso sem
+  // ele — o nome vindo da importação nunca chegava ao banco. O e-mail e o
+  // telefone (ADR-0084) entram pelo mesmo caminho e teriam o mesmo destino.
+  it('repassa recipient, e-mail e telefone ao caso de uso', async () => {
+    const { service, createDelivery } = build(null);
+    (createDelivery.execute as jest.Mock).mockResolvedValue({ id: 'd-9' });
+
+    await service.create(draft);
+
+    expect(createDelivery.execute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recipient: 'Acme Ltda',
+        recipientEmail: 'contato@acme.test',
+        recipientPhone: '+55 11 90000-0000',
+      }),
+    );
+  });
+
+  it('ausência de contato vira null (não undefined) para o domínio', async () => {
+    const { service, createDelivery } = build(null);
+    (createDelivery.execute as jest.Mock).mockResolvedValue({ id: 'd-9' });
+
+    // Descarta os três campos de contato para provar o default `null`.
+    const semContato: DeliveryDraft = { ...draft };
+    delete semContato.recipient;
+    delete semContato.recipientEmail;
+    delete semContato.recipientPhone;
+    await service.create(semContato);
+
+    expect(createDelivery.execute).toHaveBeenCalledWith(
+      expect.objectContaining({ recipient: null, recipientEmail: null, recipientPhone: null }),
+    );
+  });
+});

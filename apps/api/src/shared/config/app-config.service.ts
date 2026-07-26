@@ -167,6 +167,17 @@ export class AppConfigService {
     };
   }
 
+  /** Notificações ao destinatário (ADR-0084). */
+  get notifications() {
+    return {
+      enabled: this.get('NOTIFICATIONS_ENABLED'),
+      channel: this.get('NOTIFICATIONS_CHANNEL'),
+      locale: this.get('NOTIFICATIONS_LOCALE'),
+      proximityRadiusKm: this.get('NOTIFICATIONS_PROXIMITY_RADIUS_KM'),
+      proximityCheckIntervalMs: this.get('NOTIFICATIONS_PROXIMITY_INTERVAL_MS'),
+    };
+  }
+
   get maps() {
     return {
       provider: this.get('MAPS_PROVIDER'),

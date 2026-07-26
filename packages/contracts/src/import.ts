@@ -69,6 +69,8 @@ export interface ImportRowView {
   status: ImportRowStatus;
   recipient: string | null;
   phone: string | null;
+  /** E-mail do destinatário (ADR-0084). */
+  email: string | null;
   orderNumber: string | null;
   notes: string | null;
   priority: DeliveryPriority;

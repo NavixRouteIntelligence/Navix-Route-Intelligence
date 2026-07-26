@@ -42,10 +42,33 @@ export interface DeliveryPublicSnapshot {
 }
 
 /**
+ * Recorte para as notificações ao destinatário (ADR-0084). Inclui o contato —
+ * PII de terceiros —, então só o módulo de notificações consome, e nunca chega
+ * à página pública de rastreio.
+ */
+export interface NotifiableDeliveryDto {
+  id: string;
+  status: DeliveryStatus;
+  recipient: string | null;
+  recipientEmail: string | null;
+  recipientPhone: string | null;
+  latitude: number;
+  longitude: number;
+  driverId: string | null;
+}
+
+/**
  * API pública do contexto Delivery. Expõe apenas o necessário para outros
  * módulos (ex.: Optimizer) sem revelar o agregado/repositório internos.
  */
 export interface DeliveryLookupPort {
+  /** Uma entrega com contato, para notificar (ADR-0084). */
+  getNotifiable(tenantId: string, id: string): Promise<NotifiableDeliveryDto | null>;
+  /**
+   * Entregas ativas (pendente/em rota) com contato. Filtra por motorista quando
+   * informado — base do aviso "está chegando".
+   */
+  listNotifiableActive(tenantId: string, driverId?: string): Promise<NotifiableDeliveryDto[]>;
   /** Snapshot mínimo para o rastreamento público (ADR-0082). */
   getPublicSnapshot(tenantId: string, id: string): Promise<DeliveryPublicSnapshot | null>;
   getStops(tenantId: string, ids: string[]): Promise<DeliveryStopDto[]>;
@@ -113,6 +136,40 @@ export class DeliveryLookupService implements DeliveryLookupPort {
       driverId: s.driverId,
       latitude: s.address.latitude,
       longitude: s.address.longitude,
+    };
+  }
+
+  async getNotifiable(tenantId: string, id: string): Promise<NotifiableDeliveryDto | null> {
+    const delivery = await this.deliveries.findById(tenantId, id);
+    return delivery ? this.toNotifiable(delivery) : null;
+  }
+
+  async listNotifiableActive(tenantId: string, driverId?: string): Promise<NotifiableDeliveryDto[]> {
+    const active = await this.deliveries.findAll(tenantId, {
+      page: { page: 1, pageSize: 100 },
+      filters: { driverId },
+      sort: [],
+    });
+    return active.items
+      .filter((d) => {
+        const s = d.snapshot();
+        return s.status === 'pending' || s.status === 'in_route';
+      })
+      .map((d) => this.toNotifiable(d));
+  }
+
+  private toNotifiable(d: Delivery): NotifiableDeliveryDto {
+    const s = d.snapshot();
+    const address = s.address.snapshot();
+    return {
+      id: s.id,
+      status: s.status,
+      recipient: s.recipient,
+      recipientEmail: s.recipientEmail,
+      recipientPhone: s.recipientPhone,
+      latitude: address.latitude,
+      longitude: address.longitude,
+      driverId: s.driverId,
     };
   }
 

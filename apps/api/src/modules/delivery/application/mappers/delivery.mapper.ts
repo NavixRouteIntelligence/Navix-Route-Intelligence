@@ -19,6 +19,9 @@ export function toDeliveryView(delivery: Delivery): DeliveryView {
     vehicleId: s.vehicleId,
     routeId: s.routeId,
     notes: s.notes,
+    recipient: s.recipient,
+    recipientEmail: s.recipientEmail,
+    recipientPhone: s.recipientPhone,
     createdAt: s.createdAt.toISOString(),
     updatedAt: s.updatedAt.toISOString(),
     // Tombstone: null em leituras normais; preenchido no feed de sync (ADR-0020).

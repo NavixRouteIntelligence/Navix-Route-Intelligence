@@ -72,6 +72,14 @@ export class DeliveryOrmEntity {
   @Column('text', { nullable: true })
   recipient!: string | null;
 
+  // Contato do destinatário para as notificações (ADR-0084). PII de terceiros:
+  // nunca sai na página pública de rastreio.
+  @Column('text', { name: 'recipient_email', nullable: true })
+  recipientEmail!: string | null;
+
+  @Column('text', { name: 'recipient_phone', nullable: true })
+  recipientPhone!: string | null;
+
   @Column('timestamptz', { name: 'created_at' })
   createdAt!: Date;
 
