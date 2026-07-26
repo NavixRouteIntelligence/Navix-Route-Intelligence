@@ -13,8 +13,12 @@ class _FakeApi extends Interceptor {
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
-    final body = options.path.contains('route-plans') ? {'data': plans} : {'data': deliveries};
-    handler.resolve(Response(requestOptions: options, statusCode: 200, data: body));
+    final body = options.path.contains('route-plans')
+        ? {'data': plans}
+        : {'data': deliveries};
+    handler.resolve(
+      Response(requestOptions: options, statusCode: 200, data: body),
+    );
   }
 }
 
@@ -30,15 +34,29 @@ class _ReorgApi extends Interceptor {
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
     calls.add(options);
     if (options.method == 'POST') {
-      handler.resolve(Response(requestOptions: options, statusCode: 202, data: {
-        'data': {'jobId': 'job-1'}
-      }));
+      handler.resolve(
+        Response(
+          requestOptions: options,
+          statusCode: 202,
+          data: {
+            'data': {'jobId': 'job-1'},
+          },
+        ),
+      );
     } else if (options.path.contains('/jobs/')) {
-      handler.resolve(Response(requestOptions: options, statusCode: 200, data: {
-        'data': {'status': jobStatus, 'routePlanId': 'p1'}
-      }));
+      handler.resolve(
+        Response(
+          requestOptions: options,
+          statusCode: 200,
+          data: {
+            'data': {'status': jobStatus, 'routePlanId': 'p1'},
+          },
+        ),
+      );
     } else {
-      handler.resolve(Response(requestOptions: options, statusCode: 200, data: {'data': []}));
+      handler.resolve(
+        Response(requestOptions: options, statusCode: 200, data: {'data': []}),
+      );
     }
   }
 }
@@ -55,7 +73,12 @@ MyRouteRepository repo({
 
 Map<String, dynamic> delivery(String id, String street) => {
       'id': id,
-      'address': {'street': street, 'number': '10', 'city': 'Lisboa', 'state': 'LX'},
+      'address': {
+        'street': street,
+        'number': '10',
+        'city': 'Lisboa',
+        'state': 'LX',
+      },
     };
 
 void main() {
@@ -74,51 +97,54 @@ void main() {
     expect(route.status, MyRouteStatus.preparing);
   });
 
-  test('com plano: lê resumo, grupos e paradas com endereço resolvido', () async {
-    final route = await repo(
-      plans: [
-        {
-          'id': 'p1',
-          'createdAt': '2026-07-23T09:00:00.000Z',
-          'metrics': {'totalDistanceKm': 12.5, 'totalTimeMinutes': 95},
-          'savings': {'distanceKm': 3.2, 'distancePct': 20},
-          'stops': [
-            {'sequence': 1, 'deliveryId': 'd1', 'etaMinutes': 12},
-            {'sequence': 2, 'deliveryId': 'd2', 'etaMinutes': 40},
-          ],
-          'groups': [
-            {
-              'type': 'commerce',
-              'order': 1,
-              'stops': 1,
-              'sequences': [1],
-              'distanceKm': 5.0,
-              'timeMinutes': 12,
-            },
-            {
-              'type': 'residence',
-              'order': 2,
-              'stops': 1,
-              'sequences': [2],
-              'distanceKm': 7.5,
-              'timeMinutes': 28,
-            },
-          ],
-        },
-      ],
-      deliveries: [delivery('d1', 'Rua A'), delivery('d2', 'Rua B')],
-    ).load();
+  test(
+    'com plano: lê resumo, grupos e paradas com endereço resolvido',
+    () async {
+      final route = await repo(
+        plans: [
+          {
+            'id': 'p1',
+            'createdAt': '2026-07-23T09:00:00.000Z',
+            'metrics': {'totalDistanceKm': 12.5, 'totalTimeMinutes': 95},
+            'savings': {'distanceKm': 3.2, 'distancePct': 20},
+            'stops': [
+              {'sequence': 1, 'deliveryId': 'd1', 'etaMinutes': 12},
+              {'sequence': 2, 'deliveryId': 'd2', 'etaMinutes': 40},
+            ],
+            'groups': [
+              {
+                'type': 'commerce',
+                'order': 1,
+                'stops': 1,
+                'sequences': [1],
+                'distanceKm': 5.0,
+                'timeMinutes': 12,
+              },
+              {
+                'type': 'residence',
+                'order': 2,
+                'stops': 1,
+                'sequences': [2],
+                'distanceKm': 7.5,
+                'timeMinutes': 28,
+              },
+            ],
+          },
+        ],
+        deliveries: [delivery('d1', 'Rua A'), delivery('d2', 'Rua B')],
+      ).load();
 
-    expect(route.status, MyRouteStatus.ready);
-    expect(route.isReady, isTrue);
-    expect(route.totalStops, 2);
-    expect(route.distanceKm, 12.5);
-    expect(route.savedKm, 3.2);
-    expect(route.updatedAt, isNotNull);
-    expect(route.groups.map((g) => g.type), ['commerce', 'residence']);
-    expect(route.stops.first.addressLine, 'Rua A, 10');
-    expect(route.stops.first.cityLine, 'Lisboa — LX');
-  });
+      expect(route.status, MyRouteStatus.ready);
+      expect(route.isReady, isTrue);
+      expect(route.totalStops, 2);
+      expect(route.distanceKm, 12.5);
+      expect(route.savedKm, 3.2);
+      expect(route.updatedAt, isNotNull);
+      expect(route.groups.map((g) => g.type), ['commerce', 'residence']);
+      expect(route.stops.first.addressLine, 'Rua A, 10');
+      expect(route.stops.first.cityLine, 'Lisboa — LX');
+    },
+  );
 
   test('stopsOf devolve só as paradas do grupo, em ordem de rota', () async {
     final route = await repo(
@@ -144,7 +170,11 @@ void main() {
           ],
         },
       ],
-      deliveries: [delivery('d1', 'Rua A'), delivery('d2', 'Rua B'), delivery('d3', 'Rua C')],
+      deliveries: [
+        delivery('d1', 'Rua A'),
+        delivery('d2', 'Rua B'),
+        delivery('d3', 'Rua C'),
+      ],
     ).load();
 
     final stops = route.stopsOf(route.groups.first);
@@ -160,7 +190,9 @@ void main() {
         ..httpClientAdapter = IOHttpClientAdapter()
         ..interceptors.add(_ReorgApi(calls, jobStatus: 'succeeded'));
 
-      await MyRouteRepository(dio).reorganize(ReorganizeMode.ai, order: ['d1', 'd2']);
+      await MyRouteRepository(
+        dio,
+      ).reorganize(ReorganizeMode.ai, order: ['d1', 'd2']);
 
       final post = calls.firstWhere((c) => c.method == 'POST');
       expect(post.path, contains('/route-plans/mine'));
@@ -175,7 +207,9 @@ void main() {
         ..httpClientAdapter = IOHttpClientAdapter()
         ..interceptors.add(_ReorgApi(calls, jobStatus: 'succeeded'));
 
-      await MyRouteRepository(dio).reorganize(ReorganizeMode.manual, order: ['d2', 'd1']);
+      await MyRouteRepository(
+        dio,
+      ).reorganize(ReorganizeMode.manual, order: ['d2', 'd1']);
 
       final post = calls.firstWhere((c) => c.method == 'POST');
       expect((post.data as Map)['strategy'], 'manual');
@@ -188,7 +222,9 @@ void main() {
         ..interceptors.add(_ReorgApi(<RequestOptions>[], jobStatus: 'failed'));
 
       expect(
-        () => MyRouteRepository(dio).reorganize(ReorganizeMode.ai, order: ['d1', 'd2']),
+        () => MyRouteRepository(
+          dio,
+        ).reorganize(ReorganizeMode.ai, order: ['d1', 'd2']),
         throwsA(anything),
       );
     });

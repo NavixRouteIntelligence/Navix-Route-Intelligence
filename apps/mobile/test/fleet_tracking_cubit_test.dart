@@ -14,9 +14,28 @@ void main() {
   final snapshot = FleetSnapshot(
     updatedAt: now,
     drivers: [
-      TrackedDriver(id: 'd1', name: 'Carlos Melo', status: TrackStatus.enRoute, latitude: -23.55, longitude: -46.63, speedKmh: 42, recordedAt: now),
-      const TrackedDriver(id: 'd2', name: 'Ana Souza', status: TrackStatus.stopped, latitude: -23.56, longitude: -46.64, speedKmh: 0),
-      const TrackedDriver(id: 'd3', name: 'João Lima', status: TrackStatus.offline),
+      TrackedDriver(
+        id: 'd1',
+        name: 'Carlos Melo',
+        status: TrackStatus.enRoute,
+        latitude: -23.55,
+        longitude: -46.63,
+        speedKmh: 42,
+        recordedAt: now,
+      ),
+      const TrackedDriver(
+        id: 'd2',
+        name: 'Ana Souza',
+        status: TrackStatus.stopped,
+        latitude: -23.56,
+        longitude: -46.64,
+        speedKmh: 0,
+      ),
+      const TrackedDriver(
+        id: 'd3',
+        name: 'João Lima',
+        status: TrackStatus.offline,
+      ),
     ],
   );
 

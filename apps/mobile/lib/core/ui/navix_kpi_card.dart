@@ -57,7 +57,11 @@ class NavixKpiCard extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             value,
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, height: 1.1),
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+              height: 1.1,
+            ),
           ),
           if (deltaLabel != null) ...[
             const SizedBox(height: 8),

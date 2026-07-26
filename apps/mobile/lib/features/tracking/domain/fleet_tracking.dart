@@ -39,21 +39,37 @@ class TrackedDriver extends Equatable {
   final String? plate;
 
   bool get hasPosition => latitude != null && longitude != null;
-  bool get isOnline => status == TrackStatus.enRoute || status == TrackStatus.stopped;
+  bool get isOnline =>
+      status == TrackStatus.enRoute || status == TrackStatus.stopped;
 
   /// Segundos desde a última posição (null se nunca reportou).
-  int? get ageSeconds => recordedAt == null ? null : DateTime.now().difference(recordedAt!).inSeconds;
+  int? get ageSeconds => recordedAt == null
+      ? null
+      : DateTime.now().difference(recordedAt!).inSeconds;
 
   /// GPS instável: online mas sem atualização há mais de 90s.
   bool get gpsStale => isOnline && (ageSeconds ?? 0) > 90;
 
   @override
-  List<Object?> get props => [id, name, status, latitude, longitude, speedKmh, recordedAt, plate];
+  List<Object?> get props => [
+        id,
+        name,
+        status,
+        latitude,
+        longitude,
+        speedKmh,
+        recordedAt,
+        plate,
+      ];
 }
 
 /// Um ponto do histórico de posições (timeline).
 class TrackPoint extends Equatable {
-  const TrackPoint({required this.recordedAt, required this.status, this.speedKmh});
+  const TrackPoint({
+    required this.recordedAt,
+    required this.status,
+    this.speedKmh,
+  });
 
   final DateTime recordedAt;
   final TrackStatus status;
@@ -83,7 +99,11 @@ class FleetSnapshot extends Equatable {
 
 /// Alerta operacional derivado do estado da frota.
 class FleetAlert extends Equatable {
-  const FleetAlert({required this.id, required this.severity, required this.message});
+  const FleetAlert({
+    required this.id,
+    required this.severity,
+    required this.message,
+  });
 
   final String id;
   final String severity; // warning | danger

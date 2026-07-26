@@ -78,7 +78,9 @@ class AuthRepositoryImpl implements AuthRepository {
 
   AuthSession _sessionFromJson(Map<String, dynamic> json) {
     final tokens = json['tokens'] as Map<String, dynamic>?;
-    if (tokens == null) throw const ServerFailure(); // resposta de autenticação sem tokens
+    if (tokens == null) {
+      throw const ServerFailure(); // resposta de autenticação sem tokens
+    }
     return AuthSession(
       user: _userFromJson(json['user'] as Map<String, dynamic>),
       accessToken: tokens['accessToken'] as String,
@@ -90,6 +92,7 @@ class AuthRepositoryImpl implements AuthRepository {
         id: json['id'] as String,
         tenantId: json['tenantId'] as String,
         email: json['email'] as String,
-        roles: (json['roles'] as List<dynamic>).map((e) => e as String).toList(),
+        roles:
+            (json['roles'] as List<dynamic>).map((e) => e as String).toList(),
       );
 }

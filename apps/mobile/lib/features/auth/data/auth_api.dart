@@ -12,22 +12,29 @@ class AuthApi {
   final Dio apiDio;
 
   Future<Map<String, dynamic>> login(LoginParams p) async {
-    final res = await authDio.post<dynamic>('/auth/mobile/login', data: {
-      'email': p.email,
-      'password': p.password,
-      if (p.organization != null) 'organization': p.organization,
-    });
+    final res = await authDio.post<dynamic>(
+      '/auth/mobile/login',
+      data: {
+        'email': p.email,
+        'password': p.password,
+        if (p.organization != null) 'organization': p.organization,
+      },
+    );
     return res.data as Map<String, dynamic>;
   }
 
   Future<Map<String, dynamic>> register(RegisterParams p) async {
-    final res = await authDio.post<dynamic>('/auth/mobile/register', data: {
-      'accountType': p.accountType == AccountType.company ? 'company' : 'driver',
-      'name': p.name,
-      'email': p.email,
-      'password': p.password,
-      if (p.organizationName != null) 'organizationName': p.organizationName,
-    });
+    final res = await authDio.post<dynamic>(
+      '/auth/mobile/register',
+      data: {
+        'accountType':
+            p.accountType == AccountType.company ? 'company' : 'driver',
+        'name': p.name,
+        'email': p.email,
+        'password': p.password,
+        if (p.organizationName != null) 'organizationName': p.organizationName,
+      },
+    );
     return res.data as Map<String, dynamic>;
   }
 
@@ -38,6 +45,9 @@ class AuthApi {
   }
 
   Future<void> logout(String refreshToken) async {
-    await apiDio.post<dynamic>('/auth/mobile/logout', data: {'refreshToken': refreshToken});
+    await apiDio.post<dynamic>(
+      '/auth/mobile/logout',
+      data: {'refreshToken': refreshToken},
+    );
   }
 }

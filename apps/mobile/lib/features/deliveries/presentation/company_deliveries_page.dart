@@ -28,9 +28,11 @@ class CompanyDeliveriesPage extends StatelessWidget {
                 final dark = Theme.of(context).brightness == Brightness.dark;
                 theme.setMode(dark ? ThemeMode.light : ThemeMode.dark);
               },
-              icon: Icon(Theme.of(context).brightness == Brightness.dark
-                  ? Icons.light_mode_outlined
-                  : Icons.dark_mode_outlined),
+              icon: Icon(
+                Theme.of(context).brightness == Brightness.dark
+                    ? Icons.light_mode_outlined
+                    : Icons.dark_mode_outlined,
+              ),
             ),
           ],
         ),

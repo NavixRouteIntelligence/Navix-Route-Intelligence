@@ -31,9 +31,11 @@ class DeliverySummary extends Equatable {
 
   factory DeliverySummary.fromJson(Map<String, dynamic> json) {
     final address = json['address'];
-    final addr = address is Map<String, dynamic> ? address : const <String, dynamic>{};
+    final addr =
+        address is Map<String, dynamic> ? address : const <String, dynamic>{};
     final window = json['timeWindow'];
-    final win = window is Map<String, dynamic> ? window : const <String, dynamic>{};
+    final win =
+        window is Map<String, dynamic> ? window : const <String, dynamic>{};
     final street = (addr['street'] as String?)?.trim() ?? '';
     final number = (addr['number'] as String?)?.trim() ?? '';
 
@@ -43,9 +45,13 @@ class DeliverySummary extends Equatable {
       city: (addr['city'] as String?) ?? '',
       status: _status(json['status'] as String?),
       priority: _priority(json['priority'] as String?),
-      windowStart: DateTime.tryParse((win['start'] as String?) ?? '')?.toLocal(),
+      windowStart: DateTime.tryParse(
+        (win['start'] as String?) ?? '',
+      )?.toLocal(),
       windowEnd: DateTime.tryParse((win['end'] as String?) ?? '')?.toLocal(),
-      notes: (json['notes'] as String?)?.trim().isEmpty ?? true ? null : json['notes'] as String?,
+      notes: (json['notes'] as String?)?.trim().isEmpty ?? true
+          ? null
+          : json['notes'] as String?,
     );
   }
 
@@ -66,5 +72,14 @@ class DeliverySummary extends Equatable {
       };
 
   @override
-  List<Object?> get props => [id, addressLine, city, status, priority, windowStart, windowEnd, notes];
+  List<Object?> get props => [
+        id,
+        addressLine,
+        city,
+        status,
+        priority,
+        windowStart,
+        windowEnd,
+        notes,
+      ];
 }

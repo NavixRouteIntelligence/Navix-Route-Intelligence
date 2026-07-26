@@ -4,7 +4,12 @@ import '../../app/theme/navix_tokens.dart';
 
 /// Cabeçalho de seção (título + trailing opcional).
 class NavixSectionHeader extends StatelessWidget {
-  const NavixSectionHeader({super.key, required this.title, this.trailing, this.icon});
+  const NavixSectionHeader({
+    super.key,
+    required this.title,
+    this.trailing,
+    this.icon,
+  });
 
   final String title;
   final Widget? trailing;

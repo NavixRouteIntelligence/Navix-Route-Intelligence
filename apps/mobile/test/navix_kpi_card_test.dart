@@ -4,7 +4,9 @@ import 'package:navix_mobile/app/theme/app_theme.dart';
 import 'package:navix_mobile/core/ui/navix_kpi_card.dart';
 
 void main() {
-  testWidgets('NavixKpiCard renderiza rótulo, valor e variação com os tokens', (tester) async {
+  testWidgets('NavixKpiCard renderiza rótulo, valor e variação com os tokens', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.dark(),

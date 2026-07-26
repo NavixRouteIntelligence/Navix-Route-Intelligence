@@ -105,16 +105,21 @@ class _Body extends StatelessWidget {
     final parking = d.parking;
     if (parking != null) {
       final (color, label) = _difficulty(context, parking.difficulty);
-      rows.add(_Line(
-        icon: Icons.local_parking_outlined,
-        child: Row(
-          children: [
-            NavixStatusPill(label: label, color: color),
-            const SizedBox(width: 8),
-            Text('${parking.walkMinutes} min a pé', style: TextStyle(color: t.muted, fontSize: 13)),
-          ],
+      rows.add(
+        _Line(
+          icon: Icons.local_parking_outlined,
+          child: Row(
+            children: [
+              NavixStatusPill(label: label, color: color),
+              const SizedBox(width: 8),
+              Text(
+                '${parking.walkMinutes} min a pé',
+                style: TextStyle(color: t.muted, fontSize: 13),
+              ),
+            ],
+          ),
         ),
-      ));
+      );
     }
 
     for (final tip in d.access) {
@@ -124,28 +129,40 @@ class _Body extends StatelessWidget {
     final insight = d.insight;
     if (insight != null && insight.hasSignal) {
       if (insight.typicalServiceMinutes != null) {
-        rows.add(_Line(
-          icon: Icons.timer_outlined,
-          child: Text('Atendimento típico: ${insight.typicalServiceMinutes!.toStringAsFixed(0)} min'),
-        ));
+        rows.add(
+          _Line(
+            icon: Icons.timer_outlined,
+            child: Text(
+              'Atendimento típico: ${insight.typicalServiceMinutes!.toStringAsFixed(0)} min',
+            ),
+          ),
+        );
       }
       for (final tip in insight.accessTips) {
         rows.add(_Line(icon: Icons.groups_outlined, child: Text(tip)));
       }
-      rows.add(Padding(
-        padding: const EdgeInsets.only(top: 4),
-        child: Text('${insight.sampleSize} observações da frota',
-            style: TextStyle(color: t.muted, fontSize: 12)),
-      ));
+      rows.add(
+        Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Text(
+            '${insight.sampleSize} observações da frota',
+            style: TextStyle(color: t.muted, fontSize: 12),
+          ),
+        ),
+      );
     }
 
     if (rows.isEmpty) {
-      return Text('Sem sinais para esta parada ainda.', style: TextStyle(color: t.muted, fontSize: 13.5));
+      return Text(
+        'Sem sinais para esta parada ainda.',
+        style: TextStyle(color: t.muted, fontSize: 13.5),
+      );
     }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        for (final row in rows) Padding(padding: const EdgeInsets.only(bottom: 8), child: row),
+        for (final row in rows)
+          Padding(padding: const EdgeInsets.only(bottom: 8), child: row),
       ],
     );
   }
@@ -173,7 +190,12 @@ class _Line extends StatelessWidget {
       children: [
         Icon(icon, size: 18, color: t.muted),
         const SizedBox(width: 10),
-        Expanded(child: DefaultTextStyle.merge(style: const TextStyle(fontSize: 14), child: child)),
+        Expanded(
+          child: DefaultTextStyle.merge(
+            style: const TextStyle(fontSize: 14),
+            child: child,
+          ),
+        ),
       ],
     );
   }

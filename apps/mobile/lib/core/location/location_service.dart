@@ -2,7 +2,12 @@ import 'package:geolocator/geolocator.dart';
 
 /// Amostra de localização normalizada (velocidade já em km/h).
 class LocationSample {
-  const LocationSample({required this.latitude, required this.longitude, this.speedKmh, this.heading});
+  const LocationSample({
+    required this.latitude,
+    required this.longitude,
+    this.speedKmh,
+    this.heading,
+  });
 
   final double latitude;
   final double longitude;

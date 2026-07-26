@@ -12,13 +12,34 @@ class DashboardRepository {
 
   Future<DashboardData> load() async {
     try {
-      final deliveries = _map(await _dio.get<dynamic>('/deliveries', queryParameters: {'pageSize': 100}));
-      final plans = _map(await _dio.get<dynamic>('/route-plans', queryParameters: {'pageSize': 50}));
+      final deliveries = _map(
+        await _dio.get<dynamic>(
+          '/deliveries',
+          queryParameters: {'pageSize': 100},
+        ),
+      );
+      final plans = _map(
+        await _dio.get<dynamic>(
+          '/route-plans',
+          queryParameters: {'pageSize': 50},
+        ),
+      );
       final pod = _map(await _dio.get<dynamic>('/pod/summary'));
-      final positions = _map(await _dio.get<dynamic>('/tracking/positions/latest'));
-      final imports = _map(await _dio.get<dynamic>('/imports', queryParameters: {'pageSize': 5}));
-      final vehicles = _map(await _dio.get<dynamic>('/vehicles', queryParameters: {'pageSize': 100}));
-      final drivers = _map(await _dio.get<dynamic>('/drivers', queryParameters: {'pageSize': 100}));
+      final positions = _map(
+        await _dio.get<dynamic>('/tracking/positions/latest'),
+      );
+      final imports = _map(
+        await _dio.get<dynamic>('/imports', queryParameters: {'pageSize': 5}),
+      );
+      final vehicles = _map(
+        await _dio.get<dynamic>(
+          '/vehicles',
+          queryParameters: {'pageSize': 100},
+        ),
+      );
+      final drivers = _map(
+        await _dio.get<dynamic>('/drivers', queryParameters: {'pageSize': 100}),
+      );
 
       final planItems = _items(plans);
       return DashboardData(
@@ -41,16 +62,22 @@ class DashboardRepository {
   }
 
   Map<String, dynamic> _map(Response<dynamic> res) =>
-      res.data is Map<String, dynamic> ? res.data as Map<String, dynamic> : const {};
+      res.data is Map<String, dynamic>
+          ? res.data as Map<String, dynamic>
+          : const {};
 
   int _metaTotal(Map<String, dynamic> json) {
     final meta = json['meta'];
-    return meta is Map<String, dynamic> ? (meta['total'] as num?)?.toInt() ?? 0 : 0;
+    return meta is Map<String, dynamic>
+        ? (meta['total'] as num?)?.toInt() ?? 0
+        : 0;
   }
 
   List<Map<String, dynamic>> _items(Map<String, dynamic> json) {
     final data = json['data'];
-    return data is List ? data.whereType<Map<String, dynamic>>().toList() : const [];
+    return data is List
+        ? data.whereType<Map<String, dynamic>>().toList()
+        : const [];
   }
 
   DeliveryCounts _deliveries(Map<String, dynamic> json) {
@@ -78,29 +105,44 @@ class DashboardRepository {
 
   int _avgScore(List<Map<String, dynamic>> items) {
     if (items.isEmpty) return 0;
-    final sum = items.fold<int>(0, (a, p) => a + ((p['score'] as num?)?.toInt() ?? 0));
+    final sum = items.fold<int>(
+      0,
+      (a, p) => a + ((p['score'] as num?)?.toInt() ?? 0),
+    );
     return (sum / items.length).round();
   }
 
-  double _savedKm(List<Map<String, dynamic>> items) => items.fold<double>(0, (a, p) {
+  double _savedKm(List<Map<String, dynamic>> items) =>
+      items.fold<double>(0, (a, p) {
         final s = p['savings'];
-        return a + (s is Map<String, dynamic> ? (s['distanceKm'] as num?)?.toDouble() ?? 0 : 0);
+        return a +
+            (s is Map<String, dynamic>
+                ? (s['distanceKm'] as num?)?.toDouble() ?? 0
+                : 0);
       });
 
   double _avgSavingsPct(List<Map<String, dynamic>> items) {
     if (items.isEmpty) return 0;
     final sum = items.fold<double>(0, (a, p) {
       final s = p['savings'];
-      return a + (s is Map<String, dynamic> ? (s['distancePct'] as num?)?.toDouble() ?? 0 : 0);
+      return a +
+          (s is Map<String, dynamic>
+              ? (s['distancePct'] as num?)?.toDouble() ?? 0
+              : 0);
     });
     return sum / items.length;
   }
 
-  List<double> _series(List<Map<String, dynamic>> items, {required bool baseline}) {
+  List<double> _series(
+    List<Map<String, dynamic>> items, {
+    required bool baseline,
+  }) {
     final take = items.take(7).toList().reversed.toList();
     return take.map<double>((p) {
       final m = p[baseline ? 'baseline' : 'metrics'];
-      return m is Map<String, dynamic> ? (m['totalDistanceKm'] as num?)?.toDouble() ?? 0 : 0;
+      return m is Map<String, dynamic>
+          ? (m['totalDistanceKm'] as num?)?.toDouble() ?? 0
+          : 0;
     }).toList();
   }
 
@@ -115,11 +157,17 @@ class DashboardRepository {
     final data = json['data'];
     if (data is! List) return const [];
     return data.whereType<Map<String, dynamic>>().map((p) {
-      return FleetDriver(id: (p['driverId'] as String?) ?? '', status: (p['status'] as String?) ?? 'offline');
+      return FleetDriver(
+        id: (p['driverId'] as String?) ?? '',
+        status: (p['status'] as String?) ?? 'offline',
+      );
     }).toList();
   }
 
-  FleetCounts _fleet(Map<String, dynamic> vehicles, Map<String, dynamic> drivers) {
+  FleetCounts _fleet(
+    Map<String, dynamic> vehicles,
+    Map<String, dynamic> drivers,
+  ) {
     final v = _items(vehicles);
     final d = _items(drivers);
     return FleetCounts(
@@ -137,8 +185,11 @@ class DashboardRepository {
       return PlanSummary(
         id: (p['id'] as String?) ?? '',
         score: (p['score'] as num?)?.toInt() ?? 0,
-        savingsPct: s is Map<String, dynamic> ? (s['distancePct'] as num?)?.toDouble() ?? 0 : 0,
-        stops: m is Map<String, dynamic> ? (m['stops'] as num?)?.toInt() ?? 0 : 0,
+        savingsPct: s is Map<String, dynamic>
+            ? (s['distancePct'] as num?)?.toDouble() ?? 0
+            : 0,
+        stops:
+            m is Map<String, dynamic> ? (m['stops'] as num?)?.toInt() ?? 0 : 0,
       );
     }).toList();
   }
@@ -146,8 +197,12 @@ class DashboardRepository {
   List<ImportSummaryItem> _recentImports(Map<String, dynamic> json) {
     return _items(json).take(3).map((b) {
       final summary = b['summary'];
-      final valid = summary is Map<String, dynamic> ? (summary['valid'] as num?)?.toInt() ?? 0 : 0;
-      final total = summary is Map<String, dynamic> ? (summary['total'] as num?)?.toInt() ?? 0 : 0;
+      final valid = summary is Map<String, dynamic>
+          ? (summary['valid'] as num?)?.toInt() ?? 0
+          : 0;
+      final total = summary is Map<String, dynamic>
+          ? (summary['total'] as num?)?.toInt() ?? 0
+          : 0;
       return ImportSummaryItem(
         filename: (b['filename'] as String?) ?? '—',
         valid: valid,

@@ -61,10 +61,16 @@ Future<void> configureDependencies(AppConfig config) async {
       DioClient(config: config, store: getIt<SecureSessionStore>()),
     )
     ..registerSingleton<AuthApi>(
-      AuthApi(authDio: getIt<DioClient>().authDio, apiDio: getIt<DioClient>().apiDio),
+      AuthApi(
+        authDio: getIt<DioClient>().authDio,
+        apiDio: getIt<DioClient>().apiDio,
+      ),
     )
     ..registerSingleton<AuthRepository>(
-      AuthRepositoryImpl(api: getIt<AuthApi>(), store: getIt<SecureSessionStore>()),
+      AuthRepositoryImpl(
+        api: getIt<AuthApi>(),
+        store: getIt<SecureSessionStore>(),
+      ),
     )
     ..registerLazySingleton<SessionCubit>(
       () => SessionCubit(
@@ -74,21 +80,30 @@ Future<void> configureDependencies(AppConfig config) async {
         logger: getIt<AppLogger>(),
       ),
     )
-    ..registerLazySingleton<ThemeCubit>(() => ThemeCubit(getIt<SecureSessionStore>()))
+    ..registerLazySingleton<ThemeCubit>(
+      () => ThemeCubit(getIt<SecureSessionStore>()),
+    )
     ..registerLazySingleton<DashboardRepository>(
       () => DashboardRepository(getIt<DioClient>().apiDio),
     )
-    ..registerFactory<DashboardCubit>(() => DashboardCubit(getIt<DashboardRepository>()))
+    ..registerFactory<DashboardCubit>(
+      () => DashboardCubit(getIt<DashboardRepository>()),
+    )
     ..registerLazySingleton<DeliveriesRepository>(
       () => DeliveriesRepository(getIt<DioClient>().apiDio),
     )
-    ..registerFactory<DeliveriesCubit>(() => DeliveriesCubit(getIt<DeliveriesRepository>()))
+    ..registerFactory<DeliveriesCubit>(
+      () => DeliveriesCubit(getIt<DeliveriesRepository>()),
+    )
     ..registerSingleton<LocationService>(const LocationService())
     ..registerLazySingleton<TrackingRepository>(
       () => TrackingRepository(getIt<DioClient>().apiDio),
     )
     ..registerLazySingleton<LocationSharingCubit>(
-      () => LocationSharingCubit(getIt<LocationService>(), getIt<TrackingRepository>()),
+      () => LocationSharingCubit(
+        getIt<LocationService>(),
+        getIt<TrackingRepository>(),
+      ),
     )
     ..registerLazySingleton<ImportRepository>(
       () => ImportRepository(getIt<DioClient>().apiDio),
@@ -100,29 +115,46 @@ Future<void> configureDependencies(AppConfig config) async {
     ..registerSingleton<ConnectivityService>(ConnectivityService())
     ..registerSingleton<PodQueueStore>(PodQueueStore())
     ..registerFactory<PodCaptureCubit>(
-      () => PodCaptureCubit(getIt<PodRepository>(), getIt<LocationService>(), getIt<TrackingRepository>(), getIt<PodQueueStore>()),
+      () => PodCaptureCubit(
+        getIt<PodRepository>(),
+        getIt<LocationService>(),
+        getIt<TrackingRepository>(),
+        getIt<PodQueueStore>(),
+      ),
     )
     ..registerSingleton<PodSyncCubit>(
-      PodSyncCubit(getIt<PodRepository>(), getIt<PodQueueStore>(), getIt<ConnectivityService>())..init(),
+      PodSyncCubit(
+        getIt<PodRepository>(),
+        getIt<PodQueueStore>(),
+        getIt<ConnectivityService>(),
+      )..init(),
     )
     ..registerLazySingleton<FleetTrackingRepository>(
       () => FleetTrackingRepository(getIt<DioClient>().apiDio),
     )
-    ..registerFactory<FleetTrackingCubit>(() => FleetTrackingCubit(getIt<FleetTrackingRepository>()))
+    ..registerFactory<FleetTrackingCubit>(
+      () => FleetTrackingCubit(getIt<FleetTrackingRepository>()),
+    )
     ..registerLazySingleton<MyRouteRepository>(
       () => MyRouteRepository(getIt<DioClient>().apiDio),
     )
-    ..registerFactory<MyRouteCubit>(() => MyRouteCubit(getIt<MyRouteRepository>()))
+    ..registerFactory<MyRouteCubit>(
+      () => MyRouteCubit(getIt<MyRouteRepository>()),
+    )
     ..registerLazySingleton<TariffStore>(() => TariffStore())
     ..registerFactory<EarningsCubit>(() => EarningsCubit(getIt<TariffStore>()))
     ..registerLazySingleton<MaintenanceRepository>(
       () => MaintenanceRepository(getIt<DioClient>().apiDio),
     )
-    ..registerFactory<MaintenanceCubit>(() => MaintenanceCubit(getIt<MaintenanceRepository>()))
+    ..registerFactory<MaintenanceCubit>(
+      () => MaintenanceCubit(getIt<MaintenanceRepository>()),
+    )
     ..registerLazySingleton<FinanceRepository>(
       () => FinanceRepository(getIt<DioClient>().apiDio),
     )
-    ..registerFactory<FinanceCubit>(() => FinanceCubit(getIt<FinanceRepository>()))
+    ..registerFactory<FinanceCubit>(
+      () => FinanceCubit(getIt<FinanceRepository>()),
+    )
     ..registerLazySingleton<IntelligenceRepository>(
       () => IntelligenceRepository(getIt<DioClient>().apiDio),
     )
@@ -131,6 +163,9 @@ Future<void> configureDependencies(AppConfig config) async {
     )
     ..registerLazySingleton<SpeechService>(PluginSpeechService.new)
     ..registerFactory<VoiceAssistantCubit>(
-      () => VoiceAssistantCubit(getIt<SpeechService>(), getIt<IntelligenceRepository>()),
+      () => VoiceAssistantCubit(
+        getIt<SpeechService>(),
+        getIt<IntelligenceRepository>(),
+      ),
     );
 }

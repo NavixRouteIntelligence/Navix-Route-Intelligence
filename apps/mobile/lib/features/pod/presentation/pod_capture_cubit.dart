@@ -50,12 +50,21 @@ class PodCaptureState extends Equatable {
   }
 
   @override
-  List<Object?> get props => [gps, latitude, longitude, submitting, done, queued, error];
+  List<Object?> get props => [
+        gps,
+        latitude,
+        longitude,
+        submitting,
+        done,
+        queued,
+        error,
+      ];
 }
 
 /// Captura de comprovante de entrega: obtém o GPS e envia o POD (com fila offline).
 class PodCaptureCubit extends Cubit<PodCaptureState> {
-  PodCaptureCubit(this._pod, this._location, this._tracking, this._queue) : super(const PodCaptureState());
+  PodCaptureCubit(this._pod, this._location, this._tracking, this._queue)
+      : super(const PodCaptureState());
 
   final PodRepository _pod;
   final LocationService _location;
@@ -67,7 +76,13 @@ class PodCaptureCubit extends Cubit<PodCaptureState> {
     emit(state.copyWith(gps: GpsStatus.loading, clearError: true));
     try {
       final s = await _location.current();
-      emit(state.copyWith(gps: GpsStatus.done, latitude: s.latitude, longitude: s.longitude));
+      emit(
+        state.copyWith(
+          gps: GpsStatus.done,
+          latitude: s.latitude,
+          longitude: s.longitude,
+        ),
+      );
     } catch (_) {
       emit(state.copyWith(gps: GpsStatus.error));
     }
@@ -98,10 +113,15 @@ class PodCaptureCubit extends Cubit<PodCaptureState> {
       if (state.latitude != null && state.longitude != null) {
         try {
           await _tracking.sendPosition(
-            LocationSample(latitude: state.latitude!, longitude: state.longitude!),
+            LocationSample(
+              latitude: state.latitude!,
+              longitude: state.longitude!,
+            ),
             status: 'finished',
           );
-        } catch (_) {/* não bloqueia o POD */}
+        } catch (_) {
+          /* não bloqueia o POD */
+        }
       }
       emit(state.copyWith(submitting: false, done: true, queued: false));
     } on NetworkFailure {

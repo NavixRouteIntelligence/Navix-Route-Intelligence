@@ -12,7 +12,11 @@ void main() {
   late _MockRepo repo;
 
   const data = StopIntelligence(
-    parking: ParkingPrediction(difficulty: 'hard', confidence: 0.8, walkMinutes: 5),
+    parking: ParkingPrediction(
+      difficulty: 'hard',
+      confidence: 0.8,
+      walkMinutes: 5,
+    ),
     access: ['Entrar pela doca'],
     insight: CollectiveInsight(
       sampleSize: 6,
@@ -32,36 +36,46 @@ void main() {
   blocTest<StopIntelligenceCubit, StopIntelligenceState>(
     'load com sucesso: loading → success com dados',
     build: () {
-      when(() => repo.loadForStop(
-            id: any(named: 'id'),
-            latitude: any(named: 'latitude'),
-            longitude: any(named: 'longitude'),
-            vehicleType: any(named: 'vehicleType'),
-          )).thenAnswer((_) async => data);
+      when(
+        () => repo.loadForStop(
+          id: any(named: 'id'),
+          latitude: any(named: 'latitude'),
+          longitude: any(named: 'longitude'),
+          vehicleType: any(named: 'vehicleType'),
+        ),
+      ).thenAnswer((_) async => data);
       return StopIntelligenceCubit(repo);
     },
     act: (c) => c.load(latitude: -23.55, longitude: -46.63),
     expect: () => [
       const StopIntelligenceState(status: StopIntelligenceStatus.loading),
-      const StopIntelligenceState(status: StopIntelligenceStatus.success, data: data),
+      const StopIntelligenceState(
+        status: StopIntelligenceStatus.success,
+        data: data,
+      ),
     ],
   );
 
   blocTest<StopIntelligenceCubit, StopIntelligenceState>(
     'load com falha: loading → error com mensagem',
     build: () {
-      when(() => repo.loadForStop(
-            id: any(named: 'id'),
-            latitude: any(named: 'latitude'),
-            longitude: any(named: 'longitude'),
-            vehicleType: any(named: 'vehicleType'),
-          )).thenThrow(const NetworkFailure());
+      when(
+        () => repo.loadForStop(
+          id: any(named: 'id'),
+          latitude: any(named: 'latitude'),
+          longitude: any(named: 'longitude'),
+          vehicleType: any(named: 'vehicleType'),
+        ),
+      ).thenThrow(const NetworkFailure());
       return StopIntelligenceCubit(repo);
     },
     act: (c) => c.load(latitude: 0, longitude: 0),
     expect: () => const [
       StopIntelligenceState(status: StopIntelligenceStatus.loading),
-      StopIntelligenceState(status: StopIntelligenceStatus.error, error: NetworkFailure()),
+      StopIntelligenceState(
+        status: StopIntelligenceStatus.error,
+        error: NetworkFailure(),
+      ),
     ],
   );
 }

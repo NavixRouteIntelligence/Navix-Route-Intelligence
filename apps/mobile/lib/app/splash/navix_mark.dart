@@ -58,13 +58,15 @@ abstract final class NavixMark {
 
   /// Converte um caminho da caixa de design para um quadrado de lado [side]
   /// centrado em [center].
-  static Path scaleTo(Path path, {required Offset center, required double side}) {
+  static Path scaleTo(
+    Path path, {
+    required Offset center,
+    required double side,
+  }) {
     final factor = side / designSize;
-    return path.transform(affine(
-      scale: factor,
-      tx: center.dx - side / 2,
-      ty: center.dy - side / 2,
-    ));
+    return path.transform(
+      affine(scale: factor, tx: center.dx - side / 2, ty: center.dy - side / 2),
+    );
   }
 
   /// Matriz afim 4×4 (escala uniforme + translação) em ordem *column-major*,
@@ -84,11 +86,13 @@ abstract final class NavixMark {
   /// Escala [path] em torno do seu próprio centro (para revelações "pop").
   static Path scaleAroundCenter(Path path, double factor) {
     final pivot = path.getBounds().center;
-    return path.transform(affine(
-      scale: factor,
-      tx: pivot.dx * (1 - factor),
-      ty: pivot.dy * (1 - factor),
-    ));
+    return path.transform(
+      affine(
+        scale: factor,
+        tx: pivot.dx * (1 - factor),
+        ty: pivot.dy * (1 - factor),
+      ),
+    );
   }
 
   /// Ponto a [distance] de [corner] na direção de [from], usado para arredondar
@@ -99,6 +103,9 @@ abstract final class NavixMark {
     final length = math.sqrt(dx * dx + dy * dy);
     if (length == 0) return corner;
     final clamped = math.min(distance, length / 2);
-    return Offset(corner.dx + dx / length * clamped, corner.dy + dy / length * clamped);
+    return Offset(
+      corner.dx + dx / length * clamped,
+      corner.dy + dy / length * clamped,
+    );
   }
 }

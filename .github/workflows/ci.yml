@@ -62,6 +62,48 @@ jobs:
             apps/web/coverage/lcov.info
           if-no-files-found: ignore
 
+  # ==========================================================================
+  # Qualidade do aplicativo Flutter: mesma versão usada no desenvolvimento.
+  # ==========================================================================
+  mobile:
+    name: Mobile Flutter
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.44.6
+          cache: true
+
+      - name: Confirmar versão do Flutter
+        run: flutter --version
+
+      - name: Instalar dependências
+        run: flutter pub get
+
+      - name: Verificar formatação
+        run: dart format --output=none --set-exit-if-changed .
+
+      - name: Analisar código
+        run: flutter analyze
+
+      - name: Rodar testes e gerar cobertura
+        run: flutter test --coverage
+
+      - name: Guardar cobertura do mobile
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-mobile
+          path: apps/mobile/coverage/lcov.info
+          if-no-files-found: ignore
+
   # ===========================================================================
   # Testes E2E da API contra Postgres + Redis reais.
   # ===========================================================================

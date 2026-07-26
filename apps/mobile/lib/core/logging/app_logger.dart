@@ -13,7 +13,12 @@ class AppLogger {
   final LogLevel minLevel;
 
   /// Gancho opcional para telemetria externa (crash/observabilidade).
-  void Function(LogLevel level, String message, Object? error, StackTrace? stack)? onRecord;
+  void Function(
+    LogLevel level,
+    String message,
+    Object? error,
+    StackTrace? stack,
+  )? onRecord;
 
   static final RegExp _sensitive = RegExp(
     r'(authorization|bearer|password|token|refresh)[^,}\s]*',
@@ -29,7 +34,12 @@ class AppLogger {
   void error(String message, [Object? error, StackTrace? stack]) =>
       _log(LogLevel.error, message, error, stack);
 
-  void _log(LogLevel level, String message, [Object? error, StackTrace? stack]) {
+  void _log(
+    LogLevel level,
+    String message, [
+    Object? error,
+    StackTrace? stack,
+  ]) {
     if (!enabled || level.index < minLevel.index) return;
     final safe = _redact(message);
     developer.log(

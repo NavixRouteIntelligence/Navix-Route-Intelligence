@@ -26,7 +26,11 @@ const Duration kSplashDuration = Duration(milliseconds: 2200);
 /// Não decide *quando* sair: apenas avisa por [onStorytellingDone]. Quem
 /// coordena com o carregamento de dados é o `SplashGate`.
 class NavixSplash extends StatefulWidget {
-  const NavixSplash({super.key, this.onStorytellingDone, this.duration = kSplashDuration});
+  const NavixSplash({
+    super.key,
+    this.onStorytellingDone,
+    this.duration = kSplashDuration,
+  });
 
   /// Chamado quando a encenação termina (o mínimo de tempo em tela cumprido).
   final VoidCallback? onStorytellingDone;
@@ -36,7 +40,8 @@ class NavixSplash extends StatefulWidget {
   State<NavixSplash> createState() => _NavixSplashState();
 }
 
-class _NavixSplashState extends State<NavixSplash> with TickerProviderStateMixin {
+class _NavixSplashState extends State<NavixSplash>
+    with TickerProviderStateMixin {
   /// Conduz a encenação (0→1, uma vez).
   late final AnimationController _story;
 
@@ -52,8 +57,12 @@ class _NavixSplashState extends State<NavixSplash> with TickerProviderStateMixin
   @override
   void initState() {
     super.initState();
-    _story = AnimationController(vsync: this, duration: widget.duration)..addStatusListener(_onStoryStatus);
-    _ambient = AnimationController(vsync: this, duration: const Duration(seconds: 6));
+    _story = AnimationController(vsync: this, duration: widget.duration)
+      ..addStatusListener(_onStoryStatus);
+    _ambient = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 6),
+    );
   }
 
   @override
@@ -95,7 +104,8 @@ class _NavixSplashState extends State<NavixSplash> with TickerProviderStateMixin
 
   @override
   Widget build(BuildContext context) {
-    final tokens = Theme.of(context).extension<NavixTokens>() ?? NavixTokens.dark;
+    final tokens =
+        Theme.of(context).extension<NavixTokens>() ?? NavixTokens.dark;
     final palette = SplashPalette(
       background: AppColors.darkBg,
       primary: AppColors.primary,
@@ -123,7 +133,8 @@ class _NavixSplashState extends State<NavixSplash> with TickerProviderStateMixin
             final tagline = _slice(t, 0.74, 1.00, Curves.easeOut);
 
             // Respiração e parallax: contínuos, seguem depois da encenação.
-            final breath = reduced ? 1.0 : 1 + math.sin(ambient * math.pi * 2) * 0.012;
+            final breath =
+                reduced ? 1.0 : 1 + math.sin(ambient * math.pi * 2) * 0.012;
             final parallax = reduced
                 ? Offset.zero
                 : Offset(
@@ -140,7 +151,8 @@ class _NavixSplashState extends State<NavixSplash> with TickerProviderStateMixin
                   children: [
                     RepaintBoundary(
                       child: Transform.scale(
-                        scale: breath * (0.96 + 0.04 * _slice(t, 0.0, 0.6, Curves.easeOut)),
+                        scale: breath *
+                            (0.96 + 0.04 * _slice(t, 0.0, 0.6, Curves.easeOut)),
                         child: CustomPaint(
                           painter: NavixSplashPainter(
                             palette: palette,

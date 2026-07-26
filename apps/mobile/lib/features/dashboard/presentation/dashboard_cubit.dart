@@ -8,14 +8,26 @@ import '../domain/dashboard_data.dart';
 enum DashboardStatus { loading, success, error }
 
 class DashboardState extends Equatable {
-  const DashboardState({this.status = DashboardStatus.loading, this.data, this.error});
+  const DashboardState({
+    this.status = DashboardStatus.loading,
+    this.data,
+    this.error,
+  });
 
   final DashboardStatus status;
   final DashboardData? data;
   final Failure? error;
 
-  DashboardState copyWith({DashboardStatus? status, DashboardData? data, Failure? error}) =>
-      DashboardState(status: status ?? this.status, data: data ?? this.data, error: error);
+  DashboardState copyWith({
+    DashboardStatus? status,
+    DashboardData? data,
+    Failure? error,
+  }) =>
+      DashboardState(
+        status: status ?? this.status,
+        data: data ?? this.data,
+        error: error,
+      );
 
   @override
   List<Object?> get props => [status, data, error];
@@ -34,7 +46,12 @@ class DashboardCubit extends Cubit<DashboardState> {
     } on Failure catch (f) {
       emit(DashboardState(status: DashboardStatus.error, error: f));
     } catch (_) {
-      emit(const DashboardState(status: DashboardStatus.error, error: UnknownFailure()));
+      emit(
+        const DashboardState(
+          status: DashboardStatus.error,
+          error: UnknownFailure(),
+        ),
+      );
     }
   }
 }

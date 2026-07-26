@@ -9,7 +9,10 @@ enum SessionStatus { unknown, authenticated, unauthenticated }
 class SessionState extends Equatable {
   const SessionState({required this.status, this.role, this.email});
 
-  const SessionState.unknown() : status = SessionStatus.unknown, role = null, email = null;
+  const SessionState.unknown()
+      : status = SessionStatus.unknown,
+        role = null,
+        email = null;
   const SessionState.unauthenticated()
       : status = SessionStatus.unauthenticated,
         role = null,

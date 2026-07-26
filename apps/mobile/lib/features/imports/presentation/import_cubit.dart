@@ -49,7 +49,15 @@ class ImportState extends Equatable {
   }
 
   @override
-  List<Object?> get props => [step, busy, preview, confirmation, history, historyLoading, error];
+  List<Object?> get props => [
+        step,
+        busy,
+        preview,
+        confirmation,
+        history,
+        historyLoading,
+        error,
+      ];
 }
 
 class ImportCubit extends Cubit<ImportState> {
@@ -69,11 +77,16 @@ class ImportCubit extends Cubit<ImportState> {
     }
   }
 
-  Future<void> pickAndPreview({required String path, required String filename}) async {
+  Future<void> pickAndPreview({
+    required String path,
+    required String filename,
+  }) async {
     emit(state.copyWith(busy: true, clearError: true));
     try {
       final preview = await _repository.preview(path: path, filename: filename);
-      emit(state.copyWith(busy: false, step: ImportStep.preview, preview: preview));
+      emit(
+        state.copyWith(busy: false, step: ImportStep.preview, preview: preview),
+      );
     } on Failure catch (f) {
       emit(state.copyWith(busy: false, error: f));
     } catch (_) {
@@ -81,14 +94,19 @@ class ImportCubit extends Cubit<ImportState> {
     }
   }
 
-
   Future<void> confirm() async {
     final batch = state.preview?.batch;
     if (batch == null) return;
     emit(state.copyWith(busy: true, clearError: true));
     try {
       final result = await _repository.confirm(batch.id);
-      emit(state.copyWith(busy: false, step: ImportStep.done, confirmation: result));
+      emit(
+        state.copyWith(
+          busy: false,
+          step: ImportStep.done,
+          confirmation: result,
+        ),
+      );
       await loadHistory();
     } on Failure catch (f) {
       emit(state.copyWith(busy: false, error: f));

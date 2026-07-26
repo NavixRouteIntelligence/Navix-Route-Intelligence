@@ -8,14 +8,22 @@ import '../data/pod_queue_store.dart';
 import '../data/pod_repository.dart';
 
 class PodSyncState extends Equatable {
-  const PodSyncState({this.online = true, this.pending = 0, this.syncing = false});
+  const PodSyncState({
+    this.online = true,
+    this.pending = 0,
+    this.syncing = false,
+  });
 
   final bool online;
   final int pending;
   final bool syncing;
 
   PodSyncState copyWith({bool? online, int? pending, bool? syncing}) =>
-      PodSyncState(online: online ?? this.online, pending: pending ?? this.pending, syncing: syncing ?? this.syncing);
+      PodSyncState(
+        online: online ?? this.online,
+        pending: pending ?? this.pending,
+        syncing: syncing ?? this.syncing,
+      );
 
   @override
   List<Object?> get props => [online, pending, syncing];
@@ -24,7 +32,8 @@ class PodSyncState extends Equatable {
 /// Gerencia a fila offline de comprovantes: conta pendentes, observa a conexão
 /// e reenvia automaticamente quando volta a ficar online.
 class PodSyncCubit extends Cubit<PodSyncState> {
-  PodSyncCubit(this._repository, this._queue, this._connectivity) : super(const PodSyncState());
+  PodSyncCubit(this._repository, this._queue, this._connectivity)
+      : super(const PodSyncState());
 
   final PodRepository _repository;
   final PodQueueStore _queue;

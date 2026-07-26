@@ -32,19 +32,22 @@ class CollectiveInsight extends Equatable {
   final List<String> accessTips;
 
   bool get hasSignal =>
-      parkingDifficulty != null || typicalServiceMinutes != null || accessTips.isNotEmpty;
+      parkingDifficulty != null ||
+      typicalServiceMinutes != null ||
+      accessTips.isNotEmpty;
 
   @override
-  List<Object?> get props => [sampleSize, parkingDifficulty, typicalServiceMinutes, accessTips];
+  List<Object?> get props => [
+        sampleSize,
+        parkingDifficulty,
+        typicalServiceMinutes,
+        accessTips,
+      ];
 }
 
 /// Inteligência da parada atual: previsão + acesso + coletiva (ADR-0028/0029/0031).
 class StopIntelligence extends Equatable {
-  const StopIntelligence({
-    this.parking,
-    this.access = const [],
-    this.insight,
-  });
+  const StopIntelligence({this.parking, this.access = const [], this.insight});
 
   final ParkingPrediction? parking;
   final List<String> access; // textos das instruções de acesso

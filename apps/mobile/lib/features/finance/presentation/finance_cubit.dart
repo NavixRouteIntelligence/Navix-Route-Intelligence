@@ -50,7 +50,15 @@ class FinanceState extends Equatable {
   }
 
   @override
-  List<Object?> get props => [status, summary, entries, insights, history, busy, error];
+  List<Object?> get props => [
+        status,
+        summary,
+        entries,
+        insights,
+        history,
+        busy,
+        error,
+      ];
 }
 
 /// Gerencia as finanças do motorista (FASE 3, F1b). `load` carrega resumo +
@@ -67,11 +75,24 @@ class FinanceCubit extends Cubit<FinanceState> {
       final entries = await _repository.entries();
       final insights = await _repository.insights();
       final history = await _repository.history();
-      emit(FinanceState(status: FinanceStatus.ready, summary: summary, entries: entries, insights: insights, history: history));
+      emit(
+        FinanceState(
+          status: FinanceStatus.ready,
+          summary: summary,
+          entries: entries,
+          insights: insights,
+          history: history,
+        ),
+      );
     } on Failure catch (f) {
       emit(FinanceState(status: FinanceStatus.error, error: f));
     } catch (_) {
-      emit(const FinanceState(status: FinanceStatus.error, error: UnknownFailure()));
+      emit(
+        const FinanceState(
+          status: FinanceStatus.error,
+          error: UnknownFailure(),
+        ),
+      );
     }
   }
 
@@ -83,12 +104,19 @@ class FinanceCubit extends Cubit<FinanceState> {
     } on Failure catch (f) {
       emit(state.copyWith(status: FinanceStatus.error, error: f));
     } catch (_) {
-      emit(state.copyWith(status: FinanceStatus.error, error: const UnknownFailure()));
+      emit(
+        state.copyWith(
+          status: FinanceStatus.error,
+          error: const UnknownFailure(),
+        ),
+      );
     }
   }
 
-  Future<void> addEntry(NewFinancialEntry entry) => _mutate(() => _repository.addEntry(entry));
-  Future<void> deleteEntry(String id) => _mutate(() => _repository.deleteEntry(id));
+  Future<void> addEntry(NewFinancialEntry entry) =>
+      _mutate(() => _repository.addEntry(entry));
+  Future<void> deleteEntry(String id) =>
+      _mutate(() => _repository.deleteEntry(id));
 
   Future<void> _mutate(Future<void> Function() action) async {
     if (state.busy) return;

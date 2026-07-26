@@ -61,7 +61,11 @@ class PluginSpeechService implements SpeechService {
     Timer(const Duration(seconds: 12), () async {
       if (!completer.isCompleted) {
         await _stt.stop();
-        finish(_stt.lastRecognizedWords.trim().isEmpty ? null : _stt.lastRecognizedWords.trim());
+        finish(
+          _stt.lastRecognizedWords.trim().isEmpty
+              ? null
+              : _stt.lastRecognizedWords.trim(),
+        );
       }
     });
 

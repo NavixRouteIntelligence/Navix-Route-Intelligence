@@ -32,10 +32,15 @@ class ProfilePage extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(state.email ?? '—', style: Theme.of(context).textTheme.titleMedium),
+                    Text(
+                      state.email ?? '—',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
                     const SizedBox(height: 4),
                     Text(
-                      state.role == UserRole.driver ? l10n.accountDriver : l10n.accountCompany,
+                      state.role == UserRole.driver
+                          ? l10n.accountDriver
+                          : l10n.accountCompany,
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],
@@ -51,7 +56,9 @@ class ProfilePage extends StatelessWidget {
                     subtitle: Text(l10n.profileMaintenanceSubtitle),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => Navigator.of(context).push<void>(
-                      MaterialPageRoute(builder: (_) => const MaintenancePage()),
+                      MaterialPageRoute(
+                        builder: (_) => const MaintenancePage(),
+                      ),
                     ),
                   ),
                 ),

@@ -14,7 +14,8 @@ class VoiceAssistantButton extends StatelessWidget {
     final t = context.tokens;
     return BlocBuilder<VoiceAssistantCubit, VoiceAssistantState>(
       builder: (context, state) {
-        final busy = state.status == VoiceStatus.listening || state.status == VoiceStatus.thinking;
+        final busy = state.status == VoiceStatus.listening ||
+            state.status == VoiceStatus.thinking;
         final label = switch (state.status) {
           VoiceStatus.listening => 'Ouvindo…',
           VoiceStatus.thinking => 'Processando…',
@@ -24,8 +25,10 @@ class VoiceAssistantButton extends StatelessWidget {
           // Tag única: as abas vivem juntas num IndexedStack, e FABs com a tag
           // padrão colidem no Hero ao animar uma rota (ex.: abrir o Drawer).
           heroTag: 'fab-voice-assistant',
-          onPressed: busy ? null : () => context.read<VoiceAssistantCubit>().start(),
-          backgroundColor: busy ? t.danger : Theme.of(context).colorScheme.primary,
+          onPressed:
+              busy ? null : () => context.read<VoiceAssistantCubit>().start(),
+          backgroundColor:
+              busy ? t.danger : Theme.of(context).colorScheme.primary,
           icon: Icon(busy ? Icons.mic : Icons.mic_none_outlined),
           label: Text(label),
         );

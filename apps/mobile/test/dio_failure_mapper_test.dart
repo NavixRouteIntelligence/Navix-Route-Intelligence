@@ -8,7 +8,11 @@ DioException _badResponse(int status, {Object? data}) {
   return DioException(
     requestOptions: req,
     type: DioExceptionType.badResponse,
-    response: Response<dynamic>(requestOptions: req, statusCode: status, data: data),
+    response: Response<dynamic>(
+      requestOptions: req,
+      statusCode: status,
+      data: data,
+    ),
   );
 }
 
@@ -28,9 +32,12 @@ void main() {
 
     test('o override não afeta outros status', () {
       final f = mapDioException(
-        _badResponse(400, data: {
-          'error': {'message': 'Bad Request Exception'}
-        }),
+        _badResponse(
+          400,
+          data: {
+            'error': {'message': 'Bad Request Exception'},
+          },
+        ),
         unauthorized: const InvalidCredentialsFailure(),
       );
       expect(f, isA<ValidationFailure>());
@@ -38,10 +45,12 @@ void main() {
     });
 
     test('erro de conexão continua sendo falha de rede', () {
-      final f = mapDioException(DioException(
-        requestOptions: RequestOptions(path: '/x'),
-        type: DioExceptionType.connectionError,
-      ));
+      final f = mapDioException(
+        DioException(
+          requestOptions: RequestOptions(path: '/x'),
+          type: DioExceptionType.connectionError,
+        ),
+      );
       expect(f, isA<NetworkFailure>());
     });
   });

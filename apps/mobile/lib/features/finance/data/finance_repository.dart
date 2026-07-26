@@ -15,8 +15,12 @@ class FinanceRepository {
   Future<FinancialSummary> summary() async {
     try {
       final res = await _dio.get<dynamic>('/finance/summary');
-      final data = res.data is Map<String, dynamic> ? (res.data as Map<String, dynamic>)['data'] : null;
-      return data is Map<String, dynamic> ? FinancialSummary.fromJson(data) : const FinancialSummary();
+      final data = res.data is Map<String, dynamic>
+          ? (res.data as Map<String, dynamic>)['data']
+          : null;
+      return data is Map<String, dynamic>
+          ? FinancialSummary.fromJson(data)
+          : const FinancialSummary();
     } on DioException catch (e) {
       throw mapDioException(e);
     }
@@ -25,8 +29,12 @@ class FinanceRepository {
   Future<DeliveryInsights> insights() async {
     try {
       final res = await _dio.get<dynamic>('/deliveries/insights');
-      final data = res.data is Map<String, dynamic> ? (res.data as Map<String, dynamic>)['data'] : null;
-      return data is Map<String, dynamic> ? DeliveryInsights.fromJson(data) : const DeliveryInsights();
+      final data = res.data is Map<String, dynamic>
+          ? (res.data as Map<String, dynamic>)['data']
+          : null;
+      return data is Map<String, dynamic>
+          ? DeliveryInsights.fromJson(data)
+          : const DeliveryInsights();
     } on DioException catch (e) {
       throw mapDioException(e);
     }
@@ -34,9 +42,16 @@ class FinanceRepository {
 
   Future<FinancialHistory> history({String granularity = 'month'}) async {
     try {
-      final res = await _dio.get<dynamic>('/finance/history', queryParameters: {'granularity': granularity});
-      final data = res.data is Map<String, dynamic> ? (res.data as Map<String, dynamic>)['data'] : null;
-      return data is Map<String, dynamic> ? FinancialHistory.fromJson(data) : const FinancialHistory();
+      final res = await _dio.get<dynamic>(
+        '/finance/history',
+        queryParameters: {'granularity': granularity},
+      );
+      final data = res.data is Map<String, dynamic>
+          ? (res.data as Map<String, dynamic>)['data']
+          : null;
+      return data is Map<String, dynamic>
+          ? FinancialHistory.fromJson(data)
+          : const FinancialHistory();
     } on DioException catch (e) {
       throw mapDioException(e);
     }
@@ -45,9 +60,14 @@ class FinanceRepository {
   Future<List<FinancialEntry>> entries() async {
     try {
       final res = await _dio.get<dynamic>('/finance/entries');
-      final data = res.data is Map<String, dynamic> ? (res.data as Map<String, dynamic>)['data'] : null;
+      final data = res.data is Map<String, dynamic>
+          ? (res.data as Map<String, dynamic>)['data']
+          : null;
       if (data is! List) return const [];
-      return data.whereType<Map<String, dynamic>>().map(FinancialEntry.fromJson).toList();
+      return data
+          .whereType<Map<String, dynamic>>()
+          .map(FinancialEntry.fromJson)
+          .toList();
     } on DioException catch (e) {
       throw mapDioException(e);
     }
