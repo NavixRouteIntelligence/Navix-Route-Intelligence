@@ -41,3 +41,15 @@ docker/volumes/
 # ancorada na raiz (NÃO o código em src/**/storage/).
 /storage/
 /apps/api/storage/
+
+# Terraform — cache de providers, state e variáveis reais nunca vão ao git.
+# O .terraform.lock.hcl É versionado (garante os mesmos providers) — não ignorar.
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+crash.*.log
+# terraform.tfvars carrega valores reais (segredos/IDs); só o .example é versionado.
+infra/terraform/terraform.tfvars
+*.auto.tfvars

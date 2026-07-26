@@ -18,6 +18,13 @@ services:
         value: production
       - key: OPTIMIZER_WORKER_ENABLED
         value: "false"
+      # OBRIGATÓRIO junto com o WORKER_ENABLED=false acima. Sem isto o driver
+      # cai no default `inprocess`, cuja fila processa no PRÓPRIO processo da
+      # API (o WORKER_ENABLED só governa o worker BullMQ): a otimização
+      # continuaria dentro da API e o navix-worker ficaria ocioso consumindo
+      # uma fila vazia — a topologia dedicada seria um no-op silencioso.
+      - key: OPTIMIZER_QUEUE_DRIVER
+        value: bullmq
       - key: STORAGE_DRIVER
         value: s3
       # Banco/Redis: o app lê variáveis SEPARADAS (não DATABASE_URL/REDIS_URL).
@@ -63,7 +70,10 @@ services:
     name: navix-worker
     runtime: docker
     dockerfilePath: ./docker/api.Dockerfile
-    dockerCommand: node dist/main-worker.js
+    # Caminho relativo ao WORKDIR /repo da imagem (docker/api.Dockerfile), que
+    # copia o build para apps/api/dist. "dist/main-worker.js" não existe lá e o
+    # worker morreria no boot com MODULE_NOT_FOUND.
+    dockerCommand: node apps/api/dist/main-worker.js
     region: frankfurt
     plan: starter
     envVars:

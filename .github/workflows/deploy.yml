@@ -1,0 +1,195 @@
+# ---------------------------------------------------------------------------
+# Deploy contínuo (CD) — o que a Auditoria 5 apontava como INEXISTENTE (R2).
+# A cada push na branch `main` (após a CI passar), builda as imagens, publica
+# no ECR e atualiza os serviços ECS (api, worker, web) em Frankfurt.
+#
+# FLUXO (a ordem importa):
+#   1. build + push das imagens com a tag do commit (SHA)
+#   2. REGISTRA novas revisões das task definitions apontando para essa tag
+#   3. roda a migração de banco com a revisão NOVA e ESPERA o resultado
+#   4. só então atualiza os serviços para as revisões novas
+#
+# Requer no GitHub (Settings -> Secrets and variables -> Actions):
+#   Secret   AWS_DEPLOY_ROLE_ARN  -> role IAM assumível via OIDC (sem chave estática)
+#   Variable PRIVATE_SUBNETS      -> output `private_subnet_ids` do Terraform
+#   Variable APP_SG               -> output `app_security_group_id` do Terraform
+# Ver docs/infrastructure/terraform-plan-runbook.md §6.
+# ---------------------------------------------------------------------------
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: ["CI"]      # só roda se a CI (lint/testes) passou
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:        # permite deploy manual pela aba Actions
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  id-token: write          # para autenticar na AWS via OIDC
+  contents: read
+
+env:
+  AWS_REGION: eu-central-1
+  ECR_API: navix-api
+  ECR_WEB: navix-web
+  ECS_CLUSTER: navix-production
+
+jobs:
+  deploy:
+    name: Build, publicar e implantar
+    runs-on: ubuntu-latest
+    # Gate de aprovação humana: configure o environment `production` com
+    # required reviewers (Settings -> Environments). Sem isso, todo merge em
+    # main vai direto para produção.
+    environment: production
+    # Não implanta se a CI falhou.
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Autenticar na AWS (OIDC, sem chave estática)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login no ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Definir tag da imagem (SHA do commit)
+        id: vars
+        run: echo "tag=${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+
+      - name: Conferir os insumos de rede vindos do Terraform
+        env:
+          PRIVATE_SUBNETS: ${{ vars.PRIVATE_SUBNETS }}
+          APP_SG: ${{ vars.APP_SG }}
+        run: |
+          # Falhar aqui (cedo e barato) é melhor que falhar na task de migração.
+          test -n "$PRIVATE_SUBNETS" || { echo "::error::Variable PRIVATE_SUBNETS ausente (output private_subnet_ids do Terraform)."; exit 1; }
+          test -n "$APP_SG" || { echo "::error::Variable APP_SG ausente (output app_security_group_id do Terraform)."; exit 1; }
+
+      # --- Build + push das imagens -----------------------------------------
+      - name: Build e push da API
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+          TAG: ${{ steps.vars.outputs.tag }}
+        run: |
+          docker build -f docker/api.Dockerfile -t "$REGISTRY/$ECR_API:$TAG" .
+          docker push "$REGISTRY/$ECR_API:$TAG"
+
+      - name: Build e push do Web
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+          TAG: ${{ steps.vars.outputs.tag }}
+        run: |
+          docker build -f docker/web.Dockerfile -t "$REGISTRY/$ECR_WEB:$TAG" .
+          docker push "$REGISTRY/$ECR_WEB:$TAG"
+
+      # --- Novas revisões das task definitions ------------------------------
+      # Sem este passo o deploy é um NO-OP: `update-service --force-new-deployment`
+      # apenas reinicia a MESMA revisão, que continua apontando para a imagem
+      # antiga. Aqui pegamos a definição vigente, trocamos só a imagem e
+      # registramos uma revisão nova.
+      - name: Registrar task definitions com a imagem nova
+        id: taskdefs
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+          TAG: ${{ steps.vars.outputs.tag }}
+        run: |
+          set -euo pipefail
+          register() {
+            local family="$1" container="$2" image="$3"
+            # Campos de runtime não aceitos por register-task-definition são removidos.
+            aws ecs describe-task-definition --task-definition "$family" \
+              --region "$AWS_REGION" --query taskDefinition \
+            | jq --arg C "$container" --arg IMG "$image" '
+                (.containerDefinitions[] | select(.name == $C) | .image) = $IMG
+                | del(.taskDefinitionArn, .revision, .status, .requiresAttributes,
+                      .compatibilities, .registeredAt, .registeredBy, .deregisteredAt)
+              ' > "/tmp/$family.json"
+            aws ecs register-task-definition --region "$AWS_REGION" \
+              --cli-input-json "file:///tmp/$family.json" \
+              --query 'taskDefinition.taskDefinitionArn' --output text
+          }
+
+          API_TD=$(register navix-production-api api "$REGISTRY/$ECR_API:$TAG")
+          # O worker roda a MESMA imagem da API, com outro comando.
+          WORKER_TD=$(register navix-production-worker worker "$REGISTRY/$ECR_API:$TAG")
+          WEB_TD=$(register navix-production-web web "$REGISTRY/$ECR_WEB:$TAG")
+
+          echo "api=$API_TD" >> "$GITHUB_OUTPUT"
+          echo "worker=$WORKER_TD" >> "$GITHUB_OUTPUT"
+          echo "web=$WEB_TD" >> "$GITHUB_OUTPUT"
+          printf 'Revisões registradas:\n  api=%s\n  worker=%s\n  web=%s\n' "$API_TD" "$WORKER_TD" "$WEB_TD"
+
+      # --- Migração de banco ANTES de trocar a aplicação --------------------
+      # Roda com a revisão NOVA (o schema casa com o código que vai subir) e
+      # ESPERA o término conferindo o exit code — `run-task` sozinho só informa
+      # que a task foi criada, não que a migração deu certo.
+      - name: Rodar migrações do banco (e aguardar)
+        env:
+          API_TD: ${{ steps.taskdefs.outputs.api }}
+          PRIVATE_SUBNETS: ${{ vars.PRIVATE_SUBNETS }}
+          APP_SG: ${{ vars.APP_SG }}
+        run: |
+          set -euo pipefail
+          TASK_ARN=$(aws ecs run-task \
+            --cluster "$ECS_CLUSTER" \
+            --launch-type FARGATE \
+            --task-definition "$API_TD" \
+            --overrides '{"containerOverrides":[{"name":"api","command":["npm","run","migration:run"]}]}' \
+            --network-configuration "awsvpcConfiguration={subnets=[$PRIVATE_SUBNETS],securityGroups=[$APP_SG]}" \
+            --region "$AWS_REGION" \
+            --query 'tasks[0].taskArn' --output text)
+
+          echo "Migração em execução: $TASK_ARN"
+          aws ecs wait tasks-stopped --cluster "$ECS_CLUSTER" --tasks "$TASK_ARN" --region "$AWS_REGION"
+
+          EXIT_CODE=$(aws ecs describe-tasks --cluster "$ECS_CLUSTER" --tasks "$TASK_ARN" \
+            --region "$AWS_REGION" --query 'tasks[0].containers[0].exitCode' --output text)
+          REASON=$(aws ecs describe-tasks --cluster "$ECS_CLUSTER" --tasks "$TASK_ARN" \
+            --region "$AWS_REGION" --query 'tasks[0].stoppedReason' --output text)
+
+          if [ "$EXIT_CODE" != "0" ]; then
+            echo "::error::Migração falhou (exit=$EXIT_CODE, motivo=$REASON). Nada foi implantado; veja os logs em /ecs/navix-production."
+            exit 1
+          fi
+          echo "✅ Migração concluída com sucesso."
+
+      # --- Deploy dos três serviços (rolling, com healthcheck) --------------
+      - name: Atualizar serviços ECS para as revisões novas
+        env:
+          API_TD: ${{ steps.taskdefs.outputs.api }}
+          WORKER_TD: ${{ steps.taskdefs.outputs.worker }}
+          WEB_TD: ${{ steps.taskdefs.outputs.web }}
+        run: |
+          set -euo pipefail
+          deploy() {
+            echo "Implantando $1 -> $2"
+            aws ecs update-service \
+              --cluster "$ECS_CLUSTER" --service "$1" --task-definition "$2" \
+              --region "$AWS_REGION" --output text --query 'service.serviceName'
+          }
+          deploy api "$API_TD"
+          deploy worker "$WORKER_TD"
+          deploy web "$WEB_TD"
+
+      # O rollback automático em falha de healthcheck vem do deployment circuit
+      # breaker configurado nos serviços (infra/terraform/ecs.tf). Este wait
+      # falha o job se o serviço não estabilizar — inclusive quando o circuit
+      # breaker reverte para a revisão anterior.
+      - name: Aguardar estabilização
+        run: |
+          aws ecs wait services-stable \
+            --cluster "$ECS_CLUSTER" \
+            --services api worker web \
+            --region "$AWS_REGION"
+
+      - name: Resumo
+        run: echo "✅ Deploy de ${{ steps.vars.outputs.tag }} concluído em $AWS_REGION."
