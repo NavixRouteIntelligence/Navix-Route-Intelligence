@@ -10,4 +10,4 @@ import 'core/config/app_config.dart';
 ///
 /// Sem o dart-define, o default é http://10.0.2.2:3001/api/v1 (alias do
 /// emulador Android para o host; no simulador iOS use localhost ou a URL acima).
-Future<void>  main() => bootstrap(AppConfig.dev());
+Future<void> main() => bootstrap(AppConfig.dev());
