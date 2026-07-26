@@ -122,6 +122,28 @@ desenvolvimento; não é aceitável sob carga (ADR-0007/0055).
 
 ---
 
+## 5.1 Teste de integração (contra Redis real)
+
+As garantias acima são verificadas em `apps/api/test/optimizer-queue.e2e-spec.ts`,
+que roda a fila e o worker **de verdade** contra o Redis — não contra mocks:
+
+| Caso | O que prova |
+|------|-------------|
+| enfileira → worker consome | a otimização sai do processo da API |
+| enfileirado **sem** worker, consumido quando ele sobe | restart não perde job |
+| mesmo `jobId` três vezes → processa uma | idempotência |
+| falha na 1ª tentativa, conclui na 2ª | retry/backoff + `resetForRetry` |
+| tentativas esgotadas → `failed` | job não some silenciosamente |
+| `execute` devolve `false` | job ainda não commitado é reenfileirado |
+
+> **Por que não bastavam os unitários:** o mock rejeita na hora, mas o ioredis
+> real com `maxRetriesPerRequest: null` **bufferiza** em vez de rejeitar. Foi
+> essa diferença que escondeu o defeito do *offline queue* até a revisão.
+
+O teste roda no **banco Redis 15** (`REDIS_DB`), isolado do 0 usado em
+desenvolvimento — sem isso o worker de teste consumiria jobs reais. Entra no job
+`e2e` da CI, que já sobe Redis.
+
 ## 6. Como verificar que está mesmo separado
 
 1. No boot do worker, o log deve trazer `Worker de otimização ativo (BullMQ).`

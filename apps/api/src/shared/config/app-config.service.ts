@@ -86,6 +86,7 @@ export class AppConfigService {
       host: this.get('REDIS_HOST'),
       port: this.get('REDIS_PORT'),
       password: this.get('REDIS_PASSWORD') || undefined,
+      db: this.get('REDIS_DB'),
     };
   }
 
