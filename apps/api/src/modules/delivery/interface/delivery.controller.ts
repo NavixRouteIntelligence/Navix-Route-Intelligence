@@ -140,6 +140,7 @@ export class DeliveryController {
     return { data };
   }
 
+
   @Patch(':id')
   @Roles('admin', 'dispatcher')
   @ApiOperation({ summary: 'Atualiza dados de uma entrega' })

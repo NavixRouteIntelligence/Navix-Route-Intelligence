@@ -26,5 +26,9 @@ import { TrackingController } from './interface/tracking.controller';
     { provide: POSITION_REPOSITORY, useClass: PositionRepository },
     { provide: TRACKING_EVENTS, useClass: RealtimeTrackingEvents },
   ],
+  // API pública do módulo: o Delivery consome a última posição do motorista
+  // para o rastreamento público da entrega (ADR-0082), via gateway
+  // anti-corrupção — nunca tocando no repositório de posições diretamente.
+  exports: [QueryPositionsUseCase],
 })
 export class TrackingModule {}

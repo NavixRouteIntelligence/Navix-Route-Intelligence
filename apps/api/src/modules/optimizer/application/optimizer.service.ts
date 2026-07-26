@@ -7,6 +7,10 @@ import {
   DISTANCE_PROVIDER,
   type DistanceProviderPort,
 } from '../domain/ports/distance-provider.port';
+import {
+  ROUTE_PLAN_REPOSITORY,
+  type RoutePlanRepositoryPort,
+} from '../domain/ports/route-plan-repository.port';
 import type { OptimizationWeights } from '../domain/ports/route-optimization-strategy.port';
 import { computeMetrics, computeSavings } from './scoring';
 import { OptimizeRouteUseCase } from './optimize-route.use-case';
@@ -26,6 +30,16 @@ export interface EstimateOutput {
 export interface OptimizerServicePort {
   estimate(stops: EstimateInput[]): Promise<EstimateOutput>;
   optimizeDeliveries(tenantId: string, actorId: string, deliveryIds: string[]): Promise<string>;
+  /**
+   * Chegada estimada da entrega segundo o plano de rota vigente, ou `null` se
+   * não houver plano que a contenha.
+   *
+   * **Heurística** (ADR-0082): `plano.criadoEm + etaMinutes da parada`. Trata o
+   * plano como se a rota começasse no instante em que foi calculada — não
+   * considera atraso acumulado nem trânsito. Serve para dar ordem de grandeza
+   * ao destinatário; o modelo real é a Fase 3 do roadmap.
+   */
+  etaForDelivery(tenantId: string, deliveryId: string): Promise<Date | null>;
 }
 
 export const OPTIMIZER_SERVICE = Symbol('OPTIMIZER_SERVICE');
@@ -40,6 +54,7 @@ export class OptimizerService implements OptimizerServicePort {
     @Inject(DISTANCE_PROVIDER) private readonly distance: DistanceProviderPort,
     private readonly registry: StrategyRegistry,
     private readonly optimizeRoute: OptimizeRouteUseCase,
+    @Inject(ROUTE_PLAN_REPOSITORY) private readonly plans: RoutePlanRepositoryPort,
   ) {}
 
   async estimate(stops: EstimateInput[]): Promise<EstimateOutput> {
@@ -80,5 +95,19 @@ export class OptimizerService implements OptimizerServicePort {
   async optimizeDeliveries(tenantId: string, actorId: string, deliveryIds: string[]): Promise<string> {
     const view = await this.optimizeRoute.execute({ tenantId, actorId, deliveryIds });
     return view.id;
+  }
+
+  async etaForDelivery(tenantId: string, deliveryId: string): Promise<Date | null> {
+    // O plano mais recente é a rota vigente (mesma leitura que o app do
+    // motorista faz). A busca respeita a RLS: só enxerga planos deste tenant.
+    const page = await this.plans.findAll(tenantId, { page: 1, pageSize: 1 });
+    const plan = page.items[0];
+    if (!plan) return null;
+
+    const stop = plan.snapshot().stops.find((s) => s.deliveryId === deliveryId);
+    if (!stop) return null;
+
+    const startedAt = plan.snapshot().createdAt.getTime();
+    return new Date(startedAt + stop.etaMinutes * 60_000);
   }
 }
