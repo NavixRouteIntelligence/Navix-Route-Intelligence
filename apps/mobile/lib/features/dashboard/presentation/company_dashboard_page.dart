@@ -120,7 +120,10 @@ class _Content extends StatelessWidget {
             physics: const NeverScrollableScrollPhysics(),
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
-            childAspectRatio: 1.7,
+            // 1.45 e não 1.7: o card de Economia carrega o chip de variação e
+            // precisa de mais altura. O NavixKpiCard ainda encolhe o valor se
+            // faltar espaço, então telas estreitas degradam sem estourar.
+            childAspectRatio: 1.45,
             children: [
               NavixKpiCard(icon: Icons.inventory_2_outlined, label: 'Entregas', value: '${data.deliveries.total}', iconColor: primary),
               NavixKpiCard(icon: Icons.route_outlined, label: 'Rotas otimizadas', value: '${data.routesTotal}', iconColor: t.accent),

@@ -45,8 +45,31 @@ class _PodSheetState extends State<_PodSheet> {
   final _note = TextEditingController();
   bool _preparing = false;
 
+  /// Espelha `_sig.isNotEmpty` no estado do widget.
+  ///
+  /// O `SignatureController` avisa a cada traço, mas **nada reconstruía esta
+  /// folha**: o "Confirmar" lia `_sig.isNotEmpty` dentro do `build`, então
+  /// continuava desabilitado mesmo com a assinatura já desenhada. Na prática só
+  /// habilitava se o motorista tirasse uma foto — e assinar sozinho, que a
+  /// própria tela oferece, não fechava a entrega.
+  bool _hasSignature = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _sig.addListener(_onSignatureChanged);
+  }
+
+  /// Reconstrói só na transição vazio ↔ preenchido (e não a cada ponto do
+  /// traço, que redesenharia a folha inteira dezenas de vezes por segundo).
+  void _onSignatureChanged() {
+    final has = _sig.isNotEmpty;
+    if (has != _hasSignature && mounted) setState(() => _hasSignature = has);
+  }
+
   @override
   void dispose() {
+    _sig.removeListener(_onSignatureChanged);
     _sig.dispose();
     _note.dispose();
     super.dispose();
@@ -60,7 +83,7 @@ class _PodSheetState extends State<_PodSheet> {
   }
 
   bool get _needsProof => _status == 'delivered';
-  bool get _hasProof => _photoDataUrl != null || _sig.isNotEmpty;
+  bool get _hasProof => _photoDataUrl != null || _hasSignature;
 
   Future<void> _submit() async {
     setState(() => _preparing = true);
@@ -191,7 +214,8 @@ class _PodSheetState extends State<_PodSheet> {
               Row(
                 children: [
                   const Expanded(child: Text('Assinatura', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600))),
-                  TextButton(onPressed: () => setState(_sig.clear), child: const Text('Limpar')),
+                  // Sem setState: limpar dispara o listener, que reconstrói.
+                  TextButton(onPressed: _sig.clear, child: const Text('Limpar')),
                 ],
               ),
               const SizedBox(height: 4),

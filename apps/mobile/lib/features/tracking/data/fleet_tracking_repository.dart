@@ -13,7 +13,12 @@ class FleetTrackingRepository {
   Future<FleetSnapshot> loadFleet() async {
     try {
       final positions = _list(await _dio.get<dynamic>('/tracking/positions/latest'));
-      final drivers = _items(await _dio.get<dynamic>('/drivers', queryParameters: {'pageSize': 200}));
+      // `/fleet/drivers`, não `/drivers`: sem o prefixo a API devolve 404 e a
+      // tela de Rastreamento da frota não carrega.
+      //
+      // pageSize 100 é o teto do DTO (`@Max(100)` em list-query.dto.ts); pedir
+      // 200 era rejeitado com 400 e derrubava a tela do mesmo jeito.
+      final drivers = _items(await _dio.get<dynamic>('/fleet/drivers', queryParameters: {'pageSize': 100}));
 
       final names = {for (final d in drivers) (d['id'] as String? ?? ''): (d['name'] as String? ?? 'Motorista')};
       final byId = {for (final p in positions) (p['driverId'] as String? ?? ''): p};

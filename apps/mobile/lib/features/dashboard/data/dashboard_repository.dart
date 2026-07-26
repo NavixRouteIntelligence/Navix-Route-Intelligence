@@ -17,8 +17,11 @@ class DashboardRepository {
       final pod = _map(await _dio.get<dynamic>('/pod/summary'));
       final positions = _map(await _dio.get<dynamic>('/tracking/positions/latest'));
       final imports = _map(await _dio.get<dynamic>('/imports', queryParameters: {'pageSize': 5}));
-      final vehicles = _map(await _dio.get<dynamic>('/vehicles', queryParameters: {'pageSize': 100}));
-      final drivers = _map(await _dio.get<dynamic>('/drivers', queryParameters: {'pageSize': 100}));
+      // Veículos e motoristas vivem sob `/fleet` na API (FleetController). Sem o
+      // prefixo o request dava 404 e derrubava o dashboard inteiro em "Algo deu
+      // errado" — o painel da Empresa não abria.
+      final vehicles = _map(await _dio.get<dynamic>('/fleet/vehicles', queryParameters: {'pageSize': 100}));
+      final drivers = _map(await _dio.get<dynamic>('/fleet/drivers', queryParameters: {'pageSize': 100}));
 
       final planItems = _items(plans);
       return DashboardData(
