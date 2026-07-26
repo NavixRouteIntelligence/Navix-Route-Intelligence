@@ -6,9 +6,9 @@ import { DataSource } from 'typeorm';
 import { transactionContext } from '../../../shared/database/transaction-context';
 import { NotFoundError } from '../../../shared/kernel/domain-error';
 import {
-  DELIVERY_REPOSITORY,
-  type DeliveryRepositoryPort,
-} from '../domain/ports/delivery-repository.port';
+  DELIVERY_LOOKUP,
+  type DeliveryLookupPort,
+} from '../../delivery/application/delivery-lookup.service';
 import {
   ROUTE_ETA_GATEWAY,
   VEHICLE_LOCATION_GATEWAY,
@@ -39,7 +39,7 @@ export class GetPublicTrackingUseCase {
   constructor(
     @InjectDataSource() private readonly dataSource: DataSource,
     @Inject(TRACKING_TOKEN_REPOSITORY) private readonly tokens: TrackingTokenRepositoryPort,
-    @Inject(DELIVERY_REPOSITORY) private readonly deliveries: DeliveryRepositoryPort,
+    @Inject(DELIVERY_LOOKUP) private readonly deliveries: DeliveryLookupPort,
     @Inject(ROUTE_ETA_GATEWAY) private readonly eta: RouteEtaGatewayPort,
     @Inject(VEHICLE_LOCATION_GATEWAY) private readonly location: VehicleLocationGatewayPort,
   ) {}
@@ -53,10 +53,9 @@ export class GetPublicTrackingUseCase {
     if (!ref) throw new NotFoundError('Rastreamento não encontrado.');
 
     return this.withTenant(ref.tenantId, async () => {
-      const delivery = await this.deliveries.findById(ref.tenantId, ref.deliveryId);
-      if (!delivery) throw new NotFoundError('Rastreamento não encontrado.');
+      const snapshot = await this.deliveries.getPublicSnapshot(ref.tenantId, ref.deliveryId);
+      if (!snapshot) throw new NotFoundError('Rastreamento não encontrado.');
 
-      const snapshot = delivery.snapshot();
       const inRoute = snapshot.status === 'in_route';
 
       const vehiclePosition =
@@ -84,10 +83,7 @@ export class GetPublicTrackingUseCase {
           : null,
         // Só as coordenadas do destino, para centrar o mapa — nunca a rua, o
         // número ou o complemento.
-        destination: {
-          latitude: snapshot.address.latitude,
-          longitude: snapshot.address.longitude,
-        },
+        destination: { latitude: snapshot.latitude, longitude: snapshot.longitude },
         updatedAt: new Date().toISOString(),
       };
     });

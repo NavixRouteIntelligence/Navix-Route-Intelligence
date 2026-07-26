@@ -1,6 +1,6 @@
 import type { AppConfigService } from '../../../shared/config/app-config.service';
 import { NotFoundError } from '../../../shared/kernel/domain-error';
-import type { DeliveryRepositoryPort } from '../domain/ports/delivery-repository.port';
+import type { DeliveryLookupPort } from '../../delivery/application/delivery-lookup.service';
 import type { TrackingTokenRepositoryPort } from '../domain/ports/tracking-token-repository.port';
 import { IssueTrackingLinkUseCase } from './issue-tracking-link.use-case';
 
@@ -8,8 +8,10 @@ function build(opts: { found?: unknown; existing?: string | null } = {}) {
   // `'found' in opts` e não `??`: o caso interessante é justamente `found: null`
   // (entrega de outro tenant, que a RLS esconde), que o `??` engoliria.
   const deliveries = {
-    findById: jest.fn().mockResolvedValue('found' in opts ? opts.found : { id: 'del-1' }),
-  } as unknown as DeliveryRepositoryPort;
+    getPublicSnapshot: jest
+      .fn()
+      .mockResolvedValue('found' in opts ? opts.found : { status: 'pending' }),
+  } as unknown as DeliveryLookupPort;
 
   const tokens: TrackingTokenRepositoryPort = {
     resolve: jest.fn(),
