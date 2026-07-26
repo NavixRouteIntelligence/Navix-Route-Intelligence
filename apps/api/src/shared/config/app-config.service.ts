@@ -131,6 +131,14 @@ export class AppConfigService {
     };
   }
 
+  /** Rastreamento público da entrega pelo destinatário (ADR-0082). */
+  get publicTracking() {
+    return {
+      // Sem barra final: o use case concatena `/<token>`.
+      baseUrl: this.get('PUBLIC_TRACKING_BASE_URL').replace(/\/+$/, ''),
+    };
+  }
+
   get tracking() {
     return { retentionDays: this.get('TRACKING_RETENTION_DAYS') };
   }

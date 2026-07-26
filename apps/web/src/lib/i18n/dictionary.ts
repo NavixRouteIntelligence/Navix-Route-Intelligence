@@ -172,6 +172,26 @@ const pt_BR = {
 
   'stopIntel.title': 'Inteligência da parada',
   'stopIntel.empty': 'Sem sinais para esta parada ainda.',
+
+  'track.title': 'Acompanhe sua entrega',
+  'track.subtitle': 'Atualizado automaticamente',
+  'track.status.pending': 'Preparando',
+  'track.status.in_route': 'A caminho',
+  'track.status.delivered': 'Entregue',
+  'track.status.failed': 'Tentativa sem sucesso',
+  'track.status.canceled': 'Cancelada',
+  'track.eta': 'Chegada estimada',
+  'track.eta.none': 'Ainda sem estimativa',
+  'track.eta.disclaimer': 'Estimativa: pode variar com o trânsito.',
+  'track.vehicle': 'Veículo a caminho',
+  'track.vehicle.updated': 'Posição de',
+  'track.destination': 'Destino',
+  'track.notFound.title': 'Rastreamento não encontrado',
+  'track.notFound.description': 'Este link não é válido ou expirou. Peça um novo a quem enviou.',
+  'track.error.title': 'Não foi possível carregar',
+  'track.error.description': 'Tente novamente em instantes.',
+  'track.delivered.note': 'Entrega concluída. Obrigado!',
+  'track.privacy': 'Mostramos apenas o essencial para acompanhar esta entrega.',
 };
 
 type Keys = typeof pt_BR;
@@ -194,6 +214,11 @@ const pt_PT: Keys = {
   'error.403.description': 'Não tem permissão para aceder a esta página.',
   'action.home': 'Ir para o início',
   'insights.subtitle': 'Análises automáticas da sua operação.',
+  'track.title': 'Acompanhe a sua entrega',
+  'track.status.pending': 'A preparar',
+  'track.eta.disclaimer': 'Estimativa: pode variar com o trânsito.',
+  'track.notFound.description': 'Esta ligação não é válida ou expirou. Peça uma nova a quem a enviou.',
+  'track.privacy': 'Mostramos apenas o essencial para acompanhar esta entrega.',
 };
 
 const en: Keys = {
@@ -347,6 +372,26 @@ const en: Keys = {
   'voice.reply.help': 'You can say: next stop, summary, time left, mark delivered or report parking.',
   'voice.reply.unknown': 'I did not catch that. Say "help" to list commands.',
 
+
+  'track.title': 'Track your delivery',
+  'track.subtitle': 'Updates automatically',
+  'track.status.pending': 'Preparing',
+  'track.status.in_route': 'On the way',
+  'track.status.delivered': 'Delivered',
+  'track.status.failed': 'Delivery attempt failed',
+  'track.status.canceled': 'Canceled',
+  'track.eta': 'Estimated arrival',
+  'track.eta.none': 'No estimate yet',
+  'track.eta.disclaimer': 'Estimate: may vary with traffic.',
+  'track.vehicle': 'Vehicle on the way',
+  'track.vehicle.updated': 'Position from',
+  'track.destination': 'Destination',
+  'track.notFound.title': 'Tracking not found',
+  'track.notFound.description': 'This link is invalid or has expired. Ask the sender for a new one.',
+  'track.error.title': "Couldn't load",
+  'track.error.description': 'Please try again shortly.',
+  'track.delivered.note': 'Delivery completed. Thank you!',
+  'track.privacy': 'We show only what you need to follow this delivery.',
   'stopIntel.title': 'Stop intelligence',
   'stopIntel.empty': 'No signals for this stop yet.',
 };
@@ -502,6 +547,26 @@ const es: Keys = {
   'voice.reply.help': 'Puedes decir: siguiente parada, resumen, cuánto falta, marcar entregada o reportar aparcamiento.',
   'voice.reply.unknown': 'No entendí. Di "ayuda" para ver los comandos.',
 
+
+  'track.title': 'Sigue tu entrega',
+  'track.subtitle': 'Se actualiza automáticamente',
+  'track.status.pending': 'Preparando',
+  'track.status.in_route': 'En camino',
+  'track.status.delivered': 'Entregada',
+  'track.status.failed': 'Intento fallido',
+  'track.status.canceled': 'Cancelada',
+  'track.eta': 'Llegada estimada',
+  'track.eta.none': 'Aún sin estimación',
+  'track.eta.disclaimer': 'Estimación: puede variar con el tráfico.',
+  'track.vehicle': 'Vehículo en camino',
+  'track.vehicle.updated': 'Posición de',
+  'track.destination': 'Destino',
+  'track.notFound.title': 'Seguimiento no encontrado',
+  'track.notFound.description': 'Este enlace no es válido o ha caducado. Pide uno nuevo a quien lo envió.',
+  'track.error.title': 'No se pudo cargar',
+  'track.error.description': 'Inténtalo de nuevo en unos instantes.',
+  'track.delivered.note': '¡Entrega completada. Gracias!',
+  'track.privacy': 'Mostramos solo lo esencial para seguir esta entrega.',
   'stopIntel.title': 'Inteligencia de la parada',
   'stopIntel.empty': 'Aún no hay señales para esta parada.',
 };

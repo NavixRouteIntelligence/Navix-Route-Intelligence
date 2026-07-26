@@ -6,6 +6,7 @@ export * from './finance';
 export * from './optimizer';
 export * from './import';
 export * from './tracking';
+export * from './public-tracking';
 export * from './pod';
 export * from './settings';
 export * from './realtime';

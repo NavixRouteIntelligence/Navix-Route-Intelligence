@@ -65,6 +65,10 @@ export const envSchema = z.object({
   MEDIA_URL_TTL_SECONDS: z.coerce.number().int().positive().default(900),
   // Retenção de posições de tracking (dias); 0 desliga o expurgo (ADR-0048).
   TRACKING_RETENTION_DAYS: z.coerce.number().int().min(0).default(90),
+  // Base do link público de rastreamento (ADR-0082). Só monta a URL enviada ao
+  // destinatário; o token em si é validado no backend, então um valor errado
+  // aqui gera link inválido, não brecha de acesso.
+  PUBLIC_TRACKING_BASE_URL: z.string().default('http://localhost:3000/track'),
   S3_ENDPOINT: z.string().optional(),
   S3_REGION: z.string().default('auto'),
   S3_BUCKET: z.string().optional(),
