@@ -7,6 +7,7 @@ import type {
   ResourceResponse,
   SyncParams,
   SyncResponse,
+  TrackingLinkResponse,
   UpdateDeliveryRequest,
 } from '@navix/contracts';
 
@@ -40,4 +41,13 @@ export const deliveriesApi = {
       body: { status },
     }),
   remove: (id: string) => apiRequest<void>(`/deliveries/${id}`, { method: 'DELETE' }),
+  /**
+   * Emite (ou recupera) o link público de rastreamento do destinatário
+   * (ADR-0082). É idempotente no backend: chamar de novo devolve o link
+   * vigente, então reenviar o link a quem já o recebeu não o invalida.
+   */
+  trackingLink: (id: string) =>
+    apiRequest<ResourceResponse<TrackingLinkResponse>>(`/deliveries/${id}/tracking-link`, {
+      method: 'POST',
+    }),
 };

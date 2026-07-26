@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { DeliveryPriority, TimeWindow } from '@navix/contracts';
+import type { DeliveryPriority, DeliveryStatus, TimeWindow } from '@navix/contracts';
 
 import type { Delivery } from '../domain/delivery';
 import {
@@ -29,10 +29,25 @@ export interface DeliveryStopDto {
 }
 
 /**
+ * Recorte mínimo da entrega para o rastreamento público (ADR-0082): só o que
+ * a página do destinatário precisa. Deliberadamente **sem** endereço textual,
+ * destinatário ou observações — quem consome isto serve um endpoint anônimo.
+ */
+export interface DeliveryPublicSnapshot {
+  status: DeliveryStatus;
+  /** Necessário para localizar o veículo; nunca sai na resposta pública. */
+  driverId: string | null;
+  latitude: number;
+  longitude: number;
+}
+
+/**
  * API pública do contexto Delivery. Expõe apenas o necessário para outros
  * módulos (ex.: Optimizer) sem revelar o agregado/repositório internos.
  */
 export interface DeliveryLookupPort {
+  /** Snapshot mínimo para o rastreamento público (ADR-0082). */
+  getPublicSnapshot(tenantId: string, id: string): Promise<DeliveryPublicSnapshot | null>;
   getStops(tenantId: string, ids: string[]): Promise<DeliveryStopDto[]>;
   /**
    * Nº de entregas **concluídas** (`delivered`) com conclusão no intervalo
@@ -85,6 +100,20 @@ export class DeliveryLookupService implements DeliveryLookupPort {
       const t = s.updatedAt.getTime();
       return t >= from.getTime() && t <= to.getTime();
     }).length;
+  }
+
+  async getPublicSnapshot(tenantId: string, id: string): Promise<DeliveryPublicSnapshot | null> {
+    // Passa pela RLS como qualquer leitura: entrega de outro tenant não existe.
+    const delivery = await this.deliveries.findById(tenantId, id);
+    if (!delivery) return null;
+
+    const s = delivery.snapshot();
+    return {
+      status: s.status,
+      driverId: s.driverId,
+      latitude: s.address.latitude,
+      longitude: s.address.longitude,
+    };
   }
 
   private toDto(d: Delivery): DeliveryStopDto {

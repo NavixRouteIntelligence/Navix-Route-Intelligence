@@ -6,9 +6,9 @@ import type { TrackingLinkResponse } from '@navix/contracts';
 import { AppConfigService } from '../../../shared/config/app-config.service';
 import { NotFoundError } from '../../../shared/kernel/domain-error';
 import {
-  DELIVERY_REPOSITORY,
-  type DeliveryRepositoryPort,
-} from '../domain/ports/delivery-repository.port';
+  DELIVERY_LOOKUP,
+  type DeliveryLookupPort,
+} from '../../delivery/application/delivery-lookup.service';
 import {
   TRACKING_TOKEN_REPOSITORY,
   type TrackingTokenRepositoryPort,
@@ -25,7 +25,7 @@ const TOKEN_BYTES = 32;
 @Injectable()
 export class IssueTrackingLinkUseCase {
   constructor(
-    @Inject(DELIVERY_REPOSITORY) private readonly deliveries: DeliveryRepositoryPort,
+    @Inject(DELIVERY_LOOKUP) private readonly deliveries: DeliveryLookupPort,
     @Inject(TRACKING_TOKEN_REPOSITORY) private readonly tokens: TrackingTokenRepositoryPort,
     private readonly config: AppConfigService,
   ) {}
@@ -34,7 +34,7 @@ export class IssueTrackingLinkUseCase {
     // Confirma que a entrega existe NESTE tenant antes de emitir o link. A
     // leitura passa pela RLS, então um id de outro tenant simplesmente não é
     // encontrado — não há como emitir token para entrega alheia.
-    const delivery = await this.deliveries.findById(tenantId, deliveryId);
+    const delivery = await this.deliveries.getPublicSnapshot(tenantId, deliveryId);
     if (!delivery) throw new NotFoundError('Entrega não encontrada.');
 
     // Idempotente: reemitir devolve o link vigente em vez de criar outro. Assim

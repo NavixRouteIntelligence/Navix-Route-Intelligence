@@ -1,8 +1,10 @@
 import type { DataSource, EntityManager } from 'typeorm';
 
 import { NotFoundError } from '../../../shared/kernel/domain-error';
-import { Delivery } from '../domain/delivery';
-import type { DeliveryRepositoryPort } from '../domain/ports/delivery-repository.port';
+import type {
+  DeliveryLookupPort,
+  DeliveryPublicSnapshot,
+} from '../../delivery/application/delivery-lookup.service';
 import type { TrackingTokenRepositoryPort } from '../domain/ports/tracking-token-repository.port';
 import type {
   RouteEtaGatewayPort,
@@ -30,35 +32,20 @@ function dataSourceSpy(): { ds: DataSource; tenantSets: string[] } {
   return { ds, tenantSets };
 }
 
-function delivery(overrides: { status?: string; driverId?: string | null } = {}): Delivery {
-  const d = Delivery.create({
-    tenantId: 'tenant-a',
-    address: {
-      street: 'Rua Secreta',
-      number: '42',
-      city: 'Lisboa',
-      state: 'LIS',
-      postalCode: '1000-001',
-      country: 'PT',
-      latitude: 38.72,
-      longitude: -9.14,
-    },
-    timeWindow: { start: new Date().toISOString(), end: new Date(Date.now() + 3.6e6).toISOString() },
-    recipient: 'Maria Silva',
-    notes: 'Deixar com o porteiro; código do portão 1234',
+function snapshot(
+  overrides: { status?: DeliveryPublicSnapshot['status']; driverId?: string | null } = {},
+): DeliveryPublicSnapshot {
+  return {
+    status: overrides.status ?? 'pending',
     driverId: overrides.driverId === undefined ? 'driver-1' : overrides.driverId,
-  });
-  if (overrides.status === 'in_route') d.changeStatus('in_route');
-  if (overrides.status === 'delivered') {
-    d.changeStatus('in_route');
-    d.changeStatus('delivered');
-  }
-  return d;
+    latitude: 38.72,
+    longitude: -9.14,
+  };
 }
 
 function build(opts: {
   resolved?: { deliveryId: string; tenantId: string } | null;
-  found?: Delivery | null;
+  found?: DeliveryPublicSnapshot | null;
   eta?: Date | null;
   position?: { latitude: number; longitude: number; recordedAt: Date } | null;
 }) {
@@ -68,8 +55,8 @@ function build(opts: {
     findActiveByDelivery: jest.fn(),
     issue: jest.fn(),
   };
-  const findById = jest.fn().mockResolvedValue(opts.found ?? null);
-  const deliveries = { findById } as unknown as DeliveryRepositoryPort;
+  const getPublicSnapshot = jest.fn().mockResolvedValue(opts.found ?? null);
+  const deliveries = { getPublicSnapshot } as unknown as DeliveryLookupPort;
   const eta: RouteEtaGatewayPort = {
     etaForDelivery: jest.fn().mockResolvedValue(opts.eta ?? null),
   };
@@ -80,7 +67,7 @@ function build(opts: {
   return {
     uc: new GetPublicTrackingUseCase(ds, tokens, deliveries, eta, location),
     tenantSets,
-    findById,
+    getPublicSnapshot,
     location,
     eta,
   };
@@ -88,31 +75,31 @@ function build(opts: {
 
 describe('GetPublicTrackingUseCase', () => {
   it('token inválido não chega ao banco e não revela nada', async () => {
-    const { uc, findById } = build({ resolved: null });
+    const { uc, getPublicSnapshot } = build({ resolved: null });
 
     await expect(uc.execute(TOKEN)).rejects.toBeInstanceOf(NotFoundError);
-    expect(findById).not.toHaveBeenCalled();
+    expect(getPublicSnapshot).not.toHaveBeenCalled();
   });
 
   // A garantia central de multi-tenant: sem `app.current_tenant` a RLS devolve
   // zero linhas, então o caso de uso PRECISA ligá-la com o tenant do token.
   it('estabelece app.current_tenant com o tenant do token (RLS)', async () => {
-    const { uc, tenantSets, findById } = build({
+    const { uc, tenantSets, getPublicSnapshot } = build({
       resolved: { deliveryId: 'del-1', tenantId: 'tenant-a' },
-      found: delivery({ status: 'in_route' }),
+      found: snapshot({ status: 'in_route' }),
     });
 
     await uc.execute(TOKEN);
 
     expect(tenantSets).toEqual(['tenant-a']);
     // E a leitura é escopada pelo mesmo tenant, nunca por outro.
-    expect(findById).toHaveBeenCalledWith('tenant-a', 'del-1');
+    expect(getPublicSnapshot).toHaveBeenCalledWith('tenant-a', 'del-1');
   });
 
   it('não vaza PII: sem endereço, destinatário, observações nem IDs internos', async () => {
     const { uc } = build({
       resolved: { deliveryId: 'del-1', tenantId: 'tenant-a' },
-      found: delivery({ status: 'in_route' }),
+      found: snapshot({ status: 'in_route' }),
       position: { latitude: 38.7, longitude: -9.1, recordedAt: new Date() },
     });
 
@@ -144,7 +131,7 @@ describe('GetPublicTrackingUseCase', () => {
     const recordedAt = new Date('2026-07-24T10:00:00.000Z');
     const { uc } = build({
       resolved: { deliveryId: 'del-1', tenantId: 'tenant-a' },
-      found: delivery({ status: 'in_route' }),
+      found: snapshot({ status: 'in_route' }),
       position: { latitude: 38.7, longitude: -9.1, recordedAt },
     });
 
@@ -162,7 +149,7 @@ describe('GetPublicTrackingUseCase', () => {
   it('NÃO expõe posição quando a entrega não está em rota', async () => {
     const { uc, location } = build({
       resolved: { deliveryId: 'del-1', tenantId: 'tenant-a' },
-      found: delivery({ status: 'delivered' }),
+      found: snapshot({ status: 'delivered' }),
       position: { latitude: 38.7, longitude: -9.1, recordedAt: new Date() },
     });
 
@@ -176,7 +163,7 @@ describe('GetPublicTrackingUseCase', () => {
     const eta = new Date('2026-07-24T11:30:00.000Z');
     const { uc } = build({
       resolved: { deliveryId: 'del-1', tenantId: 'tenant-a' },
-      found: delivery({ status: 'in_route' }),
+      found: snapshot({ status: 'in_route' }),
       eta,
     });
 
@@ -189,7 +176,7 @@ describe('GetPublicTrackingUseCase', () => {
   it('entrega concluída não mostra ETA (seria um horário no passado)', async () => {
     const { uc, eta } = build({
       resolved: { deliveryId: 'del-1', tenantId: 'tenant-a' },
-      found: delivery({ status: 'delivered' }),
+      found: snapshot({ status: 'delivered' }),
       eta: new Date(),
     });
 

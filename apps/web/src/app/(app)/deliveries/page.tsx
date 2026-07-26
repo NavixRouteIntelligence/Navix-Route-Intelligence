@@ -8,7 +8,7 @@ import {
   type DeliveryStatus,
 } from '@navix/contracts';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { FileCheck, Package, Pencil, Plus, Trash2 } from 'lucide-react';
+import { FileCheck, Package, Pencil, Plus, Share2, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 
@@ -72,6 +72,27 @@ export default function DeliveriesPage() {
       toast({ tone: 'success', title: 'Status atualizado' });
     },
     onError: (e: Error) => toast({ tone: 'error', title: 'Transição inválida', description: e.message }),
+  });
+
+  /**
+   * Emite o link público (ADR-0082) e o coloca na área de transferência, que é
+   * o que o despachante faz em seguida: colar no WhatsApp/e-mail do
+   * destinatário. A cópia pode falhar (contexto inseguro, permissão negada), e
+   * nesse caso o link vai no corpo do toast para copiar à mão — perder o link
+   * recém-emitido seria pior do que um passo extra.
+   */
+  const trackingLink = useMutation({
+    mutationFn: (id: string) => deliveriesApi.trackingLink(id),
+    onSuccess: async ({ data }) => {
+      try {
+        await navigator.clipboard.writeText(data.url);
+        toast({ tone: 'success', title: 'Link copiado', description: data.url });
+      } catch {
+        toast({ tone: 'info', title: 'Link de rastreamento', description: data.url });
+      }
+    },
+    onError: (e: Error) =>
+      toast({ tone: 'error', title: 'Erro ao gerar link', description: e.message }),
   });
 
   const remove = useMutation({
@@ -195,6 +216,19 @@ export default function DeliveriesPage() {
                           {(d.status === 'delivered' || d.status === 'failed') && (
                             <Button variant="ghost" size="icon" aria-label="Ver comprovante" onClick={() => setPodFor(d.id)}>
                               <FileCheck className="h-4 w-4 text-primary" />
+                            </Button>
+                          )}
+                          {/* Entrega cancelada não tem o que acompanhar. */}
+                          {d.status !== 'canceled' && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              aria-label="Copiar link de rastreamento"
+                              title="Copiar link de rastreamento"
+                              loading={trackingLink.isPending && trackingLink.variables === d.id}
+                              onClick={() => trackingLink.mutate(d.id)}
+                            >
+                              <Share2 className="h-4 w-4" />
                             </Button>
                           )}
                           <Button asChild variant="ghost" size="icon" aria-label="Editar">

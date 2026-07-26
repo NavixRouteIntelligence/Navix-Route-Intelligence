@@ -20,7 +20,6 @@ import type {
   DeliveryInsights,
   ResourceResponse,
   SyncResponse,
-  TrackingLinkResponse,
 } from '@navix/contracts';
 
 import { CurrentUser } from '../../../shared/interface/current-user.decorator';
@@ -32,7 +31,6 @@ import { ChangeDeliveryStatusUseCase } from '../application/change-delivery-stat
 import { CreateDeliveryUseCase } from '../application/create-delivery.use-case';
 import { DeleteDeliveryUseCase } from '../application/delete-delivery.use-case';
 import { GetDeliveryInsightsUseCase } from '../application/get-delivery-insights.use-case';
-import { IssueTrackingLinkUseCase } from '../application/issue-tracking-link.use-case';
 import { GetDeliveryUseCase } from '../application/get-delivery.use-case';
 import { ListDeliveriesUseCase } from '../application/list-deliveries.use-case';
 import { SyncDeliveriesUseCase } from '../application/sync-deliveries.use-case';
@@ -61,7 +59,6 @@ export class DeliveryController {
     private readonly changeStatus: ChangeDeliveryStatusUseCase,
     private readonly deleteDelivery: DeleteDeliveryUseCase,
     private readonly getInsights: GetDeliveryInsightsUseCase,
-    private readonly issueTrackingLink: IssueTrackingLinkUseCase,
   ) {}
 
   @Post()
@@ -143,19 +140,6 @@ export class DeliveryController {
     return { data };
   }
 
-  @Post(':id/tracking-link')
-  @Roles('admin', 'dispatcher')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Emite (ou recupera) o link público de rastreamento' })
-  async trackingLink(
-    @CurrentUser() user: AuthenticatedUser,
-    @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<ResourceResponse<TrackingLinkResponse>> {
-    // Idempotente: reemitir devolve o link vigente, para não invalidar o que o
-    // destinatário já recebeu (ADR-0082).
-    const data = await this.issueTrackingLink.execute(user.tenantId, id);
-    return { data };
-  }
 
   @Patch(':id')
   @Roles('admin', 'dispatcher')
