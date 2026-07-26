@@ -49,9 +49,19 @@ class NavixDualBars extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      _Bar(ratio: a, color: colorA, height: height, duration: t.motionSlow),
+                      _Bar(
+                        ratio: a,
+                        color: colorA,
+                        height: height,
+                        duration: t.motionSlow,
+                      ),
                       const SizedBox(width: 3),
-                      _Bar(ratio: b, color: colorB, height: height, duration: t.motionSlow),
+                      _Bar(
+                        ratio: b,
+                        color: colorB,
+                        height: height,
+                        duration: t.motionSlow,
+                      ),
                     ],
                   ),
                   const SizedBox(height: 6),
@@ -70,7 +80,12 @@ class NavixDualBars extends StatelessWidget {
 }
 
 class _Bar extends StatelessWidget {
-  const _Bar({required this.ratio, required this.color, required this.height, required this.duration});
+  const _Bar({
+    required this.ratio,
+    required this.color,
+    required this.height,
+    required this.duration,
+  });
   final double ratio;
   final Color color;
   final double height;
@@ -87,7 +102,10 @@ class _Bar extends StatelessWidget {
         height: 6 + v * (height - 30),
         decoration: BoxDecoration(
           color: color,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(4), bottom: Radius.circular(2)),
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(4),
+            bottom: Radius.circular(2),
+          ),
         ),
       ),
     );

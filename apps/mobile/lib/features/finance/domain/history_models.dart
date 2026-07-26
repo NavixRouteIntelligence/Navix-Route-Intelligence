@@ -14,7 +14,8 @@ class FinancialHistoryPoint extends Equatable {
   final double expense;
   final double balance;
 
-  factory FinancialHistoryPoint.fromJson(Map<String, dynamic> j) => FinancialHistoryPoint(
+  factory FinancialHistoryPoint.fromJson(Map<String, dynamic> j) =>
+      FinancialHistoryPoint(
         period: (j['period'] as String?) ?? '',
         income: (j['income'] as num?)?.toDouble() ?? 0,
         expense: (j['expense'] as num?)?.toDouble() ?? 0,
@@ -36,7 +37,11 @@ class FinancialHistory extends Equatable {
 
   factory FinancialHistory.fromJson(Map<String, dynamic> j) => FinancialHistory(
         granularity: (j['granularity'] as String?) ?? 'month',
-        points: (j['points'] as List?)?.whereType<Map<String, dynamic>>().map(FinancialHistoryPoint.fromJson).toList() ?? const [],
+        points: (j['points'] as List?)
+                ?.whereType<Map<String, dynamic>>()
+                .map(FinancialHistoryPoint.fromJson)
+                .toList() ??
+            const [],
       );
 
   @override

@@ -66,30 +66,34 @@ class MaintenanceCubit extends Cubit<MaintenanceState> {
       }
       final records = await _repository.records(vehicle.id);
       final reminders = await _repository.reminders(vehicle.id);
-      emit(MaintenanceState(
-        status: MaintenanceStatus.ready,
-        vehicle: vehicle,
-        records: records,
-        reminders: reminders,
-      ));
+      emit(
+        MaintenanceState(
+          status: MaintenanceStatus.ready,
+          vehicle: vehicle,
+          records: records,
+          reminders: reminders,
+        ),
+      );
     } on Failure catch (f) {
       emit(MaintenanceState(status: MaintenanceStatus.error, error: f));
     } catch (_) {
-      emit(const MaintenanceState(status: MaintenanceStatus.error, error: UnknownFailure()));
+      emit(
+        const MaintenanceState(
+          status: MaintenanceStatus.error,
+          error: UnknownFailure(),
+        ),
+      );
     }
   }
 
-  Future<void> addRecord(NewMaintenanceRecord record) => _mutate(
-        (vehicleId) => _repository.addRecord(vehicleId, record),
-      );
+  Future<void> addRecord(NewMaintenanceRecord record) =>
+      _mutate((vehicleId) => _repository.addRecord(vehicleId, record));
 
-  Future<void> deleteRecord(String id) => _mutate(
-        (vehicleId) => _repository.deleteRecord(vehicleId, id),
-      );
+  Future<void> deleteRecord(String id) =>
+      _mutate((vehicleId) => _repository.deleteRecord(vehicleId, id));
 
-  Future<void> updateOdometer(int odometerKm) => _mutate(
-        (vehicleId) => _repository.updateOdometer(vehicleId, odometerKm),
-      );
+  Future<void> updateOdometer(int odometerKm) =>
+      _mutate((vehicleId) => _repository.updateOdometer(vehicleId, odometerKm));
 
   /// Executa a mutação e recarrega registros + lembretes (a rota muda). Erros
   /// viram mensagem sem perder os dados atuais.
@@ -102,12 +106,14 @@ class MaintenanceCubit extends Cubit<MaintenanceState> {
       final records = await _repository.records(vehicle.id);
       final reminders = await _repository.reminders(vehicle.id);
       final refreshed = await _repository.myVehicle();
-      emit(state.copyWith(
-        busy: false,
-        records: records,
-        reminders: reminders,
-        vehicle: refreshed ?? vehicle,
-      ));
+      emit(
+        state.copyWith(
+          busy: false,
+          records: records,
+          reminders: reminders,
+          vehicle: refreshed ?? vehicle,
+        ),
+      );
     } on Failure catch (f) {
       emit(state.copyWith(busy: false, error: f));
     } catch (_) {

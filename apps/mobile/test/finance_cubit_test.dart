@@ -24,7 +24,15 @@ void main() {
     deliveries: 4,
     profitPerDelivery: 18.75,
   );
-  const entry = FinancialEntry(id: 'e1', type: 'expense', category: 'fuel', amount: 62.5, occurredAt: '2026-07-10', liters: 40, odometerKm: 100000);
+  const entry = FinancialEntry(
+    id: 'e1',
+    type: 'expense',
+    category: 'fuel',
+    amount: 62.5,
+    occurredAt: '2026-07-10',
+    liters: 40,
+    odometerKm: 100000,
+  );
 
   setUpAll(() => registerFallbackValue(_FakeNewEntry()));
   setUp(() => repo = _MockRepo());
@@ -34,14 +42,22 @@ void main() {
     build: () {
       when(() => repo.summary()).thenAnswer((_) async => summary);
       when(() => repo.entries()).thenAnswer((_) async => [entry]);
-      when(() => repo.insights()).thenAnswer((_) async => const DeliveryInsights());
-      when(() => repo.history(granularity: any(named: 'granularity'))).thenAnswer((_) async => const FinancialHistory());
+      when(
+        () => repo.insights(),
+      ).thenAnswer((_) async => const DeliveryInsights());
+      when(
+        () => repo.history(granularity: any(named: 'granularity')),
+      ).thenAnswer((_) async => const FinancialHistory());
       return FinanceCubit(repo);
     },
     act: (c) => c.load(),
     expect: () => const [
       FinanceState(status: FinanceStatus.loading),
-      FinanceState(status: FinanceStatus.ready, summary: summary, entries: [entry]),
+      FinanceState(
+        status: FinanceStatus.ready,
+        summary: summary,
+        entries: [entry],
+      ),
     ],
   );
 
@@ -76,14 +92,25 @@ void main() {
     build: () {
       when(() => repo.summary()).thenAnswer((_) async => summary);
       when(() => repo.entries()).thenAnswer((_) async => [entry]);
-      when(() => repo.insights()).thenAnswer((_) async => const DeliveryInsights());
-      when(() => repo.history(granularity: any(named: 'granularity'))).thenAnswer((_) async => const FinancialHistory());
+      when(
+        () => repo.insights(),
+      ).thenAnswer((_) async => const DeliveryInsights());
+      when(
+        () => repo.history(granularity: any(named: 'granularity')),
+      ).thenAnswer((_) async => const FinancialHistory());
       when(() => repo.addEntry(any())).thenAnswer((_) async {});
       return FinanceCubit(repo);
     },
     act: (c) async {
       await c.load();
-      await c.addEntry(const NewFinancialEntry(type: 'expense', category: 'toll', amount: 2.5, occurredAt: '2026-07-11'));
+      await c.addEntry(
+        const NewFinancialEntry(
+          type: 'expense',
+          category: 'toll',
+          amount: 2.5,
+          occurredAt: '2026-07-11',
+        ),
+      );
     },
     verify: (_) {
       verify(() => repo.addEntry(any())).called(1);
@@ -96,8 +123,12 @@ void main() {
     build: () {
       when(() => repo.summary()).thenAnswer((_) async => summary);
       when(() => repo.entries()).thenAnswer((_) async => [entry]);
-      when(() => repo.insights()).thenAnswer((_) async => const DeliveryInsights());
-      when(() => repo.history(granularity: any(named: 'granularity'))).thenAnswer((_) async => const FinancialHistory());
+      when(
+        () => repo.insights(),
+      ).thenAnswer((_) async => const DeliveryInsights());
+      when(
+        () => repo.history(granularity: any(named: 'granularity')),
+      ).thenAnswer((_) async => const FinancialHistory());
       when(() => repo.deleteEntry(any())).thenAnswer((_) async {});
       return FinanceCubit(repo);
     },

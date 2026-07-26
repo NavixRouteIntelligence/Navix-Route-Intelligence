@@ -20,10 +20,14 @@ class AuthUser extends Equatable {
   final List<String> roles;
 
   /// Mapeia os papéis (RBAC) para o perfil da UI.
-  UserRole get role => roles.contains('driver') && !_hasAdmin ? UserRole.driver : UserRole.company;
+  UserRole get role => roles.contains('driver') && !_hasAdmin
+      ? UserRole.driver
+      : UserRole.company;
 
   bool get _hasAdmin =>
-      roles.contains('admin') || roles.contains('dispatcher') || roles.contains('fleet_manager');
+      roles.contains('admin') ||
+      roles.contains('dispatcher') ||
+      roles.contains('fleet_manager');
 
   @override
   List<Object?> get props => [id, tenantId, email, roles];
@@ -48,7 +52,11 @@ class AuthSession extends Equatable {
 /// Credenciais de login. O tenant é resolvido pelo e-mail (ou por [organization],
 /// o slug da empresa, opcional) — sem tenantId (ADR-0016).
 class LoginParams extends Equatable {
-  const LoginParams({required this.email, required this.password, this.organization});
+  const LoginParams({
+    required this.email,
+    required this.password,
+    this.organization,
+  });
 
   final String email;
   final String password;
@@ -77,5 +85,11 @@ class RegisterParams extends Equatable {
   final String? organizationName;
 
   @override
-  List<Object?> get props => [accountType, name, email, password, organizationName];
+  List<Object?> get props => [
+        accountType,
+        name,
+        email,
+        password,
+        organizationName,
+      ];
 }

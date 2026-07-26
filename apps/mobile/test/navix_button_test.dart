@@ -3,7 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:navix_mobile/core/ui/navix_button.dart';
 
 void main() {
-  testWidgets('NavixButton mostra o rótulo e dispara onPressed', (tester) async {
+  testWidgets('NavixButton mostra o rótulo e dispara onPressed', (
+    tester,
+  ) async {
     var tapped = 0;
     await tester.pumpWidget(
       MaterialApp(
@@ -23,7 +25,11 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: NavixButton(label: 'Entrar', loading: true, onPressed: () => tapped++),
+          body: NavixButton(
+            label: 'Entrar',
+            loading: true,
+            onPressed: () => tapped++,
+          ),
         ),
       ),
     );

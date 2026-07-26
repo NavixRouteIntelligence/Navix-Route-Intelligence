@@ -65,12 +65,20 @@ abstract final class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: tokens.surfaceAlt,
-        border: OutlineInputBorder(borderRadius: radius, borderSide: BorderSide(color: tokens.line)),
-        enabledBorder: OutlineInputBorder(borderRadius: radius, borderSide: BorderSide(color: tokens.line)),
+        border: OutlineInputBorder(
+          borderRadius: radius,
+          borderSide: BorderSide(color: tokens.line),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: radius,
+          borderSide: BorderSide(color: tokens.line),
+        ),
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusSm)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+        ),
       ),
     );
   }

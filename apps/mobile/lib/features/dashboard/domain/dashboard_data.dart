@@ -20,7 +20,12 @@ class DeliveryCounts extends Equatable {
 }
 
 class PodCounts extends Equatable {
-  const PodCounts({this.delivered = 0, this.absent = 0, this.refused = 0, this.total = 0});
+  const PodCounts({
+    this.delivered = 0,
+    this.absent = 0,
+    this.refused = 0,
+    this.total = 0,
+  });
 
   final int delivered;
   final int absent;
@@ -54,11 +59,21 @@ class FleetCounts extends Equatable {
   final int totalDrivers;
 
   @override
-  List<Object?> get props => [activeVehicles, totalVehicles, activeDrivers, totalDrivers];
+  List<Object?> get props => [
+        activeVehicles,
+        totalVehicles,
+        activeDrivers,
+        totalDrivers,
+      ];
 }
 
 class PlanSummary extends Equatable {
-  const PlanSummary({required this.id, required this.score, required this.savingsPct, required this.stops});
+  const PlanSummary({
+    required this.id,
+    required this.score,
+    required this.savingsPct,
+    required this.stops,
+  });
   final String id;
   final int score;
   final double savingsPct;
@@ -69,7 +84,12 @@ class PlanSummary extends Equatable {
 }
 
 class ImportSummaryItem extends Equatable {
-  const ImportSummaryItem({required this.filename, required this.valid, required this.total, required this.status});
+  const ImportSummaryItem({
+    required this.filename,
+    required this.valid,
+    required this.total,
+    required this.status,
+  });
   final String filename;
   final int valid;
   final int total;
@@ -110,11 +130,15 @@ class DashboardData extends Equatable {
   final List<ImportSummaryItem> recentImports;
 
   int get concluded => deliveries.delivered;
-  double get completionRate =>
-      deliveries.total == 0 ? 0 : (deliveries.delivered / deliveries.total) * 100;
+  double get completionRate => deliveries.total == 0
+      ? 0
+      : (deliveries.delivered / deliveries.total) * 100;
 
   bool get isEmpty =>
-      deliveries.total == 0 && routesTotal == 0 && pod.total == 0 && recentImports.isEmpty;
+      deliveries.total == 0 &&
+      routesTotal == 0 &&
+      pod.total == 0 &&
+      recentImports.isEmpty;
 
   @override
   List<Object?> get props => [

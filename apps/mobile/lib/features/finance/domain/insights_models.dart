@@ -49,12 +49,26 @@ class DeliveryInsights extends Equatable {
 
   factory DeliveryInsights.fromJson(Map<String, dynamic> j) => DeliveryInsights(
         totalDelivered: (j['totalDelivered'] as num?)?.toInt() ?? 0,
-        topRegions: (j['topRegions'] as List?)?.whereType<Map<String, dynamic>>().map(RegionStat.fromJson).toList() ?? const [],
-        byHour: (j['byHour'] as List?)?.whereType<Map<String, dynamic>>().map(HourStat.fromJson).toList() ?? const [],
+        topRegions: (j['topRegions'] as List?)
+                ?.whereType<Map<String, dynamic>>()
+                .map(RegionStat.fromJson)
+                .toList() ??
+            const [],
+        byHour: (j['byHour'] as List?)
+                ?.whereType<Map<String, dynamic>>()
+                .map(HourStat.fromJson)
+                .toList() ??
+            const [],
         bestRegion: j['bestRegion'] as String?,
         bestHour: (j['bestHour'] as num?)?.toInt(),
       );
 
   @override
-  List<Object?> get props => [totalDelivered, topRegions, byHour, bestRegion, bestHour];
+  List<Object?> get props => [
+        totalDelivered,
+        topRegions,
+        byHour,
+        bestRegion,
+        bestHour,
+      ];
 }

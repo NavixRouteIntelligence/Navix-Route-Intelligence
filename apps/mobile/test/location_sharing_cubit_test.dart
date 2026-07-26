@@ -13,7 +13,11 @@ void main() {
   late _MockLocation location;
   late _MockTracking tracking;
 
-  const sample = LocationSample(latitude: -23.55, longitude: -46.63, speedKmh: 42);
+  const sample = LocationSample(
+    latitude: -23.55,
+    longitude: -46.63,
+    speedKmh: 42,
+  );
 
   setUpAll(() => registerFallbackValue(sample));
 
@@ -22,12 +26,17 @@ void main() {
     tracking = _MockTracking();
   });
 
-  LocationSharingCubit build() =>
-      LocationSharingCubit(location, tracking, interval: const Duration(hours: 1));
+  LocationSharingCubit build() => LocationSharingCubit(
+        location,
+        tracking,
+        interval: const Duration(hours: 1),
+      );
 
   test('start: obtém posição, envia e passa a compartilhar', () async {
     when(() => location.current()).thenAnswer((_) async => sample);
-    when(() => tracking.sendPosition(any(), status: any(named: 'status'))).thenAnswer((_) async {});
+    when(
+      () => tracking.sendPosition(any(), status: any(named: 'status')),
+    ).thenAnswer((_) async {});
 
     final cubit = build();
     await cubit.start();
@@ -35,27 +44,38 @@ void main() {
     expect(cubit.state.sharing, isTrue);
     expect(cubit.state.busy, isFalse);
     expect(cubit.state.error, isNull);
-    verify(() => tracking.sendPosition(any(), status: any(named: 'status'))).called(1);
+    verify(
+      () => tracking.sendPosition(any(), status: any(named: 'status')),
+    ).called(1);
 
     await cubit.close();
   });
 
   test('start com permissão negada: não compartilha e emite erro', () async {
-    when(() => location.current()).thenThrow(const LocationException(LocationErrorReason.permissionDenied));
+    when(
+      () => location.current(),
+    ).thenThrow(const LocationException(LocationErrorReason.permissionDenied));
 
     final cubit = build();
     await cubit.start();
 
     expect(cubit.state.sharing, isFalse);
-    expect(cubit.state.error, const LocationFailure(LocationErrorReason.permissionDenied));
-    verifyNever(() => tracking.sendPosition(any(), status: any(named: 'status')));
+    expect(
+      cubit.state.error,
+      const LocationFailure(LocationErrorReason.permissionDenied),
+    );
+    verifyNever(
+      () => tracking.sendPosition(any(), status: any(named: 'status')),
+    );
 
     await cubit.close();
   });
 
   test('stop: encerra o compartilhamento', () async {
     when(() => location.current()).thenAnswer((_) async => sample);
-    when(() => tracking.sendPosition(any(), status: any(named: 'status'))).thenAnswer((_) async {});
+    when(
+      () => tracking.sendPosition(any(), status: any(named: 'status')),
+    ).thenAnswer((_) async {});
 
     final cubit = build();
     await cubit.start();

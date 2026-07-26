@@ -27,13 +27,20 @@ class DeliveriesRepository {
           if (status != null) 'status': status,
         },
       );
-      final json = res.data is Map<String, dynamic> ? res.data as Map<String, dynamic> : const {};
+      final json = res.data is Map<String, dynamic>
+          ? res.data as Map<String, dynamic>
+          : const {};
       final data = json['data'];
       final items = data is List
-          ? data.whereType<Map<String, dynamic>>().map(DeliverySummary.fromJson).toList()
+          ? data
+              .whereType<Map<String, dynamic>>()
+              .map(DeliverySummary.fromJson)
+              .toList()
           : <DeliverySummary>[];
       final meta = json['meta'];
-      final total = meta is Map<String, dynamic> ? (meta['total'] as num?)?.toInt() ?? items.length : items.length;
+      final total = meta is Map<String, dynamic>
+          ? (meta['total'] as num?)?.toInt() ?? items.length
+          : items.length;
       return DeliveriesPage(items: items, total: total);
     } on DioException catch (e) {
       throw mapDioException(e);

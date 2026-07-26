@@ -25,7 +25,8 @@ class _FakeSpeech implements SpeechService {
       transcript.isEmpty ? null : transcript;
 
   @override
-  Future<void> speak(String text, {required String localeId}) async => spoken.add(text);
+  Future<void> speak(String text, {required String localeId}) async =>
+      spoken.add(text);
 
   @override
   Future<void> cancel() async {}
@@ -61,15 +62,23 @@ void main() {
   blocTest<VoiceAssistantCubit, VoiceAssistantState>(
     'comando reconhecido: listening → thinking → result e fala a resposta',
     build: () {
-      when(() => repo.interpretVoice(any(), locale: any(named: 'locale'))).thenAnswer(
+      when(
+        () => repo.interpretVoice(any(), locale: any(named: 'locale')),
+      ).thenAnswer(
         (_) async => const VoiceCommand(intent: 'next_stop', confidence: 0.8),
       );
-      return VoiceAssistantCubit(_FakeSpeech(transcript: 'próxima parada'), repo);
+      return VoiceAssistantCubit(
+        _FakeSpeech(transcript: 'próxima parada'),
+        repo,
+      );
     },
     act: (c) => c.start(),
     expect: () => [
       const VoiceAssistantState(status: VoiceStatus.listening),
-      const VoiceAssistantState(status: VoiceStatus.thinking, transcript: 'próxima parada'),
+      const VoiceAssistantState(
+        status: VoiceStatus.thinking,
+        transcript: 'próxima parada',
+      ),
       const VoiceAssistantState(
         status: VoiceStatus.result,
         transcript: 'próxima parada',
@@ -82,15 +91,19 @@ void main() {
   blocTest<VoiceAssistantCubit, VoiceAssistantState>(
     'falha na interpretação: emite error',
     build: () {
-      when(() => repo.interpretVoice(any(), locale: any(named: 'locale')))
-          .thenThrow(const NetworkFailure());
+      when(
+        () => repo.interpretVoice(any(), locale: any(named: 'locale')),
+      ).thenThrow(const NetworkFailure());
       return VoiceAssistantCubit(_FakeSpeech(transcript: 'oi'), repo);
     },
     act: (c) => c.start(),
     expect: () => [
       const VoiceAssistantState(status: VoiceStatus.listening),
       const VoiceAssistantState(status: VoiceStatus.thinking, transcript: 'oi'),
-      const VoiceAssistantState(status: VoiceStatus.error, error: NetworkFailure()),
+      const VoiceAssistantState(
+        status: VoiceStatus.error,
+        error: NetworkFailure(),
+      ),
     ],
   );
 }

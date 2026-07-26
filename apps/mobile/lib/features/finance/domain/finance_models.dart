@@ -37,7 +37,16 @@ class FinancialEntry extends Equatable {
       );
 
   @override
-  List<Object?> get props => [id, type, category, amount, occurredAt, odometerKm, liters, notes];
+  List<Object?> get props => [
+        id,
+        type,
+        category,
+        amount,
+        occurredAt,
+        odometerKm,
+        liters,
+        notes,
+      ];
 }
 
 /// Resumo financeiro do período (custo/km e lucro/entrega derivados no backend).
@@ -71,8 +80,15 @@ class FinancialSummary extends Equatable {
       );
 
   @override
-  List<Object?> get props =>
-      [totalIncome, totalExpense, balance, distanceKm, costPerKm, deliveries, profitPerDelivery];
+  List<Object?> get props => [
+        totalIncome,
+        totalExpense,
+        balance,
+        distanceKm,
+        costPerKm,
+        deliveries,
+        profitPerDelivery,
+      ];
 }
 
 /// Payload para criar um lançamento.

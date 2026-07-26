@@ -22,7 +22,9 @@ void main() {
   final logger = AppLogger(enabled: false);
 
   setUpAll(() {
-    registerFallbackValue(const LoginParams(email: 'e@x.com', password: 'password'));
+    registerFallbackValue(
+      const LoginParams(email: 'e@x.com', password: 'password'),
+    );
   });
 
   setUp(() {
@@ -31,8 +33,12 @@ void main() {
     bio = _MockBiometric();
   });
 
-  SessionCubit build() =>
-      SessionCubit(repository: repo, store: store, biometric: bio, logger: logger);
+  SessionCubit build() => SessionCubit(
+        repository: repo,
+        store: store,
+        biometric: bio,
+        logger: logger,
+      );
 
   const driver = AuthSession(
     user: AuthUser(id: '1', tenantId: 't', email: 'd@x.com', roles: ['driver']),
@@ -44,7 +50,8 @@ void main() {
     blocTest<SessionCubit, SessionState>(
       'bootstrap sem sessão → não autenticado',
       build: build,
-      setUp: () => when(() => store.hasSession()).thenAnswer((_) async => false),
+      setUp: () =>
+          when(() => store.hasSession()).thenAnswer((_) async => false),
       act: (c) => c.bootstrap(),
       expect: () => [const SessionState.unauthenticated()],
     );
@@ -57,7 +64,8 @@ void main() {
         when(() => store.setKeepConnected(any())).thenAnswer((_) async {});
         when(() => store.setBiometricEnabled(any())).thenAnswer((_) async {});
       },
-      act: (c) => c.login(const LoginParams(email: 'd@x.com', password: 'password')),
+      act: (c) =>
+          c.login(const LoginParams(email: 'd@x.com', password: 'password')),
       verify: (c) {
         expect(c.state.isAuthenticated, isTrue);
         expect(c.state.isDriver, isTrue);
@@ -68,7 +76,10 @@ void main() {
       'logout volta para não autenticado',
       build: build,
       setUp: () => when(() => repo.logout()).thenAnswer((_) async {}),
-      seed: () => const SessionState(status: SessionStatus.authenticated, role: UserRole.company),
+      seed: () => const SessionState(
+        status: SessionStatus.authenticated,
+        role: UserRole.company,
+      ),
       act: (c) => c.logout(),
       expect: () => [const SessionState.unauthenticated()],
     );

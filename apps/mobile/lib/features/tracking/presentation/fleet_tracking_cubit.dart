@@ -43,9 +43,21 @@ class FleetTrackingState extends Equatable {
     final out = <FleetAlert>[];
     for (final d in s.drivers) {
       if (d.status == TrackStatus.stopped) {
-        out.add(FleetAlert(id: 'stop-${d.id}', severity: 'warning', message: '${d.name} está parado.'));
+        out.add(
+          FleetAlert(
+            id: 'stop-${d.id}',
+            severity: 'warning',
+            message: '${d.name} está parado.',
+          ),
+        );
       } else if (d.gpsStale) {
-        out.add(FleetAlert(id: 'gps-${d.id}', severity: 'danger', message: 'GPS de ${d.name} instável.'));
+        out.add(
+          FleetAlert(
+            id: 'gps-${d.id}',
+            severity: 'danger',
+            message: 'GPS de ${d.name} instável.',
+          ),
+        );
       }
     }
     return out;
@@ -74,12 +86,22 @@ class FleetTrackingState extends Equatable {
   }
 
   @override
-  List<Object?> get props => [status, snapshot, error, selectedId, history, historyLoading, live];
+  List<Object?> get props => [
+        status,
+        snapshot,
+        error,
+        selectedId,
+        history,
+        historyLoading,
+        live,
+      ];
 }
 
 class FleetTrackingCubit extends Cubit<FleetTrackingState> {
-  FleetTrackingCubit(this._repository, {Duration interval = const Duration(seconds: 8)})
-      : _interval = interval,
+  FleetTrackingCubit(
+    this._repository, {
+    Duration interval = const Duration(seconds: 8),
+  })  : _interval = interval,
         super(const FleetTrackingState());
 
   final FleetTrackingRepository _repository;
@@ -95,7 +117,12 @@ class FleetTrackingCubit extends Cubit<FleetTrackingState> {
     } on Failure catch (f) {
       emit(state.copyWith(status: FleetStatus.error, error: f));
     } catch (_) {
-      emit(state.copyWith(status: FleetStatus.error, error: const UnknownFailure()));
+      emit(
+        state.copyWith(
+          status: FleetStatus.error,
+          error: const UnknownFailure(),
+        ),
+      );
     }
   }
 
@@ -108,11 +135,19 @@ class FleetTrackingCubit extends Cubit<FleetTrackingState> {
     try {
       final snap = await _repository.loadFleet();
       emit(state.copyWith(snapshot: snap));
-    } catch (_) {/* atualização silenciosa não derruba a tela */}
+    } catch (_) {
+      /* atualização silenciosa não derruba a tela */
+    }
   }
 
   Future<void> select(String driverId) async {
-    emit(state.copyWith(selectedId: driverId, historyLoading: true, history: const []));
+    emit(
+      state.copyWith(
+        selectedId: driverId,
+        historyLoading: true,
+        history: const [],
+      ),
+    );
     try {
       final points = await _repository.loadHistory(driverId);
       emit(state.copyWith(history: points, historyLoading: false));
@@ -121,7 +156,8 @@ class FleetTrackingCubit extends Cubit<FleetTrackingState> {
     }
   }
 
-  void clearSelection() => emit(state.copyWith(clearSelection: true, history: const []));
+  void clearSelection() =>
+      emit(state.copyWith(clearSelection: true, history: const []));
 
   /// Liga/desliga o recebimento de atualizações (polling).
   void toggleLive() {

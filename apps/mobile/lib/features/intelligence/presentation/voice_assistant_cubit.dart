@@ -44,7 +44,13 @@ class VoiceAssistantState extends Equatable {
   final String? reply;
   final Failure? error;
 
-  VoiceAssistantState copyWith({VoiceStatus? status, String? transcript, VoiceCommand? command, String? reply, Failure? error}) {
+  VoiceAssistantState copyWith({
+    VoiceStatus? status,
+    String? transcript,
+    VoiceCommand? command,
+    String? reply,
+    Failure? error,
+  }) {
     return VoiceAssistantState(
       status: status ?? this.status,
       transcript: transcript ?? this.transcript,
@@ -61,7 +67,8 @@ class VoiceAssistantState extends Equatable {
 /// Orquestra o assistente por voz: ouve (STT), classifica a intenção no backend
 /// e responde por voz (TTS). Silencioso em erro para não atrapalhar a operação.
 class VoiceAssistantCubit extends Cubit<VoiceAssistantState> {
-  VoiceAssistantCubit(this._speech, this._repository) : super(const VoiceAssistantState());
+  VoiceAssistantCubit(this._speech, this._repository)
+      : super(const VoiceAssistantState());
 
   final SpeechService _speech;
   final IntelligenceRepository _repository;
@@ -70,7 +77,10 @@ class VoiceAssistantCubit extends Cubit<VoiceAssistantState> {
   static const String ttsLocale = 'pt-BR';
 
   Future<void> start() async {
-    if (state.status == VoiceStatus.listening || state.status == VoiceStatus.thinking) return;
+    if (state.status == VoiceStatus.listening ||
+        state.status == VoiceStatus.thinking) {
+      return;
+    }
 
     if (!await _speech.available()) {
       emit(const VoiceAssistantState(status: VoiceStatus.unsupported));
@@ -85,20 +95,35 @@ class VoiceAssistantCubit extends Cubit<VoiceAssistantState> {
         return;
       }
 
-      emit(VoiceAssistantState(status: VoiceStatus.thinking, transcript: transcript));
-      final command = await _repository.interpretVoice(transcript, locale: ttsLocale);
+      emit(
+        VoiceAssistantState(
+          status: VoiceStatus.thinking,
+          transcript: transcript,
+        ),
+      );
+      final command = await _repository.interpretVoice(
+        transcript,
+        locale: ttsLocale,
+      );
       final reply = voiceReplyFor(command.intent);
-      emit(VoiceAssistantState(
-        status: VoiceStatus.result,
-        transcript: transcript,
-        command: command,
-        reply: reply,
-      ));
+      emit(
+        VoiceAssistantState(
+          status: VoiceStatus.result,
+          transcript: transcript,
+          command: command,
+          reply: reply,
+        ),
+      );
       await _speech.speak(reply, localeId: ttsLocale);
     } on Failure catch (f) {
       emit(VoiceAssistantState(status: VoiceStatus.error, error: f));
     } catch (_) {
-      emit(const VoiceAssistantState(status: VoiceStatus.error, error: UnknownFailure()));
+      emit(
+        const VoiceAssistantState(
+          status: VoiceStatus.error,
+          error: UnknownFailure(),
+        ),
+      );
     }
   }
 

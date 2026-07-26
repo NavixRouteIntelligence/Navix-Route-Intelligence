@@ -60,7 +60,8 @@ class _FilterBar extends StatelessWidget {
               return ChoiceChip(
                 label: Text(label),
                 selected: state.filter == value,
-                onSelected: (_) => context.read<DeliveriesCubit>().setFilter(value),
+                onSelected: (_) =>
+                    context.read<DeliveriesCubit>().setFilter(value),
               );
             },
           ),
@@ -84,7 +85,9 @@ class _Body extends StatelessWidget {
           case DeliveriesStatus.error:
             return NavixErrorState(
               title: l10n.deliveriesErrorTitle,
-              description: state.error == null ? l10n.deliveriesRetry : context.failureText(state.error!),
+              description: state.error == null
+                  ? l10n.deliveriesRetry
+                  : context.failureText(state.error!),
               retryLabel: l10n.deliveriesRetry,
               onRetry: () => context.read<DeliveriesCubit>().load(),
             );
@@ -129,7 +132,8 @@ class _DeliveryTile extends StatelessWidget {
     final t = context.tokens;
     final l10n = AppLocalizations.of(context);
     final (statusLabel, statusColor) = _statusStyle(delivery.status, t, l10n);
-    final address = delivery.addressLine.isEmpty ? delivery.city : delivery.addressLine;
+    final address =
+        delivery.addressLine.isEmpty ? delivery.city : delivery.addressLine;
 
     return NavixCard(
       child: Column(
@@ -140,7 +144,10 @@ class _DeliveryTile extends StatelessWidget {
               Expanded(
                 child: Text(
                   address.isEmpty ? l10n.deliveriesNoAddress : address,
-                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -158,7 +165,10 @@ class _DeliveryTile extends StatelessWidget {
             children: [
               Icon(Icons.schedule_outlined, size: 15, color: t.muted),
               const SizedBox(width: 4),
-              Text(_window(delivery, l10n), style: TextStyle(color: t.muted, fontSize: 13)),
+              Text(
+                _window(delivery, l10n),
+                style: TextStyle(color: t.muted, fontSize: 13),
+              ),
               const Spacer(),
               if (delivery.priority == DeliveryPriorityView.high ||
                   delivery.priority == DeliveryPriorityView.urgent)
@@ -179,11 +189,18 @@ class _DeliveryTile extends StatelessWidget {
     return '${hm(s)}–${hm(e)}';
   }
 
-  (String, Color) _statusStyle(DeliveryStatusView s, NavixTokens t, AppLocalizations l10n) =>
+  (String, Color) _statusStyle(
+    DeliveryStatusView s,
+    NavixTokens t,
+    AppLocalizations l10n,
+  ) =>
       switch (s) {
         DeliveryStatusView.pending => (l10n.deliveryStatusPending, t.warning),
         DeliveryStatusView.inRoute => (l10n.deliveryStatusInRoute, t.accent),
-        DeliveryStatusView.delivered => (l10n.deliveryStatusDelivered, t.success),
+        DeliveryStatusView.delivered => (
+            l10n.deliveryStatusDelivered,
+            t.success
+          ),
         DeliveryStatusView.failed => (l10n.deliveryStatusFailed, t.danger),
         DeliveryStatusView.unknown => ('—', t.muted),
       };
@@ -200,12 +217,20 @@ class _PriorityTag extends StatelessWidget {
   Widget build(BuildContext context) {
     final urgent = priority == DeliveryPriorityView.urgent;
     final color = urgent ? tokens.danger : tokens.warning;
-    final label = urgent ? l10n.deliveryPriorityUrgent : l10n.deliveryPriorityHigh;
+    final label =
+        urgent ? l10n.deliveryPriorityUrgent : l10n.deliveryPriorityHigh;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Icon(Icons.priority_high, size: 15, color: color, semanticLabel: label),
-        Text(label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600)),
+        Text(
+          label,
+          style: TextStyle(
+            color: color,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ],
     );
   }

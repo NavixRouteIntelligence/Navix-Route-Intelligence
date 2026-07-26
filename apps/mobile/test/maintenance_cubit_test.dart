@@ -13,9 +13,22 @@ class _FakeNewRecord extends Fake implements NewMaintenanceRecord {}
 void main() {
   late _MockRepo repo;
 
-  const vehicle = MaintenanceVehicle(id: 'v1', plate: 'AA-00-BB', type: 'car', odometerKm: 120000);
-  const record = MaintenanceRecord(id: 'm1', type: 'oil_change', performedAt: '2026-07-01');
-  const reminder = MaintenanceReminder(type: 'insurance', status: 'due_soon', remainingDays: 16);
+  const vehicle = MaintenanceVehicle(
+    id: 'v1',
+    plate: 'AA-00-BB',
+    type: 'car',
+    odometerKm: 120000,
+  );
+  const record = MaintenanceRecord(
+    id: 'm1',
+    type: 'oil_change',
+    performedAt: '2026-07-01',
+  );
+  const reminder = MaintenanceReminder(
+    type: 'insurance',
+    status: 'due_soon',
+    remainingDays: 16,
+  );
 
   setUpAll(() => registerFallbackValue(_FakeNewRecord()));
   setUp(() => repo = _MockRepo());
@@ -64,7 +77,10 @@ void main() {
     act: (c) => c.load(),
     expect: () => [
       const MaintenanceState(status: MaintenanceStatus.loading),
-      const MaintenanceState(status: MaintenanceStatus.error, error: NetworkFailure()),
+      const MaintenanceState(
+        status: MaintenanceStatus.error,
+        error: NetworkFailure(),
+      ),
     ],
   );
 
@@ -79,7 +95,9 @@ void main() {
     },
     act: (c) async {
       await c.load();
-      await c.addRecord(const NewMaintenanceRecord(type: 'tires', performedAt: '2026-07-10'));
+      await c.addRecord(
+        const NewMaintenanceRecord(type: 'tires', performedAt: '2026-07-10'),
+      );
     },
     verify: (c) {
       verify(() => repo.addRecord('v1', any())).called(1);

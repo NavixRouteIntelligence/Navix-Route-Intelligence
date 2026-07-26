@@ -49,7 +49,11 @@ class NavMenuEntry {
 /// Acesso à navegação a partir de qualquer descendente (páginas-aba abrem o
 /// Drawer e trocam de aba sem conhecer o shell).
 class AdaptiveNavScope extends InheritedWidget {
-  const AdaptiveNavScope({required this.state, required super.child, super.key});
+  const AdaptiveNavScope({
+    required this.state,
+    required super.child,
+    super.key,
+  });
 
   final AdaptiveNavScaffoldState state;
 
@@ -57,7 +61,8 @@ class AdaptiveNavScope extends InheritedWidget {
       context.dependOnInheritedWidgetOfExactType<AdaptiveNavScope>()?.state;
 
   @override
-  bool updateShouldNotify(AdaptiveNavScope oldWidget) => state != oldWidget.state;
+  bool updateShouldNotify(AdaptiveNavScope oldWidget) =>
+      state != oldWidget.state;
 }
 
 /// Botão de menu (☰) que abre o Drawer do shell adaptativo. Colocável no
@@ -72,7 +77,8 @@ class NavMenuButton extends StatelessWidget {
     final nav = AdaptiveNavScope.maybeOf(context);
     if (nav == null) return const SizedBox.shrink();
     return IconButton(
-      tooltip: tooltip ?? MaterialLocalizations.of(context).openAppDrawerTooltip,
+      tooltip:
+          tooltip ?? MaterialLocalizations.of(context).openAppDrawerTooltip,
       icon: const Icon(Icons.menu),
       onPressed: nav.openDrawer,
     );
@@ -234,7 +240,11 @@ class _NavRail extends StatelessWidget {
 /// Drawer reutilizável: cabeçalho (avatar/nome/estado) + menu completo. Uma
 /// seleção de aba fecha o drawer e troca a aba; uma ação navega por rota.
 class _NavDrawer extends StatelessWidget {
-  const _NavDrawer({required this.header, required this.menu, required this.currentIndex});
+  const _NavDrawer({
+    required this.header,
+    required this.menu,
+    required this.currentIndex,
+  });
 
   final Widget header;
   final List<NavMenuEntry> menu;
@@ -249,7 +259,10 @@ class _NavDrawer extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Padding(padding: const EdgeInsets.fromLTRB(16, 16, 16, 8), child: header),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: header,
+            ),
             Divider(height: 1, color: t.line),
             Expanded(
               child: ListView(
@@ -261,7 +274,8 @@ class _NavDrawer extends StatelessWidget {
                     else
                       _NavDrawerTile(
                         entry: e,
-                        selected: e.tabIndex != null && e.tabIndex == currentIndex,
+                        selected:
+                            e.tabIndex != null && e.tabIndex == currentIndex,
                         onTap: () {
                           nav?.closeDrawer();
                           if (e.tabIndex != null) {
@@ -282,7 +296,11 @@ class _NavDrawer extends StatelessWidget {
 }
 
 class _NavDrawerTile extends StatelessWidget {
-  const _NavDrawerTile({required this.entry, required this.selected, required this.onTap});
+  const _NavDrawerTile({
+    required this.entry,
+    required this.selected,
+    required this.onTap,
+  });
 
   final NavMenuEntry entry;
   final bool selected;
@@ -292,19 +310,26 @@ class _NavDrawerTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = context.tokens;
     final primary = Theme.of(context).colorScheme.primary;
-    final color = entry.danger ? t.danger : (selected ? primary : Theme.of(context).colorScheme.onSurface);
+    final color = entry.danger
+        ? t.danger
+        : (selected ? primary : Theme.of(context).colorScheme.onSurface);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       child: Material(
         color: selected ? primary.withValues(alpha: 0.12) : Colors.transparent,
         borderRadius: BorderRadius.circular(12),
         child: ListTile(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           selected: selected,
           leading: Icon(entry.icon, color: color, size: 22),
           title: Text(
             entry.label,
-            style: TextStyle(color: color, fontWeight: selected ? FontWeight.w700 : FontWeight.w500),
+            style: TextStyle(
+              color: color,
+              fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+            ),
           ),
           onTap: onTap,
         ),

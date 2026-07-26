@@ -14,6 +14,9 @@ void main() {
   });
 
   test('satura no teto aceito pela API', () {
-    expect(dwellMinutes(start, start.add(const Duration(hours: 20))), maxDwellMinutes);
+    expect(
+      dwellMinutes(start, start.add(const Duration(hours: 20))),
+      maxDwellMinutes,
+    );
   });
 }

@@ -37,14 +37,28 @@ class NavixDonut extends StatelessWidget {
         width: size,
         height: size,
         child: CustomPaint(
-          painter: _DonutPainter(segments: segments, total: total, track: t.line, progress: progress),
+          painter: _DonutPainter(
+            segments: segments,
+            total: total,
+            track: t.line,
+            progress: progress,
+          ),
           child: Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(centerValue, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                Text(
+                  centerValue,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
+                  ),
+                ),
                 if (centerLabel != null)
-                  Text(centerLabel!, style: TextStyle(color: t.muted, fontSize: 10)),
+                  Text(
+                    centerLabel!,
+                    style: TextStyle(color: t.muted, fontSize: 10),
+                  ),
               ],
             ),
           ),
@@ -95,5 +109,6 @@ class _DonutPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_DonutPainter old) => old.progress != progress || old.segments != segments;
+  bool shouldRepaint(_DonutPainter old) =>
+      old.progress != progress || old.segments != segments;
 }

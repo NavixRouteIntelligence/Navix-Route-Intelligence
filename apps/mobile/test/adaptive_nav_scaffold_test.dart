@@ -20,8 +20,18 @@ AdaptiveNavScaffold _scaffold() => const AdaptiveNavScaffold(
       tabs: [
         // Páginas com Scaffold PRÓPRIO (aninhado) e leading de menu — é assim
         // que o app real monta as abas, e foi essa combinação que quebrou.
-        NavTab(icon: Icons.home_outlined, selectedIcon: Icons.home, label: 'Home', page: _TabPage(title: 'page-home')),
-        NavTab(icon: Icons.list_outlined, selectedIcon: Icons.list, label: 'List', page: _TabPage(title: 'page-list')),
+        NavTab(
+          icon: Icons.home_outlined,
+          selectedIcon: Icons.home,
+          label: 'Home',
+          page: _TabPage(title: 'page-home'),
+        ),
+        NavTab(
+          icon: Icons.list_outlined,
+          selectedIcon: Icons.list,
+          label: 'List',
+          page: _TabPage(title: 'page-list'),
+        ),
       ],
       menu: [
         NavMenuEntry(icon: Icons.home_outlined, label: 'Home', tabIndex: 0),
@@ -56,7 +66,9 @@ void main() {
     expect(find.byType(NavigationRail), findsNothing);
   });
 
-  testWidgets('tablet: substitui a Bottom Navigation pela Navigation Rail', (tester) async {
+  testWidgets('tablet: substitui a Bottom Navigation pela Navigation Rail', (
+    tester,
+  ) async {
     await _setSize(tester, const Size(1200, 800));
     await tester.pumpWidget(_host(_scaffold()));
     await tester.pumpAndSettle();
@@ -65,7 +77,9 @@ void main() {
     expect(find.byType(NavigationBar), findsNothing);
   });
 
-  testWidgets('troca de aba pela Bottom Navigation troca a página visível', (tester) async {
+  testWidgets('troca de aba pela Bottom Navigation troca a página visível', (
+    tester,
+  ) async {
     await _setSize(tester, const Size(400, 800));
     await tester.pumpWidget(_host(_scaffold()));
     await tester.pumpAndSettle();
@@ -76,7 +90,9 @@ void main() {
     await tester.tap(find.text('List'));
     await tester.pumpAndSettle();
 
-    final state = tester.state<AdaptiveNavScaffoldState>(find.byType(AdaptiveNavScaffold));
+    final state = tester.state<AdaptiveNavScaffoldState>(
+      find.byType(AdaptiveNavScaffold),
+    );
     expect(state.currentIndex, 1);
   });
 
@@ -85,7 +101,9 @@ void main() {
   // `'_elements.contains(element)': is not true` — o Scaffold com GlobalKey e o
   // AdaptiveNavScope viviam dentro de um LayoutBuilder (fase de layout), então
   // os elementos do Drawer descartado eram reativados fora do ciclo esperado.
-  testWidgets('abrir → fechar no scrim → reabrir não quebra a árvore', (tester) async {
+  testWidgets('abrir → fechar no scrim → reabrir não quebra a árvore', (
+    tester,
+  ) async {
     await _setSize(tester, const Size(400, 800));
     await tester.pumpWidget(_host(_scaffold()));
     await tester.pumpAndSettle();
@@ -108,12 +126,16 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('Drawer expõe o header e é aberto pelo botão de menu', (tester) async {
+  testWidgets('Drawer expõe o header e é aberto pelo botão de menu', (
+    tester,
+  ) async {
     await _setSize(tester, const Size(400, 800));
     await tester.pumpWidget(_host(_scaffold()));
     await tester.pumpAndSettle();
 
-    final state = tester.state<AdaptiveNavScaffoldState>(find.byType(AdaptiveNavScaffold));
+    final state = tester.state<AdaptiveNavScaffoldState>(
+      find.byType(AdaptiveNavScaffold),
+    );
     state.openDrawer();
     await tester.pumpAndSettle();
 

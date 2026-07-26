@@ -39,13 +39,17 @@ class DriverDeliveriesPage extends StatelessWidget {
                   final dark = Theme.of(context).brightness == Brightness.dark;
                   theme.setMode(dark ? ThemeMode.light : ThemeMode.dark);
                 },
-                icon: Icon(Theme.of(context).brightness == Brightness.dark
-                    ? Icons.light_mode_outlined
-                    : Icons.dark_mode_outlined),
+                icon: Icon(
+                  Theme.of(context).brightness == Brightness.dark
+                      ? Icons.light_mode_outlined
+                      : Icons.dark_mode_outlined,
+                ),
               ),
             ],
           ),
-          floatingActionButton: ImportFab(onPressed: () => _openImport(context)),
+          floatingActionButton: ImportFab(
+            onPressed: () => _openImport(context),
+          ),
           body: const DeliveriesListView(),
         ),
       ),
@@ -56,9 +60,9 @@ class DriverDeliveriesPage extends StatelessWidget {
   /// recém-importadas aparecem sem o motorista precisar puxar para atualizar.
   Future<void> _openImport(BuildContext context) async {
     final cubit = context.read<DeliveriesCubit>();
-    await Navigator.of(context).push<void>(
-      MaterialPageRoute(builder: (_) => const ImportCenterPage()),
-    );
+    await Navigator.of(
+      context,
+    ).push<void>(MaterialPageRoute(builder: (_) => const ImportCenterPage()));
     await cubit.load();
   }
 }

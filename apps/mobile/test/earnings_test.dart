@@ -43,22 +43,33 @@ void main() {
     setUp(() => store = _MockStore());
 
     test('load: lê a tarifa do armazém e marca loaded', () async {
-      when(() => store.read()).thenAnswer((_) async => const DriverTariff(perDelivery: 2, perKm: 0.5));
+      when(
+        () => store.read(),
+      ).thenAnswer((_) async => const DriverTariff(perDelivery: 2, perKm: 0.5));
       final cubit = EarningsCubit(store);
       await cubit.load();
       expect(cubit.state.loaded, isTrue);
-      expect(cubit.state.tariff, const DriverTariff(perDelivery: 2, perKm: 0.5));
+      expect(
+        cubit.state.tariff,
+        const DriverTariff(perDelivery: 2, perKm: 0.5),
+      );
     });
 
     test('save: persiste e atualiza o estado, saneando negativos', () async {
       when(() => store.save(any())).thenAnswer((_) async {});
       final cubit = EarningsCubit(store);
       await cubit.save(perDelivery: -1, perKm: 0.7);
-      expect(cubit.state.tariff, const DriverTariff(perDelivery: 0, perKm: 0.7));
-      verify(() => store.save(const DriverTariff(perDelivery: 0, perKm: 0.7))).called(1);
+      expect(
+        cubit.state.tariff,
+        const DriverTariff(perDelivery: 0, perKm: 0.7),
+      );
+      verify(
+        () => store.save(const DriverTariff(perDelivery: 0, perKm: 0.7)),
+      ).called(1);
     });
   });
 }
 
 /// Alias local para manter o padrão `test(...)` legível nos grupos acima.
-void it_(String description, dynamic Function() body) => test(description, body);
+void it_(String description, dynamic Function() body) =>
+    test(description, body);

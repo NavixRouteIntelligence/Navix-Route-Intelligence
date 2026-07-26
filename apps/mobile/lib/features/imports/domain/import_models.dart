@@ -43,11 +43,19 @@ class ImportSummary extends Equatable {
         invalid: (j['invalid'] as num?)?.toInt() ?? 0,
         duplicates: (j['duplicates'] as num?)?.toInt() ?? 0,
         estimatedSavingsKm: (j['estimatedSavingsKm'] as num?)?.toDouble() ?? 0,
-        estimatedSavingsPct: (j['estimatedSavingsPct'] as num?)?.toDouble() ?? 0,
+        estimatedSavingsPct:
+            (j['estimatedSavingsPct'] as num?)?.toDouble() ?? 0,
       );
 
   @override
-  List<Object?> get props => [total, valid, invalid, duplicates, estimatedSavingsKm, estimatedSavingsPct];
+  List<Object?> get props => [
+        total,
+        valid,
+        invalid,
+        duplicates,
+        estimatedSavingsKm,
+        estimatedSavingsPct,
+      ];
 }
 
 class ImportBatch extends Equatable {
@@ -85,7 +93,16 @@ class ImportBatch extends Equatable {
       );
 
   @override
-  List<Object?> get props => [id, filename, fileType, status, summary, createdDeliveries, routePlanId, createdAt];
+  List<Object?> get props => [
+        id,
+        filename,
+        fileType,
+        status,
+        summary,
+        createdDeliveries,
+        routePlanId,
+        createdAt,
+      ];
 }
 
 class ImportRow extends Equatable {
@@ -117,11 +134,21 @@ class ImportRow extends Equatable {
         priority: (j['priority'] as String?) ?? 'normal',
         geocoded: j['geocoded'] as bool? ?? false,
         lowConfidence: j['lowConfidence'] as bool? ?? false,
-        errors: (j['errors'] as List?)?.whereType<String>().toList() ?? const [],
+        errors:
+            (j['errors'] as List?)?.whereType<String>().toList() ?? const [],
       );
 
   @override
-  List<Object?> get props => [index, status, addressText, recipient, priority, geocoded, lowConfidence, errors];
+  List<Object?> get props => [
+        index,
+        status,
+        addressText,
+        recipient,
+        priority,
+        geocoded,
+        lowConfidence,
+        errors,
+      ];
 }
 
 /// Resultado de /imports/preview e /imports/:id (lote + linhas).
@@ -134,8 +161,18 @@ class ImportPreview extends Equatable {
   factory ImportPreview.fromJson(Map<String, dynamic> j) => ImportPreview(
         batch: j['batch'] is Map<String, dynamic>
             ? ImportBatch.fromJson(j['batch'] as Map<String, dynamic>)
-            : const ImportBatch(id: '', filename: '—', fileType: 'csv', status: ImportBatchStatus.preview, summary: ImportSummary()),
-        rows: (j['rows'] as List?)?.whereType<Map<String, dynamic>>().map(ImportRow.fromJson).toList() ?? const [],
+            : const ImportBatch(
+                id: '',
+                filename: '—',
+                fileType: 'csv',
+                status: ImportBatchStatus.preview,
+                summary: ImportSummary(),
+              ),
+        rows: (j['rows'] as List?)
+                ?.whereType<Map<String, dynamic>>()
+                .map(ImportRow.fromJson)
+                .toList() ??
+            const [],
       );
 
   @override
@@ -149,7 +186,8 @@ class ImportConfirmation extends Equatable {
   final int createdDeliveries;
   final String? routePlanId;
 
-  factory ImportConfirmation.fromJson(Map<String, dynamic> j) => ImportConfirmation(
+  factory ImportConfirmation.fromJson(Map<String, dynamic> j) =>
+      ImportConfirmation(
         createdDeliveries: (j['createdDeliveries'] as num?)?.toInt() ?? 0,
         routePlanId: j['routePlanId'] as String?,
       );

@@ -34,8 +34,11 @@ class _FinanceCardView extends StatelessWidget {
       buildWhen: (p, c) => p.summary != c.summary || p.status != c.status,
       builder: (context, state) {
         final s = state.summary;
-        final cost = s.costPerKm == null ? '—' : '€ ${s.costPerKm!.toStringAsFixed(2)}';
-        final profit = s.profitPerDelivery == null ? '—' : '€ ${s.profitPerDelivery!.toStringAsFixed(2)}';
+        final cost =
+            s.costPerKm == null ? '—' : '€ ${s.costPerKm!.toStringAsFixed(2)}';
+        final profit = s.profitPerDelivery == null
+            ? '—'
+            : '€ ${s.profitPerDelivery!.toStringAsFixed(2)}';
         return NavixCard(
           child: InkWell(
             borderRadius: BorderRadius.circular(12),
@@ -45,15 +48,35 @@ class _FinanceCardView extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(children: [
-                  Expanded(child: NavixSectionHeader(title: l10n.finTitle, icon: Icons.account_balance_wallet_outlined)),
-                  Icon(Icons.chevron_right, size: 18, color: t.muted),
-                ]),
-                Row(children: [
-                  Expanded(child: _Metric(label: l10n.finCostPerKm, value: cost, suffix: '/km')),
-                  const SizedBox(width: 8),
-                  Expanded(child: _Metric(label: l10n.finProfitPerDelivery, value: profit)),
-                ]),
+                Row(
+                  children: [
+                    Expanded(
+                      child: NavixSectionHeader(
+                        title: l10n.finTitle,
+                        icon: Icons.account_balance_wallet_outlined,
+                      ),
+                    ),
+                    Icon(Icons.chevron_right, size: 18, color: t.muted),
+                  ],
+                ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _Metric(
+                        label: l10n.finCostPerKm,
+                        value: cost,
+                        suffix: '/km',
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _Metric(
+                        label: l10n.finProfitPerDelivery,
+                        value: profit,
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -79,8 +102,19 @@ class _Metric extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.baseline,
           textBaseline: TextBaseline.alphabetic,
           children: [
-            Flexible(child: Text(value, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800))),
-            if (suffix != null) Text(suffix!, style: TextStyle(fontSize: 11, color: t.muted)),
+            Flexible(
+              child: Text(
+                value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            if (suffix != null)
+              Text(suffix!, style: TextStyle(fontSize: 11, color: t.muted)),
           ],
         ),
         const SizedBox(height: 2),

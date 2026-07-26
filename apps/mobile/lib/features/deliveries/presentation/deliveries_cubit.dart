@@ -19,6 +19,7 @@ class DeliveriesState extends Equatable {
   final DeliveriesStatus status;
   final List<DeliverySummary> items;
   final int total;
+
   /// Filtro de status ativo (`null` = todas).
   final String? filter;
   final Failure? error;
@@ -54,16 +55,30 @@ class DeliveriesCubit extends Cubit<DeliveriesState> {
     emit(state.copyWith(status: DeliveriesStatus.loading, filter: nextFilter));
     try {
       final page = await _repository.list(status: nextFilter);
-      emit(state.copyWith(
-        status: DeliveriesStatus.success,
-        items: page.items,
-        total: page.total,
-        filter: nextFilter,
-      ));
+      emit(
+        state.copyWith(
+          status: DeliveriesStatus.success,
+          items: page.items,
+          total: page.total,
+          filter: nextFilter,
+        ),
+      );
     } on Failure catch (f) {
-      emit(state.copyWith(status: DeliveriesStatus.error, error: f, filter: nextFilter));
+      emit(
+        state.copyWith(
+          status: DeliveriesStatus.error,
+          error: f,
+          filter: nextFilter,
+        ),
+      );
     } catch (_) {
-      emit(state.copyWith(status: DeliveriesStatus.error, error: const UnknownFailure(), filter: nextFilter));
+      emit(
+        state.copyWith(
+          status: DeliveriesStatus.error,
+          error: const UnknownFailure(),
+          filter: nextFilter,
+        ),
+      );
     }
   }
 

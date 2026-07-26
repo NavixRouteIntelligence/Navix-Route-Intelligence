@@ -20,7 +20,11 @@ class DriverTariff extends Equatable {
 /// Estimativa de ganhos da rota: tarifa por entrega × nº de entregas + tarifa
 /// por km × distância. Determinística; um modelo de earnings no backend
 /// (opção B) substituiria isto sem tocar a UI.
-double estimateEarnings(DriverTariff tariff, {required int deliveries, required double km}) {
+double estimateEarnings(
+  DriverTariff tariff, {
+  required int deliveries,
+  required double km,
+}) {
   final byDelivery = tariff.perDelivery * deliveries;
   final byDistance = tariff.perKm * (km <= 0 ? 0 : km);
   final total = byDelivery + byDistance;

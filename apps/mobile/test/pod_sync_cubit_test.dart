@@ -15,7 +15,11 @@ class _MockConn extends Mock implements ConnectivityService {}
 QueuedPod _q(String id) => QueuedPod(
       id: id,
       createdAt: DateTime(2026, 7, 10),
-      submission: PodSubmission(deliveryId: 'd-$id', status: 'delivered', label: 'Cliente $id'),
+      submission: PodSubmission(
+        deliveryId: 'd-$id',
+        status: 'delivered',
+        label: 'Cliente $id',
+      ),
     );
 
 void main() {
@@ -23,13 +27,19 @@ void main() {
   late _MockQueue queue;
   late _MockConn conn;
 
-  setUpAll(() => registerFallbackValue(const PodSubmission(deliveryId: 'x', status: 'delivered')));
+  setUpAll(
+    () => registerFallbackValue(
+      const PodSubmission(deliveryId: 'x', status: 'delivered'),
+    ),
+  );
 
   setUp(() {
     repo = _MockRepo();
     queue = _MockQueue();
     conn = _MockConn();
-    when(() => conn.onlineChanges).thenAnswer((_) => const Stream<bool>.empty());
+    when(
+      () => conn.onlineChanges,
+    ).thenAnswer((_) => const Stream<bool>.empty());
   });
 
   test('syncNow: envia pendentes e remove os enviados', () async {
@@ -67,7 +77,9 @@ void main() {
   test('init: define online e conta pendentes', () async {
     when(() => conn.isOnline()).thenAnswer((_) async => false);
     when(() => queue.count()).thenAnswer((_) async => 3);
-    when(() => queue.all()).thenAnswer((_) async => [_q('1'), _q('2'), _q('3')]);
+    when(
+      () => queue.all(),
+    ).thenAnswer((_) async => [_q('1'), _q('2'), _q('3')]);
 
     final cubit = PodSyncCubit(repo, queue, conn);
     await cubit.init();

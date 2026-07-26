@@ -38,7 +38,10 @@ class PodSubmission {
       };
 
   /// Serialização completa para persistência offline (inclui o rótulo).
-  Map<String, dynamic> toStorage() => {...toJson(), if (label != null) 'label': label};
+  Map<String, dynamic> toStorage() => {
+        ...toJson(),
+        if (label != null) 'label': label,
+      };
 
   factory PodSubmission.fromStorage(Map<String, dynamic> j) => PodSubmission(
         deliveryId: (j['deliveryId'] as String?) ?? '',
