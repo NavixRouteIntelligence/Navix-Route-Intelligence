@@ -26,12 +26,13 @@ const redisProvider: Provider = {
   inject: [AppConfigService],
   useFactory: (config: AppConfigService): Redis => {
     const logger = new Logger('Redis');
-    const { host, port, password } = config.redis;
+    const { host, port, password, db } = config.redis;
 
     const client = new Redis({
       host,
       port,
       password,
+      db,
       enableOfflineQueue: false,
       maxRetriesPerRequest: 1,
       // Backoff crescente e limitado; mantém tentativas de reconexão sem travar.

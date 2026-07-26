@@ -16,11 +16,12 @@ export const BULL_PREFIX = 'navix:bull';
  * criam suas próprias conexões a partir destas opções.
  */
 export function bullConnection(config: AppConfigService): RedisOptions {
-  const { host, port, password } = config.redis;
+  const { host, port, password, db } = config.redis;
   return {
     host,
     port,
     password: password || undefined,
+    db,
     maxRetriesPerRequest: null,
   };
 }

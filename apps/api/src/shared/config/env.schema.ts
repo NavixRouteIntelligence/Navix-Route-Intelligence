@@ -34,6 +34,10 @@ export const envSchema = z.object({
   REDIS_HOST: z.string().min(1),
   REDIS_PORT: z.coerce.number().int().positive().default(6379),
   REDIS_PASSWORD: z.string().optional().default(''),
+  // Índice do banco Redis. Um Redis gerenciado costuma ser compartilhado entre
+  // ambientes; separar por índice evita que um pise na fila do outro (e é o que
+  // permite o teste de integração rodar sem tocar nos dados de desenvolvimento).
+  REDIS_DB: z.coerce.number().int().min(0).max(15).default(0),
 
   JWT_ACCESS_TTL: z.coerce.number().int().positive().default(900),
   JWT_REFRESH_TTL: z.coerce.number().int().positive().default(1209600),
