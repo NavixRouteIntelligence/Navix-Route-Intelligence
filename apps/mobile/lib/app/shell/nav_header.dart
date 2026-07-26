@@ -21,16 +21,22 @@ class NavHeader extends StatelessWidget {
   /// Nome de exibição derivado do e-mail (parte antes do @, capitalizada).
   static String _displayName(String? email) {
     if (email == null || email.isEmpty) return '—';
-    final local = email.split('@').first.replaceAll(RegExp(r'[._-]+'), ' ').trim();
+    final local =
+        email.split('@').first.replaceAll(RegExp(r'[._-]+'), ' ').trim();
     if (local.isEmpty) return email;
-    return local.split(' ').map((w) => w.isEmpty ? w : '${w[0].toUpperCase()}${w.substring(1)}').join(' ');
+    return local
+        .split(' ')
+        .map((w) => w.isEmpty ? w : '${w[0].toUpperCase()}${w.substring(1)}')
+        .join(' ');
   }
 
   static String _initials(String name) {
-    final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    final parts =
+        name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
     if (parts.isEmpty) return '?';
     if (parts.length == 1) return parts.first.substring(0, 1).toUpperCase();
-    return (parts.first.substring(0, 1) + parts.last.substring(0, 1)).toUpperCase();
+    return (parts.first.substring(0, 1) + parts.last.substring(0, 1))
+        .toUpperCase();
   }
 
   @override
@@ -47,7 +53,10 @@ class NavHeader extends StatelessWidget {
               backgroundColor: Theme.of(context).colorScheme.primary,
               child: Text(
                 _initials(name),
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 18),
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 18),
               ),
             ),
             const SizedBox(width: 12),
@@ -55,10 +64,18 @@ class NavHeader extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                  Text(name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.w700)),
                   const SizedBox(height: 2),
                   if (s.email != null)
-                    Text(s.email!, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: context.tokens.muted)),
+                    Text(s.email!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontSize: 12, color: context.tokens.muted)),
                   const SizedBox(height: 6),
                   _StatusPill(showLiveStatus: showLiveStatus),
                 ],
@@ -77,14 +94,19 @@ class _StatusPill extends StatelessWidget {
   const _StatusPill({required this.showLiveStatus});
   final bool showLiveStatus;
 
-  Widget _pill(BuildContext context, {required Color color, required String label, required bool live}) {
+  Widget _pill(BuildContext context,
+      {required Color color, required String label, required bool live}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(color: color.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(999)),
+      decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.14),
+          borderRadius: BorderRadius.circular(999)),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         NavixPulseDot(color: color, animate: live),
         const SizedBox(width: 6),
-        Text(label, style: TextStyle(color: color, fontSize: 11.5, fontWeight: FontWeight.w600)),
+        Text(label,
+            style: TextStyle(
+                color: color, fontSize: 11.5, fontWeight: FontWeight.w600)),
       ]),
     );
   }
@@ -94,13 +116,16 @@ class _StatusPill extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final t = context.tokens;
     if (!showLiveStatus) {
-      return _pill(context, color: t.success, label: l10n.statusOnline, live: false);
+      return _pill(context,
+          color: t.success, label: l10n.statusOnline, live: false);
     }
     return BlocBuilder<LocationSharingCubit, LocationSharingState>(
       bloc: GetIt.instance<LocationSharingCubit>(),
       builder: (context, state) => state.sharing
-          ? _pill(context, color: t.accent, label: l10n.statusEnRoute, live: true)
-          : _pill(context, color: t.success, label: l10n.statusOnline, live: false),
+          ? _pill(context,
+              color: t.accent, label: l10n.statusEnRoute, live: true)
+          : _pill(context,
+              color: t.success, label: l10n.statusOnline, live: false),
     );
   }
 }

@@ -17,7 +17,8 @@ class AuthInterceptor extends Interceptor {
   Completer<String?>? _refreshing;
 
   @override
-  Future<void> onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
+  Future<void> onRequest(
+      RequestOptions options, RequestInterceptorHandler handler) async {
     final token = await store.readAccessToken();
     if (token != null && !options.headers.containsKey('Authorization')) {
       options.headers['Authorization'] = 'Bearer $token';
@@ -26,7 +27,8 @@ class AuthInterceptor extends Interceptor {
   }
 
   @override
-  Future<void> onError(DioException err, ErrorInterceptorHandler handler) async {
+  Future<void> onError(
+      DioException err, ErrorInterceptorHandler handler) async {
     final is401 = err.response?.statusCode == 401;
     final alreadyRetried = err.requestOptions.extra['__retried'] == true;
 

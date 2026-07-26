@@ -9,7 +9,8 @@ class VoiceCommand extends Equatable {
     this.parkingDifficulty,
   });
 
-  final String intent; // next_stop | route_summary | remaining | mark_delivered | report_parking | help | unknown
+  final String
+      intent; // next_stop | route_summary | remaining | mark_delivered | report_parking | help | unknown
   final double confidence;
   final String? parkingDifficulty; // slot de report_parking
 

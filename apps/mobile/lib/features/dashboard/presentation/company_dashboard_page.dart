@@ -60,14 +60,16 @@ class _DashboardView extends StatelessWidget {
           final child = switch (state.status) {
             DashboardStatus.loading => const _LoadingView(),
             DashboardStatus.error => NavixErrorState(
-                description: context.failureText(state.error ?? const UnknownFailure()),
+                description:
+                    context.failureText(state.error ?? const UnknownFailure()),
                 onRetry: () => context.read<DashboardCubit>().load(),
               ),
             DashboardStatus.success => (state.data?.isEmpty ?? true)
                 ? const NavixEmptyState(
                     icon: Icons.insights_outlined,
                     title: 'Sem dados ainda',
-                    description: 'Cadastre entregas e otimize rotas para ver seus indicadores.',
+                    description:
+                        'Cadastre entregas e otimize rotas para ver seus indicadores.',
                   )
                 : _Content(data: state.data!),
           };
@@ -96,7 +98,8 @@ class _Content extends StatelessWidget {
     final t = context.tokens;
     final primary = Theme.of(context).colorScheme.primary;
     final planned = data.perfPlanned.isEmpty ? <double>[0] : data.perfPlanned;
-    final optimized = data.perfOptimized.isEmpty ? <double>[0] : data.perfOptimized;
+    final optimized =
+        data.perfOptimized.isEmpty ? <double>[0] : data.perfOptimized;
 
     return RefreshIndicator(
       onRefresh: () => context.read<DashboardCubit>().load(),
@@ -125,16 +128,30 @@ class _Content extends StatelessWidget {
             // faltar espaço, então telas estreitas degradam sem estourar.
             childAspectRatio: 1.45,
             children: [
-              NavixKpiCard(icon: Icons.inventory_2_outlined, label: 'Entregas', value: '${data.deliveries.total}', iconColor: primary),
-              NavixKpiCard(icon: Icons.route_outlined, label: 'Rotas otimizadas', value: '${data.routesTotal}', iconColor: t.accent),
+              NavixKpiCard(
+                  icon: Icons.inventory_2_outlined,
+                  label: 'Entregas',
+                  value: '${data.deliveries.total}',
+                  iconColor: primary),
+              NavixKpiCard(
+                  icon: Icons.route_outlined,
+                  label: 'Rotas otimizadas',
+                  value: '${data.routesTotal}',
+                  iconColor: t.accent),
               NavixKpiCard(
                 icon: Icons.local_gas_station_outlined,
                 label: 'Economia',
                 value: '${data.savedKm.toStringAsFixed(0)} km',
                 iconColor: t.warning,
-                deltaLabel: data.avgSavingsPct > 0 ? '${data.avgSavingsPct.toStringAsFixed(0)}%' : null,
+                deltaLabel: data.avgSavingsPct > 0
+                    ? '${data.avgSavingsPct.toStringAsFixed(0)}%'
+                    : null,
               ),
-              NavixKpiCard(icon: Icons.check_circle_outline, label: 'Taxa de conclusão', value: '${data.completionRate.toStringAsFixed(0)}%', iconColor: t.success),
+              NavixKpiCard(
+                  icon: Icons.check_circle_outline,
+                  label: 'Taxa de conclusão',
+                  value: '${data.completionRate.toStringAsFixed(0)}%',
+                  iconColor: t.success),
             ],
           ),
           const SizedBox(height: 16),
@@ -166,7 +183,8 @@ class _Content extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const NavixSectionHeader(title: 'IA Insights', icon: Icons.auto_awesome_outlined),
+                const NavixSectionHeader(
+                    title: 'IA Insights', icon: Icons.auto_awesome_outlined),
                 ..._insights(context, data),
               ],
             ),
@@ -182,12 +200,14 @@ class _Content extends StatelessWidget {
                   title: 'Frota ao vivo',
                   icon: Icons.podcasts_outlined,
                   trailing: NavixStatusPill(
-                    label: '${data.positions.where((f) => f.status == 'en_route').length} em rota',
+                    label:
+                        '${data.positions.where((f) => f.status == 'en_route').length} em rota',
                     color: t.accent,
                   ),
                 ),
                 if (data.positions.isEmpty)
-                  Text('Nenhum motorista rastreado.', style: TextStyle(color: t.muted))
+                  Text('Nenhum motorista rastreado.',
+                      style: TextStyle(color: t.muted))
                 else
                   ...data.positions.take(4).map((f) => _FleetRow(driver: f)),
               ],
@@ -223,7 +243,8 @@ class _Content extends StatelessWidget {
                   title: 'Import Center',
                   icon: Icons.upload_file_outlined,
                   trailing: TextButton(
-                    onPressed: () => _soon(context, 'Import Center em breve no app.'),
+                    onPressed: () =>
+                        _soon(context, 'Import Center em breve no app.'),
                     child: const Text('Importar'),
                   ),
                 ),
@@ -241,12 +262,21 @@ class _Content extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const NavixSectionHeader(title: 'Frota', icon: Icons.local_shipping_outlined),
+                const NavixSectionHeader(
+                    title: 'Frota', icon: Icons.local_shipping_outlined),
                 Row(
                   children: [
-                    Expanded(child: _MiniStat(value: '${data.fleet.activeVehicles}/${data.fleet.totalVehicles}', label: 'Veículos ativos')),
+                    Expanded(
+                        child: _MiniStat(
+                            value:
+                                '${data.fleet.activeVehicles}/${data.fleet.totalVehicles}',
+                            label: 'Veículos ativos')),
                     const SizedBox(width: 10),
-                    Expanded(child: _MiniStat(value: '${data.fleet.activeDrivers}/${data.fleet.totalDrivers}', label: 'Motoristas ativos')),
+                    Expanded(
+                        child: _MiniStat(
+                            value:
+                                '${data.fleet.activeDrivers}/${data.fleet.totalDrivers}',
+                            label: 'Motoristas ativos')),
                   ],
                 ),
               ],
@@ -258,27 +288,47 @@ class _Content extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                NavixSectionHeader(title: 'Entregas por status', icon: Icons.donut_large_outlined, trailing: Text('${data.deliveries.total} total', style: TextStyle(color: t.muted, fontSize: 12))),
+                NavixSectionHeader(
+                    title: 'Entregas por status',
+                    icon: Icons.donut_large_outlined,
+                    trailing: Text('${data.deliveries.total} total',
+                        style: TextStyle(color: t.muted, fontSize: 12))),
                 Row(
                   children: [
                     NavixDonut(
                       centerValue: '${data.deliveries.delivered}',
                       centerLabel: 'entregues',
                       segments: [
-                        DonutSegment(data.deliveries.delivered.toDouble(), t.success),
-                        DonutSegment(data.deliveries.inRoute.toDouble(), primary),
-                        DonutSegment(data.deliveries.pending.toDouble(), t.warning),
-                        DonutSegment(data.deliveries.failed.toDouble(), t.danger),
+                        DonutSegment(
+                            data.deliveries.delivered.toDouble(), t.success),
+                        DonutSegment(
+                            data.deliveries.inRoute.toDouble(), primary),
+                        DonutSegment(
+                            data.deliveries.pending.toDouble(), t.warning),
+                        DonutSegment(
+                            data.deliveries.failed.toDouble(), t.danger),
                       ],
                     ),
                     const SizedBox(width: 16),
                     Expanded(
                       child: Column(
                         children: [
-                          _LegendRow(color: t.success, label: 'Entregue', value: data.deliveries.delivered),
-                          _LegendRow(color: primary, label: 'Em rota', value: data.deliveries.inRoute),
-                          _LegendRow(color: t.warning, label: 'Pendente', value: data.deliveries.pending),
-                          _LegendRow(color: t.danger, label: 'Falhou', value: data.deliveries.failed),
+                          _LegendRow(
+                              color: t.success,
+                              label: 'Entregue',
+                              value: data.deliveries.delivered),
+                          _LegendRow(
+                              color: primary,
+                              label: 'Em rota',
+                              value: data.deliveries.inRoute),
+                          _LegendRow(
+                              color: t.warning,
+                              label: 'Pendente',
+                              value: data.deliveries.pending),
+                          _LegendRow(
+                              color: t.danger,
+                              label: 'Falhou',
+                              value: data.deliveries.failed),
                         ],
                       ),
                     ),
@@ -296,14 +346,26 @@ class _Content extends StatelessWidget {
     final t = context.tokens;
     final items = <(Color, String, String)>[];
     if (d.avgSavingsPct > 0) {
-      items.add((t.accent, 'Otimização economiza rota', 'Ganho médio de ${d.avgSavingsPct.toStringAsFixed(0)}% em distância nas rotas.'));
+      items.add((
+        t.accent,
+        'Otimização economiza rota',
+        'Ganho médio de ${d.avgSavingsPct.toStringAsFixed(0)}% em distância nas rotas.'
+      ));
     }
     if (d.deliveries.failed > 0) {
-      items.add((t.danger, 'Entregas com falha', '${d.deliveries.failed} entrega(s) falharam — investigue as causas.'));
+      items.add((
+        t.danger,
+        'Entregas com falha',
+        '${d.deliveries.failed} entrega(s) falharam — investigue as causas.'
+      ));
     }
     final idle = d.fleet.totalVehicles - d.fleet.activeVehicles;
     if (idle > 0) {
-      items.add((t.warning, 'Veículos ociosos', '$idle veículo(s) inativo(s) — realoque para reduzir atrasos.'));
+      items.add((
+        t.warning,
+        'Veículos ociosos',
+        '$idle veículo(s) inativo(s) — realoque para reduzir atrasos.'
+      ));
     }
     if (items.isEmpty) {
       items.add((t.success, 'Operação saudável', 'Sem alertas no período.'));
@@ -323,8 +385,13 @@ class _Legend extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = context.tokens;
-    Widget item(Color c, String l) => Row(mainAxisSize: MainAxisSize.min, children: [
-          Container(width: 8, height: 8, decoration: BoxDecoration(color: c, borderRadius: BorderRadius.circular(2))),
+    Widget item(Color c, String l) =>
+        Row(mainAxisSize: MainAxisSize.min, children: [
+          Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                  color: c, borderRadius: BorderRadius.circular(2))),
           const SizedBox(width: 4),
           Text(l, style: TextStyle(fontSize: 11, color: t.muted)),
         ]);
@@ -337,7 +404,8 @@ class _Legend extends StatelessWidget {
 }
 
 class _InsightRow extends StatelessWidget {
-  const _InsightRow({required this.color, required this.title, required this.description});
+  const _InsightRow(
+      {required this.color, required this.title, required this.description});
   final Color color;
   final String title;
   final String description;
@@ -350,14 +418,21 @@ class _InsightRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(width: 8, height: 8, margin: const EdgeInsets.only(top: 5), decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+          Container(
+              width: 8,
+              height: 8,
+              margin: const EdgeInsets.only(top: 5),
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                Text(description, style: TextStyle(color: t.muted, fontSize: 12)),
+                Text(title,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w600, fontSize: 13)),
+                Text(description,
+                    style: TextStyle(color: t.muted, fontSize: 12)),
               ],
             ),
           ),
@@ -383,16 +458,24 @@ class _PlanRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Rota $short', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                Text('${plan.stops} paradas', style: TextStyle(color: t.muted, fontSize: 11)),
+                Text('Rota $short',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w600, fontSize: 13)),
+                Text('${plan.stops} paradas',
+                    style: TextStyle(color: t.muted, fontSize: 11)),
               ],
             ),
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text('−${plan.savingsPct.toStringAsFixed(0)}% km', style: TextStyle(color: t.accent, fontWeight: FontWeight.w700, fontSize: 13)),
-              Text('Score ${plan.score}', style: TextStyle(color: t.muted, fontSize: 11)),
+              Text('−${plan.savingsPct.toStringAsFixed(0)}% km',
+                  style: TextStyle(
+                      color: t.accent,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13)),
+              Text('Score ${plan.score}',
+                  style: TextStyle(color: t.muted, fontSize: 11)),
             ],
           ),
         ],
@@ -413,8 +496,14 @@ class _ImportRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
-          Expanded(child: Text(item.filename, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13))),
-          NavixStatusPill(label: '${item.valid}/${item.total}', color: ok ? t.success : t.warning),
+          Expanded(
+              child: Text(item.filename,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 13))),
+          NavixStatusPill(
+              label: '${item.valid}/${item.total}',
+              color: ok ? t.success : t.warning),
         ],
       ),
     );
@@ -439,7 +528,9 @@ class _MiniStat extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+          Text(value,
+              style:
+                  const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
           const SizedBox(height: 2),
           Text(label, style: TextStyle(color: t.muted, fontSize: 11)),
         ],
@@ -449,7 +540,8 @@ class _MiniStat extends StatelessWidget {
 }
 
 class _LegendRow extends StatelessWidget {
-  const _LegendRow({required this.color, required this.label, required this.value});
+  const _LegendRow(
+      {required this.color, required this.label, required this.value});
   final Color color;
   final String label;
   final int value;
@@ -461,9 +553,14 @@ class _LegendRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+          Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
           const SizedBox(width: 8),
-          Expanded(child: Text(label, style: TextStyle(color: t.muted, fontSize: 12.5))),
+          Expanded(
+              child: Text(label,
+                  style: TextStyle(color: t.muted, fontSize: 12.5))),
           Text('$value', style: const TextStyle(fontWeight: FontWeight.w600)),
         ],
       ),
@@ -488,9 +585,15 @@ class _FleetRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
-          Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+          Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
           const SizedBox(width: 10),
-          Expanded(child: Text(short, style: const TextStyle(fontFamily: 'monospace', fontSize: 12.5))),
+          Expanded(
+              child: Text(short,
+                  style: const TextStyle(
+                      fontFamily: 'monospace', fontSize: 12.5))),
           NavixStatusPill(label: label, color: color),
         ],
       ),
@@ -515,7 +618,8 @@ class _LoadingView extends StatelessWidget {
           crossAxisSpacing: 12,
           mainAxisSpacing: 12,
           childAspectRatio: 1.7,
-          children: List.generate(4, (_) => const NavixCard(child: NavixSkeleton(height: 60))),
+          children: List.generate(
+              4, (_) => const NavixCard(child: NavixSkeleton(height: 60))),
         ),
         const SizedBox(height: 16),
         const NavixCard(child: NavixSkeleton(height: 150)),

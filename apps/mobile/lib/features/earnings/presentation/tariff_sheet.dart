@@ -6,7 +6,8 @@ import '../domain/driver_tariff.dart';
 
 /// Sheet para configurar a tarifa (€/entrega e €/km). Devolve a nova [DriverTariff]
 /// ao salvar, ou null se cancelar.
-Future<DriverTariff?> showTariffSheet(BuildContext context, DriverTariff current) {
+Future<DriverTariff?> showTariffSheet(
+    BuildContext context, DriverTariff current) {
   return showModalBottomSheet<DriverTariff>(
     context: context,
     isScrollControlled: true,
@@ -24,10 +25,12 @@ class _TariffSheet extends StatefulWidget {
 }
 
 class _TariffSheetState extends State<_TariffSheet> {
-  late final TextEditingController _perDelivery =
-      TextEditingController(text: widget.current.perDelivery > 0 ? _fmt(widget.current.perDelivery) : '');
-  late final TextEditingController _perKm =
-      TextEditingController(text: widget.current.perKm > 0 ? _fmt(widget.current.perKm) : '');
+  late final TextEditingController _perDelivery = TextEditingController(
+      text: widget.current.perDelivery > 0
+          ? _fmt(widget.current.perDelivery)
+          : '');
+  late final TextEditingController _perKm = TextEditingController(
+      text: widget.current.perKm > 0 ? _fmt(widget.current.perKm) : '');
 
   String _fmt(double v) => v.toStringAsFixed(2);
 
@@ -57,9 +60,13 @@ class _TariffSheetState extends State<_TariffSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(l10n.earningsTariffTitle, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+          Text(l10n.earningsTariffTitle,
+              style:
+                  const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
           const SizedBox(height: 4),
-          Text(l10n.earningsTariffHint, style: TextStyle(fontSize: 12.5, color: Theme.of(context).hintColor)),
+          Text(l10n.earningsTariffHint,
+              style: TextStyle(
+                  fontSize: 12.5, color: Theme.of(context).hintColor)),
           const SizedBox(height: 16),
           _Field(controller: _perDelivery, label: l10n.earningsPerDelivery),
           const SizedBox(height: 12),

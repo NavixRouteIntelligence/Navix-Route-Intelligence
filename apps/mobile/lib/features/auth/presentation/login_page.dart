@@ -57,7 +57,9 @@ class _LoginPageState extends State<LoginPage> {
         LoginParams(
           email: _email.text.trim(),
           password: _password.text,
-          organization: _organization.text.trim().isEmpty ? null : _organization.text.trim(),
+          organization: _organization.text.trim().isEmpty
+              ? null
+              : _organization.text.trim(),
         ),
         keepConnected: _keepConnected,
         enableBiometric: _useBiometrics,
@@ -67,7 +69,9 @@ class _LoginPageState extends State<LoginPage> {
       if (!mounted) return;
       setState(() => _error = context.failureText(f));
     } catch (_) {
-      if (mounted) setState(() => _error = AppLocalizations.of(context).errorUnknown);
+      if (mounted) {
+        setState(() => _error = AppLocalizations.of(context).errorUnknown);
+      }
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -88,24 +92,29 @@ class _LoginPageState extends State<LoginPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(l10n.loginTitle, style: Theme.of(context).textTheme.headlineMedium),
+                    Text(l10n.loginTitle,
+                        style: Theme.of(context).textTheme.headlineMedium),
                     const SizedBox(height: 4),
-                    Text(l10n.loginSubtitle, style: Theme.of(context).textTheme.bodyMedium),
+                    Text(l10n.loginSubtitle,
+                        style: Theme.of(context).textTheme.bodyMedium),
                     const SizedBox(height: 24),
                     TextFormField(
                       controller: _email,
                       keyboardType: TextInputType.emailAddress,
                       autofillHints: const [AutofillHints.email],
                       decoration: InputDecoration(labelText: l10n.fieldEmail),
-                      validator: (v) => (v == null || !v.contains('@')) ? '—' : null,
+                      validator: (v) =>
+                          (v == null || !v.contains('@')) ? '—' : null,
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
                       controller: _password,
                       obscureText: true,
                       autofillHints: const [AutofillHints.password],
-                      decoration: InputDecoration(labelText: l10n.fieldPassword),
-                      validator: (v) => (v == null || v.length < 8) ? '—' : null,
+                      decoration:
+                          InputDecoration(labelText: l10n.fieldPassword),
+                      validator: (v) =>
+                          (v == null || v.length < 8) ? '—' : null,
                     ),
                     const SizedBox(height: 12),
                     // Empresa (opcional): o tenant é resolvido pelo e-mail; este
@@ -113,7 +122,8 @@ class _LoginPageState extends State<LoginPage> {
                     TextFormField(
                       controller: _organization,
                       autofillHints: const [AutofillHints.organizationName],
-                      decoration: const InputDecoration(labelText: 'Empresa (opcional)'),
+                      decoration: const InputDecoration(
+                          labelText: 'Empresa (opcional)'),
                     ),
                     const SizedBox(height: 8),
                     SwitchListTile(
@@ -127,14 +137,21 @@ class _LoginPageState extends State<LoginPage> {
                         contentPadding: EdgeInsets.zero,
                         title: Text(l10n.useBiometrics),
                         value: _useBiometrics,
-                        onChanged: _keepConnected ? (v) => setState(() => _useBiometrics = v) : null,
+                        onChanged: _keepConnected
+                            ? (v) => setState(() => _useBiometrics = v)
+                            : null,
                       ),
                     if (_error != null) ...[
                       const SizedBox(height: 8),
-                      Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                      Text(_error!,
+                          style: TextStyle(
+                              color: Theme.of(context).colorScheme.error)),
                     ],
                     const SizedBox(height: 16),
-                    NavixButton(label: l10n.signInAction, loading: _submitting, onPressed: _submit),
+                    NavixButton(
+                        label: l10n.signInAction,
+                        loading: _submitting,
+                        onPressed: _submit),
                     const SizedBox(height: 8),
                     TextButton(
                       onPressed: () => context.push('/register'),

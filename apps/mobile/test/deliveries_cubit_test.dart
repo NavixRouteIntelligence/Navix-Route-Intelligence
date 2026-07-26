@@ -27,21 +27,25 @@ void main() {
   blocTest<DeliveriesCubit, DeliveriesState>(
     'sucesso: loading → success com as entregas',
     build: () {
-      when(() => repo.list(status: any(named: 'status'), pageSize: any(named: 'pageSize')))
-          .thenAnswer((_) async => const DeliveriesPage(items: [_delivery], total: 1));
+      when(() => repo.list(
+              status: any(named: 'status'), pageSize: any(named: 'pageSize')))
+          .thenAnswer(
+              (_) async => const DeliveriesPage(items: [_delivery], total: 1));
       return DeliveriesCubit(repo);
     },
     act: (c) => c.load(),
     expect: () => const [
       DeliveriesState(status: DeliveriesStatus.loading),
-      DeliveriesState(status: DeliveriesStatus.success, items: [_delivery], total: 1),
+      DeliveriesState(
+          status: DeliveriesStatus.success, items: [_delivery], total: 1),
     ],
   );
 
   blocTest<DeliveriesCubit, DeliveriesState>(
     'lista vazia: loading → success com lista vazia',
     build: () {
-      when(() => repo.list(status: any(named: 'status'), pageSize: any(named: 'pageSize')))
+      when(() => repo.list(
+              status: any(named: 'status'), pageSize: any(named: 'pageSize')))
           .thenAnswer((_) async => const DeliveriesPage(items: [], total: 0));
       return DeliveriesCubit(repo);
     },
@@ -55,8 +59,9 @@ void main() {
   blocTest<DeliveriesCubit, DeliveriesState>(
     'falha de rede: loading → error com mensagem tipada (nada vaza para a UI)',
     build: () {
-      when(() => repo.list(status: any(named: 'status'), pageSize: any(named: 'pageSize')))
-          .thenThrow(const NetworkFailure());
+      when(() => repo.list(
+          status: any(named: 'status'),
+          pageSize: any(named: 'pageSize'))).thenThrow(const NetworkFailure());
       return DeliveriesCubit(repo);
     },
     act: (c) => c.load(),
@@ -69,17 +74,25 @@ void main() {
   blocTest<DeliveriesCubit, DeliveriesState>(
     'setFilter aplica o filtro e recarrega escopado',
     build: () {
-      when(() => repo.list(status: any(named: 'status'), pageSize: any(named: 'pageSize')))
-          .thenAnswer((_) async => const DeliveriesPage(items: [_delivery], total: 1));
+      when(() => repo.list(
+              status: any(named: 'status'), pageSize: any(named: 'pageSize')))
+          .thenAnswer(
+              (_) async => const DeliveriesPage(items: [_delivery], total: 1));
       return DeliveriesCubit(repo);
     },
     act: (c) => c.setFilter('pending'),
     expect: () => const [
       DeliveriesState(status: DeliveriesStatus.loading, filter: 'pending'),
-      DeliveriesState(status: DeliveriesStatus.success, items: [_delivery], total: 1, filter: 'pending'),
+      DeliveriesState(
+          status: DeliveriesStatus.success,
+          items: [_delivery],
+          total: 1,
+          filter: 'pending'),
     ],
     verify: (_) {
-      verify(() => repo.list(status: 'pending', pageSize: any(named: 'pageSize'))).called(1);
+      verify(() =>
+              repo.list(status: 'pending', pageSize: any(named: 'pageSize')))
+          .called(1);
     },
   );
 }

@@ -24,7 +24,8 @@ void main() {
   const sample = LocationSample(latitude: -23.55, longitude: -46.63);
 
   setUpAll(() {
-    registerFallbackValue(const PodSubmission(deliveryId: 'x', status: 'delivered'));
+    registerFallbackValue(
+        const PodSubmission(deliveryId: 'x', status: 'delivered'));
     registerFallbackValue(sample);
   });
 
@@ -46,20 +47,26 @@ void main() {
   });
 
   test('captureLocation falha: gps error', () async {
-    when(() => location.current()).thenThrow(const LocationException(LocationErrorReason.permissionDenied));
+    when(() => location.current()).thenThrow(
+        const LocationException(LocationErrorReason.permissionDenied));
     final cubit = build();
     await cubit.captureLocation();
     expect(cubit.state.gps, GpsStatus.error);
   });
 
-  test('submit sucesso: envia POD, registra posição finished e conclui', () async {
+  test('submit sucesso: envia POD, registra posição finished e conclui',
+      () async {
     when(() => location.current()).thenAnswer((_) async => sample);
     when(() => pod.submit(any())).thenAnswer((_) async {});
-    when(() => tracking.sendPosition(any(), status: any(named: 'status'))).thenAnswer((_) async {});
+    when(() => tracking.sendPosition(any(), status: any(named: 'status')))
+        .thenAnswer((_) async {});
 
     final cubit = build();
     await cubit.captureLocation();
-    await cubit.submit(deliveryId: 'del-1', status: 'delivered', photoDataUrl: 'data:image/jpeg;base64,AAA');
+    await cubit.submit(
+        deliveryId: 'del-1',
+        status: 'delivered',
+        photoDataUrl: 'data:image/jpeg;base64,AAA');
 
     expect(cubit.state.done, isTrue);
     expect(cubit.state.error, isNull);
@@ -67,7 +74,8 @@ void main() {
     verify(() => tracking.sendPosition(any(), status: 'finished')).called(1);
   });
 
-  test('submit sem conexão: enfileira e conclui como pendente (queued)', () async {
+  test('submit sem conexão: enfileira e conclui como pendente (queued)',
+      () async {
     when(() => pod.submit(any())).thenThrow(const NetworkFailure());
     when(() => queue.enqueue(any())).thenAnswer((_) async {});
     final cubit = build();
@@ -79,7 +87,8 @@ void main() {
   });
 
   test('submit erro não-rede: mensagem de erro e não conclui', () async {
-    when(() => pod.submit(any())).thenThrow(const ServerFailure('Erro no servidor.'));
+    when(() => pod.submit(any()))
+        .thenThrow(const ServerFailure('Erro no servidor.'));
     final cubit = build();
     await cubit.submit(deliveryId: 'del-1', status: 'absent');
     expect(cubit.state.done, isFalse);

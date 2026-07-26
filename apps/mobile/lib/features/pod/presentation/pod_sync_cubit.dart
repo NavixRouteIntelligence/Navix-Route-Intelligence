@@ -8,14 +8,18 @@ import '../data/pod_queue_store.dart';
 import '../data/pod_repository.dart';
 
 class PodSyncState extends Equatable {
-  const PodSyncState({this.online = true, this.pending = 0, this.syncing = false});
+  const PodSyncState(
+      {this.online = true, this.pending = 0, this.syncing = false});
 
   final bool online;
   final int pending;
   final bool syncing;
 
   PodSyncState copyWith({bool? online, int? pending, bool? syncing}) =>
-      PodSyncState(online: online ?? this.online, pending: pending ?? this.pending, syncing: syncing ?? this.syncing);
+      PodSyncState(
+          online: online ?? this.online,
+          pending: pending ?? this.pending,
+          syncing: syncing ?? this.syncing);
 
   @override
   List<Object?> get props => [online, pending, syncing];
@@ -24,7 +28,8 @@ class PodSyncState extends Equatable {
 /// Gerencia a fila offline de comprovantes: conta pendentes, observa a conexão
 /// e reenvia automaticamente quando volta a ficar online.
 class PodSyncCubit extends Cubit<PodSyncState> {
-  PodSyncCubit(this._repository, this._queue, this._connectivity) : super(const PodSyncState());
+  PodSyncCubit(this._repository, this._queue, this._connectivity)
+      : super(const PodSyncState());
 
   final PodRepository _repository;
   final PodQueueStore _queue;
@@ -62,7 +67,14 @@ class PodSyncCubit extends Cubit<PodSyncState> {
         await _repository.submit(item.submission);
         await _queue.remove(item.id);
       } catch (_) {
-        break; // provável falha de rede — reenvia depois
+        // Um envio anterior pode ter sido concluído no servidor pouco antes
+        // da queda de ligação. Se o POD já existe, este item é só um duplicado
+        // seguro de remover; assim não bloqueia os próximos da fila.
+        if (await _repository.hasRegisteredPod(item.submission.deliveryId)) {
+          await _queue.remove(item.id);
+          continue;
+        }
+        break; // falha real: preserva o item e tenta novamente mais tarde
       }
     }
     emit(state.copyWith(syncing: false, pending: await _queue.count()));

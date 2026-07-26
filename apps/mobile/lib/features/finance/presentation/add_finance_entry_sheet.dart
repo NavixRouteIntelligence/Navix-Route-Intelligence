@@ -44,7 +44,8 @@ class _AddFinanceEntrySheetState extends State<_AddFinanceEntrySheet> {
 
   String _iso(DateTime d) => d.toIso8601String().substring(0, 10);
   int? _int(TextEditingController c) => int.tryParse(c.text.trim());
-  double? _num(TextEditingController c) => double.tryParse(c.text.trim().replaceAll(',', '.'));
+  double? _num(TextEditingController c) =>
+      double.tryParse(c.text.trim().replaceAll(',', '.'));
 
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
@@ -82,12 +83,20 @@ class _AddFinanceEntrySheetState extends State<_AddFinanceEntrySheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(l10n.finAddTitle, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+            Text(l10n.finAddTitle,
+                style:
+                    const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
             const SizedBox(height: 16),
             SegmentedButton<String>(
               segments: [
-                ButtonSegment(value: 'expense', label: Text(l10n.finExpense), icon: const Icon(Icons.south_west)),
-                ButtonSegment(value: 'income', label: Text(l10n.finIncome), icon: const Icon(Icons.north_east)),
+                ButtonSegment(
+                    value: 'expense',
+                    label: Text(l10n.finExpense),
+                    icon: const Icon(Icons.south_west)),
+                ButtonSegment(
+                    value: 'income',
+                    label: Text(l10n.finIncome),
+                    icon: const Icon(Icons.north_east)),
               ],
               selected: {_type},
               onSelectionChanged: (s) => setState(() => _type = s.first),
@@ -95,31 +104,53 @@ class _AddFinanceEntrySheetState extends State<_AddFinanceEntrySheet> {
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
               initialValue: _category,
-              decoration: InputDecoration(labelText: l10n.finCategory, border: const OutlineInputBorder()),
+              decoration: InputDecoration(
+                  labelText: l10n.finCategory,
+                  border: const OutlineInputBorder()),
               items: _categories
-                  .map((c) => DropdownMenuItem(value: c, child: Text(financeCategoryLabel(l10n, c))))
+                  .map((c) => DropdownMenuItem(
+                      value: c, child: Text(financeCategoryLabel(l10n, c))))
                   .toList(),
               onChanged: (v) => setState(() => _category = v ?? _category),
             ),
             const SizedBox(height: 12),
             Row(children: [
-              Expanded(child: _NumField(controller: _amount, label: l10n.finAmount, prefix: '€ ', decimal: true)),
+              Expanded(
+                  child: _NumField(
+                      controller: _amount,
+                      label: l10n.finAmount,
+                      prefix: '€ ',
+                      decimal: true)),
               const SizedBox(width: 12),
-              Expanded(child: _DateField(label: l10n.finDate, value: _iso(_occurredAt), onTap: _pickDate)),
+              Expanded(
+                  child: _DateField(
+                      label: l10n.finDate,
+                      value: _iso(_occurredAt),
+                      onTap: _pickDate)),
             ]),
             if (isFuel) ...[
               const SizedBox(height: 12),
               Row(children: [
-                Expanded(child: _NumField(controller: _odometer, label: l10n.finOdometer, suffix: 'km')),
+                Expanded(
+                    child: _NumField(
+                        controller: _odometer,
+                        label: l10n.finOdometer,
+                        suffix: 'km')),
                 const SizedBox(width: 12),
-                Expanded(child: _NumField(controller: _liters, label: l10n.finLiters, suffix: 'L', decimal: true)),
+                Expanded(
+                    child: _NumField(
+                        controller: _liters,
+                        label: l10n.finLiters,
+                        suffix: 'L',
+                        decimal: true)),
               ]),
             ],
             const SizedBox(height: 12),
             TextField(
               controller: _notes,
               maxLength: 500,
-              decoration: InputDecoration(labelText: l10n.finNotes, border: const OutlineInputBorder()),
+              decoration: InputDecoration(
+                  labelText: l10n.finNotes, border: const OutlineInputBorder()),
             ),
             const SizedBox(height: 8),
             SizedBox(
@@ -138,7 +169,8 @@ class _AddFinanceEntrySheetState extends State<_AddFinanceEntrySheet> {
 }
 
 class _DateField extends StatelessWidget {
-  const _DateField({required this.label, required this.value, required this.onTap});
+  const _DateField(
+      {required this.label, required this.value, required this.onTap});
   final String label;
   final String value;
   final VoidCallback onTap;
@@ -160,7 +192,12 @@ class _DateField extends StatelessWidget {
 }
 
 class _NumField extends StatelessWidget {
-  const _NumField({required this.controller, required this.label, this.suffix, this.prefix, this.decimal = false});
+  const _NumField(
+      {required this.controller,
+      required this.label,
+      this.suffix,
+      this.prefix,
+      this.decimal = false});
   final TextEditingController controller;
   final String label;
   final String? suffix;
@@ -172,7 +209,10 @@ class _NumField extends StatelessWidget {
     return TextField(
       controller: controller,
       keyboardType: TextInputType.numberWithOptions(decimal: decimal),
-      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(decimal ? r'[0-9.,]' : r'[0-9]'))],
+      inputFormatters: [
+        FilteringTextInputFormatter.allow(
+            RegExp(decimal ? r'[0-9.,]' : r'[0-9]'))
+      ],
       decoration: InputDecoration(
         labelText: label,
         suffixText: suffix,

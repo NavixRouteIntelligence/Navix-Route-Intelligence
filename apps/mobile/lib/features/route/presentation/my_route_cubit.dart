@@ -78,7 +78,10 @@ class MyRouteCubit extends Cubit<MyRouteState> {
     try {
       await _repository.reorganize(mode, order: order);
       await _repository.load().then(
-            (route) => emit(state.copyWith(reorganizing: false, route: route, status: MyRouteLoadStatus.ready)),
+            (route) => emit(state.copyWith(
+                reorganizing: false,
+                route: route,
+                status: MyRouteLoadStatus.ready)),
           );
       return true;
     } on Failure catch (f) {

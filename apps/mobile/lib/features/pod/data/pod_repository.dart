@@ -38,7 +38,8 @@ class PodSubmission {
       };
 
   /// Serialização completa para persistência offline (inclui o rótulo).
-  Map<String, dynamic> toStorage() => {...toJson(), if (label != null) 'label': label};
+  Map<String, dynamic> toStorage() =>
+      {...toJson(), if (label != null) 'label': label};
 
   factory PodSubmission.fromStorage(Map<String, dynamic> j) => PodSubmission(
         deliveryId: (j['deliveryId'] as String?) ?? '',
@@ -63,6 +64,21 @@ class PodRepository {
       await _dio.post<dynamic>('/pod', data: pod.toJson());
     } on DioException catch (e) {
       throw mapDioException(e);
+    }
+  }
+
+  /// Confirma se já há um comprovante no servidor para a entrega.
+  ///
+  /// A fila offline pode conter uma tentativa que chegou ao servidor pouco
+  /// antes de a conexão cair. Nesse caso o reenvio recebe 409, mas remover o
+  /// item é seguro somente depois desta confirmação explícita.
+  Future<bool> hasRegisteredPod(String deliveryId) async {
+    try {
+      final response = await _dio.get<dynamic>('/pod/$deliveryId');
+      final body = response.data;
+      return body is Map<String, dynamic> && body['data'] != null;
+    } on DioException {
+      return false;
     }
   }
 }

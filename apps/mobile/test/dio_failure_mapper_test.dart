@@ -8,7 +8,8 @@ DioException _badResponse(int status, {Object? data}) {
   return DioException(
     requestOptions: req,
     type: DioExceptionType.badResponse,
-    response: Response<dynamic>(requestOptions: req, statusCode: status, data: data),
+    response:
+        Response<dynamic>(requestOptions: req, statusCode: status, data: data),
   );
 }
 

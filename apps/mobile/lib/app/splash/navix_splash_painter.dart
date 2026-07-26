@@ -67,14 +67,17 @@ class NavixSplashPainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final side = math.min(size.width, size.height) * 0.42;
 
-    final route = NavixMark.scaleTo(NavixMark.routePath(), center: center + parallax, side: side);
+    final route = NavixMark.scaleTo(NavixMark.routePath(),
+        center: center + parallax, side: side);
     final stroke = side * 0.085;
 
     _paintHalo(canvas, center + parallax * 0.4, side, reveal);
     _paintRouteGhost(canvas, route, stroke);
     _paintTrace(canvas, route, stroke);
     if (reveal > 0) _paintArrow(canvas, center + parallax, side);
-    if (orbit != 0 && reveal > 0) _paintParticles(canvas, center + parallax * 1.6, side, reveal);
+    if (orbit != 0 && reveal > 0) {
+      _paintParticles(canvas, center + parallax * 1.6, side, reveal);
+    }
   }
 
   /// Brilho difuso atrás da marca — cresce conforme a revelação.
@@ -86,7 +89,11 @@ class NavixSplashPainter extends CustomPainter {
         palette.accent.withValues(alpha: 0.26 * t),
         palette.primary.withValues(alpha: 0.12 * t),
         palette.primary.withValues(alpha: 0),
-      ], const [0.0, 0.55, 1.0]);
+      ], const [
+        0.0,
+        0.55,
+        1.0
+      ]);
     canvas.drawCircle(center, radius, paint);
   }
 
@@ -153,16 +160,21 @@ class NavixSplashPainter extends CustomPainter {
     // Ponto de luz: só enquanto a rota está sendo calculada.
     if (head != null && trace < 1) {
       final r = stroke * 0.92;
-      canvas.drawCircle(head, r * 2.4, Paint()..color = palette.accent.withValues(alpha: 0.22));
+      canvas.drawCircle(head, r * 2.4,
+          Paint()..color = palette.accent.withValues(alpha: 0.22));
       canvas.drawCircle(head, r, Paint()..color = Colors.white);
     }
   }
 
   /// Seta de navegação no destino — a rota virando identidade.
   void _paintArrow(Canvas canvas, Offset center, double side) {
-    final arrow = NavixMark.scaleTo(NavixMark.arrowPath(), center: center, side: side);
+    final arrow =
+        NavixMark.scaleTo(NavixMark.arrowPath(), center: center, side: side);
     final popped = NavixMark.scaleAroundCenter(arrow, 0.6 + 0.4 * reveal);
-    canvas.drawPath(popped, Paint()..color = palette.accent.withValues(alpha: reveal.clamp(0.0, 1.0)));
+    canvas.drawPath(
+        popped,
+        Paint()
+          ..color = palette.accent.withValues(alpha: reveal.clamp(0.0, 1.0)));
   }
 
   /// Partículas em órbita: inteligência, movimento e conexão. Posições puramente
@@ -182,7 +194,8 @@ class NavixSplashPainter extends CustomPainter {
       final depth = (math.sin(angle) + 1) / 2;
       final alpha = (0.16 + 0.44 * depth) * t;
       final r = side * (0.012 + 0.014 * depth);
-      paint.color = (i.isEven ? palette.accent : Colors.white).withValues(alpha: alpha);
+      paint.color =
+          (i.isEven ? palette.accent : Colors.white).withValues(alpha: alpha);
       canvas.drawCircle(position, r, paint);
     }
   }

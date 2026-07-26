@@ -27,17 +27,22 @@ class MaintenancePage extends StatelessWidget {
     return BlocProvider(
       create: (_) => GetIt.instance<MaintenanceCubit>()..load(),
       child: Scaffold(
-        appBar: AppBar(leading: const NavLeading(), title: Text(l10n.maintTitle)),
+        appBar:
+            AppBar(leading: const NavLeading(), title: Text(l10n.maintTitle)),
         body: BlocConsumer<MaintenanceCubit, MaintenanceState>(
           listenWhen: (p, c) => p.error != c.error && c.error != null,
           listener: (context, state) => ScaffoldMessenger.of(context)
             ..hideCurrentSnackBar()
-            ..showSnackBar(SnackBar(content: Text(context.failureText(state.error!)))),
+            ..showSnackBar(
+                SnackBar(content: Text(context.failureText(state.error!)))),
           builder: (context, state) {
             return switch (state.status) {
-              MaintenanceStatus.loading => const Center(child: CircularProgressIndicator()),
+              MaintenanceStatus.loading =>
+                const Center(child: CircularProgressIndicator()),
               MaintenanceStatus.error => NavixErrorState(
-                  description: state.error == null ? l10n.maintLoadError : context.failureText(state.error!),
+                  description: state.error == null
+                      ? l10n.maintLoadError
+                      : context.failureText(state.error!),
                   onRetry: () => context.read<MaintenanceCubit>().load(),
                 ),
               MaintenanceStatus.empty => NavixEmptyState(
@@ -51,7 +56,9 @@ class MaintenancePage extends StatelessWidget {
         ),
         floatingActionButton: BlocBuilder<MaintenanceCubit, MaintenanceState>(
           builder: (context, state) {
-            if (state.status != MaintenanceStatus.ready) return const SizedBox.shrink();
+            if (state.status != MaintenanceStatus.ready) {
+              return const SizedBox.shrink();
+            }
             return FloatingActionButton.extended(
               heroTag: 'fab-maintenance',
               onPressed: state.busy ? null : () => _add(context),
@@ -86,7 +93,9 @@ class _Content extends StatelessWidget {
           _VehicleCard(vehicle: state.vehicle!),
           const SizedBox(height: 12),
           if (state.reminders.isNotEmpty) ...[
-            NavixSectionHeader(title: l10n.maintReminders, icon: Icons.notifications_active_outlined),
+            NavixSectionHeader(
+                title: l10n.maintReminders,
+                icon: Icons.notifications_active_outlined),
             ...state.reminders.map((r) => _ReminderTile(reminder: r)),
             const SizedBox(height: 12),
           ],
@@ -94,7 +103,9 @@ class _Content extends StatelessWidget {
           if (state.records.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 24),
-              child: Text(l10n.maintNoRecords, textAlign: TextAlign.center, style: TextStyle(color: context.tokens.muted)),
+              child: Text(l10n.maintNoRecords,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: context.tokens.muted)),
             )
           else
             ...state.records.map((rec) => _RecordTile(record: rec)),
@@ -115,16 +126,23 @@ class _VehicleCard extends StatelessWidget {
     return NavixCard(
       child: Row(
         children: [
-          CircleAvatar(radius: 22, backgroundColor: Theme.of(context).colorScheme.primary, child: const Icon(Icons.directions_car, color: Colors.white)),
+          CircleAvatar(
+              radius: 22,
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              child: const Icon(Icons.directions_car, color: Colors.white)),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(vehicle.plate, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+                Text(vehicle.plate,
+                    style: const TextStyle(
+                        fontSize: 17, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 2),
                 Text(
-                  vehicle.odometerKm != null ? '${vehicle.odometerKm} km' : l10n.maintOdometerUnset,
+                  vehicle.odometerKm != null
+                      ? '${vehicle.odometerKm} km'
+                      : l10n.maintOdometerUnset,
                   style: TextStyle(fontSize: 13, color: t.muted),
                 ),
               ],
@@ -153,12 +171,18 @@ class _VehicleCard extends StatelessWidget {
           autofocus: true,
           keyboardType: TextInputType.number,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          decoration: InputDecoration(labelText: l10n.maintOdometer, suffixText: 'km', border: const OutlineInputBorder()),
+          decoration: InputDecoration(
+              labelText: l10n.maintOdometer,
+              suffixText: 'km',
+              border: const OutlineInputBorder()),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l10n.commonCancel)),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(l10n.commonCancel)),
           FilledButton(
-            onPressed: () => Navigator.pop(ctx, int.tryParse(controller.text.trim())),
+            onPressed: () =>
+                Navigator.pop(ctx, int.tryParse(controller.text.trim())),
             child: Text(l10n.maintSave),
           ),
         ],
@@ -182,8 +206,10 @@ class _ReminderTile extends StatelessWidget {
       _ => (t.success, l10n.maintStatusOk),
     };
     final parts = <String>[
-      if (reminder.remainingDays != null) l10n.maintNDays(reminder.remainingDays!.abs()),
-      if (reminder.remainingKm != null) l10n.maintNKm(reminder.remainingKm!.abs()),
+      if (reminder.remainingDays != null)
+        l10n.maintNDays(reminder.remainingDays!.abs()),
+      if (reminder.remainingKm != null)
+        l10n.maintNKm(reminder.remainingKm!.abs()),
     ];
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
@@ -191,16 +217,23 @@ class _ReminderTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         child: Row(
           children: [
-            Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+            Container(
+                width: 8,
+                height: 8,
+                decoration:
+                    BoxDecoration(color: color, shape: BoxShape.circle)),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(maintenanceTypeLabel(l10n, reminder.type), style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600)),
+                  Text(maintenanceTypeLabel(l10n, reminder.type),
+                      style: const TextStyle(
+                          fontSize: 14.5, fontWeight: FontWeight.w600)),
                   if (parts.isNotEmpty) ...[
                     const SizedBox(height: 2),
-                    Text(parts.join(' · '), style: TextStyle(fontSize: 12, color: t.muted)),
+                    Text(parts.join(' · '),
+                        style: TextStyle(fontSize: 12, color: t.muted)),
                   ],
                 ],
               ),
@@ -236,19 +269,26 @@ class _RecordTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(maintenanceTypeLabel(l10n, record.type), style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600)),
+                  Text(maintenanceTypeLabel(l10n, record.type),
+                      style: const TextStyle(
+                          fontSize: 14.5, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 2),
-                  Text(meta.join(' · '), style: TextStyle(fontSize: 12, color: t.muted)),
+                  Text(meta.join(' · '),
+                      style: TextStyle(fontSize: 12, color: t.muted)),
                   if (record.notes != null && record.notes!.isNotEmpty) ...[
                     const SizedBox(height: 2),
-                    Text(record.notes!, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: t.muted)),
+                    Text(record.notes!,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 12, color: t.muted)),
                   ],
                 ],
               ),
             ),
             IconButton(
               tooltip: l10n.maintDelete,
-              onPressed: () => context.read<MaintenanceCubit>().deleteRecord(record.id),
+              onPressed: () =>
+                  context.read<MaintenanceCubit>().deleteRecord(record.id),
               icon: Icon(Icons.delete_outline, size: 20, color: t.muted),
             ),
           ],

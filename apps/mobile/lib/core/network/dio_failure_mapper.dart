@@ -20,7 +20,9 @@ Failure mapDioException(DioException e, {Failure? unauthorized}) {
       // do tipo, em vez de um "Erro no servidor." fixo em português.
       final detail = _extractMessage(e.response?.data);
       if (status == 401) return unauthorized ?? const UnauthorizedFailure();
-      if (status == 400 || status == 409 || status == 422) return ValidationFailure(detail);
+      if (status == 400 || status == 409 || status == 422) {
+        return ValidationFailure(detail);
+      }
       return ServerFailure(detail, status);
     default:
       return const UnknownFailure();

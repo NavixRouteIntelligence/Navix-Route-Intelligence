@@ -22,7 +22,8 @@ class AuthApi {
 
   Future<Map<String, dynamic>> register(RegisterParams p) async {
     final res = await authDio.post<dynamic>('/auth/mobile/register', data: {
-      'accountType': p.accountType == AccountType.company ? 'company' : 'driver',
+      'accountType':
+          p.accountType == AccountType.company ? 'company' : 'driver',
       'name': p.name,
       'email': p.email,
       'password': p.password,
@@ -38,6 +39,7 @@ class AuthApi {
   }
 
   Future<void> logout(String refreshToken) async {
-    await apiDio.post<dynamic>('/auth/mobile/logout', data: {'refreshToken': refreshToken});
+    await apiDio.post<dynamic>('/auth/mobile/logout',
+        data: {'refreshToken': refreshToken});
   }
 }

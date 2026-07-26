@@ -36,13 +36,15 @@ class MyRouteRepository {
   ///
   /// Enfileira em `POST /route-plans/mine` (202 + jobId) e faz polling do job
   /// até concluir; quem chama recarrega a rota depois.
-  Future<void> reorganize(ReorganizeMode mode, {required List<String> order}) async {
+  Future<void> reorganize(ReorganizeMode mode,
+      {required List<String> order}) async {
     try {
       final body = mode == ReorganizeMode.ai
           ? {'deliveryIds': order, 'smart': true}
           : {'deliveryIds': order, 'strategy': 'manual'};
       final res = await _dio.post<dynamic>('/route-plans/mine', data: body);
-      final jobId = (_map(res)['data'] as Map<String, dynamic>?)?['jobId'] as String?;
+      final jobId =
+          (_map(res)['data'] as Map<String, dynamic>?)?['jobId'] as String?;
       if (jobId != null) await _awaitJob(jobId);
     } on DioException catch (e) {
       throw mapDioException(e);
@@ -53,8 +55,10 @@ class MyRouteRepository {
     final deadline = DateTime.now().add(_pollTimeout);
     while (DateTime.now().isBefore(deadline)) {
       await Future<void>.delayed(_pollInterval);
-      final job = _map(await _dio.get<dynamic>('/route-plans/jobs/$jobId'))['data'];
-      final status = job is Map<String, dynamic> ? job['status'] as String? : null;
+      final job =
+          _map(await _dio.get<dynamic>('/route-plans/jobs/$jobId'))['data'];
+      final status =
+          job is Map<String, dynamic> ? job['status'] as String? : null;
       if (status == 'succeeded') return;
       if (status == 'failed') {
         throw const ServerFailure('Não foi possível reorganizar a rota.');
@@ -67,9 +71,10 @@ class MyRouteRepository {
     try {
       // O plano mais recente é a rota vigente; as entregas dão o endereço de
       // cada parada (o plano guarda só coordenadas e a sequência).
-      final plans = _map(await _dio.get<dynamic>('/route-plans', queryParameters: {'pageSize': 1}));
-      final deliveries =
-          _map(await _dio.get<dynamic>('/deliveries', queryParameters: {'pageSize': 100, 'sort': 'createdAt'}));
+      final plans = _map(await _dio
+          .get<dynamic>('/route-plans', queryParameters: {'pageSize': 1}));
+      final deliveries = _map(await _dio.get<dynamic>('/deliveries',
+          queryParameters: {'pageSize': 100, 'sort': 'createdAt'}));
 
       final items = _items(deliveries);
       final plan = _items(plans).isNotEmpty ? _items(plans).first : null;
@@ -77,11 +82,16 @@ class MyRouteRepository {
       if (plan == null) {
         // Sem plano: distinguir "poucas entregas" de "a IA ainda não preparou"
         // muda a mensagem que o motorista vê — e nenhuma das duas é erro dele.
-        return items.length >= _minStops ? const MyRoute.preparing() : const MyRoute.empty();
+        return items.length >= _minStops
+            ? const MyRoute.preparing()
+            : const MyRoute.empty();
       }
 
       final byId = {for (final d in items) (d['id'] as String? ?? ''): d};
-      final planStops = (plan['stops'] as List?)?.whereType<Map<String, dynamic>>().toList() ?? const [];
+      final planStops = (plan['stops'] as List?)
+              ?.whereType<Map<String, dynamic>>()
+              .toList() ??
+          const [];
       final stops = planStops.map((s) => _stop(s, byId)).toList();
 
       return MyRoute(
@@ -91,8 +101,12 @@ class MyRouteRepository {
         timeMinutes: _nested(plan, ['metrics', 'totalTimeMinutes']) ?? 0,
         savedKm: _nested(plan, ['savings', 'distanceKm']) ?? 0,
         savedPct: _nested(plan, ['savings', 'distancePct']) ?? 0,
-        updatedAt: DateTime.tryParse(plan['createdAt'] as String? ?? '')?.toLocal(),
-        groups: (plan['groups'] as List?)?.whereType<Map<String, dynamic>>().map(RouteGroup.fromJson).toList() ??
+        updatedAt:
+            DateTime.tryParse(plan['createdAt'] as String? ?? '')?.toLocal(),
+        groups: (plan['groups'] as List?)
+                ?.whereType<Map<String, dynamic>>()
+                .map(RouteGroup.fromJson)
+                .toList() ??
             const [],
         stops: stops,
         next: _nextDelivery(stops, byId),
@@ -105,7 +119,8 @@ class MyRouteRepository {
   /// A primeira parada da rota cuja entrega ainda não foi concluída — o alvo do
   /// "Registrar entrega". Percorre em ordem de sequência (as paradas já vêm
   /// ordenadas do plano).
-  NextDelivery? _nextDelivery(List<RouteStopInfo> stops, Map<String, Map<String, dynamic>> byId) {
+  NextDelivery? _nextDelivery(
+      List<RouteStopInfo> stops, Map<String, Map<String, dynamic>> byId) {
     for (final s in stops) {
       final status = byId[s.deliveryId]?['status'] as String?;
       if (status != 'delivered' && status != 'failed') {
@@ -116,11 +131,13 @@ class MyRouteRepository {
     return null;
   }
 
-  RouteStopInfo _stop(Map<String, dynamic> stop, Map<String, Map<String, dynamic>> byId) {
+  RouteStopInfo _stop(
+      Map<String, dynamic> stop, Map<String, Map<String, dynamic>> byId) {
     final id = stop['deliveryId'] as String? ?? '';
     final delivery = byId[id];
     final address = delivery?['address'];
-    final a = address is Map<String, dynamic> ? address : const <String, dynamic>{};
+    final a =
+        address is Map<String, dynamic> ? address : const <String, dynamic>{};
     final street = (a['street'] as String?) ?? '';
     final number = (a['number'] as String?) ?? '';
     final city = (a['city'] as String?) ?? '';
@@ -145,8 +162,11 @@ class MyRouteRepository {
   }
 
   Map<String, dynamic> _map(Response<dynamic> res) =>
-      res.data is Map<String, dynamic> ? res.data as Map<String, dynamic> : const {};
+      res.data is Map<String, dynamic>
+          ? res.data as Map<String, dynamic>
+          : const {};
 
   List<Map<String, dynamic>> _items(Map<String, dynamic> body) =>
-      (body['data'] as List?)?.whereType<Map<String, dynamic>>().toList() ?? const [];
+      (body['data'] as List?)?.whereType<Map<String, dynamic>>().toList() ??
+      const [];
 }

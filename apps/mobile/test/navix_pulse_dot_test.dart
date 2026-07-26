@@ -17,7 +17,8 @@ void main() {
     await tester.pump();
 
     // Remove o widget da árvore → dispose().
-    await tester.pumpWidget(const MaterialApp(home: Scaffold(body: SizedBox.shrink())));
+    await tester
+        .pumpWidget(const MaterialApp(home: Scaffold(body: SizedBox.shrink())));
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
@@ -29,15 +30,18 @@ void main() {
     ));
     await tester.pump(const Duration(milliseconds: 300));
 
-    await tester.pumpWidget(const MaterialApp(home: Scaffold(body: SizedBox.shrink())));
+    await tester
+        .pumpWidget(const MaterialApp(home: Scaffold(body: SizedBox.shrink())));
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('alternar animate liga e desliga o pulso sem lançar', (tester) async {
+  testWidgets('alternar animate liga e desliga o pulso sem lançar',
+      (tester) async {
     Widget host(bool animate) => MaterialApp(
-          home: Scaffold(body: NavixPulseDot(color: Colors.green, animate: animate)),
+          home: Scaffold(
+              body: NavixPulseDot(color: Colors.green, animate: animate)),
         );
 
     await tester.pumpWidget(host(false));

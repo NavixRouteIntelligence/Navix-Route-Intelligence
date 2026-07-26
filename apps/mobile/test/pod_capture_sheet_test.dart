@@ -32,13 +32,16 @@ class _NoLocation implements LocationService {
 void main() {
   setUp(() {
     final conn = _MockConn();
-    when(() => conn.onlineChanges).thenAnswer((_) => const Stream<bool>.empty());
+    when(() => conn.onlineChanges)
+        .thenAnswer((_) => const Stream<bool>.empty());
 
     GetIt.instance
       ..registerFactory<PodCaptureCubit>(
-        () => PodCaptureCubit(_MockPodRepo(), _NoLocation(), _MockTracking(), _MockQueue()),
+        () => PodCaptureCubit(
+            _MockPodRepo(), _NoLocation(), _MockTracking(), _MockQueue()),
       )
-      ..registerSingleton<PodSyncCubit>(PodSyncCubit(_MockPodRepo(), _MockQueue(), conn));
+      ..registerSingleton<PodSyncCubit>(
+          PodSyncCubit(_MockPodRepo(), _MockQueue(), conn));
   });
 
   tearDown(() => GetIt.instance.reset());
@@ -60,7 +63,8 @@ void main() {
         home: Builder(
           builder: (context) => Scaffold(
             body: ElevatedButton(
-              onPressed: () => showPodCaptureSheet(context, deliveryId: 'del-1'),
+              onPressed: () =>
+                  showPodCaptureSheet(context, deliveryId: 'del-1'),
               child: const Text('abrir'),
             ),
           ),
@@ -71,15 +75,18 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  FilledButton confirmButton(WidgetTester tester) => tester.widget<FilledButton>(
+  FilledButton confirmButton(WidgetTester tester) =>
+      tester.widget<FilledButton>(
         find.widgetWithText(FilledButton, 'Confirmar'),
       );
 
-  testWidgets('Confirmar começa desabilitado (sem foto nem assinatura)', (tester) async {
+  testWidgets('Confirmar começa desabilitado (sem foto nem assinatura)',
+      (tester) async {
     await openSheet(tester);
 
     expect(confirmButton(tester).onPressed, isNull);
-    expect(find.text('Adicione foto ou assinatura para confirmar a entrega.'), findsOneWidget);
+    expect(find.text('Adicione foto ou assinatura para confirmar a entrega.'),
+        findsOneWidget);
   });
 
   // O bug que isto trava: o SignatureController avisa a cada traço, mas nada
@@ -105,9 +112,11 @@ void main() {
     expect(
       confirmButton(tester).onPressed,
       isNotNull,
-      reason: 'a assinatura é prova suficiente; o botão tem de habilitar sozinho',
+      reason:
+          'a assinatura é prova suficiente; o botão tem de habilitar sozinho',
     );
-    expect(find.text('Adicione foto ou assinatura para confirmar a entrega.'), findsNothing);
+    expect(find.text('Adicione foto ou assinatura para confirmar a entrega.'),
+        findsNothing);
   });
 
   testWidgets('Limpar volta a desabilitar o Confirmar', (tester) async {

@@ -48,19 +48,22 @@ void main() {
   });
 
   group('SplashGate', () {
-    testWidgets('segura a home enquanto a encenação não termina', (tester) async {
+    testWidgets('segura a home enquanto a encenação não termina',
+        (tester) async {
       await tester.pumpWidget(_gate(ready: true));
       await tester.pump();
 
       // A home existe na árvore (o app carrega por baixo), mas está encoberta.
-      final splashOpacity = tester.widgetList<Opacity>(find.byType(Opacity)).first;
+      final splashOpacity =
+          tester.widgetList<Opacity>(find.byType(Opacity)).first;
       expect(splashOpacity.opacity, lessThan(1));
 
       await tester.pumpAndSettle(const Duration(seconds: 4));
       expect(find.text('home'), findsOneWidget);
     });
 
-    testWidgets('dados prontos antes da animação: espera a animação terminar', (tester) async {
+    testWidgets('dados prontos antes da animação: espera a animação terminar',
+        (tester) async {
       await tester.pumpWidget(_gate(ready: true));
       await tester.pump(_fast);
 
@@ -71,7 +74,8 @@ void main() {
       expect(find.byType(NavixSplash), findsNothing);
     });
 
-    testWidgets('animação pronta antes dos dados: mantém a splash e não trava', (tester) async {
+    testWidgets('animação pronta antes dos dados: mantém a splash e não trava',
+        (tester) async {
       await tester.pumpWidget(_gate(ready: false));
       // Passa muito além da encenação inteira.
       await tester.pump(const Duration(seconds: 3));

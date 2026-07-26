@@ -75,7 +75,8 @@ class MaintenanceCubit extends Cubit<MaintenanceState> {
     } on Failure catch (f) {
       emit(MaintenanceState(status: MaintenanceStatus.error, error: f));
     } catch (_) {
-      emit(const MaintenanceState(status: MaintenanceStatus.error, error: UnknownFailure()));
+      emit(const MaintenanceState(
+          status: MaintenanceStatus.error, error: UnknownFailure()));
     }
   }
 

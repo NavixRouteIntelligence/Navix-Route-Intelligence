@@ -4,7 +4,8 @@ import '../../app/theme/navix_tokens.dart';
 
 /// Placeholder de carregamento com pulsação suave (estado de loading do DS).
 class NavixSkeleton extends StatefulWidget {
-  const NavixSkeleton({super.key, this.height = 16, this.width, this.radius = 8});
+  const NavixSkeleton(
+      {super.key, this.height = 16, this.width, this.radius = 8});
 
   final double height;
   final double? width;
@@ -14,7 +15,8 @@ class NavixSkeleton extends StatefulWidget {
   State<NavixSkeleton> createState() => _NavixSkeletonState();
 }
 
-class _NavixSkeletonState extends State<NavixSkeleton> with SingleTickerProviderStateMixin {
+class _NavixSkeletonState extends State<NavixSkeleton>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
 
   @override
@@ -23,7 +25,8 @@ class _NavixSkeletonState extends State<NavixSkeleton> with SingleTickerProvider
     // Criado no initState (não em `late final` preguiçoso): se o widget for
     // descartado sem nunca ter construído, o dispose() criaria o controller
     // sobre um elemento já desativado. Ver _DotState em nav_header.dart.
-    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 900))
+    _controller = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 900))
       ..repeat(reverse: true);
   }
 

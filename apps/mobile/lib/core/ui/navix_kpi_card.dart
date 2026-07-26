@@ -67,7 +67,8 @@ class NavixKpiCard extends StatelessWidget {
               child: Text(
                 value,
                 maxLines: 1,
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, height: 1.1),
+                style: const TextStyle(
+                    fontSize: 22, fontWeight: FontWeight.w700, height: 1.1),
               ),
             ),
           ),

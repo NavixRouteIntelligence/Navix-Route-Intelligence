@@ -45,17 +45,22 @@ class EarningsCard extends StatelessWidget {
                 Row(
                   children: [
                     Expanded(
-                      child: NavixSectionHeader(title: l10n.earningsTitle, icon: Icons.payments_outlined),
+                      child: NavixSectionHeader(
+                          title: l10n.earningsTitle,
+                          icon: Icons.payments_outlined),
                     ),
                     Icon(Icons.edit_outlined, size: 16, color: t.muted),
                   ],
                 ),
                 if (!configured) ...[
-                  Text(l10n.earningsSetupPrompt, style: TextStyle(fontSize: 13.5, color: t.muted, height: 1.35)),
+                  Text(l10n.earningsSetupPrompt,
+                      style: TextStyle(
+                          fontSize: 13.5, color: t.muted, height: 1.35)),
                 ] else ...[
                   Text(
                     '€ ${total.toStringAsFixed(2)}',
-                    style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800),
+                    style: const TextStyle(
+                        fontSize: 26, fontWeight: FontWeight.w800),
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -63,7 +68,8 @@ class EarningsCard extends StatelessWidget {
                     style: TextStyle(fontSize: 12, color: t.muted),
                   ),
                   const SizedBox(height: 6),
-                  Text(l10n.earningsEstimateNote, style: TextStyle(fontSize: 10.5, color: t.muted)),
+                  Text(l10n.earningsEstimateNote,
+                      style: TextStyle(fontSize: 10.5, color: t.muted)),
                 ],
               ],
             ),

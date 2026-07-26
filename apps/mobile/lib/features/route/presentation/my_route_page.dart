@@ -46,14 +46,19 @@ class MyRoutePage extends StatelessWidget {
             // Ação SECUNDÁRIA (ADR-0078): reorganizar. A IA é o padrão; só aparece
             // quando há rota com paradas suficientes.
             BlocBuilder<MyRouteCubit, MyRouteState>(
-              buildWhen: (p, c) => p.route.isReady != c.route.isReady || p.reorganizing != c.reorganizing,
-              builder: (context, state) => state.route.isReady && state.route.stops.length >= 2
-                  ? IconButton(
-                      tooltip: l10n.routeReorganize,
-                      icon: const Icon(Icons.tune),
-                      onPressed: state.reorganizing ? null : () => _openReorganize(context, state.route),
-                    )
-                  : const SizedBox.shrink(),
+              buildWhen: (p, c) =>
+                  p.route.isReady != c.route.isReady ||
+                  p.reorganizing != c.reorganizing,
+              builder: (context, state) =>
+                  state.route.isReady && state.route.stops.length >= 2
+                      ? IconButton(
+                          tooltip: l10n.routeReorganize,
+                          icon: const Icon(Icons.tune),
+                          onPressed: state.reorganizing
+                              ? null
+                              : () => _openReorganize(context, state.route),
+                        )
+                      : const SizedBox.shrink(),
             ),
           ],
         ),
@@ -62,12 +67,16 @@ class MyRoutePage extends StatelessWidget {
           listenWhen: (p, c) => p.error != c.error && c.error != null,
           listener: (context, state) => ScaffoldMessenger.of(context)
             ..hideCurrentSnackBar()
-            ..showSnackBar(SnackBar(content: Text(context.failureText(state.error!)))),
+            ..showSnackBar(
+                SnackBar(content: Text(context.failureText(state.error!)))),
           builder: (context, state) {
             final body = switch (state.status) {
-              MyRouteLoadStatus.loading => const Center(child: CircularProgressIndicator()),
+              MyRouteLoadStatus.loading =>
+                const Center(child: CircularProgressIndicator()),
               MyRouteLoadStatus.error => NavixErrorState(
-                  description: state.error == null ? l10n.routeLoadError : context.failureText(state.error!),
+                  description: state.error == null
+                      ? l10n.routeLoadError
+                      : context.failureText(state.error!),
                   onRetry: () => context.read<MyRouteCubit>().load(),
                 ),
               MyRouteLoadStatus.ready => _Content(state: state),
@@ -83,7 +92,8 @@ class MyRoutePage extends StatelessWidget {
           },
         ),
         bottomNavigationBar: BlocBuilder<MyRouteCubit, MyRouteState>(
-          buildWhen: (p, c) => p.route.next != c.route.next || p.status != c.status,
+          buildWhen: (p, c) =>
+              p.route.next != c.route.next || p.status != c.status,
           builder: (context, state) => _RegisterBar(next: state.route.next),
         ),
       ),
@@ -107,7 +117,8 @@ class MyRoutePage extends StatelessWidget {
     List<String> finalOrder = order;
     if (mode == ReorganizeMode.manual) {
       final reordered = await Navigator.of(context).push<List<String>>(
-        MaterialPageRoute(builder: (_) => _ManualReorderPage(stops: route.stops)),
+        MaterialPageRoute(
+            builder: (_) => _ManualReorderPage(stops: route.stops)),
       );
       if (reordered == null) return;
       finalOrder = reordered;
@@ -136,7 +147,8 @@ class _ReorganizingOverlay extends StatelessWidget {
             children: [
               const CircularProgressIndicator(),
               const SizedBox(height: 14),
-              Text(l10n.routeReorganizing, style: const TextStyle(fontWeight: FontWeight.w600)),
+              Text(l10n.routeReorganizing,
+                  style: const TextStyle(fontWeight: FontWeight.w600)),
             ],
           ),
         ),
@@ -159,20 +171,24 @@ class _ReorganizeSheet extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
             child: Align(
               alignment: Alignment.centerLeft,
-              child: Text(l10n.routeReorganize, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+              child: Text(l10n.routeReorganize,
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.w700)),
             ),
           ),
           ListTile(
             leading: Icon(Icons.auto_awesome, color: t.accent),
             title: Text(l10n.routeReorgAi),
-            subtitle: Text(l10n.routeReorgAiDesc, style: TextStyle(color: t.muted, fontSize: 12)),
+            subtitle: Text(l10n.routeReorgAiDesc,
+                style: TextStyle(color: t.muted, fontSize: 12)),
             trailing: _RecommendedPill(),
             onTap: () => Navigator.of(context).pop(ReorganizeMode.ai),
           ),
           ListTile(
             leading: const Icon(Icons.drag_handle),
             title: Text(l10n.routeReorgManual),
-            subtitle: Text(l10n.routeReorgManualDesc, style: TextStyle(color: t.muted, fontSize: 12)),
+            subtitle: Text(l10n.routeReorgManualDesc,
+                style: TextStyle(color: t.muted, fontSize: 12)),
             onTap: () => Navigator.of(context).pop(ReorganizeMode.manual),
           ),
           const SizedBox(height: 8),
@@ -189,9 +205,12 @@ class _RecommendedPill extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(color: t.accent.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(999)),
+      decoration: BoxDecoration(
+          color: t.accent.withValues(alpha: 0.14),
+          borderRadius: BorderRadius.circular(999)),
       child: Text(l10n.routeRecommended,
-          style: TextStyle(color: t.accent, fontSize: 11, fontWeight: FontWeight.w700)),
+          style: TextStyle(
+              color: t.accent, fontSize: 11, fontWeight: FontWeight.w700)),
     );
   }
 }
@@ -217,7 +236,8 @@ class _ManualReorderPageState extends State<_ManualReorderPage> {
         title: Text(l10n.routeReorgManual),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(_stops.map((s) => s.deliveryId).toList()),
+            onPressed: () => Navigator.of(context)
+                .pop(_stops.map((s) => s.deliveryId).toList()),
             child: Text(l10n.commonSave),
           ),
         ],
@@ -234,9 +254,15 @@ class _ManualReorderPageState extends State<_ManualReorderPage> {
           final s = _stops[i];
           return ListTile(
             key: ValueKey(s.deliveryId),
-            leading: CircleAvatar(radius: 14, child: Text('${i + 1}', style: const TextStyle(fontSize: 12))),
-            title: Text(s.addressLine.isEmpty ? '—' : s.addressLine, maxLines: 1, overflow: TextOverflow.ellipsis),
-            subtitle: s.cityLine.isEmpty ? null : Text(s.cityLine, maxLines: 1, overflow: TextOverflow.ellipsis),
+            leading: CircleAvatar(
+                radius: 14,
+                child: Text('${i + 1}', style: const TextStyle(fontSize: 12))),
+            title: Text(s.addressLine.isEmpty ? '—' : s.addressLine,
+                maxLines: 1, overflow: TextOverflow.ellipsis),
+            subtitle: s.cityLine.isEmpty
+                ? null
+                : Text(s.cityLine,
+                    maxLines: 1, overflow: TextOverflow.ellipsis),
             trailing: const Icon(Icons.drag_handle),
           );
         },
@@ -278,7 +304,8 @@ class _RegisterBar extends StatelessWidget {
         child: FilledButton.icon(
           onPressed: next == null ? null : () => _register(context),
           icon: const Icon(Icons.camera_alt_outlined),
-          label: Text(next == null ? l10n.routeNoPending : l10n.routeRegisterDelivery),
+          label: Text(
+              next == null ? l10n.routeNoPending : l10n.routeRegisterDelivery),
         ),
       ),
     );
@@ -301,10 +328,15 @@ class _Content extends StatelessWidget {
           children: [
             SizedBox(height: MediaQuery.sizeOf(context).height * 0.18),
             NavixEmptyState(
-              icon: route.status == MyRouteStatus.preparing ? Icons.auto_awesome : Icons.route_outlined,
-              title: route.status == MyRouteStatus.preparing ? l10n.routePreparingTitle : l10n.routeEmptyTitle,
-              description:
-                  route.status == MyRouteStatus.preparing ? l10n.routePreparingDesc : l10n.routeEmptyDesc,
+              icon: route.status == MyRouteStatus.preparing
+                  ? Icons.auto_awesome
+                  : Icons.route_outlined,
+              title: route.status == MyRouteStatus.preparing
+                  ? l10n.routePreparingTitle
+                  : l10n.routeEmptyTitle,
+              description: route.status == MyRouteStatus.preparing
+                  ? l10n.routePreparingDesc
+                  : l10n.routeEmptyDesc,
             ),
           ],
         ),
@@ -320,7 +352,8 @@ class _Content extends StatelessWidget {
           const SizedBox(height: 12),
           const _AiPanel(),
           const SizedBox(height: 12),
-          NavixSectionHeader(title: l10n.routeGroups, icon: Icons.category_outlined),
+          NavixSectionHeader(
+              title: l10n.routeGroups, icon: Icons.category_outlined),
           ...route.groups.map((g) => _GroupTile(
                 group: g,
                 route: route,
@@ -352,14 +385,18 @@ class _Summary extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(l10n.routeReadyByAi,
-                    style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700)),
+                    style: const TextStyle(
+                        fontSize: 14.5, fontWeight: FontWeight.w700)),
               ),
               _StatusChip(label: l10n.routeStatusReady, color: t.success),
             ],
           ),
           const SizedBox(height: 14),
           Row(children: [
-            _Metric(value: '${route.totalStops}', label: l10n.routeStops, icon: Icons.pin_drop_outlined),
+            _Metric(
+                value: '${route.totalStops}',
+                label: l10n.routeStops,
+                icon: Icons.pin_drop_outlined),
             _Metric(
                 value: '${route.distanceKm.toStringAsFixed(1)} km',
                 label: l10n.routeDistance,
@@ -386,7 +423,10 @@ class _Summary extends StatelessWidget {
                       route.savedKm.toStringAsFixed(1),
                       route.savedPct.toStringAsFixed(0),
                     ),
-                    style: TextStyle(fontSize: 12.5, color: t.success, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                        fontSize: 12.5,
+                        color: t.success,
+                        fontWeight: FontWeight.w600),
                   ),
                 ),
               ]),
@@ -427,7 +467,8 @@ class _Metric extends StatelessWidget {
       child: Column(children: [
         Icon(icon, size: 16, color: t.muted),
         const SizedBox(height: 4),
-        Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+        Text(value,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
         const SizedBox(height: 2),
         Text(label, style: TextStyle(fontSize: 11, color: t.muted)),
       ]),
@@ -448,7 +489,8 @@ class _StatusChip extends StatelessWidget {
           borderRadius: BorderRadius.circular(999),
         ),
         child: Text(label,
-            style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w700)),
+            style: TextStyle(
+                fontSize: 11, color: color, fontWeight: FontWeight.w700)),
       );
 }
 
@@ -481,10 +523,13 @@ class _AiPanel extends StatelessWidget {
           Row(children: [
             Icon(Icons.psychology_outlined, size: 18, color: t.accent),
             const SizedBox(width: 8),
-            Text(l10n.routeAiTitle, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+            Text(l10n.routeAiTitle,
+                style:
+                    const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
           ]),
           const SizedBox(height: 4),
-          Text(l10n.routeAiSubtitle, style: TextStyle(fontSize: 12, color: t.muted)),
+          Text(l10n.routeAiSubtitle,
+              style: TextStyle(fontSize: 12, color: t.muted)),
           const SizedBox(height: 12),
           Wrap(
             spacing: 8,
@@ -492,7 +537,8 @@ class _AiPanel extends StatelessWidget {
             children: [
               for (final (icon, label) in factors)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     color: t.surfaceAlt,
                     borderRadius: BorderRadius.circular(999),
@@ -515,7 +561,8 @@ class _AiPanel extends StatelessWidget {
 /// Um Grupo Inteligente, expansível. A ordem mostrada é a da rota — o grupo
 /// **não** reordena nada (ADR-0075).
 class _GroupTile extends StatelessWidget {
-  const _GroupTile({required this.group, required this.route, required this.expanded});
+  const _GroupTile(
+      {required this.group, required this.route, required this.expanded});
 
   final RouteGroup group;
   final MyRoute route;
@@ -537,7 +584,8 @@ class _GroupTile extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               onTap: () => context.read<MyRouteCubit>().toggleGroup(group.type),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 child: Row(children: [
                   Container(
                     width: 34,
@@ -546,7 +594,8 @@ class _GroupTile extends StatelessWidget {
                       color: t.accent.withValues(alpha: 0.14),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Icon(destinationIcon(group.type), size: 18, color: t.accent),
+                    child: Icon(destinationIcon(group.type),
+                        size: 18, color: t.accent),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -554,7 +603,8 @@ class _GroupTile extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(destinationLabel(l10n, group.type),
-                            style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700)),
+                            style: const TextStyle(
+                                fontSize: 14.5, fontWeight: FontWeight.w700)),
                         const SizedBox(height: 2),
                         Text(
                           '${l10n.routeGroupStops(group.stops)} · '
@@ -575,7 +625,9 @@ class _GroupTile extends StatelessWidget {
             ),
             AnimatedCrossFade(
               duration: t.motionBase,
-              crossFadeState: expanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+              crossFadeState: expanded
+                  ? CrossFadeState.showSecond
+                  : CrossFadeState.showFirst,
               firstChild: const SizedBox(width: double.infinity),
               secondChild: Column(
                 children: [
@@ -611,7 +663,8 @@ class _StopTile extends StatelessWidget {
             border: Border.all(color: t.line),
           ),
           child: Text('${stop.sequence}',
-              style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700)),
+              style:
+                  const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700)),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -621,7 +674,8 @@ class _StopTile extends StatelessWidget {
               Text(stop.addressLine.isEmpty ? '—' : stop.addressLine,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600)),
+                  style: const TextStyle(
+                      fontSize: 13.5, fontWeight: FontWeight.w600)),
               if (stop.cityLine.isNotEmpty)
                 Text(stop.cityLine,
                     maxLines: 1,
@@ -630,7 +684,8 @@ class _StopTile extends StatelessWidget {
             ],
           ),
         ),
-        Text('${stop.etaMinutes.round()} min', style: TextStyle(fontSize: 11.5, color: t.muted)),
+        Text('${stop.etaMinutes.round()} min',
+            style: TextStyle(fontSize: 11.5, color: t.muted)),
       ]),
     );
   }

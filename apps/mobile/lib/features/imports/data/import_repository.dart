@@ -10,7 +10,8 @@ class ImportRepository {
   final Dio _dio;
 
   /// Envia o arquivo para pré-visualização (multipart). Não persiste entregas.
-  Future<ImportPreview> preview({required String path, required String filename}) async {
+  Future<ImportPreview> preview(
+      {required String path, required String filename}) async {
     try {
       final form = FormData.fromMap({
         'file': await MultipartFile.fromFile(path, filename: filename),
@@ -26,7 +27,8 @@ class ImportRepository {
   /// pela IA no backend (ADR-0074) — não há opt-in nem botão "Otimizar".
   Future<ImportConfirmation> confirm(String batchId) async {
     try {
-      final res = await _dio.post<dynamic>('/imports/$batchId/confirm', data: const <String, dynamic>{});
+      final res = await _dio.post<dynamic>('/imports/$batchId/confirm',
+          data: const <String, dynamic>{});
       return ImportConfirmation.fromJson(_map(res));
     } on DioException catch (e) {
       throw mapDioException(e);
@@ -36,10 +38,14 @@ class ImportRepository {
   /// Histórico de lotes.
   Future<List<ImportBatch>> list({int pageSize = 10}) async {
     try {
-      final res = await _dio.get<dynamic>('/imports', queryParameters: {'pageSize': pageSize});
+      final res = await _dio
+          .get<dynamic>('/imports', queryParameters: {'pageSize': pageSize});
       final data = _map(res)['data'];
       return data is List
-          ? data.whereType<Map<String, dynamic>>().map(ImportBatch.fromJson).toList()
+          ? data
+              .whereType<Map<String, dynamic>>()
+              .map(ImportBatch.fromJson)
+              .toList()
           : const [];
     } on DioException catch (e) {
       throw mapDioException(e);
@@ -47,5 +53,7 @@ class ImportRepository {
   }
 
   Map<String, dynamic> _map(Response<dynamic> res) =>
-      res.data is Map<String, dynamic> ? res.data as Map<String, dynamic> : const {};
+      res.data is Map<String, dynamic>
+          ? res.data as Map<String, dynamic>
+          : const {};
 }

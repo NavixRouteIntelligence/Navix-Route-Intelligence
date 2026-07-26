@@ -13,8 +13,11 @@ class _FakeApi extends Interceptor {
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
-    final body = options.path.contains('route-plans') ? {'data': plans} : {'data': deliveries};
-    handler.resolve(Response(requestOptions: options, statusCode: 200, data: body));
+    final body = options.path.contains('route-plans')
+        ? {'data': plans}
+        : {'data': deliveries};
+    handler.resolve(
+        Response(requestOptions: options, statusCode: 200, data: body));
   }
 }
 
@@ -38,7 +41,8 @@ class _ReorgApi extends Interceptor {
         'data': {'status': jobStatus, 'routePlanId': 'p1'}
       }));
     } else {
-      handler.resolve(Response(requestOptions: options, statusCode: 200, data: {'data': []}));
+      handler.resolve(Response(
+          requestOptions: options, statusCode: 200, data: {'data': []}));
     }
   }
 }
@@ -55,7 +59,12 @@ MyRouteRepository repo({
 
 Map<String, dynamic> delivery(String id, String street) => {
       'id': id,
-      'address': {'street': street, 'number': '10', 'city': 'Lisboa', 'state': 'LX'},
+      'address': {
+        'street': street,
+        'number': '10',
+        'city': 'Lisboa',
+        'state': 'LX'
+      },
     };
 
 void main() {
@@ -74,7 +83,8 @@ void main() {
     expect(route.status, MyRouteStatus.preparing);
   });
 
-  test('com plano: lê resumo, grupos e paradas com endereço resolvido', () async {
+  test('com plano: lê resumo, grupos e paradas com endereço resolvido',
+      () async {
     final route = await repo(
       plans: [
         {
@@ -144,7 +154,11 @@ void main() {
           ],
         },
       ],
-      deliveries: [delivery('d1', 'Rua A'), delivery('d2', 'Rua B'), delivery('d3', 'Rua C')],
+      deliveries: [
+        delivery('d1', 'Rua A'),
+        delivery('d2', 'Rua B'),
+        delivery('d3', 'Rua C')
+      ],
     ).load();
 
     final stops = route.stopsOf(route.groups.first);
@@ -160,7 +174,8 @@ void main() {
         ..httpClientAdapter = IOHttpClientAdapter()
         ..interceptors.add(_ReorgApi(calls, jobStatus: 'succeeded'));
 
-      await MyRouteRepository(dio).reorganize(ReorganizeMode.ai, order: ['d1', 'd2']);
+      await MyRouteRepository(dio)
+          .reorganize(ReorganizeMode.ai, order: ['d1', 'd2']);
 
       final post = calls.firstWhere((c) => c.method == 'POST');
       expect(post.path, contains('/route-plans/mine'));
@@ -175,7 +190,8 @@ void main() {
         ..httpClientAdapter = IOHttpClientAdapter()
         ..interceptors.add(_ReorgApi(calls, jobStatus: 'succeeded'));
 
-      await MyRouteRepository(dio).reorganize(ReorganizeMode.manual, order: ['d2', 'd1']);
+      await MyRouteRepository(dio)
+          .reorganize(ReorganizeMode.manual, order: ['d2', 'd1']);
 
       final post = calls.firstWhere((c) => c.method == 'POST');
       expect((post.data as Map)['strategy'], 'manual');
@@ -188,7 +204,8 @@ void main() {
         ..interceptors.add(_ReorgApi(<RequestOptions>[], jobStatus: 'failed'));
 
       expect(
-        () => MyRouteRepository(dio).reorganize(ReorganizeMode.ai, order: ['d1', 'd2']),
+        () => MyRouteRepository(dio)
+            .reorganize(ReorganizeMode.ai, order: ['d1', 'd2']),
         throwsA(anything),
       );
     });

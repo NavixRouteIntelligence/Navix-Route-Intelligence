@@ -4,7 +4,8 @@ import 'package:navix_mobile/app/theme/app_theme.dart';
 import 'package:navix_mobile/core/ui/navix_kpi_card.dart';
 
 void main() {
-  testWidgets('NavixKpiCard renderiza rótulo, valor e variação com os tokens', (tester) async {
+  testWidgets('NavixKpiCard renderiza rótulo, valor e variação com os tokens',
+      (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.dark(),
@@ -28,7 +29,8 @@ void main() {
   // passava da célula e o Flutter pintava "BOTTOM OVERFLOWED BY 17 PIXELS"
   // por cima do dashboard da Empresa. Aqui a célula é apertada de propósito:
   // o valor tem de encolher em vez de estourar.
-  testWidgets('não estoura o layout numa célula apertada (com chip)', (tester) async {
+  testWidgets('não estoura o layout numa célula apertada (com chip)',
+      (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.dark(),

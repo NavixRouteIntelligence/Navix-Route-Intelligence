@@ -33,5 +33,6 @@ extension FailureL10n on Failure {
 
 /// Açúcar para o caso comum: `context.failureText(state.error!)`.
 extension FailureContextL10n on BuildContext {
-  String failureText(Failure failure) => failure.localizedMessage(AppLocalizations.of(this));
+  String failureText(Failure failure) =>
+      failure.localizedMessage(AppLocalizations.of(this));
 }

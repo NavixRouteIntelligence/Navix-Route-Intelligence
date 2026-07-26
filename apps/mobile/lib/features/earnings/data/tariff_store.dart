@@ -18,13 +18,15 @@ class TariffStore {
   static const _kPerKm = 'navix.tariff.perKm';
 
   Future<DriverTariff> read() async {
-    final perDelivery = double.tryParse(await _storage.read(key: _kPerDelivery) ?? '') ?? 0;
+    final perDelivery =
+        double.tryParse(await _storage.read(key: _kPerDelivery) ?? '') ?? 0;
     final perKm = double.tryParse(await _storage.read(key: _kPerKm) ?? '') ?? 0;
     return DriverTariff(perDelivery: perDelivery, perKm: perKm);
   }
 
   Future<void> save(DriverTariff tariff) async {
-    await _storage.write(key: _kPerDelivery, value: tariff.perDelivery.toString());
+    await _storage.write(
+        key: _kPerDelivery, value: tariff.perDelivery.toString());
     await _storage.write(key: _kPerKm, value: tariff.perKm.toString());
   }
 }

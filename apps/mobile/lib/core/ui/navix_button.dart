@@ -30,7 +30,10 @@ class NavixButton extends StatelessWidget {
         : Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (icon != null) ...[Icon(icon, size: 18), const SizedBox(width: 8)],
+              if (icon != null) ...[
+                Icon(icon, size: 18),
+                const SizedBox(width: 8)
+              ],
               Text(label),
             ],
           );
@@ -38,8 +41,10 @@ class NavixButton extends StatelessWidget {
     final effectiveOnPressed = loading ? null : onPressed;
 
     return switch (variant) {
-      NavixButtonVariant.primary => FilledButton(onPressed: effectiveOnPressed, child: child),
-      NavixButtonVariant.outline => OutlinedButton(onPressed: effectiveOnPressed, child: child),
+      NavixButtonVariant.primary =>
+        FilledButton(onPressed: effectiveOnPressed, child: child),
+      NavixButtonVariant.outline =>
+        OutlinedButton(onPressed: effectiveOnPressed, child: child),
     };
   }
 }

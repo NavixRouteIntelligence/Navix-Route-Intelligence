@@ -21,13 +21,15 @@ class IntelligenceRepository {
     String? vehicleType,
   }) async {
     try {
-      final forecast = await _dio.post<dynamic>('/intelligence/route-forecast', data: {
+      final forecast =
+          await _dio.post<dynamic>('/intelligence/route-forecast', data: {
         'stops': [
           {'id': id, 'latitude': latitude, 'longitude': longitude},
         ],
         if (vehicleType != null) 'vehicleType': vehicleType,
       });
-      final insight = await _dio.get<dynamic>('/intelligence/insights', queryParameters: {
+      final insight =
+          await _dio.get<dynamic>('/intelligence/insights', queryParameters: {
         'latitude': latitude,
         'longitude': longitude,
       });
@@ -70,9 +72,11 @@ class IntelligenceRepository {
       });
 
   /// Classifica a intenção de um comando falado (transcrição do STT).
-  Future<VoiceCommand> interpretVoice(String transcript, {String? locale}) async {
+  Future<VoiceCommand> interpretVoice(String transcript,
+      {String? locale}) async {
     try {
-      final res = await _dio.post<dynamic>('/intelligence/voice-command', data: {
+      final res =
+          await _dio.post<dynamic>('/intelligence/voice-command', data: {
         'transcript': transcript,
         if (locale != null) 'locale': locale,
       });
@@ -81,8 +85,9 @@ class IntelligenceRepository {
       return VoiceCommand(
         intent: (data['intent'] as String?) ?? 'unknown',
         confidence: (data['confidence'] as num?)?.toDouble() ?? 0,
-        parkingDifficulty:
-            slots is Map<String, dynamic> ? slots['parkingDifficulty'] as String? : null,
+        parkingDifficulty: slots is Map<String, dynamic>
+            ? slots['parkingDifficulty'] as String?
+            : null,
       );
     } on DioException catch (e) {
       throw mapDioException(e);
@@ -98,7 +103,8 @@ class IntelligenceRepository {
   }
 
   Map<String, dynamic> _data(Response<dynamic> res) =>
-      res.data is Map<String, dynamic> && (res.data as Map)['data'] is Map<String, dynamic>
+      res.data is Map<String, dynamic> &&
+              (res.data as Map)['data'] is Map<String, dynamic>
           ? (res.data as Map<String, dynamic>)['data'] as Map<String, dynamic>
           : const {};
 
@@ -106,7 +112,9 @@ class IntelligenceRepository {
     final data = _data(res);
     final schedule = data['schedule'];
     final stops = schedule is Map<String, dynamic> ? schedule['stops'] : null;
-    if (stops is List && stops.isNotEmpty && stops.first is Map<String, dynamic>) {
+    if (stops is List &&
+        stops.isNotEmpty &&
+        stops.first is Map<String, dynamic>) {
       return stops.first as Map<String, dynamic>;
     }
     return null;
@@ -138,9 +146,11 @@ class IntelligenceRepository {
     final tips = data['accessTips'];
     return CollectiveInsight(
       sampleSize: (data['sampleSize'] as num?)?.toInt() ?? 0,
-      parkingDifficulty:
-          parking is Map<String, dynamic> ? parking['difficulty'] as String? : null,
-      typicalServiceMinutes: (data['typicalServiceMinutes'] as num?)?.toDouble(),
+      parkingDifficulty: parking is Map<String, dynamic>
+          ? parking['difficulty'] as String?
+          : null,
+      typicalServiceMinutes:
+          (data['typicalServiceMinutes'] as num?)?.toDouble(),
       accessTips: tips is List ? tips.whereType<String>().toList() : const [],
     );
   }

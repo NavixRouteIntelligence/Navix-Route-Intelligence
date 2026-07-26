@@ -43,7 +43,9 @@ class SessionCubit extends Cubit<SessionState> {
     }
     try {
       final user = await _repository.restore();
-      emit(user == null ? const SessionState.unauthenticated() : _authenticated(user));
+      emit(user == null
+          ? const SessionState.unauthenticated()
+          : _authenticated(user));
     } catch (e) {
       _logger.warning('Falha ao restaurar sessão', e);
       emit(const SessionState.unauthenticated());
@@ -76,7 +78,8 @@ class SessionCubit extends Cubit<SessionState> {
 
   Future<bool> isBiometricAvailable() => _biometric.isAvailable();
 
-  Future<void> setBiometricEnabled(bool enabled) => _store.setBiometricEnabled(enabled);
+  Future<void> setBiometricEnabled(bool enabled) =>
+      _store.setBiometricEnabled(enabled);
 
   SessionState _authenticated(AuthUser user) => SessionState(
         status: SessionStatus.authenticated,

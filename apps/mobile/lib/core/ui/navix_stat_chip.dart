@@ -22,11 +22,13 @@ class NavixStatChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(positive ? Icons.arrow_upward : Icons.arrow_downward, size: 11, color: color),
+          Icon(positive ? Icons.arrow_upward : Icons.arrow_downward,
+              size: 11, color: color),
           const SizedBox(width: 3),
           Text(
             label,
-            style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600),
+            style: TextStyle(
+                color: color, fontSize: 11, fontWeight: FontWeight.w600),
           ),
         ],
       ),

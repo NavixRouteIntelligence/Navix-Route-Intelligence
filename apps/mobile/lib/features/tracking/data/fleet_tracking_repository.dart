@@ -12,16 +12,23 @@ class FleetTrackingRepository {
 
   Future<FleetSnapshot> loadFleet() async {
     try {
-      final positions = _list(await _dio.get<dynamic>('/tracking/positions/latest'));
+      final positions =
+          _list(await _dio.get<dynamic>('/tracking/positions/latest'));
       // `/fleet/drivers`, não `/drivers`: sem o prefixo a API devolve 404 e a
       // tela de Rastreamento da frota não carrega.
       //
       // pageSize 100 é o teto do DTO (`@Max(100)` em list-query.dto.ts); pedir
       // 200 era rejeitado com 400 e derrubava a tela do mesmo jeito.
-      final drivers = _items(await _dio.get<dynamic>('/fleet/drivers', queryParameters: {'pageSize': 100}));
+      final drivers = _items(await _dio
+          .get<dynamic>('/fleet/drivers', queryParameters: {'pageSize': 100}));
 
-      final names = {for (final d in drivers) (d['id'] as String? ?? ''): (d['name'] as String? ?? 'Motorista')};
-      final byId = {for (final p in positions) (p['driverId'] as String? ?? ''): p};
+      final names = {
+        for (final d in drivers)
+          (d['id'] as String? ?? ''): (d['name'] as String? ?? 'Motorista')
+      };
+      final byId = {
+        for (final p in positions) (p['driverId'] as String? ?? ''): p
+      };
 
       final result = <TrackedDriver>[];
       // Motoristas cadastrados, com a posição mais recente quando houver.
@@ -47,14 +54,18 @@ class FleetTrackingRepository {
 
   Future<List<TrackPoint>> loadHistory(String driverId) async {
     try {
-      final res = await _dio.get<dynamic>('/tracking/drivers/$driverId/history');
-      final data = res.data is Map<String, dynamic> ? res.data as Map<String, dynamic> : const {};
+      final res =
+          await _dio.get<dynamic>('/tracking/drivers/$driverId/history');
+      final data = res.data is Map<String, dynamic>
+          ? res.data as Map<String, dynamic>
+          : const {};
       final points = data['points'];
       if (points is! List) return const [];
       return points.whereType<Map<String, dynamic>>().map((p) {
         final speed = (p['speed'] as num?)?.toDouble();
         return TrackPoint(
-          recordedAt: DateTime.tryParse((p['recordedAt'] as String?) ?? '') ?? DateTime.now(),
+          recordedAt: DateTime.tryParse((p['recordedAt'] as String?) ?? '') ??
+              DateTime.now(),
           status: trackStatusFrom(p['status'] as String?, speedKmh: speed),
           speedKmh: speed,
         );
@@ -88,12 +99,20 @@ class FleetTrackingRepository {
       };
 
   List<Map<String, dynamic>> _list(Response<dynamic> res) {
-    final data = res.data is Map<String, dynamic> ? (res.data as Map<String, dynamic>)['data'] : null;
-    return data is List ? data.whereType<Map<String, dynamic>>().toList() : const [];
+    final data = res.data is Map<String, dynamic>
+        ? (res.data as Map<String, dynamic>)['data']
+        : null;
+    return data is List
+        ? data.whereType<Map<String, dynamic>>().toList()
+        : const [];
   }
 
   List<Map<String, dynamic>> _items(Response<dynamic> res) {
-    final data = res.data is Map<String, dynamic> ? (res.data as Map<String, dynamic>)['data'] : null;
-    return data is List ? data.whereType<Map<String, dynamic>>().toList() : const [];
+    final data = res.data is Map<String, dynamic>
+        ? (res.data as Map<String, dynamic>)['data']
+        : null;
+    return data is List
+        ? data.whereType<Map<String, dynamic>>().toList()
+        : const [];
   }
 }

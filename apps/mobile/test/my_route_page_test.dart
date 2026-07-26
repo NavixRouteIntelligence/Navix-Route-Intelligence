@@ -67,15 +67,26 @@ class _FakeApi extends Interceptor {
             'data': [
               {
                 'id': 'd1',
-                'address': {'street': 'Rua Alfa', 'number': '10', 'city': 'Lisboa', 'state': 'LX'},
+                'address': {
+                  'street': 'Rua Alfa',
+                  'number': '10',
+                  'city': 'Lisboa',
+                  'state': 'LX'
+                },
               },
               {
                 'id': 'd2',
-                'address': {'street': 'Rua Beta', 'number': '20', 'city': 'Porto', 'state': 'PT'},
+                'address': {
+                  'street': 'Rua Beta',
+                  'number': '20',
+                  'city': 'Porto',
+                  'state': 'PT'
+                },
               },
             ],
           };
-    handler.resolve(Response(requestOptions: options, statusCode: 200, data: body));
+    handler.resolve(
+        Response(requestOptions: options, statusCode: 200, data: body));
   }
 }
 
@@ -88,25 +99,32 @@ Widget host() => MaterialApp(
 
 void main() {
   setUp(() {
-    final dio = Dio(BaseOptions(baseUrl: 'http://localhost'))..interceptors.add(_FakeApi());
+    final dio = Dio(BaseOptions(baseUrl: 'http://localhost'))
+      ..interceptors.add(_FakeApi());
     final conn = _MockConn();
-    when(() => conn.onlineChanges).thenAnswer((_) => const Stream<bool>.empty());
+    when(() => conn.onlineChanges)
+        .thenAnswer((_) => const Stream<bool>.empty());
     GetIt.instance
-      ..registerFactory<MyRouteCubit>(() => MyRouteCubit(MyRouteRepository(dio)))
-      ..registerFactory<VoiceAssistantCubit>(() => VoiceAssistantCubit(_FakeSpeech(), _MockIntel()))
-      ..registerSingleton<PodSyncCubit>(PodSyncCubit(_MockPodRepo(), _MockQueue(), conn));
+      ..registerFactory<MyRouteCubit>(
+          () => MyRouteCubit(MyRouteRepository(dio)))
+      ..registerFactory<VoiceAssistantCubit>(
+          () => VoiceAssistantCubit(_FakeSpeech(), _MockIntel()))
+      ..registerSingleton<PodSyncCubit>(
+          PodSyncCubit(_MockPodRepo(), _MockQueue(), conn));
   });
 
   tearDown(() => GetIt.instance.reset());
 
-  CrossFadeState fadeState(WidgetTester tester) =>
-      tester.widget<AnimatedCrossFade>(find.byType(AnimatedCrossFade)).crossFadeState;
+  CrossFadeState fadeState(WidgetTester tester) => tester
+      .widget<AnimatedCrossFade>(find.byType(AnimatedCrossFade))
+      .crossFadeState;
 
   // O grupo fica abaixo do resumo e do painel da IA; a ListView é lazy, então
   // o teste rola até ele antes de asseverar (locale padrão do ambiente é en).
   Future<Finder> scrollToGroup(WidgetTester tester) async {
     final group = find.text('Commerce');
-    await tester.scrollUntilVisible(group, 200, scrollable: find.byType(Scrollable).first);
+    await tester.scrollUntilVisible(group, 200,
+        scrollable: find.byType(Scrollable).first);
     await tester.pumpAndSettle();
     return group;
   }
@@ -119,7 +137,8 @@ void main() {
     expect(await scrollToGroup(tester), findsOneWidget);
   });
 
-  testWidgets('tocar no grupo expande e recolhe a lista de paradas', (tester) async {
+  testWidgets('tocar no grupo expande e recolhe a lista de paradas',
+      (tester) async {
     await tester.pumpWidget(host());
     await tester.pumpAndSettle();
     await scrollToGroup(tester);
@@ -138,15 +157,19 @@ void main() {
     expect(fadeState(tester), CrossFadeState.showFirst);
   });
 
-  testWidgets('a barra de registrar entrega aparece habilitada quando há pendente', (tester) async {
+  testWidgets(
+      'a barra de registrar entrega aparece habilitada quando há pendente',
+      (tester) async {
     await tester.pumpWidget(host());
     await tester.pumpAndSettle();
 
-    final button = tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Register delivery'));
+    final button = tester.widget<FilledButton>(
+        find.widgetWithText(FilledButton, 'Register delivery'));
     expect(button.onPressed, isNotNull);
   });
 
-  testWidgets('a ação de reorganizar abre o sheet com IA (padrão) e Manual', (tester) async {
+  testWidgets('a ação de reorganizar abre o sheet com IA (padrão) e Manual',
+      (tester) async {
     await tester.pumpWidget(host());
     await tester.pumpAndSettle();
 

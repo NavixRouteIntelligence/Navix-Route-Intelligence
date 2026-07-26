@@ -14,7 +14,8 @@ class MaintenanceVehicle extends Equatable {
   final String type;
   final int? odometerKm;
 
-  factory MaintenanceVehicle.fromJson(Map<String, dynamic> j) => MaintenanceVehicle(
+  factory MaintenanceVehicle.fromJson(Map<String, dynamic> j) =>
+      MaintenanceVehicle(
         id: (j['id'] as String?) ?? '',
         plate: (j['plate'] as String?) ?? '',
         type: (j['type'] as String?) ?? 'car',
@@ -47,7 +48,8 @@ class MaintenanceRecord extends Equatable {
   final String? nextDueDate;
   final int? nextDueOdometerKm;
 
-  factory MaintenanceRecord.fromJson(Map<String, dynamic> j) => MaintenanceRecord(
+  factory MaintenanceRecord.fromJson(Map<String, dynamic> j) =>
+      MaintenanceRecord(
         id: (j['id'] as String?) ?? '',
         type: (j['type'] as String?) ?? 'other',
         performedAt: (j['performedAt'] as String?) ?? '',
@@ -59,8 +61,16 @@ class MaintenanceRecord extends Equatable {
       );
 
   @override
-  List<Object?> get props =>
-      [id, type, performedAt, odometerKm, cost, notes, nextDueDate, nextDueOdometerKm];
+  List<Object?> get props => [
+        id,
+        type,
+        performedAt,
+        odometerKm,
+        cost,
+        notes,
+        nextDueDate,
+        nextDueOdometerKm
+      ];
 }
 
 /// Lembrete de vencimento derivado no backend. `status` ∈ overdue/due_soon/ok.
@@ -84,7 +94,8 @@ class MaintenanceReminder extends Equatable {
   bool get isOverdue => status == 'overdue';
   bool get isDueSoon => status == 'due_soon';
 
-  factory MaintenanceReminder.fromJson(Map<String, dynamic> j) => MaintenanceReminder(
+  factory MaintenanceReminder.fromJson(Map<String, dynamic> j) =>
+      MaintenanceReminder(
         type: (j['type'] as String?) ?? 'other',
         status: (j['status'] as String?) ?? 'ok',
         remainingDays: (j['remainingDays'] as num?)?.toInt(),
@@ -94,7 +105,8 @@ class MaintenanceReminder extends Equatable {
       );
 
   @override
-  List<Object?> get props => [type, status, remainingDays, remainingKm, dueDate, dueOdometerKm];
+  List<Object?> get props =>
+      [type, status, remainingDays, remainingKm, dueDate, dueOdometerKm];
 }
 
 /// Payload para criar um registro de manutenção.

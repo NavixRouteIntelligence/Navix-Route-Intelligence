@@ -14,7 +14,8 @@ class AppErrorHandler {
   /// zona protegida por `runZonedGuarded`.
   void install() {
     FlutterError.onError = (FlutterErrorDetails details) {
-      _logger.error('FlutterError: ${details.exceptionAsString()}', details.exception, details.stack);
+      _logger.error('FlutterError: ${details.exceptionAsString()}',
+          details.exception, details.stack);
       // Sem isto o stack trace NUNCA chega ao console: substituir onError
       // desliga a apresentação padrão do Flutter, e um crash de árvore vira uma
       // tela cinza sem diagnóstico. Fora de release, sempre apresentar.
@@ -29,7 +30,8 @@ class AppErrorHandler {
 
     // Substitui a tela vermelha por um placeholder discreto.
     ErrorWidget.builder = (FlutterErrorDetails details) => _FriendlyErrorWidget(
-          message: kReleaseMode ? 'Algo deu errado.' : details.exceptionAsString(),
+          message:
+              kReleaseMode ? 'Algo deu errado.' : details.exceptionAsString(),
         );
   }
 

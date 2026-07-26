@@ -42,13 +42,18 @@ class RouteGroup extends Equatable {
         type: (j['type'] as String?) ?? 'other',
         order: (j['order'] as num?)?.toInt() ?? 0,
         stops: (j['stops'] as num?)?.toInt() ?? 0,
-        sequences: (j['sequences'] as List?)?.whereType<num>().map((n) => n.toInt()).toList() ?? const [],
+        sequences: (j['sequences'] as List?)
+                ?.whereType<num>()
+                .map((n) => n.toInt())
+                .toList() ??
+            const [],
         distanceKm: (j['distanceKm'] as num?)?.toDouble() ?? 0,
         timeMinutes: (j['timeMinutes'] as num?)?.toDouble() ?? 0,
       );
 
   @override
-  List<Object?> get props => [type, order, stops, sequences, distanceKm, timeMinutes];
+  List<Object?> get props =>
+      [type, order, stops, sequences, distanceKm, timeMinutes];
 }
 
 /// Uma parada da rota, com o endereço já resolvido para exibição.
@@ -68,7 +73,8 @@ class RouteStopInfo extends Equatable {
   final double etaMinutes;
 
   @override
-  List<Object?> get props => [sequence, deliveryId, addressLine, cityLine, etaMinutes];
+  List<Object?> get props =>
+      [sequence, deliveryId, addressLine, cityLine, etaMinutes];
 }
 
 /// A próxima entrega a registrar — a parada pendente mais à frente na rota.
@@ -129,6 +135,16 @@ class MyRoute extends Equatable {
   }
 
   @override
-  List<Object?> get props =>
-      [status, totalStops, distanceKm, timeMinutes, savedKm, savedPct, updatedAt, groups, stops, next];
+  List<Object?> get props => [
+        status,
+        totalStops,
+        distanceKm,
+        timeMinutes,
+        savedKm,
+        savedPct,
+        updatedAt,
+        groups,
+        stops,
+        next
+      ];
 }

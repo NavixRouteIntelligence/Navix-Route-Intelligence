@@ -27,7 +27,8 @@ class StoredUser {
         id: json['id'] as String,
         tenantId: json['tenantId'] as String,
         email: json['email'] as String,
-        roles: (json['roles'] as List<dynamic>).map((e) => e as String).toList(),
+        roles:
+            (json['roles'] as List<dynamic>).map((e) => e as String).toList(),
       );
 }
 
@@ -59,7 +60,8 @@ class SecureSessionStore {
     await _storage.write(key: _kUser, value: jsonEncode(user.toJson()));
   }
 
-  Future<void> updateTokens({required String accessToken, required String refreshToken}) async {
+  Future<void> updateTokens(
+      {required String accessToken, required String refreshToken}) async {
     await _storage.write(key: _kAccess, value: accessToken);
     await _storage.write(key: _kRefresh, value: refreshToken);
   }
@@ -73,23 +75,28 @@ class SecureSessionStore {
     return StoredUser.fromJson(jsonDecode(raw) as Map<String, dynamic>);
   }
 
-  Future<bool> hasSession() async => (await _storage.read(key: _kRefresh)) != null;
+  Future<bool> hasSession() async =>
+      (await _storage.read(key: _kRefresh)) != null;
 
   Future<void> setBiometricEnabled(bool enabled) =>
       _storage.write(key: _kBiometric, value: enabled ? '1' : '0');
 
-  Future<bool> isBiometricEnabled() async => (await _storage.read(key: _kBiometric)) == '1';
+  Future<bool> isBiometricEnabled() async =>
+      (await _storage.read(key: _kBiometric)) == '1';
 
   /// "Manter conectado" — quando desligado, a sessão não é restaurada no início.
   Future<void> setKeepConnected(bool value) =>
       _storage.write(key: _kKeepConnected, value: value ? '1' : '0');
 
-  Future<bool> isKeepConnected() async => (await _storage.read(key: _kKeepConnected)) != '0';
+  Future<bool> isKeepConnected() async =>
+      (await _storage.read(key: _kKeepConnected)) != '0';
 
   /// Tema: 'dark' (padrão), 'light' ou 'system'.
-  Future<void> setThemeName(String value) => _storage.write(key: _kTheme, value: value);
+  Future<void> setThemeName(String value) =>
+      _storage.write(key: _kTheme, value: value);
 
-  Future<String> readThemeName() async => (await _storage.read(key: _kTheme)) ?? 'dark';
+  Future<String> readThemeName() async =>
+      (await _storage.read(key: _kTheme)) ?? 'dark';
 
   Future<void> clear() async {
     await _storage.delete(key: _kAccess);

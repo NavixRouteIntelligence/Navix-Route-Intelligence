@@ -9,7 +9,8 @@ import 'package:flutter/material.dart';
 /// sobre um elemento já desativado — "Looking up a deactivated widget's
 /// ancestor is unsafe" — derrubando a árvore inteira do app.
 class NavixPulseDot extends StatefulWidget {
-  const NavixPulseDot({required this.color, required this.animate, this.size = 8, super.key});
+  const NavixPulseDot(
+      {required this.color, required this.animate, this.size = 8, super.key});
 
   final Color color;
   final bool animate;
@@ -19,13 +20,15 @@ class NavixPulseDot extends StatefulWidget {
   State<NavixPulseDot> createState() => _NavixPulseDotState();
 }
 
-class _NavixPulseDotState extends State<NavixPulseDot> with SingleTickerProviderStateMixin {
+class _NavixPulseDotState extends State<NavixPulseDot>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _c;
 
   @override
   void initState() {
     super.initState();
-    _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 1600));
+    _c = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 1600));
     if (widget.animate) _c.repeat();
   }
 
@@ -59,17 +62,22 @@ class _NavixPulseDotState extends State<NavixPulseDot> with SingleTickerProvider
       builder: (context, child) => SizedBox(
         width: size,
         height: size,
-        child: Stack(alignment: Alignment.center, clipBehavior: Clip.none, children: [
-          Opacity(
-            opacity: (1 - _c.value) * 0.6,
-            child: Container(
-              width: size + _c.value * (size + 2),
-              height: size + _c.value * (size + 2),
-              decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: widget.color)),
-            ),
-          ),
-          child!,
-        ]),
+        child: Stack(
+            alignment: Alignment.center,
+            clipBehavior: Clip.none,
+            children: [
+              Opacity(
+                opacity: (1 - _c.value) * 0.6,
+                child: Container(
+                  width: size + _c.value * (size + 2),
+                  height: size + _c.value * (size + 2),
+                  decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: widget.color)),
+                ),
+              ),
+              child!,
+            ]),
       ),
       child: dot,
     );

@@ -50,13 +50,16 @@ class _RegisterPageState extends State<RegisterPage> {
           name: _name.text.trim(),
           email: _email.text.trim(),
           password: _password.text,
-          organizationName: _type == AccountType.company ? _company.text.trim() : null,
+          organizationName:
+              _type == AccountType.company ? _company.text.trim() : null,
         ),
       );
     } on Failure catch (f) {
       if (mounted) setState(() => _error = context.failureText(f));
     } catch (_) {
-      if (mounted) setState(() => _error = AppLocalizations.of(context).errorUnknown);
+      if (mounted) {
+        setState(() => _error = AppLocalizations.of(context).errorUnknown);
+      }
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -78,7 +81,8 @@ class _RegisterPageState extends State<RegisterPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(l10n.registerSubtitle, style: Theme.of(context).textTheme.bodyMedium),
+                    Text(l10n.registerSubtitle,
+                        style: Theme.of(context).textTheme.bodyMedium),
                     const SizedBox(height: 16),
                     _TypeSelector(
                       value: _type,
@@ -90,15 +94,19 @@ class _RegisterPageState extends State<RegisterPage> {
                     TextFormField(
                       controller: _name,
                       decoration: InputDecoration(labelText: l10n.fieldName),
-                      validator: (v) => (v == null || v.trim().length < 2) ? '—' : null,
+                      validator: (v) =>
+                          (v == null || v.trim().length < 2) ? '—' : null,
                     ),
                     if (_type == AccountType.company) ...[
                       const SizedBox(height: 12),
                       TextFormField(
                         controller: _company,
-                        decoration: InputDecoration(labelText: l10n.fieldCompanyName),
-                        validator: (v) =>
-                            (_type == AccountType.company && (v == null || v.trim().length < 2)) ? '—' : null,
+                        decoration:
+                            InputDecoration(labelText: l10n.fieldCompanyName),
+                        validator: (v) => (_type == AccountType.company &&
+                                (v == null || v.trim().length < 2))
+                            ? '—'
+                            : null,
                       ),
                     ],
                     const SizedBox(height: 12),
@@ -106,21 +114,29 @@ class _RegisterPageState extends State<RegisterPage> {
                       controller: _email,
                       keyboardType: TextInputType.emailAddress,
                       decoration: InputDecoration(labelText: l10n.fieldEmail),
-                      validator: (v) => (v == null || !v.contains('@')) ? '—' : null,
+                      validator: (v) =>
+                          (v == null || !v.contains('@')) ? '—' : null,
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
                       controller: _password,
                       obscureText: true,
-                      decoration: InputDecoration(labelText: l10n.fieldPassword),
-                      validator: (v) => (v == null || v.length < 8) ? '—' : null,
+                      decoration:
+                          InputDecoration(labelText: l10n.fieldPassword),
+                      validator: (v) =>
+                          (v == null || v.length < 8) ? '—' : null,
                     ),
                     if (_error != null) ...[
                       const SizedBox(height: 8),
-                      Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                      Text(_error!,
+                          style: TextStyle(
+                              color: Theme.of(context).colorScheme.error)),
                     ],
                     const SizedBox(height: 16),
-                    NavixButton(label: l10n.createAccount, loading: _submitting, onPressed: _submit),
+                    NavixButton(
+                        label: l10n.createAccount,
+                        loading: _submitting,
+                        onPressed: _submit),
                     const SizedBox(height: 8),
                     TextButton(
                       onPressed: () => context.pop(),
@@ -177,7 +193,11 @@ class _TypeSelector extends StatelessWidget {
 }
 
 class _Option extends StatelessWidget {
-  const _Option({required this.icon, required this.label, required this.selected, required this.onTap});
+  const _Option(
+      {required this.icon,
+      required this.label,
+      required this.selected,
+      required this.onTap});
 
   final IconData icon;
   final String label;
@@ -194,13 +214,18 @@ class _Option extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: selected ? scheme.primary : scheme.outlineVariant, width: selected ? 2 : 1),
+          border: Border.all(
+              color: selected ? scheme.primary : scheme.outlineVariant,
+              width: selected ? 2 : 1),
         ),
         child: Column(
           children: [
-            Icon(icon, color: selected ? scheme.primary : scheme.onSurfaceVariant),
+            Icon(icon,
+                color: selected ? scheme.primary : scheme.onSurfaceVariant),
             const SizedBox(height: 8),
-            Text(label, textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodySmall),
+            Text(label,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodySmall),
           ],
         ),
       ),

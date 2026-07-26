@@ -9,7 +9,8 @@ class TrackingRepository {
 
   final Dio _dio;
 
-  Future<void> sendPosition(LocationSample sample, {String status = 'en_route'}) async {
+  Future<void> sendPosition(LocationSample sample,
+      {String status = 'en_route'}) async {
     try {
       await _dio.post<dynamic>('/tracking/positions', data: {
         'latitude': sample.latitude,

@@ -15,7 +15,8 @@ class _MockConn extends Mock implements ConnectivityService {}
 QueuedPod _q(String id) => QueuedPod(
       id: id,
       createdAt: DateTime(2026, 7, 10),
-      submission: PodSubmission(deliveryId: 'd-$id', status: 'delivered', label: 'Cliente $id'),
+      submission: PodSubmission(
+          deliveryId: 'd-$id', status: 'delivered', label: 'Cliente $id'),
     );
 
 void main() {
@@ -23,13 +24,16 @@ void main() {
   late _MockQueue queue;
   late _MockConn conn;
 
-  setUpAll(() => registerFallbackValue(const PodSubmission(deliveryId: 'x', status: 'delivered')));
+  setUpAll(() => registerFallbackValue(
+      const PodSubmission(deliveryId: 'x', status: 'delivered')));
 
   setUp(() {
     repo = _MockRepo();
     queue = _MockQueue();
     conn = _MockConn();
-    when(() => conn.onlineChanges).thenAnswer((_) => const Stream<bool>.empty());
+    when(() => conn.onlineChanges)
+        .thenAnswer((_) => const Stream<bool>.empty());
+    when(() => repo.hasRegisteredPod(any())).thenAnswer((_) async => false);
   });
 
   test('syncNow: envia pendentes e remove os enviados', () async {
@@ -64,10 +68,33 @@ void main() {
     await cubit.close();
   });
 
+  test('syncNow: descarta duplicado confirmado e continua a fila', () async {
+    var items = [_q('1'), _q('2')];
+    when(() => queue.all()).thenAnswer((_) async => items);
+    when(() => queue.count()).thenAnswer((_) async => items.length);
+    when(() => repo.submit(any())).thenAnswer((invocation) async {
+      final pod = invocation.positionalArguments.first as PodSubmission;
+      if (pod.deliveryId == 'd-1') throw const ValidationFailure();
+    });
+    when(() => repo.hasRegisteredPod('d-1')).thenAnswer((_) async => true);
+    when(() => queue.remove(any())).thenAnswer((invocation) async {
+      final id = invocation.positionalArguments.first as String;
+      items = items.where((item) => item.id != id).toList();
+    });
+
+    final cubit = PodSyncCubit(repo, queue, conn);
+    await cubit.syncNow();
+
+    expect(cubit.state.pending, 0);
+    verify(() => repo.submit(any())).called(2);
+    await cubit.close();
+  });
+
   test('init: define online e conta pendentes', () async {
     when(() => conn.isOnline()).thenAnswer((_) async => false);
     when(() => queue.count()).thenAnswer((_) async => 3);
-    when(() => queue.all()).thenAnswer((_) async => [_q('1'), _q('2'), _q('3')]);
+    when(() => queue.all())
+        .thenAnswer((_) async => [_q('1'), _q('2'), _q('3')]);
 
     final cubit = PodSyncCubit(repo, queue, conn);
     await cubit.init();

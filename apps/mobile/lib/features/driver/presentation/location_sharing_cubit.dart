@@ -8,14 +8,20 @@ import '../../../core/location/location_service.dart';
 import '../data/tracking_repository.dart';
 
 class LocationSharingState extends Equatable {
-  const LocationSharingState({this.sharing = false, this.busy = false, this.error, this.lastSentAt});
+  const LocationSharingState(
+      {this.sharing = false, this.busy = false, this.error, this.lastSentAt});
 
   final bool sharing;
   final bool busy;
   final Failure? error;
   final DateTime? lastSentAt;
 
-  LocationSharingState copyWith({bool? sharing, bool? busy, Failure? error, DateTime? lastSentAt, bool clearError = false}) {
+  LocationSharingState copyWith(
+      {bool? sharing,
+      bool? busy,
+      Failure? error,
+      DateTime? lastSentAt,
+      bool clearError = false}) {
     return LocationSharingState(
       sharing: sharing ?? this.sharing,
       busy: busy ?? this.busy,
@@ -31,7 +37,8 @@ class LocationSharingState extends Equatable {
 /// Controla o compartilhamento de posição em tempo real: obtém a localização e
 /// envia periodicamente ao backend enquanto ativo.
 class LocationSharingCubit extends Cubit<LocationSharingState> {
-  LocationSharingCubit(this._location, this._tracking, {Duration interval = const Duration(seconds: 10)})
+  LocationSharingCubit(this._location, this._tracking,
+      {Duration interval = const Duration(seconds: 10)})
       : _interval = interval,
         super(const LocationSharingState());
 
@@ -45,7 +52,8 @@ class LocationSharingCubit extends Cubit<LocationSharingState> {
     emit(state.copyWith(busy: true, clearError: true));
     try {
       await _sendOnce();
-      emit(state.copyWith(sharing: true, busy: false, lastSentAt: DateTime.now()));
+      emit(state.copyWith(
+          sharing: true, busy: false, lastSentAt: DateTime.now()));
       _timer = Timer.periodic(_interval, (_) => _tick());
     } on LocationException catch (e) {
       emit(state.copyWith(busy: false, error: LocationFailure(e.reason)));

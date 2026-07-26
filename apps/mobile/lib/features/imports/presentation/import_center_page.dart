@@ -44,7 +44,9 @@ class _ImportView extends StatelessWidget {
               final dark = Theme.of(context).brightness == Brightness.dark;
               theme.setMode(dark ? ThemeMode.light : ThemeMode.dark);
             },
-            icon: Icon(Theme.of(context).brightness == Brightness.dark ? Icons.light_mode_outlined : Icons.dark_mode_outlined),
+            icon: Icon(Theme.of(context).brightness == Brightness.dark
+                ? Icons.light_mode_outlined
+                : Icons.dark_mode_outlined),
           ),
         ],
       ),
@@ -53,7 +55,8 @@ class _ImportView extends StatelessWidget {
         listener: (context, state) {
           ScaffoldMessenger.of(context)
             ..hideCurrentSnackBar()
-            ..showSnackBar(SnackBar(content: Text(context.failureText(state.error!))));
+            ..showSnackBar(
+                SnackBar(content: Text(context.failureText(state.error!))));
         },
         builder: (context, state) {
           final child = switch (state.step) {
@@ -89,7 +92,9 @@ class _UploadStep extends StatelessWidget {
     final path = file?.path;
     if (path == null) return;
     if (context.mounted) {
-      await context.read<ImportCubit>().pickAndPreview(path: path, filename: file!.name);
+      await context
+          .read<ImportCubit>()
+          .pickAndPreview(path: path, filename: file!.name);
     }
   }
 
@@ -123,9 +128,13 @@ class _UploadStep extends StatelessWidget {
                   ] else ...[
                     Icon(Icons.cloud_upload_outlined, size: 40, color: primary),
                     const SizedBox(height: 12),
-                    const Text('Toque para selecionar um arquivo', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                    const Text('Toque para selecionar um arquivo',
+                        style: TextStyle(
+                            fontSize: 15, fontWeight: FontWeight.w600)),
                     const SizedBox(height: 4),
-                    Text('Importe suas entregas de uma planilha ou PDF', textAlign: TextAlign.center, style: TextStyle(color: t.muted, fontSize: 12.5)),
+                    Text('Importe suas entregas de uma planilha ou PDF',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: t.muted, fontSize: 12.5)),
                   ],
                 ],
               ),
@@ -143,7 +152,8 @@ class _UploadStep extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 8),
-        Text('Até 5 MB · 1000 linhas por arquivo.', style: TextStyle(color: t.muted, fontSize: 11.5)),
+        Text('Até 5 MB · 1000 linhas por arquivo.',
+            style: TextStyle(color: t.muted, fontSize: 11.5)),
         const SizedBox(height: 24),
         const _HistorySection(),
       ],
@@ -174,9 +184,14 @@ class _PreviewStep extends StatelessWidget {
               const SizedBox(height: 16),
               Row(
                 children: [
-                  Icon(Icons.insert_drive_file_outlined, size: 18, color: t.muted),
+                  Icon(Icons.insert_drive_file_outlined,
+                      size: 18, color: t.muted),
                   const SizedBox(width: 8),
-                  Expanded(child: Text(preview.batch.filename, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w600))),
+                  Expanded(
+                      child: Text(preview.batch.filename,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontWeight: FontWeight.w600))),
                 ],
               ),
               const SizedBox(height: 12),
@@ -188,15 +203,29 @@ class _PreviewStep extends StatelessWidget {
                 mainAxisSpacing: 12,
                 childAspectRatio: 1.7,
                 children: [
-                  NavixKpiCard(icon: Icons.check_circle_outline, label: 'Válidas', value: '${s.valid}', iconColor: t.success),
-                  NavixKpiCard(icon: Icons.error_outline, label: 'Inválidas', value: '${s.invalid}', iconColor: t.danger),
-                  NavixKpiCard(icon: Icons.copy_all_outlined, label: 'Duplicadas', value: '${s.duplicates}', iconColor: t.warning),
+                  NavixKpiCard(
+                      icon: Icons.check_circle_outline,
+                      label: 'Válidas',
+                      value: '${s.valid}',
+                      iconColor: t.success),
+                  NavixKpiCard(
+                      icon: Icons.error_outline,
+                      label: 'Inválidas',
+                      value: '${s.invalid}',
+                      iconColor: t.danger),
+                  NavixKpiCard(
+                      icon: Icons.copy_all_outlined,
+                      label: 'Duplicadas',
+                      value: '${s.duplicates}',
+                      iconColor: t.warning),
                   NavixKpiCard(
                     icon: Icons.eco_outlined,
                     label: 'Economia estimada',
                     value: '${s.estimatedSavingsKm.toStringAsFixed(0)} km',
                     iconColor: t.accent,
-                    deltaLabel: s.estimatedSavingsPct > 0 ? '${s.estimatedSavingsPct.toStringAsFixed(0)}%' : null,
+                    deltaLabel: s.estimatedSavingsPct > 0
+                        ? '${s.estimatedSavingsPct.toStringAsFixed(0)}%'
+                        : null,
                   ),
                 ],
               ),
@@ -214,7 +243,8 @@ class _PreviewStep extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text('A rota é preparada automaticamente',
-                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                              style: TextStyle(
+                                  fontSize: 14, fontWeight: FontWeight.w600)),
                           const SizedBox(height: 2),
                           Text(
                             'Ao confirmar, a IA organiza as entregas e define a melhor sequência.',
@@ -227,11 +257,17 @@ class _PreviewStep extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
-              NavixSectionHeader(title: 'Linhas', icon: Icons.list_alt_outlined, trailing: Text('${preview.rows.length}', style: TextStyle(color: t.muted, fontSize: 12))),
+              NavixSectionHeader(
+                  title: 'Linhas',
+                  icon: Icons.list_alt_outlined,
+                  trailing: Text('${preview.rows.length}',
+                      style: TextStyle(color: t.muted, fontSize: 12))),
               ...preview.rows.take(50).map((r) => _RowTile(row: r)),
               if (preview.rows.length > 50) ...[
                 const SizedBox(height: 8),
-                Center(child: Text('+ ${preview.rows.length - 50} linhas', style: TextStyle(color: t.muted, fontSize: 12))),
+                Center(
+                    child: Text('+ ${preview.rows.length - 50} linhas',
+                        style: TextStyle(color: t.muted, fontSize: 12))),
               ],
             ],
           ),
@@ -264,17 +300,25 @@ class _RowTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  row.recipient?.isNotEmpty == true ? row.recipient! : 'Linha ${row.index + 1}',
-                  style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
+                  row.recipient?.isNotEmpty == true
+                      ? row.recipient!
+                      : 'Linha ${row.index + 1}',
+                  style: const TextStyle(
+                      fontSize: 13.5, fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 2),
-                Text(row.addressText.isEmpty ? '—' : row.addressText, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: t.muted, fontSize: 12)),
+                Text(row.addressText.isEmpty ? '—' : row.addressText,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: t.muted, fontSize: 12)),
                 if (row.errors.isNotEmpty) ...[
                   const SizedBox(height: 3),
-                  Text(row.errors.join(' · '), style: TextStyle(color: t.danger, fontSize: 11.5)),
+                  Text(row.errors.join(' · '),
+                      style: TextStyle(color: t.danger, fontSize: 11.5)),
                 ] else if (row.lowConfidence) ...[
                   const SizedBox(height: 3),
-                  Text('Baixa confiança (extraído de PDF)', style: TextStyle(color: t.warning, fontSize: 11.5)),
+                  Text('Baixa confiança (extraído de PDF)',
+                      style: TextStyle(color: t.warning, fontSize: 11.5)),
                 ],
               ],
             ),
@@ -297,24 +341,37 @@ class _PreviewActions extends StatelessWidget {
     final canConfirm = (state.preview?.batch.summary.valid ?? 0) > 0;
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
-      decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface, border: Border(top: BorderSide(color: t.line))),
+      decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          border: Border(top: BorderSide(color: t.line))),
       child: SafeArea(
         top: false,
         child: Row(
           children: [
             OutlinedButton(
-              onPressed: state.busy ? null : () => context.read<ImportCubit>().reset(),
-              style: OutlinedButton.styleFrom(minimumSize: const Size(0, 52), padding: const EdgeInsets.symmetric(horizontal: 20)),
+              onPressed:
+                  state.busy ? null : () => context.read<ImportCubit>().reset(),
+              style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(0, 52),
+                  padding: const EdgeInsets.symmetric(horizontal: 20)),
               child: const Text('Voltar'),
             ),
             const SizedBox(width: 10),
             Expanded(
               child: FilledButton(
-                onPressed: (state.busy || !canConfirm) ? null : () => context.read<ImportCubit>().confirm(),
+                onPressed: (state.busy || !canConfirm)
+                    ? null
+                    : () => context.read<ImportCubit>().confirm(),
                 style: FilledButton.styleFrom(minimumSize: const Size(0, 52)),
                 child: state.busy
-                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                    : Text('Confirmar ${state.preview?.batch.summary.valid ?? 0} entregas', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2))
+                    : Text(
+                        'Confirmar ${state.preview?.batch.summary.valid ?? 0} entregas',
+                        style: const TextStyle(
+                            fontSize: 15, fontWeight: FontWeight.w700)),
               ),
             ),
           ],
@@ -345,17 +402,25 @@ class _DoneStep extends StatelessWidget {
           child: Container(
             width: 72,
             height: 72,
-            decoration: BoxDecoration(color: t.success.withValues(alpha: 0.14), shape: BoxShape.circle),
+            decoration: BoxDecoration(
+                color: t.success.withValues(alpha: 0.14),
+                shape: BoxShape.circle),
             child: Icon(Icons.check_rounded, color: t.success, size: 40),
           ),
         ),
         const SizedBox(height: 16),
-        const Center(child: Text('Importação concluída', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700))),
+        const Center(
+            child: Text('Importação concluída',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700))),
         const SizedBox(height: 6),
-        Center(child: Text('${c?.createdDeliveries ?? 0} entrega(s) criada(s).', style: TextStyle(color: t.muted))),
+        Center(
+            child: Text('${c?.createdDeliveries ?? 0} entrega(s) criada(s).',
+                style: TextStyle(color: t.muted))),
         if (c?.routePlanId != null) ...[
           const SizedBox(height: 4),
-          Center(child: Text('Rota otimizada gerada.', style: TextStyle(color: t.accent, fontSize: 13))),
+          Center(
+              child: Text('Rota otimizada gerada.',
+                  style: TextStyle(color: t.accent, fontSize: 13))),
         ],
         const SizedBox(height: 24),
         FilledButton.icon(
@@ -382,16 +447,19 @@ class _HistorySection extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = context.tokens;
     return BlocBuilder<ImportCubit, ImportState>(
-      buildWhen: (p, c) => p.history != c.history || p.historyLoading != c.historyLoading,
+      buildWhen: (p, c) =>
+          p.history != c.history || p.historyLoading != c.historyLoading,
       builder: (context, state) {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const NavixSectionHeader(title: 'Histórico', icon: Icons.history_outlined),
+            const NavixSectionHeader(
+                title: 'Histórico', icon: Icons.history_outlined),
             if (state.historyLoading)
               const NavixCard(child: NavixSkeleton(height: 48))
             else if (state.history.isEmpty)
-              Text('Nenhuma importação ainda.', style: TextStyle(color: t.muted, fontSize: 13))
+              Text('Nenhuma importação ainda.',
+                  style: TextStyle(color: t.muted, fontSize: 13))
             else
               ...state.history.map((b) => _HistoryTile(batch: b)),
           ],
@@ -421,9 +489,15 @@ class _HistoryTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(batch.filename, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600)),
+                Text(batch.filename,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontSize: 13.5, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 2),
-                Text('${batch.summary.valid}/${batch.summary.total} válidas · ${batch.fileType.toUpperCase()}', style: TextStyle(color: t.muted, fontSize: 11.5)),
+                Text(
+                    '${batch.summary.valid}/${batch.summary.total} válidas · ${batch.fileType.toUpperCase()}',
+                    style: TextStyle(color: t.muted, fontSize: 11.5)),
               ],
             ),
           ),
@@ -451,23 +525,44 @@ class _StepBar extends StatelessWidget {
     return Row(
       children: [
         for (var i = 0; i < steps.length; i++) ...[
-          _dot(context, active: i <= idx, primary: primary, muted: t.surfaceAlt, label: '${i + 1}'),
+          _dot(context,
+              active: i <= idx,
+              primary: primary,
+              muted: t.surfaceAlt,
+              label: '${i + 1}'),
           const SizedBox(width: 6),
-          Text(steps[i].$2, style: TextStyle(fontSize: 12, fontWeight: i == idx ? FontWeight.w700 : FontWeight.w500, color: i <= idx ? primary : t.muted)),
+          Text(steps[i].$2,
+              style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: i == idx ? FontWeight.w700 : FontWeight.w500,
+                  color: i <= idx ? primary : t.muted)),
           if (i < steps.length - 1)
-            Expanded(child: Container(height: 2, margin: const EdgeInsets.symmetric(horizontal: 8), color: i < idx ? primary : t.line)),
+            Expanded(
+                child: Container(
+                    height: 2,
+                    margin: const EdgeInsets.symmetric(horizontal: 8),
+                    color: i < idx ? primary : t.line)),
         ],
       ],
     );
   }
 
-  Widget _dot(BuildContext context, {required bool active, required Color primary, required Color muted, required String label}) {
+  Widget _dot(BuildContext context,
+      {required bool active,
+      required Color primary,
+      required Color muted,
+      required String label}) {
     return Container(
       width: 22,
       height: 22,
       alignment: Alignment.center,
-      decoration: BoxDecoration(color: active ? primary : muted, shape: BoxShape.circle),
-      child: Text(label, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: active ? Colors.white : context.tokens.muted)),
+      decoration: BoxDecoration(
+          color: active ? primary : muted, shape: BoxShape.circle),
+      child: Text(label,
+          style: TextStyle(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w700,
+              color: active ? Colors.white : context.tokens.muted)),
     );
   }
 }
@@ -482,11 +577,16 @@ class _FormatChip extends StatelessWidget {
     final t = context.tokens;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(color: t.surfaceAlt, borderRadius: BorderRadius.circular(8), border: Border.all(color: t.line)),
+      decoration: BoxDecoration(
+          color: t.surfaceAlt,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: t.line)),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         Icon(icon, size: 15, color: t.muted),
         const SizedBox(width: 6),
-        Text(label, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500)),
+        Text(label,
+            style:
+                const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500)),
       ]),
     );
   }

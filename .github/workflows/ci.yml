@@ -63,6 +63,50 @@ jobs:
           if-no-files-found: ignore
 
   # ===========================================================================
+  # Base do CI do app do motorista. Mantém o Flutter fixado para que o mesmo
+  # SDK seja usado no Mac e em todas as execuções do GitHub Actions.
+  # Os gates de formatação, análise e testes entram no próximo item do NAV-3.
+  # ===========================================================================
+  mobile:
+    name: Mobile Flutter
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar Flutter 3.44.6
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.44.6
+          cache: true
+
+      - name: Confirmar versão do Flutter
+        run: flutter --version
+
+      - name: Instalar dependências do Mobile
+        run: flutter pub get
+
+      - name: Verificar formatação
+        run: dart format --output=none --set-exit-if-changed .
+
+      - name: Analisar código Flutter
+        run: flutter analyze
+
+      - name: Executar testes Flutter
+        run: flutter test --coverage
+
+      - name: Guardar cobertura do Mobile
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-mobile
+          path: apps/mobile/coverage/lcov.info
+          if-no-files-found: ignore
+
+  # ===========================================================================
   # Testes E2E da API contra Postgres + Redis reais.
   # ===========================================================================
   e2e:

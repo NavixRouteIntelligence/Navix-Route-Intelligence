@@ -22,11 +22,13 @@ class PlaceholderPage extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(icon, size: 40, color: Theme.of(context).colorScheme.primary),
+                Icon(icon,
+                    size: 40, color: Theme.of(context).colorScheme.primary),
                 const SizedBox(height: 12),
                 Text(title, style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: 4),
-                Text(l10n.comingSoon, style: Theme.of(context).textTheme.bodySmall),
+                Text(l10n.comingSoon,
+                    style: Theme.of(context).textTheme.bodySmall),
               ],
             ),
           ),

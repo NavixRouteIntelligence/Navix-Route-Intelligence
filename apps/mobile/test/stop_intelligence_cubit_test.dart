@@ -12,7 +12,8 @@ void main() {
   late _MockRepo repo;
 
   const data = StopIntelligence(
-    parking: ParkingPrediction(difficulty: 'hard', confidence: 0.8, walkMinutes: 5),
+    parking:
+        ParkingPrediction(difficulty: 'hard', confidence: 0.8, walkMinutes: 5),
     access: ['Entrar pela doca'],
     insight: CollectiveInsight(
       sampleSize: 6,
@@ -43,7 +44,8 @@ void main() {
     act: (c) => c.load(latitude: -23.55, longitude: -46.63),
     expect: () => [
       const StopIntelligenceState(status: StopIntelligenceStatus.loading),
-      const StopIntelligenceState(status: StopIntelligenceStatus.success, data: data),
+      const StopIntelligenceState(
+          status: StopIntelligenceStatus.success, data: data),
     ],
   );
 
@@ -61,7 +63,8 @@ void main() {
     act: (c) => c.load(latitude: 0, longitude: 0),
     expect: () => const [
       StopIntelligenceState(status: StopIntelligenceStatus.loading),
-      StopIntelligenceState(status: StopIntelligenceStatus.error, error: NetworkFailure()),
+      StopIntelligenceState(
+          status: StopIntelligenceStatus.error, error: NetworkFailure()),
     ],
   );
 }

@@ -32,10 +32,13 @@ class CollectiveInsight extends Equatable {
   final List<String> accessTips;
 
   bool get hasSignal =>
-      parkingDifficulty != null || typicalServiceMinutes != null || accessTips.isNotEmpty;
+      parkingDifficulty != null ||
+      typicalServiceMinutes != null ||
+      accessTips.isNotEmpty;
 
   @override
-  List<Object?> get props => [sampleSize, parkingDifficulty, typicalServiceMinutes, accessTips];
+  List<Object?> get props =>
+      [sampleSize, parkingDifficulty, typicalServiceMinutes, accessTips];
 }
 
 /// Inteligência da parada atual: previsão + acesso + coletiva (ADR-0028/0029/0031).

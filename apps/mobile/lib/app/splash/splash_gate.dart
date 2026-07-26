@@ -32,7 +32,8 @@ class SplashGate extends StatefulWidget {
   State<SplashGate> createState() => _SplashGateState();
 }
 
-class _SplashGateState extends State<SplashGate> with SingleTickerProviderStateMixin {
+class _SplashGateState extends State<SplashGate>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _exit;
   bool _storyDone = false;
 
@@ -79,7 +80,8 @@ class _SplashGateState extends State<SplashGate> with SingleTickerProviderStateM
             // O app entra crescendo de leve, como se a splash "abrisse" nele.
             Opacity(
               opacity: fade,
-              child: Transform.scale(scale: 0.985 + 0.015 * fade, child: widget.child),
+              child: Transform.scale(
+                  scale: 0.985 + 0.015 * fade, child: widget.child),
             ),
             IgnorePointer(
               child: Opacity(

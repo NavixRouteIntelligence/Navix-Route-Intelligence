@@ -31,10 +31,14 @@ class NavixEmptyState extends StatelessWidget {
           children: [
             Icon(icon, size: 40, color: t.muted),
             const SizedBox(height: 12),
-            Text(title, style: Theme.of(context).textTheme.titleMedium, textAlign: TextAlign.center),
+            Text(title,
+                style: Theme.of(context).textTheme.titleMedium,
+                textAlign: TextAlign.center),
             if (description != null) ...[
               const SizedBox(height: 4),
-              Text(description!, style: TextStyle(color: t.muted), textAlign: TextAlign.center),
+              Text(description!,
+                  style: TextStyle(color: t.muted),
+                  textAlign: TextAlign.center),
             ],
             if (actionLabel != null && onAction != null) ...[
               const SizedBox(height: 16),
@@ -73,9 +77,12 @@ class NavixErrorState extends StatelessWidget {
           children: [
             Icon(Icons.error_outline, size: 40, color: t.danger),
             const SizedBox(height: 12),
-            Text(title, style: Theme.of(context).textTheme.titleMedium, textAlign: TextAlign.center),
+            Text(title,
+                style: Theme.of(context).textTheme.titleMedium,
+                textAlign: TextAlign.center),
             const SizedBox(height: 4),
-            Text(description, style: TextStyle(color: t.muted), textAlign: TextAlign.center),
+            Text(description,
+                style: TextStyle(color: t.muted), textAlign: TextAlign.center),
             if (onRetry != null) ...[
               const SizedBox(height: 16),
               NavixButton(
