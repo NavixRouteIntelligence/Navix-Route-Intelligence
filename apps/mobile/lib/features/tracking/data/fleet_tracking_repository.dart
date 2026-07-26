@@ -16,8 +16,16 @@ class FleetTrackingRepository {
         await _dio.get<dynamic>('/tracking/positions/latest'),
       );
       final drivers = _items(
-        await _dio.get<dynamic>('/drivers', queryParameters: {'pageSize': 200}),
+        await _dio.get<dynamic>(
+          '/fleet/drivers',
+          queryParameters: {'pageSize': 100},
+        ),
       );
+      // `/fleet/drivers`, não `/drivers`: sem o prefixo a API devolve 404 e a
+      // tela de Rastreamento da frota não carrega.
+      //
+      // pageSize 100 é o teto do DTO (`@Max(100)` em list-query.dto.ts); pedir
+      // 200 era rejeitado com 400 e derrubava a tela do mesmo jeito.
 
       final names = {
         for (final d in drivers)

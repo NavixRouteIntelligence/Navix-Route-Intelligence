@@ -55,12 +55,24 @@ class NavixKpiCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w700,
-              height: 1.1,
+          // O card vive numa grade de altura fixa (childAspectRatio). Com o chip
+          // de variação presente, o conteúdo passava da célula e estourava
+          // ("BOTTOM OVERFLOWED"). Encolher o valor é a degradação certa: ele
+          // cede espaço antes de quebrar o layout — o que também protege contra
+          // telas estreitas e escala de fonte por acessibilidade.
+          Flexible(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                value,
+                maxLines: 1,
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                  height: 1.1,
+                ),
+              ),
             ),
           ),
           if (deltaLabel != null) ...[
