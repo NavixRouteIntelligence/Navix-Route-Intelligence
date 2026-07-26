@@ -13,6 +13,8 @@ export class OptimizerMetrics {
   private readonly solveDuration: Histogram<'strategy'>;
   private readonly stops: Histogram<'strategy'>;
   private readonly infeasible: Counter<string>;
+  private readonly reoptimizeTrigger: Histogram<string>;
+  private readonly reoptimizeSkipped: Counter<'reason'>;
 
   constructor(metrics: MetricsService) {
     const registers = [metrics.registry];
@@ -35,6 +37,20 @@ export class OptimizerMetrics {
       help: 'Rotas cuja demanda excede a capacidade do veículo.',
       registers,
     });
+    // SLA da reotimização dinâmica (ADR-0083): do evento de domínio até o job
+    // enfileirado — inclui o debounce, que é o maior componente controlável.
+    this.reoptimizeTrigger = new Histogram({
+      name: 'optimizer_reoptimization_trigger_seconds',
+      help: 'Do evento (entrega alterada/atraso) até a reotimização ser enfileirada.',
+      buckets: [0.5, 1, 2, 3, 5, 10, 20, 30, 60],
+      registers,
+    });
+    this.reoptimizeSkipped = new Counter({
+      name: 'optimizer_reoptimization_skipped_total',
+      help: 'Reotimizações não executadas, por motivo (ex.: plano sem direito).',
+      labelNames: ['reason'],
+      registers,
+    });
   }
 
   observeSolve(strategy: string, seconds: number, stops: number): void {
@@ -44,5 +60,13 @@ export class OptimizerMetrics {
 
   markInfeasible(): void {
     this.infeasible.inc();
+  }
+
+  observeReoptimizationTrigger(seconds: number): void {
+    this.reoptimizeTrigger.observe(seconds);
+  }
+
+  reoptimizationSkipped(reason: string): void {
+    this.reoptimizeSkipped.inc({ reason });
   }
 }
