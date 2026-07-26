@@ -71,7 +71,14 @@ class PodSyncCubit extends Cubit<PodSyncState> {
         await _repository.submit(item.submission);
         await _queue.remove(item.id);
       } catch (_) {
-        break; // provável falha de rede — reenvia depois
+        // Um envio anterior pode ter sido concluído no servidor pouco antes
+        // da queda de ligação. Se o POD já existe, este item é só um duplicado
+        // seguro de remover; assim não bloqueia os próximos da fila.
+        if (await _repository.hasRegisteredPod(item.submission.deliveryId)) {
+          await _queue.remove(item.id);
+          continue;
+        }
+        break; // falha real: preserva o item e tenta novamente mais tarde
       }
     }
     emit(state.copyWith(syncing: false, pending: await _queue.count()));

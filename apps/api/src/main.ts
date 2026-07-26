@@ -17,7 +17,10 @@ import { AppConfigService } from './shared/config/app-config.service';
 import { DomainExceptionFilter } from './shared/interface/domain-exception.filter';
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  // O parser padrão do Nest/Express limita JSON a 100 KB. Como o POD envia
+  // foto e assinatura em base64, desativamo-lo para usar exclusivamente o
+  // parser de 8 MB registrado logo abaixo.
+  const app = await NestFactory.create(AppModule, { bufferLogs: true, bodyParser: false });
 
   // Logger estruturado (pino) como logger global.
   app.useLogger(app.get(Logger));
@@ -78,7 +81,9 @@ async function bootstrap(): Promise<void> {
     void shutdownTracing();
   });
 
-  await app.listen(port);
+  // Escuta também em IPv4: necessário para que o app Flutter em um dispositivo
+  // físico na mesma rede local alcance a API de desenvolvimento pelo IP do Mac.
+  await app.listen(port, '0.0.0.0');
   const logger = app.get(Logger);
   logger.log(`Navix API em http://localhost:${port}/${globalPrefix}`);
   if (!config.isProduction) {
