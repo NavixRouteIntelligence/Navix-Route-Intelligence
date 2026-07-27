@@ -159,6 +159,11 @@ export interface Driver {
   /** Habilidades/atributos usados na otimização (ex.: 'refrigerated', 'hazmat'). */
   skills: string[];
   status: DriverStatus;
+  /**
+   * Login do motorista, quando a ficha tem conta no app (ADR-0085). `null` para
+   * quem a frota cadastrou mas não usa o app (terceirizado, sem smartphone).
+   */
+  userId: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -175,4 +180,53 @@ export interface UpdateDriverRequest {
   licenseNumber?: string;
   skills?: string[];
   status?: DriverStatus;
+}
+
+// ---------- Convite de motorista (ADR-0085) ----------
+
+/**
+ * Convite emitido pela frota para que um motorista crie a conta **dentro** do
+ * tenant. `driverId` liga o login a uma ficha já existente; se omitido, a ficha
+ * é criada no aceite com os dados que o convidado informa.
+ */
+export interface CreateDriverInviteRequest {
+  email: string;
+  driverId?: string;
+}
+
+/** Convite recém-criado. O link é entregue ao motorista por quem convidou. */
+export interface DriverInvite {
+  token: string;
+  url: string;
+  email: string;
+  /** Instante de expiração (ISO-8601). */
+  expiresAt: string;
+}
+
+/**
+ * O que a página pública do convite mostra antes do cadastro. Deliberadamente
+ * mínimo: só o suficiente para o convidado reconhecer o convite como seu.
+ */
+export interface DriverInvitePreview {
+  email: string;
+  organizationName: string;
+  /** `true` quando ainda não há ficha — o aceite exige nome e CNH. */
+  requiresDriverDetails: boolean;
+}
+
+/**
+ * Aceite do convite. **Não** traz e-mail nem tenant: ambos vêm do token, nunca
+ * do cliente. `name`/`licenseNumber` só são exigidos quando o convite não
+ * aponta para uma ficha existente (`requiresDriverDetails`).
+ */
+export interface AcceptDriverInviteRequest {
+  password: string;
+  name?: string;
+  licenseNumber?: string;
+}
+
+/** Conta criada. O motorista segue para o login com estas credenciais. */
+export interface AcceptDriverInviteResponse {
+  email: string;
+  organizationName: string;
 }

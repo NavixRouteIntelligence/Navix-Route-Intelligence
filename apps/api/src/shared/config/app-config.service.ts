@@ -140,6 +140,15 @@ export class AppConfigService {
     };
   }
 
+  /** Convite de motorista (ADR-0085). */
+  get driverInvites() {
+    return {
+      // Sem barra final: o use case concatena `/<token>`.
+      baseUrl: this.get('DRIVER_INVITE_BASE_URL').replace(/\/+$/, ''),
+      ttlHours: this.get('DRIVER_INVITE_TTL_HOURS'),
+    };
+  }
+
   get tracking() {
     return { retentionDays: this.get('TRACKING_RETENTION_DAYS') };
   }

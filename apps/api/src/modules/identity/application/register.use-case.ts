@@ -4,6 +4,10 @@ import type { AuthResultWithAccount, RegisterRequest } from '@navix/contracts';
 import { DataSource } from 'typeorm';
 
 import { AUDIT_LOG, type AuditLogPort } from '../../../shared/audit/audit-log.port';
+import {
+  USER_EMAIL_CONSTRAINT,
+  isUniqueViolation,
+} from '../../../shared/database/unique-violation';
 import { ConflictError, ValidationError } from '../../../shared/kernel/domain-error';
 import { newId } from '../../../shared/kernel/id';
 
@@ -25,26 +29,6 @@ import {
 } from '../domain/ports/refresh-token-repository.port';
 import { PASSWORD_HASHER, type PasswordHasherPort } from './ports/password-hasher.port';
 import { TOKEN_SERVICE, type TokenServicePort } from './ports/token-service.port';
-
-/** Índice único global de e-mail (lower(email)) — ver migração TenantSlugAndEmailIdentity. */
-const USER_EMAIL_CONSTRAINT = 'uq_users_email_lower';
-
-/**
- * Detecta violação de índice único do Postgres (SQLSTATE 23505) para uma
- * constraint/índice específico. TypeORM embrulha o erro do driver, então
- * checamos tanto o topo quanto `driverError`. Erros que não são do banco
- * (ex.: `ConflictError` do check preventivo) não têm `code`/`constraint`,
- * então nunca casam.
- */
-function isUniqueViolation(err: unknown, constraint: string): boolean {
-  const e = err as {
-    code?: string;
-    constraint?: string;
-    driverError?: { code?: string; constraint?: string };
-  };
-  const driver = e?.driverError ?? e;
-  return driver?.code === '23505' && driver?.constraint === constraint;
-}
 
 /**
  * Criação de conta com escolha de perfil (Motorista Autônomo × Empresa).

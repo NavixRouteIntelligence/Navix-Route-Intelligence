@@ -8,6 +8,8 @@ export interface DriverRepositoryPort {
   findById(tenantId: string, id: string): Promise<Driver | null>;
   findAll(tenantId: string, page: PageParams): Promise<PagedResult<Driver>>;
   existsByLicense(tenantId: string, licenseNumber: string, excludeId?: string): Promise<boolean>;
+  /** Já há ficha ligada a este login neste tenant? (índice único — ADR-0085). */
+  existsByUser(tenantId: string, userId: string): Promise<boolean>;
   delete(tenantId: string, id: string): Promise<void>;
 }
 

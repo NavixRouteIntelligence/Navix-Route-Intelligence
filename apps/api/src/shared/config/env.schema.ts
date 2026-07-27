@@ -73,6 +73,13 @@ export const envSchema = z.object({
   // destinatário; o token em si é validado no backend, então um valor errado
   // aqui gera link inválido, não brecha de acesso.
   PUBLIC_TRACKING_BASE_URL: z.string().default('http://localhost:3000/track'),
+  // Base do link de convite do motorista (ADR-0085). Mesma natureza do de
+  // rastreio: monta a URL entregue ao convidado; a validação é sempre do lado
+  // do servidor, então um valor errado gera link quebrado, não brecha.
+  DRIVER_INVITE_BASE_URL: z.string().default('http://localhost:3000/convite'),
+  // Prazo do convite. 7 dias: longo o bastante para o motorista responder sem
+  // pressa, curto o bastante para um link vazado não valer indefinidamente.
+  DRIVER_INVITE_TTL_HOURS: z.coerce.number().int().positive().max(720).default(168),
   S3_ENDPOINT: z.string().optional(),
   S3_REGION: z.string().default('auto'),
   S3_BUCKET: z.string().optional(),

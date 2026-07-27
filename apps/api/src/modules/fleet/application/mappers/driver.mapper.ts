@@ -12,6 +12,7 @@ export function toDriverView(driver: Driver): DriverView {
     licenseNumber: s.licenseNumber,
     skills: s.skills,
     status: s.status,
+    userId: s.userId,
     createdAt: s.createdAt.toISOString(),
     updatedAt: s.updatedAt.toISOString(),
   };

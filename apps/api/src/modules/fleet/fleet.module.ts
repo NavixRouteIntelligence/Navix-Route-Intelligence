@@ -8,6 +8,7 @@ import { GetVehicleUseCase } from './application/vehicles/get-vehicle.use-case';
 import { ListVehiclesUseCase } from './application/vehicles/list-vehicles.use-case';
 import { UpdateVehicleUseCase } from './application/vehicles/update-vehicle.use-case';
 // Application — drivers
+import { AttachDriverAccountUseCase } from './application/drivers/attach-driver-account.use-case';
 import { CreateDriverUseCase } from './application/drivers/create-driver.use-case';
 import { DeleteDriverUseCase } from './application/drivers/delete-driver.use-case';
 import { GetDriverUseCase } from './application/drivers/get-driver.use-case';
@@ -55,6 +56,7 @@ import { VehicleController } from './interface/vehicle.controller';
     ListDriversUseCase,
     UpdateDriverUseCase,
     DeleteDriverUseCase,
+    AttachDriverAccountUseCase,
     CreateMaintenanceUseCase,
     ListMaintenanceUseCase,
     DeleteMaintenanceUseCase,
@@ -64,6 +66,8 @@ import { VehicleController } from './interface/vehicle.controller';
     { provide: MAINTENANCE_REPOSITORY, useClass: MaintenanceRepository },
     { provide: FLEET_LOOKUP, useClass: FleetLookupService },
   ],
-  exports: [FLEET_LOOKUP],
+  // API pública do Fleet: consultas (FLEET_LOOKUP) e o vínculo ficha↔login,
+  // consumido pelo módulo de convites (ADR-0085). Repositórios seguem privados.
+  exports: [FLEET_LOOKUP, AttachDriverAccountUseCase],
 })
 export class FleetModule {}
