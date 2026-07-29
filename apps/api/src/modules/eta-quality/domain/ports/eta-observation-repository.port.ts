@@ -1,0 +1,16 @@
+import type { EtaObservation } from '../eta-observation';
+
+/** Port do corpus de medições de ETA (ADR-0087). Tudo escopado por tenant (RLS). */
+export interface EtaObservationRepositoryPort {
+  /**
+   * Grava a medição. **Idempotente**: uma segunda gravação para a mesma
+   * entrega é ignorada, porque o listener pode reprocessar o mesmo evento e a
+   * conclusão é um fato único. Devolve `true` quando a linha foi criada.
+   */
+  record(observation: EtaObservation): Promise<boolean>;
+
+  /** Erros (com sinal) das medições recentes; `null` para as sem previsão. */
+  recentErrors(tenantId: string, since: Date, limit: number): Promise<(number | null)[]>;
+}
+
+export const ETA_OBSERVATION_REPOSITORY = Symbol('ETA_OBSERVATION_REPOSITORY');
