@@ -9,6 +9,7 @@ import {
 import { GetCollectiveInsightUseCase } from './application/get-collective-insight.use-case';
 import { InterpretVoiceCommandUseCase } from './application/interpret-voice-command.use-case';
 import { PlanLoadUseCase } from './application/plan-load.use-case';
+import { RecordDerivedServiceTimeUseCase } from './application/record-derived-service-time.use-case';
 import { RecordObservationUseCase } from './application/record-observation.use-case';
 import { ACCESS_INSTRUCTIONS } from './domain/access-instructions.port';
 import { COLLECTIVE_INSIGHTS } from './domain/collective-insights.port';
@@ -38,6 +39,7 @@ import { IntelligenceController } from './interface/intelligence.controller';
     ForecastRouteUseCase,
     PlanLoadUseCase,
     RecordObservationUseCase,
+    RecordDerivedServiceTimeUseCase,
     GetCollectiveInsightUseCase,
     InterpretVoiceCommandUseCase,
     { provide: TRAFFIC_MODEL, useClass: TimeContextTrafficModel },
@@ -50,6 +52,6 @@ import { IntelligenceController } from './interface/intelligence.controller';
     { provide: COLLECTIVE_SERVICE_TIMES, useClass: CollectiveServiceTimeLookup },
   ],
   // Exposto para o Optimizer usar o tempo de serviço típico no custo (RSE-4).
-  exports: [COLLECTIVE_SERVICE_TIMES],
+  exports: [COLLECTIVE_SERVICE_TIMES, RecordDerivedServiceTimeUseCase],
 })
 export class IntelligenceModule {}

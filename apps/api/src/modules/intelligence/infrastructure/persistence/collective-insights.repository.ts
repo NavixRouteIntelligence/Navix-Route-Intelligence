@@ -78,6 +78,7 @@ export class CollectiveInsightsRepository implements CollectiveInsightsPort {
       kind: r.kind,
       parkingDifficulty: r.parkingDifficulty,
       serviceMinutes: r.serviceMinutes,
+      source: r.source,
       accessTip: r.accessTip,
       createdAt: r.createdAt,
     };

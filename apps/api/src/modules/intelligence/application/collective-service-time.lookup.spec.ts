@@ -15,6 +15,7 @@ function obs(lat: number, lng: number, minutes: number, id: string): CollectiveO
     parkingDifficulty: null,
     serviceMinutes: minutes,
     accessTip: null,
+    source: 'derived',
     createdAt: new Date(),
   };
 }

@@ -9,6 +9,7 @@ import {
   DRIVER_ACCOUNT_LINK,
   type DriverAccountLinkPort,
 } from './ports/driver-account-link.port';
+import { DWELL_WINDOW_MINUTES, dwellMinutesAtStop } from '../domain/dwell';
 import { toPositionView } from './position.mapper';
 
 const DEFAULT_HISTORY_LIMIT = 200;
@@ -79,6 +80,28 @@ export class QueryPositionsUseCase {
       const driverId = fichas.get(p.driverId);
       return driverId ? { ...view, driverId } : view;
     });
+  }
+
+  /**
+   * Tempo de atendimento **medido** numa parada (ADR-0088): a permanência do
+   * motorista no raio do destino, terminando na conclusão.
+   *
+   * Recebe a **ficha** (é o que a entrega conhece) e traduz para o login sob o
+   * qual a posição foi gravada. `null` quando não há rastro suficiente — o que
+   * é comum e não é erro: motorista sem app, GPS desligado, sinal ausente.
+   */
+  async serviceMinutesAtStop(
+    tenantId: string,
+    driverId: string,
+    stop: { latitude: number; longitude: number },
+    endedAt: Date,
+  ): Promise<number | null> {
+    const userId = await this.link.userIdForDriver(tenantId, driverId);
+    if (!userId) return null;
+
+    const from = new Date(endedAt.getTime() - DWELL_WINDOW_MINUTES * 60_000);
+    const trail = await this.positions.findBetween(tenantId, userId, from, endedAt);
+    return dwellMinutesAtStop(trail, stop);
   }
 
   /** Histórico de uma **ficha** da frota. */

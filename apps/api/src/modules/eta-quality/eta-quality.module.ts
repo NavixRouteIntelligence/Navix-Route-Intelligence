@@ -2,7 +2,9 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { DeliveryModule } from '../delivery/delivery.module';
+import { IntelligenceModule } from '../intelligence/intelligence.module';
 import { OptimizerModule } from '../optimizer/optimizer.module';
+import { TrackingModule } from '../tracking/tracking.module';
 import { EtaQualityListener } from './application/eta-quality.listener';
 import { GetEtaQualityUseCase } from './application/get-eta-quality.use-case';
 import { RecordEtaObservationUseCase } from './application/record-eta-observation.use-case';
@@ -34,6 +36,10 @@ import { EtaQualityController } from './interface/eta-quality.controller';
     TypeOrmModule.forFeature([EtaObservationOrmEntity]),
     DeliveryModule,
     OptimizerModule,
+    // Rastro de GPS (medida do atendimento) e corpus coletivo (onde ela é
+    // gravada) — ADR-0088. Ambos pelas suas APIs públicas.
+    TrackingModule,
+    IntelligenceModule,
   ],
   controllers: [EtaQualityController],
   providers: [

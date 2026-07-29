@@ -13,6 +13,8 @@ function obs(partial: Partial<CollectiveObservation> & { kind: ObservationKind }
     parkingDifficulty: null,
     serviceMinutes: null,
     accessTip: null,
+    // Padrão do fixture: dado medido pelo backend, que é o que agrega (ADR-0088).
+    source: 'derived',
     createdAt: new Date(),
     ...partial,
   };
@@ -77,5 +79,36 @@ describe('aggregateInsight', () => {
 
   it('MIN_SAMPLE é o piso de exposição', () => {
     expect(MIN_SAMPLE).toBeGreaterThanOrEqual(3);
+  });
+});
+
+// ADR-0088: o `service_time` que o cliente enviava contava do fim da parada
+// anterior — media o ciclo, não o atendimento — e inflava o tempo de serviço do
+// otimizador. Fica no banco, mas fora da decisão.
+describe('quarentena do corpus contaminado (ADR-0088)', () => {
+  const tempo = (minutes: number, source: 'derived' | 'client_cycle') =>
+    obs({ kind: 'service_time', serviceMinutes: minutes, source });
+
+  it('ignora o tempo relatado pelo cliente na mediana', () => {
+    const insight = aggregateInsight('0.000,0.000', [
+      tempo(5, 'derived'),
+      tempo(6, 'derived'),
+      tempo(7, 'derived'),
+      // Ciclo inteiro: se entrasse, puxaria a mediana para cima.
+      tempo(40, 'client_cycle'),
+      tempo(45, 'client_cycle'),
+    ]);
+
+    expect(insight.typicalServiceMinutes).toBe(6);
+  });
+
+  it('só com dado contaminado, não há tempo típico a afirmar', () => {
+    const insight = aggregateInsight('0.000,0.000', [
+      tempo(40, 'client_cycle'),
+      tempo(45, 'client_cycle'),
+      tempo(50, 'client_cycle'),
+    ]);
+
+    expect(insight.typicalServiceMinutes).toBeUndefined();
   });
 });

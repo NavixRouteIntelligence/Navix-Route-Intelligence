@@ -17,7 +17,8 @@ function observation(difficulty: 'easy' | 'moderate' | 'hard'): CollectiveObserv
     parkingDifficulty: difficulty,
     serviceMinutes: null,
     accessTip: null,
-    createdAt: new Date(),
+    source: 'reported' as const,
+  createdAt: new Date(),
   };
 }
 

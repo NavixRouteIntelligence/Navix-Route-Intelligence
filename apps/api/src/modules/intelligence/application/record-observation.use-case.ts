@@ -41,6 +41,11 @@ export class RecordObservationUseCase {
       parkingDifficulty: null,
       serviceMinutes: null,
       accessTip: null,
+      // Um cliente não consegue medir tempo de atendimento: ele só sabe quando
+      // a parada anterior terminou, o que inclui o deslocamento. Aceitamos o
+      // envio (clientes antigos não quebram) mas em quarentena — o número que
+      // vale é o derivado do rastro no backend (ADR-0088).
+      source: command.kind === 'service_time' ? 'client_cycle' : 'reported',
       createdAt: new Date(),
     };
 

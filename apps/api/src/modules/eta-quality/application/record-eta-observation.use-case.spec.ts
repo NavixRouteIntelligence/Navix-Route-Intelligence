@@ -4,6 +4,8 @@ import type {
 } from '../../delivery/application/delivery-lookup.service';
 import type { OptimizerServicePort } from '../../optimizer/application/optimizer.service';
 import type { EtaObservation } from '../domain/eta-observation';
+import type { RecordDerivedServiceTimeUseCase } from '../../intelligence/application/record-derived-service-time.use-case';
+import type { QueryPositionsUseCase } from '../../tracking/application/query-positions.use-case';
 import type { EtaObservationRepositoryPort } from '../domain/ports/eta-observation-repository.port';
 import { RecordEtaObservationUseCase } from './record-eta-observation.use-case';
 
@@ -19,6 +21,8 @@ function build(opts: {
   delivery?: DeliveryPublicSnapshot | null;
   prediction?: { routePlanId: string; arrivalAt: Date } | null;
   jaMedida?: boolean;
+  /** Minutos medidos no rastro; `null` = sem rastro suficiente. */
+  dwell?: number | null;
 } = {}) {
   const gravadas: EtaObservation[] = [];
   const observations: EtaObservationRepositoryPort = {
@@ -41,11 +45,24 @@ function build(opts: {
     etaPredictionForDelivery: jest.fn().mockResolvedValue(opts.prediction ?? null),
   } as OptimizerServicePort;
 
+  const serviceMinutesAtStop = jest.fn().mockResolvedValue(opts.dwell ?? null);
+  const positions = { serviceMinutesAtStop } as unknown as QueryPositionsUseCase;
+  const registrarTempo = jest.fn().mockResolvedValue(true);
+  const serviceTime = { execute: registrarTempo } as unknown as RecordDerivedServiceTimeUseCase;
+
   return {
-    uc: new RecordEtaObservationUseCase(observations, deliveries, optimizer),
+    uc: new RecordEtaObservationUseCase(
+      observations,
+      deliveries,
+      optimizer,
+      positions,
+      serviceTime,
+    ),
     gravadas,
     observations,
     optimizer,
+    serviceMinutesAtStop,
+    registrarTempo,
   };
 }
 
@@ -128,6 +145,65 @@ describe('RecordEtaObservationUseCase (ADR-0087)', () => {
     });
 
     await expect(uc.execute(TENANT, ENTREGA, real)).resolves.toBeNull();
+  });
+
+  // ADR-0088: o tempo de atendimento passa a ser MEDIDO no rastro, no mesmo
+  // instante e sob a mesma transação — não mais relatado pelo cliente.
+  describe('tempo de atendimento derivado (ADR-0088)', () => {
+    it('mede a permanência e grava como observação derivada', async () => {
+      const { uc, serviceMinutesAtStop, registrarTempo } = build({
+        prediction: { routePlanId: PLANO, arrivalAt: previsto },
+        dwell: 7.5,
+      });
+
+      await uc.execute(TENANT, ENTREGA, real);
+
+      expect(serviceMinutesAtStop).toHaveBeenCalledWith(
+        TENANT,
+        'ficha-1',
+        { latitude: 38.7223, longitude: -9.1393 },
+        real,
+      );
+      expect(registrarTempo).toHaveBeenCalledWith(
+        expect.objectContaining({ tenantId: TENANT, driverId: 'ficha-1', minutes: 7.5 }),
+      );
+    });
+
+    // O caso comum, e não uma falha: motorista sem app, GPS desligado, sem sinal.
+    it('sem rastro suficiente não inventa tempo', async () => {
+      const { uc, registrarTempo } = build({
+        prediction: { routePlanId: PLANO, arrivalAt: previsto },
+        dwell: null,
+      });
+
+      await uc.execute(TENANT, ENTREGA, real);
+
+      expect(registrarTempo).not.toHaveBeenCalled();
+    });
+
+    it('entrega sem motorista atribuído não tem rastro a consultar', async () => {
+      const { uc, serviceMinutesAtStop } = build({
+        delivery: { status: 'delivered', driverId: null, latitude: 38.7, longitude: -9.1 },
+      });
+
+      await uc.execute(TENANT, ENTREGA, real);
+
+      expect(serviceMinutesAtStop).not.toHaveBeenCalled();
+    });
+
+    // Reprocessar o evento não pode empurrar a mediana da célula com a mesma
+    // parada contada duas vezes.
+    it('entrega já medida não gera segunda amostra de atendimento', async () => {
+      const { uc, registrarTempo } = build({
+        prediction: { routePlanId: PLANO, arrivalAt: previsto },
+        dwell: 7.5,
+        jaMedida: true,
+      });
+
+      await uc.execute(TENANT, ENTREGA, real);
+
+      expect(registrarTempo).not.toHaveBeenCalled();
+    });
   });
 
   it('chegar adiantado dá erro negativo', async () => {

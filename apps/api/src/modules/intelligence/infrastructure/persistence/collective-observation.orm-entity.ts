@@ -1,4 +1,6 @@
 import type { ObservationKind, ParkingDifficulty } from '@navix/contracts';
+
+import type { ObservationSource } from '../../domain/collective-insight';
 import { Column, Entity, Index, PrimaryColumn } from 'typeorm';
 
 /**
@@ -37,6 +39,10 @@ export class CollectiveObservationOrmEntity {
 
   @Column('text', { name: 'access_tip', nullable: true })
   accessTip!: string | null;
+
+  /** Procedência (ADR-0088): decide se a observação entra na agregação. */
+  @Column('text', { default: 'derived' })
+  source!: ObservationSource;
 
   @Column('timestamptz', { name: 'created_at' })
   createdAt!: Date;
