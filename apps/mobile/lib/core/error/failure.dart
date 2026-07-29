@@ -43,6 +43,13 @@ class InvalidCredentialsFailure extends Failure {
   const InvalidCredentialsFailure();
 }
 
+/// Convite inexistente, expirado, revogado ou já aceito (ADR-0085). O backend
+/// responde igual para todos esses casos — não confirmar a existência de um
+/// token é o que impede sondagem —, então o app também não os distingue.
+class InviteNotFoundFailure extends Failure {
+  const InviteNotFoundFailure();
+}
+
 class ValidationFailure extends Failure {
   const ValidationFailure([super.detail]);
 }

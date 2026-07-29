@@ -93,3 +93,44 @@ class RegisterParams extends Equatable {
         organizationName,
       ];
 }
+
+/// Convite resolvido pelo token (ADR-0085). É o que a tela mostra antes do
+/// cadastro: o suficiente para o motorista reconhecer o convite como seu.
+class DriverInvitePreview extends Equatable {
+  const DriverInvitePreview({
+    required this.email,
+    required this.organizationName,
+    required this.requiresDriverDetails,
+  });
+
+  /// E-mail convidado — vira o login. O motorista não escolhe outro.
+  final String email;
+  final String organizationName;
+
+  /// `true` quando a frota ainda não tem a ficha: o aceite pede nome e CNH.
+  final bool requiresDriverDetails;
+
+  @override
+  List<Object?> get props => [email, organizationName, requiresDriverDetails];
+}
+
+/// Aceite do convite. **Não** carrega e-mail nem organização: ambos vêm do
+/// token, nunca do cliente — é o que impede criar conta em empresa alheia.
+class AcceptInviteParams extends Equatable {
+  const AcceptInviteParams({
+    required this.token,
+    required this.password,
+    this.name,
+    this.licenseNumber,
+  });
+
+  final String token;
+  final String password;
+
+  /// Só quando o convite não aponta para uma ficha existente.
+  final String? name;
+  final String? licenseNumber;
+
+  @override
+  List<Object?> get props => [token, password, name, licenseNumber];
+}
