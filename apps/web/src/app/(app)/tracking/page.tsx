@@ -47,10 +47,14 @@ export default function TrackingPage() {
     refetchInterval: live && !connected ? POLL_MS : false,
   });
 
-  // Nomes dos motoristas (junta com as posições, que trazem só o id).
+  // Nomes dos motoristas (junta com as posições, que trazem só o id da ficha).
+  //
+  // `pageSize: 100` é o teto do DTO (`@Max(100)` em list-query.dto.ts): pedir
+  // 200 era rejeitado com 400, a lista nunca chegava e **todo** motorista caía
+  // no rótulo genérico "Motorista <id>" — o mesmo erro que o app já corrigira.
   const drivers = useQuery({
     queryKey: ['drivers', 'tracking'],
-    queryFn: () => fleetApi.listDrivers({ pageSize: 200 }),
+    queryFn: () => fleetApi.listDrivers({ pageSize: 100 }),
   });
   const nameOf = (id: string) => drivers.data?.data.find((d) => d.id === id)?.name ?? `Motorista ${id.slice(0, 6)}`;
 

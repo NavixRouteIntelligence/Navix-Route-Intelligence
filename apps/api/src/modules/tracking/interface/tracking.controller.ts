@@ -84,14 +84,16 @@ export class TrackingController {
   async myLatest(
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<{ data: DriverPositionView | null }> {
-    const data = await this.queries.latestForDriver(user.tenantId, user.id);
+    // `...ForUser`: aqui o id é o do LOGIN de quem chama, não o de uma ficha
+    // (o motorista autônomo sequer tem ficha) — ADR-0086.
+    const data = await this.queries.latestForUser(user.tenantId, user.id);
     return { data };
   }
 
   @Get('me/history')
   @ApiOperation({ summary: 'Histórico de posições do próprio motorista' })
   myHistory(@CurrentUser() user: AuthenticatedUser): Promise<PositionHistoryResponse> {
-    return this.queries.history(user.tenantId, user.id);
+    return this.queries.historyForUser(user.tenantId, user.id);
   }
 
   @Get('positions/latest')
@@ -107,6 +109,8 @@ export class TrackingController {
   @Get('drivers/:driverId/history')
   @Roles('admin', 'dispatcher', 'fleet_manager')
   @ApiOperation({ summary: 'Histórico de posições de um motorista (empresa)' })
+  // `driverId` aqui é a FICHA — o mesmo id que a lista de motoristas e as
+  // entregas usam. A tradução para o login acontece no caso de uso (ADR-0086).
   driverHistory(
     @CurrentUser() user: AuthenticatedUser,
     @Param('driverId', ParseUUIDPipe) driverId: string,

@@ -17,6 +17,16 @@ import {
 export interface FleetLookupPort {
   vehicleExists(tenantId: string, vehicleId: string): Promise<boolean>;
   driverExists(tenantId: string, driverId: string): Promise<boolean>;
+  /**
+   * Login ligado a uma ficha (ADR-0086). `null` quando a ficha não tem conta no
+   * app — é o caso do terceirizado, e nunca deve ser lido como erro.
+   */
+  userIdForDriver(tenantId: string, driverId: string): Promise<string | null>;
+  /**
+   * Fichas de um conjunto de logins, numa consulta só. Logins sem ficha
+   * (motorista autônomo) simplesmente não aparecem no mapa.
+   */
+  driverIdsForUsers(tenantId: string, userIds: string[]): Promise<Map<string, string>>;
 }
 
 export const FLEET_LOOKUP = Symbol('FLEET_LOOKUP');
@@ -34,5 +44,13 @@ export class FleetLookupService implements FleetLookupPort {
 
   async driverExists(tenantId: string, driverId: string): Promise<boolean> {
     return (await this.drivers.findById(tenantId, driverId)) !== null;
+  }
+
+  userIdForDriver(tenantId: string, driverId: string): Promise<string | null> {
+    return this.drivers.findUserIdById(tenantId, driverId);
+  }
+
+  driverIdsForUsers(tenantId: string, userIds: string[]): Promise<Map<string, string>> {
+    return this.drivers.findIdsByUserIds(tenantId, userIds);
   }
 }

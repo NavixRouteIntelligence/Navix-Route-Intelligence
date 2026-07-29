@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Not, Repository } from 'typeorm';
+import { In, Not, Repository } from 'typeorm';
 
 import type { PageParams } from '../../../../shared/kernel/pagination';
 import { scopedRepository } from '../../../../shared/database/transaction-context';
@@ -55,6 +55,23 @@ export class DriverRepository implements DriverRepositoryPort {
 
   async existsByUser(tenantId: string, userId: string): Promise<boolean> {
     return (await this.repo.count({ where: { tenantId, userId } })) > 0;
+  }
+
+  async findUserIdById(tenantId: string, driverId: string): Promise<string | null> {
+    const row = await this.repo.findOne({
+      where: { tenantId, id: driverId },
+      select: ['userId'],
+    });
+    return row?.userId ?? null;
+  }
+
+  async findIdsByUserIds(tenantId: string, userIds: string[]): Promise<Map<string, string>> {
+    if (userIds.length === 0) return new Map();
+    const rows = await this.repo.find({
+      where: { tenantId, userId: In(userIds) },
+      select: ['id', 'userId'],
+    });
+    return new Map(rows.filter((r) => r.userId).map((r) => [r.userId as string, r.id]));
   }
 
   async delete(tenantId: string, id: string): Promise<void> {
