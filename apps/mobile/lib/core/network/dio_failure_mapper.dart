@@ -9,7 +9,8 @@ import '../error/failure.dart';
 /// "credencial inválida" — não havia sessão para expirar. [notFound] faz o
 /// mesmo com o 404, que no convite significa "link inválido ou expirado" e não
 /// um erro de servidor.
-Failure mapDioException(DioException e, {Failure? unauthorized, Failure? notFound}) {
+Failure mapDioException(DioException e,
+    {Failure? unauthorized, Failure? notFound}) {
   switch (e.type) {
     case DioExceptionType.connectionTimeout:
     case DioExceptionType.receiveTimeout:

@@ -33,6 +33,7 @@ class _StreamRefresh extends ChangeNotifier {
 abstract final class Routes {
   static const login = '/login';
   static const register = '/register';
+
   /// Aceite de convite (ADR-0085). Público: o convidado ainda não tem conta.
   static const invite = '/convite';
   static const driver = '/driver';

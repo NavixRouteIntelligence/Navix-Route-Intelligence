@@ -79,8 +79,14 @@ class _InvitePageState extends State<InvitePage> {
       _error = null;
     });
     try {
-      final preview = await GetIt.instance<AuthRepository>().validateInvite(token);
-      if (mounted) setState(() { _invite = preview; _token = token; });
+      final preview =
+          await GetIt.instance<AuthRepository>().validateInvite(token);
+      if (mounted) {
+        setState(() {
+          _invite = preview;
+          _token = token;
+        });
+      }
     } on Failure catch (f) {
       if (mounted) setState(() => _error = context.failureText(f));
     } catch (_) {
@@ -151,7 +157,8 @@ class _InvitePageState extends State<InvitePage> {
   }
 
   List<Widget> _tokenStep(BuildContext context, AppLocalizations l10n) => [
-        Text(l10n.inviteSubtitle, style: Theme.of(context).textTheme.bodyMedium),
+        Text(l10n.inviteSubtitle,
+            style: Theme.of(context).textTheme.bodyMedium),
         const SizedBox(height: 24),
         TextFormField(
           controller: _link,
@@ -207,8 +214,9 @@ class _InvitePageState extends State<InvitePage> {
             textCapitalization: TextCapitalization.words,
             autofillHints: const [AutofillHints.name],
             decoration: InputDecoration(labelText: l10n.inviteNameField),
-            validator: (v) =>
-                (v == null || v.trim().length < 2) ? l10n.inviteNameInvalid : null,
+            validator: (v) => (v == null || v.trim().length < 2)
+                ? l10n.inviteNameInvalid
+                : null,
           ),
           const SizedBox(height: 12),
           TextFormField(

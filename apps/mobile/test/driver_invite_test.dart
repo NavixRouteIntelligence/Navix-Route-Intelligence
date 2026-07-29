@@ -131,8 +131,8 @@ void main() {
       expect(session.user.roles, ['driver']);
 
       // O login usa o e-mail que veio do TOKEN, não algo escolhido no cliente.
-      final usado = verify(() => api.login(captureAny())).captured.single
-          as LoginParams;
+      final usado =
+          verify(() => api.login(captureAny())).captured.single as LoginParams;
       expect(usado.email, 'maria@exemplo.pt');
       expect(usado.password, 'senha-forte-123');
     });
