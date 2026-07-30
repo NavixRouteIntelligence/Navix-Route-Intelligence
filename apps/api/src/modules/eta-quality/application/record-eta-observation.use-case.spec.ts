@@ -32,6 +32,7 @@ function build(opts: {
       return true;
     }),
     recentErrors: jest.fn(),
+    trainingSamples: jest.fn(),
   };
   const deliveries = {
     getPublicSnapshot: jest
@@ -42,7 +43,11 @@ function build(opts: {
     estimate: jest.fn(),
     optimizeDeliveries: jest.fn(),
     etaForDelivery: jest.fn(),
-    etaPredictionForDelivery: jest.fn().mockResolvedValue(opts.prediction ?? null),
+    etaPredictionForDelivery: jest
+      .fn()
+      .mockResolvedValue(
+        opts.prediction ? { correctionMinutes: 0, ...opts.prediction } : null,
+      ),
   } as OptimizerServicePort;
 
   const serviceMinutesAtStop = jest.fn().mockResolvedValue(opts.dwell ?? null);

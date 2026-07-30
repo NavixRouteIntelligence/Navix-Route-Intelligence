@@ -8,6 +8,7 @@ import { TrackingModule } from '../tracking/tracking.module';
 import { EtaQualityListener } from './application/eta-quality.listener';
 import { GetEtaQualityUseCase } from './application/get-eta-quality.use-case';
 import { RecordEtaObservationUseCase } from './application/record-eta-observation.use-case';
+import { TrainEtaModelUseCase } from './application/train-eta-model.use-case';
 import { ETA_OBSERVATION_REPOSITORY } from './domain/ports/eta-observation-repository.port';
 import { EtaMetrics } from './infrastructure/observability/eta-metrics';
 import { EtaObservationOrmEntity } from './infrastructure/persistence/eta-observation.orm-entity';
@@ -45,6 +46,7 @@ import { EtaQualityController } from './interface/eta-quality.controller';
   providers: [
     RecordEtaObservationUseCase,
     GetEtaQualityUseCase,
+    TrainEtaModelUseCase,
     EtaQualityListener,
     EtaMetrics,
     { provide: ETA_OBSERVATION_REPOSITORY, useClass: EtaObservationRepository },

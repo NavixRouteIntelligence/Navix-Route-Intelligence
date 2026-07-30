@@ -15,6 +15,12 @@ export interface EtaObservation {
   actualArrivalAt: Date;
   /** real − previsto, em minutos. Positivo = chegou depois do prometido. */
   errorMinutes: number | null;
+  /**
+   * Correção do modelo já embutida em `predictedArrivalAt` (ADR-0090). Zero
+   * quando a previsão é a heurística crua. Guardada para que o treino seguinte
+   * recupere o resíduo do baseline e não corrija a própria correção.
+   */
+  correctionMinutes: number;
   source: EtaActualSource;
   cell: string;
   hourOfWeek: number;

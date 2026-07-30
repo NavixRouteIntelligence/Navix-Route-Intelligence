@@ -68,6 +68,7 @@ export class RecordEtaObservationUseCase {
       predictedArrivalAt: prediction?.arrivalAt ?? null,
       actualArrivalAt: at,
       errorMinutes: errorMinutes(prediction?.arrivalAt ?? null, at),
+      correctionMinutes: prediction?.correctionMinutes ?? 0,
       source: 'status_change',
       // Mesma célula (~110 m) da inteligência coletiva (ADR-0031): as duas
       // fontes precisam casar para virar feature do mesmo modelo.

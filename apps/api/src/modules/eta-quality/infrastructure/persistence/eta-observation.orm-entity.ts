@@ -27,6 +27,9 @@ export class EtaObservationOrmEntity {
   @Column('double precision', { name: 'error_minutes', nullable: true })
   errorMinutes!: number | null;
 
+  @Column('double precision', { name: 'correction_minutes', default: 0 })
+  correctionMinutes!: number;
+
   @Column('text')
   source!: EtaActualSource;
 

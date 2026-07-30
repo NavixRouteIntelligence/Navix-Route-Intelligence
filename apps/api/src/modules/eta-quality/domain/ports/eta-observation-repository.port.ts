@@ -11,6 +11,19 @@ export interface EtaObservationRepositoryPort {
 
   /** Erros (com sinal) das medições recentes; `null` para as sem previsão. */
   recentErrors(tenantId: string, since: Date, limit: number): Promise<(number | null)[]>;
+
+  /**
+   * Amostras rotuladas para treino (ADR-0090), **da mais antiga para a mais
+   * recente** — a divisão treino/teste é temporal. Só medições com previsão:
+   * sem ela não há resíduo a aprender.
+   */
+  trainingSamples(
+    tenantId: string,
+    since: Date,
+    limit: number,
+  ): Promise<
+    { errorMinutes: number; correctionMinutes: number; predictedArrivalAt: Date }[]
+  >;
 }
 
 export const ETA_OBSERVATION_REPOSITORY = Symbol('ETA_OBSERVATION_REPOSITORY');

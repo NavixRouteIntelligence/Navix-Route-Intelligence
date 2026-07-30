@@ -27,13 +27,16 @@ function registryReturning(order: number[]): StrategyRegistry {
   return { get: () => strategy } as unknown as StrategyRegistry;
 }
 
+/** Sem modelo treinado a correção é zero — o padrão até alguém treinar (ADR-0090). */
+const semCorrecao = { correctionMinutes: jest.fn().mockResolvedValue(0) };
+
 describe('OptimizerService.estimate', () => {
   const optimizeRoute = { execute: jest.fn() } as unknown as OptimizeRouteUseCase;
   // `estimate` não toca no repositório de planos (só `etaForDelivery` usa).
   const plans = { findAll: jest.fn() } as unknown as RoutePlanRepositoryPort;
 
   it('retorna zero de economia para menos de 2 paradas', async () => {
-    const service = new OptimizerService(euclidean, registryReturning([0]), optimizeRoute, plans);
+    const service = new OptimizerService(euclidean, registryReturning([0]), optimizeRoute, plans, semCorrecao);
 
     await expect(service.estimate([{ latitude: 0, longitude: 0 }])).resolves.toEqual({
       savingsKm: 0,
@@ -52,7 +55,7 @@ describe('OptimizerService.estimate', () => {
     // baseline é a ordem natural [0,1,2]; devolvemos a mesma → economia 0,
     // depois uma pior para garantir sinal. Aqui devolvemos [0,2,1] como "otimizada"
     // para exercitar o cálculo de savings (pode ser negativo/positivo).
-    const service = new OptimizerService(euclidean, registryReturning([0, 1, 2]), optimizeRoute, plans);
+    const service = new OptimizerService(euclidean, registryReturning([0, 1, 2]), optimizeRoute, plans, semCorrecao);
 
     const result = await service.estimate(stops);
 
@@ -68,7 +71,7 @@ describe('OptimizerService.optimizeDeliveries', () => {
 
   it('delega ao OptimizeRouteUseCase e retorna o id do plano', async () => {
     const optimizeRoute = { execute: jest.fn().mockResolvedValue({ id: 'plan-1' }) } as unknown as OptimizeRouteUseCase;
-    const service = new OptimizerService(euclidean, registryReturning([0]), optimizeRoute, plans);
+    const service = new OptimizerService(euclidean, registryReturning([0]), optimizeRoute, plans, semCorrecao);
 
     const id = await service.optimizeDeliveries('tenant-1', 'user-1', ['d-1', 'd-2']);
 

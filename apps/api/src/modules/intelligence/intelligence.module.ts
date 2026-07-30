@@ -11,6 +11,11 @@ import { InterpretVoiceCommandUseCase } from './application/interpret-voice-comm
 import { PlanLoadUseCase } from './application/plan-load.use-case';
 import { RecordDerivedServiceTimeUseCase } from './application/record-derived-service-time.use-case';
 import { RefreshCellFeaturesUseCase } from './application/refresh-cell-features.use-case';
+import { ETA_CORRECTION, EtaCorrectionService } from './application/eta-correction.service';
+import { StoreEtaModelUseCase } from './application/store-eta-model.use-case';
+import { ETA_CORRECTION_REPOSITORY } from './domain/ports/eta-correction-repository.port';
+import { EtaCorrectionOrmEntity } from './infrastructure/persistence/eta-correction.orm-entity';
+import { EtaCorrectionRepository } from './infrastructure/persistence/eta-correction.repository';
 import { RecordObservationUseCase } from './application/record-observation.use-case';
 import { ACCESS_INSTRUCTIONS } from './domain/access-instructions.port';
 import { COLLECTIVE_INSIGHTS } from './domain/collective-insights.port';
@@ -37,7 +42,11 @@ import { IntelligenceController } from './interface/intelligence.controller';
  * perfil de motorista, prontos para receber modelos de ML/LLM sem tocar a API.
  */
 @Module({
-  imports: [TypeOrmModule.forFeature([CollectiveObservationOrmEntity, CellFeatureOrmEntity])],
+  imports: [TypeOrmModule.forFeature([
+      CollectiveObservationOrmEntity,
+      CellFeatureOrmEntity,
+      EtaCorrectionOrmEntity,
+    ])],
   controllers: [IntelligenceController],
   providers: [
     ForecastRouteUseCase,
@@ -45,6 +54,8 @@ import { IntelligenceController } from './interface/intelligence.controller';
     RecordObservationUseCase,
     RecordDerivedServiceTimeUseCase,
     RefreshCellFeaturesUseCase,
+    EtaCorrectionService,
+    StoreEtaModelUseCase,
     GetCollectiveInsightUseCase,
     InterpretVoiceCommandUseCase,
     { provide: TRAFFIC_MODEL, useClass: TimeContextTrafficModel },
@@ -56,8 +67,17 @@ import { IntelligenceController } from './interface/intelligence.controller';
     { provide: VOICE_INTERPRETER, useClass: HeuristicVoiceInterpreter },
     { provide: COLLECTIVE_SERVICE_TIMES, useClass: CollectiveServiceTimeLookup },
     { provide: CELL_FEATURE_REPOSITORY, useClass: CellFeatureRepository },
+    { provide: ETA_CORRECTION_REPOSITORY, useClass: EtaCorrectionRepository },
+    { provide: ETA_CORRECTION, useExisting: EtaCorrectionService },
   ],
   // Exposto para o Optimizer usar o tempo de serviço típico no custo (RSE-4).
-  exports: [COLLECTIVE_SERVICE_TIMES, RecordDerivedServiceTimeUseCase],
+  // O modelo de ETA sai por `ETA_CORRECTION` (quem prevê) e por
+  // `StoreEtaModelUseCase` (quem treina) — ADR-0090.
+  exports: [
+    COLLECTIVE_SERVICE_TIMES,
+    RecordDerivedServiceTimeUseCase,
+    ETA_CORRECTION,
+    StoreEtaModelUseCase,
+  ],
 })
 export class IntelligenceModule {}

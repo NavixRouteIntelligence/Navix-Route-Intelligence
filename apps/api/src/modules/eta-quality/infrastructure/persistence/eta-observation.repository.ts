@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { MoreThanOrEqual, Repository } from 'typeorm';
+import { IsNull, MoreThanOrEqual, Not, Repository } from 'typeorm';
 
 import { scopedRepository } from '../../../../shared/database/transaction-context';
 import type { EtaObservation } from '../../domain/eta-observation';
@@ -45,5 +45,30 @@ export class EtaObservationRepository implements EtaObservationRepositoryPort {
       select: ['errorMinutes'],
     });
     return rows.map((r) => r.errorMinutes);
+  }
+
+  async trainingSamples(
+    tenantId: string,
+    since: Date,
+    limit: number,
+  ): Promise<{ errorMinutes: number; correctionMinutes: number; predictedArrivalAt: Date }[]> {
+    const rows = await this.repo.find({
+      where: {
+        tenantId,
+        createdAt: MoreThanOrEqual(since),
+        errorMinutes: Not(IsNull()),
+        predictedArrivalAt: Not(IsNull()),
+      },
+      // Crescente: a divisão treino/teste é temporal (ADR-0090).
+      order: { createdAt: 'ASC' },
+      take: limit,
+      select: ['errorMinutes', 'correctionMinutes', 'predictedArrivalAt'],
+    });
+
+    return rows.map((r) => ({
+      errorMinutes: r.errorMinutes as number,
+      correctionMinutes: r.correctionMinutes,
+      predictedArrivalAt: r.predictedArrivalAt as Date,
+    }));
   }
 }
