@@ -6,6 +6,7 @@ import {
   COLLECTIVE_INSIGHTS,
   type CollectiveInsightsPort,
 } from '../domain/collective-insights.port';
+import { RefreshCellFeaturesUseCase } from './refresh-cell-features.use-case';
 
 /** Teto de sanidade: acima disto o rastro descreve outra coisa, não uma parada. */
 const MAX_SERVICE_MINUTES = 600;
@@ -32,6 +33,7 @@ export interface DerivedServiceTimeCommand {
 export class RecordDerivedServiceTimeUseCase {
   constructor(
     @Inject(COLLECTIVE_INSIGHTS) private readonly store: CollectiveInsightsPort,
+    private readonly refresh: RefreshCellFeaturesUseCase,
   ) {}
 
   /** Devolve `false` quando o valor não é aproveitável (fora da faixa de sanidade). */
@@ -54,6 +56,10 @@ export class RecordDerivedServiceTimeUseCase {
     };
 
     await this.store.record(observation);
+    // Recalcula só a célula afetada (ADR-0089). `safe`: a observação já está
+    // gravada, e uma feature desatualizada por um ciclo custa menos que perder
+    // a medição que a originou.
+    await this.refresh.safeExecute(command.tenantId, observation.cell);
     return true;
   }
 }
