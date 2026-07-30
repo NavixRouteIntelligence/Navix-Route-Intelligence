@@ -13,6 +13,10 @@ import { RefreshTokenUseCase } from './application/refresh-token.use-case';
 import { RegisterUseCase } from './application/register.use-case';
 import { RequestPasswordResetUseCase } from './application/request-password-reset.use-case';
 import { ResetPasswordUseCase } from './application/reset-password.use-case';
+import {
+  TENANT_USER_PROVISIONING,
+  TenantUserProvisioningService,
+} from './application/tenant-user-provisioning.service';
 import { UpdateAvatarUseCase } from './application/update-avatar.use-case';
 import { UpdateUserProfileUseCase } from './application/update-user-profile.use-case';
 import { PASSWORD_HASHER } from './application/ports/password-hasher.port';
@@ -77,6 +81,10 @@ import { JwtStrategy } from './interface/jwt.strategy';
     { provide: PASSWORD_HASHER, useClass: Argon2PasswordHasher },
     { provide: TOKEN_SERVICE, useClass: JwtTokenService },
     { provide: KEY_RING, useClass: LocalKeyRing },
+    { provide: TENANT_USER_PROVISIONING, useClass: TenantUserProvisioningService },
   ],
+  // API pública do módulo: criar um login dentro de um tenant existente
+  // (ADR-0085). Repositório, hasher e serviço de token permanecem internos.
+  exports: [TENANT_USER_PROVISIONING],
 })
 export class IdentityModule {}

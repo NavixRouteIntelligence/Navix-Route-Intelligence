@@ -14,6 +14,14 @@ import { TimeWindow } from './value-objects/time-window';
 
 const MAX_NOTES = 2000;
 const MAX_RECIPIENT = 200;
+const MAX_CONTACT = 320; // limite prático de um endereço de e-mail (RFC 5321)
+
+/**
+ * Validação deliberadamente frouxa: o objetivo é descartar lixo evidente vindo
+ * de planilha, não bancar árbitro de RFC. Um endereço que passe daqui e não
+ * exista simplesmente não entrega — e o envio registra a falha.
+ */
+const EMAIL_RE = /^[^\s@]+@[^\s@.]+\.[^\s@]+$/;
 
 export interface DeliveryProps {
   id: string;
@@ -28,6 +36,13 @@ export interface DeliveryProps {
   notes: string | null;
   /** Quem recebe. Nulo quando a origem não informou (ADR-0076). */
   recipient: string | null;
+  /**
+   * Contato do destinatário para as notificações de acompanhamento (ADR-0084).
+   * São dados pessoais de terceiros: opcionais, e nunca expostos na página
+   * pública de rastreio.
+   */
+  recipientEmail: string | null;
+  recipientPhone: string | null;
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
@@ -43,6 +58,8 @@ export interface CreateDeliveryInput {
   routeId?: string | null;
   notes?: string | null;
   recipient?: string | null;
+  recipientEmail?: string | null;
+  recipientPhone?: string | null;
 }
 
 export interface UpdateDeliveryInput {
@@ -54,6 +71,8 @@ export interface UpdateDeliveryInput {
   routeId?: string | null;
   notes?: string | null;
   recipient?: string | null;
+  recipientEmail?: string | null;
+  recipientPhone?: string | null;
 }
 
 /**
@@ -78,6 +97,8 @@ export class Delivery {
       routeId: input.routeId ?? null,
       notes: Delivery.normalizeNotes(input.notes ?? null),
       recipient: Delivery.normalizeRecipient(input.recipient ?? null),
+      recipientEmail: Delivery.normalizeEmail(input.recipientEmail ?? null),
+      recipientPhone: Delivery.normalizeContact(input.recipientPhone ?? null),
       createdAt: now,
       updatedAt: now,
       deletedAt: null,
@@ -95,6 +116,12 @@ export class Delivery {
     if (input.priority !== undefined) this.props.priority = Delivery.validatePriority(input.priority);
     if (input.notes !== undefined) this.props.notes = Delivery.normalizeNotes(input.notes);
     if (input.recipient !== undefined) this.props.recipient = Delivery.normalizeRecipient(input.recipient);
+    if (input.recipientEmail !== undefined) {
+      this.props.recipientEmail = Delivery.normalizeEmail(input.recipientEmail);
+    }
+    if (input.recipientPhone !== undefined) {
+      this.props.recipientPhone = Delivery.normalizeContact(input.recipientPhone);
+    }
     if (input.driverId !== undefined) this.props.driverId = input.driverId;
     if (input.vehicleId !== undefined) this.props.vehicleId = input.vehicleId;
     if (input.routeId !== undefined) this.props.routeId = input.routeId;
@@ -154,6 +181,26 @@ export class Delivery {
     const value = recipient.trim();
     if (value.length === 0) return null;
     return value.length > MAX_RECIPIENT ? value.slice(0, MAX_RECIPIENT) : value;
+  }
+
+  /** Apara, limita e descarta em branco — comum a e-mail e telefone. */
+  private static normalizeContact(value: string | null): string | null {
+    if (value === null) return null;
+    const trimmed = value.trim();
+    if (trimmed.length === 0) return null;
+    return trimmed.length > MAX_CONTACT ? trimmed.slice(0, MAX_CONTACT) : trimmed;
+  }
+
+  /**
+   * E-mail em minúsculas. Endereço claramente inválido vira `null` em vez de
+   * lançar: uma planilha com uma célula suja não pode abortar a importação
+   * inteira — a entrega é criada, só não recebe notificação.
+   */
+  private static normalizeEmail(email: string | null): string | null {
+    const value = Delivery.normalizeContact(email);
+    if (value === null) return null;
+    const lower = value.toLowerCase();
+    return EMAIL_RE.test(lower) ? lower : null;
   }
 
   private static normalizeNotes(notes: string | null): string | null {

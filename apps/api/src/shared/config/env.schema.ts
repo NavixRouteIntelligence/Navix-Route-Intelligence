@@ -73,6 +73,13 @@ export const envSchema = z.object({
   // destinatário; o token em si é validado no backend, então um valor errado
   // aqui gera link inválido, não brecha de acesso.
   PUBLIC_TRACKING_BASE_URL: z.string().default('http://localhost:3000/track'),
+  // Base do link de convite do motorista (ADR-0085). Mesma natureza do de
+  // rastreio: monta a URL entregue ao convidado; a validação é sempre do lado
+  // do servidor, então um valor errado gera link quebrado, não brecha.
+  DRIVER_INVITE_BASE_URL: z.string().default('http://localhost:3000/convite'),
+  // Prazo do convite. 7 dias: longo o bastante para o motorista responder sem
+  // pressa, curto o bastante para um link vazado não valer indefinidamente.
+  DRIVER_INVITE_TTL_HOURS: z.coerce.number().int().positive().max(720).default(168),
   S3_ENDPOINT: z.string().optional(),
   S3_REGION: z.string().default('auto'),
   S3_BUCKET: z.string().optional(),
@@ -128,6 +135,21 @@ export const envSchema = z.object({
   // Zonas de risco (ADR-0024): JSON de [{latitude,longitude,radiusKm,penalty}].
   // Default vazio → sem efeito (no-op). Parseado/validado em AppConfigService.
   OPTIMIZER_RISK_ZONES: z.string().default('[]'),
+
+  // --- Notificações ao destinatário (ADR-0084) ---
+  // Opt-in: sem isto nenhum aviso sai. O canal é único no MVP (e-mail); SMS e
+  // WhatsApp entram pela mesma port quando houver adaptador.
+  NOTIFICATIONS_ENABLED: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
+  NOTIFICATIONS_CHANNEL: z.enum(['email', 'sms', 'whatsapp']).default('email'),
+  // Idioma dos avisos. O destinatário não tem conta, então não há preferência
+  // dele para consultar — usa-se o idioma do tenant.
+  NOTIFICATIONS_LOCALE: z.enum(['pt-BR', 'pt-PT', 'en', 'es']).default('pt-BR'),
+  // "Está chegando": raio e intervalo entre avaliações por motorista.
+  NOTIFICATIONS_PROXIMITY_RADIUS_KM: z.coerce.number().positive().default(2),
+  NOTIFICATIONS_PROXIMITY_INTERVAL_MS: z.coerce.number().int().positive().default(120_000),
 
   // --- Provedor de mapas/roteamento (ADR-0027) ---
   // `mapbox` usa a Matrix API (requer MAPBOX_TOKEN, já definido acima); qualquer

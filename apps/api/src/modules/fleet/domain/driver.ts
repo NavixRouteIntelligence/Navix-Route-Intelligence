@@ -1,6 +1,6 @@
 import { DRIVER_STATUSES, type DriverStatus } from '@navix/contracts';
 
-import { ValidationError } from '../../../shared/kernel/domain-error';
+import { ConflictError, ValidationError } from '../../../shared/kernel/domain-error';
 import { newId } from '../../../shared/kernel/id';
 
 export interface DriverProps {
@@ -10,6 +10,8 @@ export interface DriverProps {
   licenseNumber: string;
   skills: string[];
   status: DriverStatus;
+  /** Login ligado a esta ficha (ADR-0085). `null` = ficha sem conta no app. */
+  userId: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -20,6 +22,8 @@ export interface CreateDriverInput {
   licenseNumber: string;
   skills?: string[];
   status?: DriverStatus;
+  /** Preenchido quando a ficha nasce do aceite de um convite (ADR-0085). */
+  userId?: string | null;
 }
 
 export interface UpdateDriverInput {
@@ -42,6 +46,7 @@ export class Driver {
       licenseNumber: Driver.normalizeLicense(input.licenseNumber),
       skills: Driver.normalizeSkills(input.skills ?? []),
       status: input.status ? Driver.validateStatus(input.status) : 'active',
+      userId: input.userId ?? null,
       createdAt: now,
       updatedAt: now,
     });
@@ -60,6 +65,19 @@ export class Driver {
     this.props.updatedAt = new Date();
   }
 
+  /**
+   * Liga um login a esta ficha (ADR-0085). Uma ficha tem no máximo uma conta:
+   * reatribuir daria ao novo usuário o histórico do anterior, então é um
+   * conflito, não uma atualização. Trocar exige desligar primeiro.
+   */
+  linkAccount(userId: string): void {
+    if (this.props.userId && this.props.userId !== userId) {
+      throw new ConflictError('Este motorista já tem uma conta vinculada.');
+    }
+    this.props.userId = userId;
+    this.props.updatedAt = new Date();
+  }
+
   snapshot(): Readonly<DriverProps> {
     return { ...this.props, skills: [...this.props.skills] };
   }
@@ -70,6 +88,10 @@ export class Driver {
 
   get licenseNumber(): string {
     return this.props.licenseNumber;
+  }
+
+  get userId(): string | null {
+    return this.props.userId;
   }
 
   // ----- invariantes -----

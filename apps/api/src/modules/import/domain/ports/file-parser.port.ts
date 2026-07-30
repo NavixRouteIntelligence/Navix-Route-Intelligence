@@ -5,6 +5,8 @@ export interface ParsedRow {
   recipient?: string;
   addressText?: string;
   phone?: string;
+  /** E-mail do destinatário — base das notificações de acompanhamento (ADR-0084). */
+  email?: string;
   orderNumber?: string;
   notes?: string;
   /** Valor de prioridade como veio no arquivo (normalizado depois). */

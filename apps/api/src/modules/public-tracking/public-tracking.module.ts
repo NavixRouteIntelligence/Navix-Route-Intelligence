@@ -6,6 +6,7 @@ import { OptimizerModule } from '../optimizer/optimizer.module';
 import { TrackingModule } from '../tracking/tracking.module';
 import { GetPublicTrackingUseCase } from './application/get-public-tracking.use-case';
 import { IssueTrackingLinkUseCase } from './application/issue-tracking-link.use-case';
+import { ResolveTrackingTokenUseCase } from './application/resolve-tracking-token.use-case';
 import {
   ROUTE_ETA_GATEWAY,
   VEHICLE_LOCATION_GATEWAY,
@@ -47,9 +48,14 @@ import { TrackingLinkController } from './interface/tracking-link.controller';
   providers: [
     GetPublicTrackingUseCase,
     IssueTrackingLinkUseCase,
+    ResolveTrackingTokenUseCase,
     { provide: TRACKING_TOKEN_REPOSITORY, useClass: TrackingTokenRepository },
     { provide: ROUTE_ETA_GATEWAY, useClass: RouteEtaGateway },
     { provide: VEHICLE_LOCATION_GATEWAY, useClass: VehicleLocationGateway },
   ],
+  // API pública do módulo: emitir o link e resolver o token. O repositório de
+  // tokens fica interno — quem precisa interpretar um token usa estes casos de
+  // uso, não a persistência (ADR-0084).
+  exports: [IssueTrackingLinkUseCase, ResolveTrackingTokenUseCase],
 })
 export class PublicTrackingModule {}

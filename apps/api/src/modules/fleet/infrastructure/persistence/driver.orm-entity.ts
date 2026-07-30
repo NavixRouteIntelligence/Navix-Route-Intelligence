@@ -23,6 +23,10 @@ export class DriverOrmEntity {
   @Column('text', { default: 'active' })
   status!: DriverStatus;
 
+  /** Login do motorista (ADR-0085). Nulo para ficha sem conta no app. */
+  @Column('uuid', { name: 'user_id', nullable: true })
+  userId!: string | null;
+
   @Column('timestamptz', { name: 'created_at' })
   createdAt!: Date;
 

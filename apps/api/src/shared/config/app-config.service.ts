@@ -140,6 +140,15 @@ export class AppConfigService {
     };
   }
 
+  /** Convite de motorista (ADR-0085). */
+  get driverInvites() {
+    return {
+      // Sem barra final: o use case concatena `/<token>`.
+      baseUrl: this.get('DRIVER_INVITE_BASE_URL').replace(/\/+$/, ''),
+      ttlHours: this.get('DRIVER_INVITE_TTL_HOURS'),
+    };
+  }
+
   get tracking() {
     return { retentionDays: this.get('TRACKING_RETENTION_DAYS') };
   }
@@ -164,6 +173,17 @@ export class AppConfigService {
       delayThresholdMinutes: this.get('OPTIMIZER_DELAY_THRESHOLD_MINUTES'),
       jobAttempts: this.get('OPTIMIZER_JOB_ATTEMPTS'),
       jobBackoffMs: this.get('OPTIMIZER_JOB_BACKOFF_MS'),
+    };
+  }
+
+  /** Notificações ao destinatário (ADR-0084). */
+  get notifications() {
+    return {
+      enabled: this.get('NOTIFICATIONS_ENABLED'),
+      channel: this.get('NOTIFICATIONS_CHANNEL'),
+      locale: this.get('NOTIFICATIONS_LOCALE'),
+      proximityRadiusKm: this.get('NOTIFICATIONS_PROXIMITY_RADIUS_KM'),
+      proximityCheckIntervalMs: this.get('NOTIFICATIONS_PROXIMITY_INTERVAL_MS'),
     };
   }
 

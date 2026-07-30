@@ -15,7 +15,9 @@ import { TenancyModule } from './shared/tenancy/tenancy.module';
 import { IdempotencyModule } from './shared/idempotency/idempotency.module';
 import { ThrottlingModule } from './shared/security/throttling.module';
 import { DeliveryModule } from './modules/delivery/delivery.module';
+import { DriverInviteModule } from './modules/driver-invite/driver-invite.module';
 import { PublicTrackingModule } from './modules/public-tracking/public-tracking.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import { FinanceModule } from './modules/finance/finance.module';
 import { FleetModule } from './modules/fleet/fleet.module';
 import { ImportModule } from './modules/import/import.module';
@@ -53,11 +55,17 @@ import { UserSettingsModule } from './modules/user-settings/user-settings.module
     IdentityModule,
     UserSettingsModule,
     FleetModule,
+    // Convite de motorista (ADR-0085): compõe Identity e Fleet para ligar o
+    // login à ficha da frota, sem que um passe a depender do outro.
+    DriverInviteModule,
     FinanceModule,
     DeliveryModule,
     // Rastreamento público do destinatário (ADR-0082): compõe Delivery,
     // Optimizer e Tracking sem inverter a direção de dependência entre eles.
     PublicTrackingModule,
+    // Avisos ao destinatário (ADR-0084): consome os eventos de domínio que já
+    // existem e leva o link de rastreio em cada mensagem.
+    NotificationsModule,
     OptimizerModule,
     IntelligenceModule,
     ImportModule,

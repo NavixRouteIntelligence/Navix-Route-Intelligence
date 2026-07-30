@@ -53,6 +53,10 @@ export class DriverRepository implements DriverRepositoryPort {
     return count > 0;
   }
 
+  async existsByUser(tenantId: string, userId: string): Promise<boolean> {
+    return (await this.repo.count({ where: { tenantId, userId } })) > 0;
+  }
+
   async delete(tenantId: string, id: string): Promise<void> {
     await this.repo.delete({ tenantId, id });
   }
@@ -65,6 +69,7 @@ export class DriverRepository implements DriverRepositoryPort {
       licenseNumber: row.licenseNumber,
       skills: row.skills,
       status: row.status,
+      userId: row.userId,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     });

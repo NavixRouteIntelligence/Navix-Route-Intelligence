@@ -12,6 +12,7 @@ describe('CreateDriverUseCase', () => {
       findById: jest.fn(),
       findAll: jest.fn(),
       existsByLicense: jest.fn().mockResolvedValue(false),
+      existsByUser: jest.fn().mockResolvedValue(false),
       delete: jest.fn(),
       ...overrides,
     };

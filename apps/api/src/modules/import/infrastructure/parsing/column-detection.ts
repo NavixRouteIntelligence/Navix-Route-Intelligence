@@ -2,13 +2,22 @@ import type { ParsedRow } from '../../domain/ports/file-parser.port';
 
 type Field = keyof Pick<
   ParsedRow,
-  'recipient' | 'addressText' | 'phone' | 'orderNumber' | 'notes' | 'priority' | 'latitude' | 'longitude'
+  | 'recipient'
+  | 'addressText'
+  | 'phone'
+  | 'email'
+  | 'orderNumber'
+  | 'notes'
+  | 'priority'
+  | 'latitude'
+  | 'longitude'
 >;
 
 const SYNONYMS: Record<Field, string[]> = {
   recipient: ['destinatario', 'nome', 'cliente', 'recipient', 'name', 'customer'],
   addressText: ['endereco', 'address', 'logradouro', 'rua', 'local'],
   phone: ['telefone', 'phone', 'celular', 'fone', 'contato', 'whatsapp'],
+  email: ['email', 'e-mail', 'mail', 'correio', 'correo'],
   orderNumber: ['pedido', 'encomenda', 'order', 'numero', 'tracking', 'codigo', 'nf'],
   notes: ['observacao', 'observacoes', 'obs', 'notes', 'complemento', 'nota'],
   priority: ['prioridade', 'priority'],
@@ -63,6 +72,7 @@ export function rowFromCells(
     recipient: str(at('recipient')),
     addressText: str(at('addressText')),
     phone: str(at('phone')),
+    email: str(at('email')),
     orderNumber: str(at('orderNumber')),
     notes: str(at('notes')),
     priority: str(at('priority')),

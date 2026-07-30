@@ -77,6 +77,14 @@ export interface Delivery {
   vehicleId: string | null;
   routeId: string | null;
   notes: string | null;
+  /** Quem recebe (ADR-0076). */
+  recipient: string | null;
+  /**
+   * Contato do destinatário para as notificações (ADR-0084). Presente apenas
+   * nesta visão autenticada — a página pública de rastreio nunca os expõe.
+   */
+  recipientEmail: string | null;
+  recipientPhone: string | null;
   createdAt: string;
   updatedAt: string;
   /**
@@ -112,6 +120,9 @@ export interface CreateDeliveryRequest {
   vehicleId?: string | null;
   routeId?: string | null;
   notes?: string | null;
+  recipient?: string | null;
+  recipientEmail?: string | null;
+  recipientPhone?: string | null;
 }
 
 export interface UpdateDeliveryRequest {
@@ -122,6 +133,9 @@ export interface UpdateDeliveryRequest {
   vehicleId?: string | null;
   routeId?: string | null;
   notes?: string | null;
+  recipient?: string | null;
+  recipientEmail?: string | null;
+  recipientPhone?: string | null;
 }
 
 export interface ChangeDeliveryStatusRequest {
