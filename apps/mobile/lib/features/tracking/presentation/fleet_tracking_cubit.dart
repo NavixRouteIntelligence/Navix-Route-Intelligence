@@ -41,6 +41,25 @@ class FleetTrackingState extends Equatable {
     final s = snapshot;
     if (s == null) return const [];
     final out = <FleetAlert>[];
+
+    // Preditivos primeiro: um estouro de janela pesa mais que um GPS instável.
+    // O nome do motorista sai do próprio retrato — o alerta traz só o id.
+    final nomes = {for (final d in s.drivers) d.id: d.name};
+    for (final r in s.risks) {
+      final quem = nomes[r.driverId] ?? 'Entrega sem motorista';
+      final chance = (r.probability * 100).round();
+      final folga = r.slackMinutes < 0
+          ? 'já ${r.slackMinutes.abs().toStringAsFixed(0)} min além da janela'
+          : 'restam ${r.slackMinutes.toStringAsFixed(0)} min de folga';
+      out.add(
+        FleetAlert(
+          id: 'risk-${r.deliveryId}',
+          severity: r.severity == 'high' ? 'danger' : 'warning',
+          message: '$quem: $chance% de risco de estourar a janela — $folga.',
+        ),
+      );
+    }
+
     for (final d in s.drivers) {
       if (d.status == TrackStatus.stopped) {
         out.add(

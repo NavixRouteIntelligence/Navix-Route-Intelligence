@@ -4,6 +4,8 @@ import { DataSource } from 'typeorm';
 import type { Subscription } from 'rxjs';
 import { filter } from 'rxjs/operators';
 
+import type { DelayRiskAlert } from '@navix/contracts';
+
 import { AppConfigService } from '../../../shared/config/app-config.service';
 import { transactionContext } from '../../../shared/database/transaction-context';
 import { DomainEventBus } from '../../../shared/events/domain-event-bus';
@@ -22,6 +24,7 @@ import {
   TENANT_PLAN,
   type TenantPlanPort,
 } from '../../optimizer/application/ports/tenant-plan.port';
+import { DelayRiskRegistry } from './delay-risk.registry';
 import { PredictBreachRiskUseCase, type StopToAssess } from './predict-breach-risk.use-case';
 
 /**
@@ -61,6 +64,7 @@ export class DelayRiskAlertListener implements OnModuleInit, OnModuleDestroy {
     @Inject(TENANT_PLAN) private readonly plan: TenantPlanPort,
     private readonly realtime: RealtimeHub,
     private readonly notify: NotifyRecipientUseCase,
+    private readonly registry: DelayRiskRegistry,
   ) {}
 
   onModuleInit(): void {
@@ -141,24 +145,25 @@ export class DelayRiskAlertListener implements OnModuleInit, OnModuleDestroy {
 
     const avaliadas = await this.predict.execute(tenantId, aAvaliar);
     const porEntrega = new Map(ativas.map((d) => [d.id, d]));
+    const alertas: DelayRiskAlert[] = [];
 
     for (const parada of avaliadas) {
       if (parada.risk.level === 'low') continue;
 
       const entrega = porEntrega.get(parada.deliveryId);
-      this.realtime.publish(tenantId, {
-        type: 'alert.delay-risk',
-        data: {
-          deliveryId: parada.deliveryId,
-          driverId: entrega?.driverId ?? null,
-          severity: parada.risk.level,
-          probability: parada.risk.probability,
-          slackMinutes: parada.risk.slackMinutes,
-          predictedArrival: parada.predictedArrival.toISOString(),
-          windowEnd: parada.windowEnd.toISOString(),
-          samples: parada.risk.samples,
-        },
-      });
+      const alerta: DelayRiskAlert = {
+        deliveryId: parada.deliveryId,
+        driverId: entrega?.driverId ?? null,
+        severity: parada.risk.level,
+        probability: parada.risk.probability,
+        slackMinutes: parada.risk.slackMinutes,
+        predictedArrival: parada.predictedArrival.toISOString(),
+        windowEnd: parada.windowEnd.toISOString(),
+        samples: parada.risk.samples,
+      };
+      alertas.push(alerta);
+
+      this.realtime.publish(tenantId, { type: 'alert.delay-risk', data: alerta });
 
       // Só o risco alto chega ao destinatário. A dedup por entrega/evento do
       // `notification_log` (ADR-0084) garante um aviso só, mesmo com a rota
@@ -167,6 +172,10 @@ export class DelayRiskAlertListener implements OnModuleInit, OnModuleDestroy {
         await this.notify.execute(tenantId, parada.deliveryId, 'delayed');
       }
     }
+
+    // Retrato completo, inclusive vazio: quem lê por polling (o app) precisa
+    // ver o risco **sumir** quando ele deixa de existir, não só aparecer.
+    this.registry.replace(tenantId, alertas);
   }
 
   /**

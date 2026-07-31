@@ -9,6 +9,7 @@ import type { NotifyRecipientUseCase } from '../../notifications/application/not
 import type { OptimizerServicePort } from '../../optimizer/application/optimizer.service';
 import type { TenantPlanPort } from '../../optimizer/application/ports/tenant-plan.port';
 import { DelayRiskAlertListener } from './delay-risk-alert.listener';
+import { DelayRiskRegistry } from './delay-risk.registry';
 import type { AssessedStop, PredictBreachRiskUseCase } from './predict-breach-risk.use-case';
 
 const TENANT = 'tenant-a';
@@ -85,6 +86,7 @@ function build(opts: {
   const notificar = jest.fn().mockResolvedValue(undefined);
   const notify = { execute: notificar } as unknown as NotifyRecipientUseCase;
 
+  const registry = new DelayRiskRegistry();
   const listener = new DelayRiskAlertListener(
     dataSource,
     bus,
@@ -95,6 +97,7 @@ function build(opts: {
     plan,
     realtime,
     notify,
+    registry,
   );
 
   return {
@@ -106,6 +109,7 @@ function build(opts: {
     allowsPredictiveAlerts,
     listNotifiableActive,
     tenantSets,
+    registry,
   };
 }
 
@@ -215,6 +219,38 @@ describe('DelayRiskAlertListener (ADR-0091)', () => {
     await tick(bus);
 
     expect(tenantSets).toEqual([TENANT]);
+    listener.onModuleDestroy();
+  });
+
+  // O app lê por polling: precisa ver o risco **sumir** quando ele deixa de
+  // existir, não só aparecer.
+  it('publica o retrato completo no registro, inclusive vazio', async () => {
+    const { listener, bus, registry } = build({ avaliadas: [risco('high', 0.9)] });
+    listener.onModuleInit();
+    await tick(bus);
+
+    expect(registry.current(TENANT)).toHaveLength(1);
+    listener.onModuleDestroy();
+  });
+
+  it('risco que deixou de existir some do registro', async () => {
+    const { listener, bus, registry } = build({ avaliadas: [] });
+    registry.replace(TENANT, [
+      {
+        deliveryId: 'antiga',
+        driverId: null,
+        severity: 'high',
+        probability: 0.9,
+        slackMinutes: -5,
+        predictedArrival: previsto.toISOString(),
+        windowEnd: fimDaJanela.toISOString(),
+        samples: 40,
+      },
+    ]);
+    listener.onModuleInit();
+    await tick(bus);
+
+    expect(registry.current(TENANT)).toEqual([]);
     listener.onModuleDestroy();
   });
 

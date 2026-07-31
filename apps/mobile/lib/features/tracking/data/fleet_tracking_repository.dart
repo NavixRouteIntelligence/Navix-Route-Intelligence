@@ -51,9 +51,37 @@ class FleetTrackingRepository {
       }
 
       result.sort((a, b) => _rank(a.status).compareTo(_rank(b.status)));
-      return FleetSnapshot(drivers: result, updatedAt: DateTime.now());
+      return FleetSnapshot(
+        drivers: result,
+        updatedAt: DateTime.now(),
+        risks: await _loadRisks(),
+      );
     } on DioException catch (e) {
       throw mapDioException(e);
+    }
+  }
+
+  /// Riscos vigentes (ADR-0091). O app usa polling, então lê o retrato que o
+  /// backend calculou no ciclo dele — o web recebe o mesmo por SSE.
+  ///
+  /// Falha em silêncio: o risco é um extra sobre o retrato da frota, e perdê-lo
+  /// não pode derrubar a tela inteira.
+  Future<List<DelayRisk>> _loadRisks() async {
+    try {
+      final res = await _dio.get<dynamic>('/eta/quality/risks');
+      return _list(res)
+          .map(
+            (r) => DelayRisk(
+              deliveryId: r['deliveryId'] as String? ?? '',
+              driverId: r['driverId'] as String?,
+              severity: r['severity'] as String? ?? 'medium',
+              probability: (r['probability'] as num?)?.toDouble() ?? 0,
+              slackMinutes: (r['slackMinutes'] as num?)?.toDouble() ?? 0,
+            ),
+          )
+          .toList();
+    } on DioException {
+      return const [];
     }
   }
 

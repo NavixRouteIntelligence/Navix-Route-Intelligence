@@ -9,6 +9,7 @@ import { TrackingModule } from '../tracking/tracking.module';
 import { EtaQualityListener } from './application/eta-quality.listener';
 import { GetEtaQualityUseCase } from './application/get-eta-quality.use-case';
 import { DelayRiskAlertListener } from './application/delay-risk-alert.listener';
+import { DelayRiskRegistry } from './application/delay-risk.registry';
 import { PredictBreachRiskUseCase } from './application/predict-breach-risk.use-case';
 import { RecordEtaObservationUseCase } from './application/record-eta-observation.use-case';
 import { TrainEtaModelUseCase } from './application/train-eta-model.use-case';
@@ -54,6 +55,7 @@ import { EtaQualityController } from './interface/eta-quality.controller';
     TrainEtaModelUseCase,
     PredictBreachRiskUseCase,
     DelayRiskAlertListener,
+    DelayRiskRegistry,
     EtaQualityListener,
     EtaMetrics,
     { provide: ETA_OBSERVATION_REPOSITORY, useClass: EtaObservationRepository },

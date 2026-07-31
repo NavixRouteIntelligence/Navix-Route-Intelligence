@@ -10,12 +10,13 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import type { AuthenticatedUser } from '@navix/contracts';
+import type { AuthenticatedUser, DelayRiskAlert } from '@navix/contracts';
 
 import { CurrentUser } from '../../../shared/interface/current-user.decorator';
 import { JwtAuthGuard } from '../../../shared/security/jwt-auth.guard';
 import { Roles } from '../../../shared/security/roles.decorator';
 import { RolesGuard } from '../../../shared/security/roles.guard';
+import { DelayRiskRegistry } from '../application/delay-risk.registry';
 import { GetEtaQualityUseCase } from '../application/get-eta-quality.use-case';
 import {
   TrainEtaModelUseCase,
@@ -37,6 +38,7 @@ export class EtaQualityController {
   constructor(
     private readonly quality: GetEtaQualityUseCase,
     private readonly train: TrainEtaModelUseCase,
+    private readonly risks: DelayRiskRegistry,
   ) {}
 
   @Get()
@@ -48,6 +50,19 @@ export class EtaQualityController {
   ): Promise<{ data: EtaQualitySummary }> {
     const janela = Math.min(Math.max(windowDays, 1), 365);
     return { data: await this.quality.execute(user.tenantId, janela) };
+  }
+
+  /**
+   * Riscos vigentes de estouro de janela (ADR-0091).
+   *
+   * Existe para os clientes que **não** consomem SSE — hoje o app, que usa
+   * polling. O web recebe os mesmos alertas empurrados e não precisa daqui.
+   */
+  @Get('risks')
+  @Roles('admin', 'dispatcher', 'fleet_manager')
+  @ApiOperation({ summary: 'Paradas em risco de estourar a janela agora' })
+  currentRisks(@CurrentUser() user: AuthenticatedUser): { data: DelayRiskAlert[] } {
+    return { data: this.risks.current(user.tenantId) };
   }
 
   /**

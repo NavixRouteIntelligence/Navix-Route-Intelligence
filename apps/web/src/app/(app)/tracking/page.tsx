@@ -4,10 +4,15 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Radio, Users } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useState } from 'react';
+import type { DelayRiskAlert } from '@navix/contracts';
 
 import { useRealtime, useRealtimeEvent } from '@/lib/realtime/realtime-provider';
 
-import { TrackingAlerts, buildTrackingAlerts } from '@/components/tracking/tracking-alerts';
+import {
+  TrackingAlerts,
+  buildRiskAlerts,
+  buildTrackingAlerts,
+} from '@/components/tracking/tracking-alerts';
 import { TrackingDetailDialog } from '@/components/tracking/tracking-detail-dialog';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -40,6 +45,14 @@ export default function TrackingPage() {
     if (live) queryClient.invalidateQueries({ queryKey: ['fleet-positions'] });
   });
 
+  // Risco de estouro de janela (ADR-0091). Guardado em estado, e não em query:
+  // é evento empurrado pelo servidor, não recurso que se busca — e some ao
+  // recarregar a página, o que é o certo para um alerta do turno corrente.
+  const [risks, setRisks] = useState<DelayRiskAlert[]>([]);
+  useRealtimeEvent('alert.delay-risk', (data) => {
+    setRisks((atuais) => [...atuais.filter((r) => r.deliveryId !== data.deliveryId), data]);
+  });
+
   // Polling **apenas como fallback**: só quando o SSE não está conectado (ADR-0018).
   const { data, isLoading, error, dataUpdatedAt } = useQuery({
     queryKey: ['fleet-positions'],
@@ -61,7 +74,8 @@ export default function TrackingPage() {
   const positions = data?.data ?? [];
   const enRoute = positions.filter((p) => p.status === 'en_route').length;
   const offline = positions.filter((p) => p.status === 'offline').length;
-  const alerts = buildTrackingAlerts(positions, nameOf);
+  // Preditivos primeiro: um estouro de janela pesa mais que um GPS instável.
+  const alerts = [...buildRiskAlerts(risks, nameOf), ...buildTrackingAlerts(positions, nameOf)];
 
   return (
     <div className="space-y-6">
