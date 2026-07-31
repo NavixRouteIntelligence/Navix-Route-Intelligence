@@ -71,8 +71,14 @@ MyRouteRepository repo({
   return MyRouteRepository(dio);
 }
 
-Map<String, dynamic> delivery(String id, String street) => {
+Map<String, dynamic> delivery(
+  String id,
+  String street, {
+  String status = 'pending',
+}) =>
+    {
       'id': id,
+      'status': status,
       'address': {
         'street': street,
         'number': '10',
@@ -106,7 +112,14 @@ void main() {
             'id': 'p1',
             'createdAt': '2026-07-23T09:00:00.000Z',
             'metrics': {'totalDistanceKm': 12.5, 'totalTimeMinutes': 95},
-            'savings': {'distanceKm': 3.2, 'distancePct': 20},
+            'baseline': {'totalDistanceKm': 15.7, 'totalTimeMinutes': 120},
+            'savings': {
+              'distanceKm': 3.2,
+              'distancePct': 20,
+              'timeMinutes': 25,
+              'timePct': 20.8,
+            },
+            'params': {'vehicleType': 'van'},
             'stops': [
               {'sequence': 1, 'deliveryId': 'd1', 'etaMinutes': 12},
               {'sequence': 2, 'deliveryId': 'd2', 'etaMinutes': 40},
@@ -131,14 +144,26 @@ void main() {
             ],
           },
         ],
-        deliveries: [delivery('d1', 'Rua A'), delivery('d2', 'Rua B')],
+        deliveries: [
+          delivery('d1', 'Rua A', status: 'delivered'),
+          delivery('d2', 'Rua B'),
+        ],
       ).load();
 
       expect(route.status, MyRouteStatus.ready);
       expect(route.isReady, isTrue);
       expect(route.totalStops, 2);
+      expect(route.completedStops, 1);
+      expect(route.remainingStops, 1);
+      expect(route.completionRatio, 0.5);
       expect(route.distanceKm, 12.5);
       expect(route.savedKm, 3.2);
+      expect(route.savedMinutes, 25);
+      expect(route.baselineDistanceKm, 15.7);
+      expect(route.baselineTimeMinutes, 120);
+      expect(route.vehicleType, 'van');
+      expect(route.usesDefaultFuelEstimate, isFalse);
+      expect(route.fuelSavedLiters, closeTo(0.352, 0.0001));
       expect(route.updatedAt, isNotNull);
       expect(route.groups.map((g) => g.type), ['commerce', 'residence']);
       expect(route.stops.first.addressLine, 'Rua A, 10');

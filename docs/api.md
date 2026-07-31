@@ -256,7 +256,7 @@ Tenant + usuário são criados numa única transação. O **RBAC** usa `roles[]`
 
 ### 14.1 Fleet — implementado (Fase 1)
 
-Todas as rotas exigem `Authorization: Bearer <access_token>`. Mutações exigem papel `admin` ou `fleet_manager`. Escopadas ao tenant do token.
+Todas as rotas exigem `Authorization: Bearer <access_token>`. Mutações exigem papel `admin` ou `fleet_manager` e são escopadas ao tenant do token. Exceção: `POST /fleet/vehicles` também aceita `driver` quando o login não possui ficha de motorista vinculada no tenant — o fluxo de onboarding do motorista autônomo. Motoristas convidados por uma empresa continuam bloqueados.
 
 ```
 # Veículos
@@ -274,7 +274,7 @@ PATCH  /api/v1/fleet/drivers/{id}        # atualiza parcial
 DELETE /api/v1/fleet/drivers/{id}        # remove (204)
 ```
 
-Corpo de criação de veículo: `{ plate, type, capacity, status? }` — `type ∈ {car,van,truck,motorcycle,bicycle}`, `status ∈ {active,inactive,maintenance}`.
+Corpo de criação de veículo: `{ plate, type, capacity, status?, odometerKm? }` — `type ∈ {car,van,truck,motorcycle,bicycle}`, `status ∈ {active,inactive,maintenance}`.
 Corpo de criação de motorista: `{ name, licenseNumber, skills?, status? }` — `status ∈ {active,inactive}`.
 
 ### 14.2 Delivery — implementado (Fase 1)

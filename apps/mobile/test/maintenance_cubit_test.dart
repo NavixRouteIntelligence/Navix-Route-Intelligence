@@ -10,6 +10,8 @@ class _MockRepo extends Mock implements MaintenanceRepository {}
 
 class _FakeNewRecord extends Fake implements NewMaintenanceRecord {}
 
+class _FakeNewVehicle extends Fake implements NewVehicle {}
+
 void main() {
   late _MockRepo repo;
 
@@ -30,7 +32,10 @@ void main() {
     remainingDays: 16,
   );
 
-  setUpAll(() => registerFallbackValue(_FakeNewRecord()));
+  setUpAll(() {
+    registerFallbackValue(_FakeNewRecord());
+    registerFallbackValue(_FakeNewVehicle());
+  });
   setUp(() => repo = _MockRepo());
 
   MaintenanceCubit build() => MaintenanceCubit(repo);
@@ -104,6 +109,28 @@ void main() {
       // recarrega registros/lembretes após a mutação (load + mutação = 2 chamadas)
       verify(() => repo.records('v1')).called(2);
     },
+  );
+
+  blocTest<MaintenanceCubit, MaintenanceState>(
+    'createVehicle: cadastra e abre a área completa do veículo',
+    build: () {
+      when(() => repo.createVehicle(any())).thenAnswer((_) async => vehicle);
+      when(() => repo.records('v1')).thenAnswer((_) async => []);
+      when(() => repo.reminders('v1')).thenAnswer((_) async => []);
+      return build();
+    },
+    seed: () => const MaintenanceState(status: MaintenanceStatus.empty),
+    act: (c) => c.createVehicle(
+      const NewVehicle(plate: 'AA-00-BB', type: 'car', capacity: 400),
+    ),
+    expect: () => [
+      const MaintenanceState(status: MaintenanceStatus.empty, busy: true),
+      const MaintenanceState(
+        status: MaintenanceStatus.ready,
+        vehicle: vehicle,
+      ),
+    ],
+    verify: (_) => verify(() => repo.createVehicle(any())).called(1),
   );
 
   blocTest<MaintenanceCubit, MaintenanceState>(

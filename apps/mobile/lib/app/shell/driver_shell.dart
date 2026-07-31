@@ -3,8 +3,8 @@ import 'package:get_it/get_it.dart';
 
 import '../../core/session/session_cubit.dart';
 import '../../features/deliveries/presentation/driver_deliveries_page.dart';
+import '../../features/finance/presentation/driver_results_page.dart';
 import '../../features/route/presentation/my_route_page.dart';
-import '../../features/finance/presentation/finance_page.dart';
 import '../../features/maintenance/presentation/maintenance_page.dart';
 import '../../l10n/gen/app_localizations.dart';
 import 'adaptive_nav_scaffold.dart';
@@ -39,18 +39,6 @@ class DriverShell extends StatelessWidget {
         label: l10n.navDeliveries,
         page: const DriverDeliveriesPage(),
       ),
-      NavTab(
-        icon: Icons.directions_car_outlined,
-        selectedIcon: Icons.directions_car,
-        label: l10n.navVehicle,
-        page: const MaintenancePage(),
-      ),
-      NavTab(
-        icon: Icons.account_balance_wallet_outlined,
-        selectedIcon: Icons.account_balance_wallet,
-        label: l10n.navFinance,
-        page: const FinancePage(),
-      ),
     ];
 
     final menu = [
@@ -67,31 +55,14 @@ class DriverShell extends StatelessWidget {
       NavMenuEntry(
         icon: Icons.directions_car_outlined,
         label: l10n.navVehicle,
-        tabIndex: 2,
-      ),
-      NavMenuEntry(
-        icon: Icons.account_balance_wallet_outlined,
-        label: l10n.navFinance,
-        tabIndex: 3,
-      ),
-      const NavMenuEntry.divider(),
-      // Manutenção mora na tela do Veículo (aba Veículo) — combinadas hoje.
-      NavMenuEntry(
-        icon: Icons.build_outlined,
-        label: l10n.navMaintenance,
-        tabIndex: 2,
+        onTap: () => _push(context, const MaintenancePage()),
       ),
       NavMenuEntry(
         icon: Icons.insights_outlined,
-        label: l10n.navStatistics,
-        onTap: () => _push(
-          context,
-          ComingSoonPage(
-            title: l10n.navStatistics,
-            icon: Icons.insights_outlined,
-          ),
-        ),
+        label: l10n.navResults,
+        onTap: () => _push(context, const DriverResultsPage()),
       ),
+      const NavMenuEntry.divider(),
       NavMenuEntry(
         icon: Icons.notifications_outlined,
         label: l10n.navNotifications,

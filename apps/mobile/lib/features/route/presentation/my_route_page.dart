@@ -5,6 +5,7 @@ import 'package:get_it/get_it.dart';
 import '../../../app/shell/adaptive_nav_scaffold.dart';
 import '../../../app/theme/navix_tokens.dart';
 import '../../../core/error/failure_l10n.dart';
+import '../../../core/session/session_cubit.dart';
 import '../../../core/ui/navix_card.dart';
 import '../../../core/ui/navix_section_header.dart';
 import '../../../core/ui/navix_states.dart';
@@ -18,13 +19,11 @@ import '../domain/my_route.dart';
 import 'destination_labels.dart';
 import 'my_route_cubit.dart';
 
-/// **Minha Rota** (ADR-0076): a rota que a IA já preparou, e o posto operacional
-/// do motorista.
+/// **Minha Rota** (ADR-0076): resumo e sequência operacional do motorista.
 ///
 /// Não há botão "Otimizar" — desde a ADR-0074 a preparação acontece sozinha na
-/// confirmação da importação. Além do resumo, dos fatores da IA e dos Grupos
-/// Inteligentes, concentra as ações de operação (registrar entrega, voz) que
-/// antes viviam numa tela de dashboard separada.
+/// confirmação da importação. A tela concentra as ações de operação (registrar
+/// entrega, voz) que antes viviam numa tela de dashboard separada.
 class MyRoutePage extends StatelessWidget {
   const MyRoutePage({super.key});
 
@@ -62,7 +61,7 @@ class MyRoutePage extends StatelessWidget {
             ),
           ],
         ),
-        floatingActionButton: const VoiceAssistantButton(),
+        floatingActionButton: const VoiceAssistantButton(compact: true),
         body: BlocConsumer<MyRouteCubit, MyRouteState>(
           listenWhen: (p, c) => p.error != c.error && c.error != null,
           listener: (context, state) => ScaffoldMessenger.of(context)
@@ -373,24 +372,281 @@ class _Content extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
         children: [
+          _RouteHero(route: route),
+          const SizedBox(height: 12),
           _Summary(route: route),
-          const SizedBox(height: 12),
-          const _AiPanel(),
-          const SizedBox(height: 12),
+          const SizedBox(height: 20),
           NavixSectionHeader(
-            title: l10n.routeGroups,
+            title: l10n.routeDestinationTypes,
             icon: Icons.category_outlined,
           ),
-          ...route.groups.map(
-            (g) => _GroupTile(
-              group: g,
-              route: route,
-              expanded: state.expanded.contains(g.type),
+          const SizedBox(height: 8),
+          _DestinationOverview(groups: route.groups),
+          const SizedBox(height: 20),
+          NavixSectionHeader(
+            title: l10n.routeDeliveryOrder,
+            icon: Icons.format_list_numbered,
+          ),
+          const SizedBox(height: 8),
+          _DeliveryOrder(route: route),
+        ],
+      ),
+    );
+  }
+}
+
+class _RouteHero extends StatelessWidget {
+  const _RouteHero({required this.route});
+
+  final MyRoute route;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    final l10n = AppLocalizations.of(context);
+    final scheme = Theme.of(context).colorScheme;
+    final now = DateTime.now();
+    final greeting = switch (now.hour) {
+      < 12 => l10n.routeGreetingMorning,
+      < 18 => l10n.routeGreetingAfternoon,
+      _ => l10n.routeGreetingEvening,
+    };
+    final name = _displayName();
+    final next = route.next;
+    final nextEta = next == null ? null : _etaFor(next.id);
+
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            scheme.primary.withValues(alpha: 0.3),
+            t.accent.withValues(alpha: 0.1),
+            scheme.surface,
+          ],
+          stops: const [0, 0.62, 1],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: scheme.primary.withValues(alpha: 0.35),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: scheme.primary.withValues(alpha: 0.12),
+            blurRadius: 24,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            right: -30,
+            top: -42,
+            child: Container(
+              width: 132,
+              height: 132,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: t.accent.withValues(alpha: 0.07),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            name == null ? greeting : '$greeting, $name',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 21,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.3,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            MaterialLocalizations.of(context)
+                                .formatFullDate(now),
+                            style: TextStyle(fontSize: 12.5, color: t.muted),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: scheme.primary.withValues(alpha: 0.18),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: scheme.primary.withValues(alpha: 0.28),
+                        ),
+                      ),
+                      child: Icon(
+                        Icons.navigation_rounded,
+                        color: scheme.primary,
+                        size: 20,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        l10n.routeProgressCount(
+                          route.completedStops,
+                          route.totalStops,
+                        ),
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      l10n.routeProgressRemaining(route.remainingStops),
+                      style: TextStyle(fontSize: 12, color: t.muted),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 9),
+                TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0, end: route.completionRatio),
+                  duration: t.motionSlow,
+                  builder: (context, value, _) => ClipRRect(
+                    borderRadius: BorderRadius.circular(999),
+                    child: LinearProgressIndicator(
+                      value: value,
+                      minHeight: 7,
+                      backgroundColor: scheme.onSurface.withValues(alpha: 0.1),
+                      valueColor: AlwaysStoppedAnimation(scheme.primary),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: scheme.surface.withValues(alpha: 0.72),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: t.line),
+                  ),
+                  child: next == null
+                      ? Row(
+                          children: [
+                            Icon(
+                              Icons.check_circle_outline,
+                              color: t.success,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              l10n.routeAllDeliveriesDone,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        )
+                      : Row(
+                          children: [
+                            Container(
+                              width: 34,
+                              height: 34,
+                              decoration: BoxDecoration(
+                                color: t.accent.withValues(alpha: 0.13),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Icon(
+                                Icons.near_me_outlined,
+                                size: 18,
+                                color: t.accent,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    l10n.routeNextStop,
+                                    style: TextStyle(
+                                      fontSize: 10.5,
+                                      color: t.muted,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    next.label,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (nextEta != null) ...[
+                              const SizedBox(width: 8),
+                              Text(
+                                '${nextEta.round()} min',
+                                style: TextStyle(
+                                  color: t.accent,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                ),
+              ],
             ),
           ),
         ],
       ),
     );
+  }
+
+  String? _displayName() {
+    if (!GetIt.instance.isRegistered<SessionCubit>()) return null;
+    final email = GetIt.instance<SessionCubit>().state.email;
+    if (email == null || email.isEmpty) return null;
+    final local =
+        email.split('@').first.replaceAll(RegExp(r'[._-]+'), ' ').trim();
+    if (local.isEmpty) return null;
+    return local
+        .split(' ')
+        .map((word) => word.isEmpty
+            ? word
+            : '${word[0].toUpperCase()}${word.substring(1)}')
+        .join(' ');
+  }
+
+  double? _etaFor(String deliveryId) {
+    for (final stop in route.stops) {
+      if (stop.deliveryId == deliveryId) return stop.etaMinutes;
+    }
+    return null;
   }
 }
 
@@ -410,11 +666,11 @@ class _Summary extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.auto_awesome, size: 18, color: t.accent),
+              Icon(Icons.route_outlined, size: 18, color: t.accent),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  l10n.routeReadyByAi,
+                  l10n.routeSummaryTitle,
                   style: const TextStyle(
                     fontSize: 14.5,
                     fontWeight: FontWeight.w700,
@@ -543,207 +799,136 @@ class _StatusChip extends StatelessWidget {
       );
 }
 
-/// O que a IA levou em conta. Lista **só o que o motor usa de verdade** — não
-/// há fonte de trânsito ao vivo no sistema, então o painel fala em padrões
-/// históricos por região e horário (Inteligência Coletiva, ADR-0065) em vez de
-/// prometer trânsito.
-class _AiPanel extends StatelessWidget {
-  const _AiPanel();
+class _DestinationOverview extends StatelessWidget {
+  const _DestinationOverview({required this.groups});
+
+  final List<RouteGroup> groups;
 
   @override
   Widget build(BuildContext context) {
     final t = context.tokens;
     final l10n = AppLocalizations.of(context);
-    final factors = <(IconData, String)>[
-      (Icons.straighten, l10n.factorDistance),
-      (Icons.map_outlined, l10n.factorRegion),
-      (Icons.insights_outlined, l10n.factorHistory),
-      (Icons.category_outlined, l10n.factorDestinationType),
-      (Icons.schedule_outlined, l10n.factorTimeWindow),
-      (Icons.priority_high, l10n.factorPriority),
-      (Icons.inventory_2_outlined, l10n.factorCapacity),
-      (Icons.local_shipping_outlined, l10n.factorVehicle),
-    ];
 
-    return NavixCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.psychology_outlined, size: 18, color: t.accent),
-              const SizedBox(width: 8),
-              Text(
-                l10n.routeAiTitle,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final group in groups)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+            decoration: BoxDecoration(
+              color: t.surfaceAlt,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: t.line),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  destinationIcon(group.type),
+                  size: 17,
+                  color: t.accent,
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            l10n.routeAiSubtitle,
-            style: TextStyle(fontSize: 12, color: t.muted),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final (icon, label) in factors)
+                const SizedBox(width: 7),
+                Text(
+                  destinationLabel(l10n, group.type),
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(width: 7),
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
+                    horizontal: 7,
+                    vertical: 2,
                   ),
                   decoration: BoxDecoration(
-                    color: t.surfaceAlt,
+                    color: t.accent.withValues(alpha: 0.14),
                     borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: t.line),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(icon, size: 13, color: t.muted),
-                      const SizedBox(width: 6),
-                      Text(label, style: const TextStyle(fontSize: 11.5)),
-                    ],
+                  child: Text(
+                    '${group.stops}',
+                    style: TextStyle(
+                      color: t.accent,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
-            ],
+              ],
+            ),
           ),
+      ],
+    );
+  }
+}
+
+class _DeliveryOrder extends StatelessWidget {
+  const _DeliveryOrder({required this.route});
+
+  final MyRoute route;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    final stops = [...route.stops]
+      ..sort((a, b) => a.sequence.compareTo(b.sequence));
+
+    return NavixCard(
+      padding: EdgeInsets.zero,
+      child: Column(
+        children: [
+          for (var index = 0; index < stops.length; index++) ...[
+            _StopTile(
+              stop: stops[index],
+              destinationType: _destinationTypeFor(route, stops[index]),
+            ),
+            if (index != stops.length - 1)
+              Divider(height: 1, indent: 52, color: t.line),
+          ],
         ],
       ),
     );
   }
+
+  static String _destinationTypeFor(MyRoute route, RouteStopInfo stop) {
+    for (final group in route.groups) {
+      if (group.sequences.contains(stop.sequence)) return group.type;
+    }
+    return 'other';
+  }
 }
 
-/// Um Grupo Inteligente, expansível. A ordem mostrada é a da rota — o grupo
-/// **não** reordena nada (ADR-0075).
-class _GroupTile extends StatelessWidget {
-  const _GroupTile({
-    required this.group,
-    required this.route,
-    required this.expanded,
-  });
+class _StopTile extends StatelessWidget {
+  const _StopTile({required this.stop, required this.destinationType});
 
-  final RouteGroup group;
-  final MyRoute route;
-  final bool expanded;
+  final RouteStopInfo stop;
+  final String destinationType;
 
   @override
   Widget build(BuildContext context) {
     final t = context.tokens;
     final l10n = AppLocalizations.of(context);
-    final stops = route.stopsOf(group);
-
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: NavixCard(
-        padding: EdgeInsets.zero,
-        child: Column(
-          children: [
-            InkWell(
-              borderRadius: BorderRadius.circular(12),
-              onTap: () => context.read<MyRouteCubit>().toggleGroup(group.type),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 12,
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 34,
-                      height: 34,
-                      decoration: BoxDecoration(
-                        color: t.accent.withValues(alpha: 0.14),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(
-                        destinationIcon(group.type),
-                        size: 18,
-                        color: t.accent,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            destinationLabel(l10n, group.type),
-                            style: const TextStyle(
-                              fontSize: 14.5,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '${l10n.routeGroupStops(group.stops)} · '
-                            '${group.distanceKm.toStringAsFixed(1)} km · '
-                            '${group.timeMinutes.round()} min',
-                            style: TextStyle(fontSize: 12, color: t.muted),
-                          ),
-                        ],
-                      ),
-                    ),
-                    AnimatedRotation(
-                      turns: expanded ? 0.5 : 0,
-                      duration: t.motionFast,
-                      child: Icon(Icons.expand_more, color: t.muted),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            AnimatedCrossFade(
-              duration: t.motionBase,
-              crossFadeState: expanded
-                  ? CrossFadeState.showSecond
-                  : CrossFadeState.showFirst,
-              firstChild: const SizedBox(width: double.infinity),
-              secondChild: Column(
-                children: [
-                  Divider(height: 1, color: t.line),
-                  ...stops.map((s) => _StopTile(stop: s)),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _StopTile extends StatelessWidget {
-  const _StopTile({required this.stop});
-  final RouteStopInfo stop;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = context.tokens;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 26,
-            height: 26,
+            width: 28,
+            height: 28,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: t.surfaceAlt,
+              color: t.accent.withValues(alpha: 0.14),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: t.line),
             ),
             child: Text(
               '${stop.sequence}',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 11.5,
                 fontWeight: FontWeight.w700,
+                color: t.accent,
               ),
             ),
           ),
@@ -768,12 +953,42 @@ class _StopTile extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(fontSize: 11.5, color: t.muted),
                   ),
+                const SizedBox(height: 7),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: t.surfaceAlt,
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(color: t.line),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        destinationIcon(destinationType),
+                        size: 12,
+                        color: t.muted,
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        destinationLabel(l10n, destinationType),
+                        style: TextStyle(fontSize: 10.5, color: t.muted),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
-          Text(
-            '${stop.etaMinutes.round()} min',
-            style: TextStyle(fontSize: 11.5, color: t.muted),
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Text(
+              '${stop.etaMinutes.round()} min',
+              style: TextStyle(fontSize: 11.5, color: t.muted),
+            ),
           ),
         ],
       ),

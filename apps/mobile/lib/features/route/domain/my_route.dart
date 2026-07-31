@@ -105,10 +105,16 @@ class MyRoute extends Equatable {
   const MyRoute({
     required this.status,
     this.totalStops = 0,
+    this.completedStops = 0,
     this.distanceKm = 0,
     this.timeMinutes = 0,
     this.savedKm = 0,
     this.savedPct = 0,
+    this.savedMinutes = 0,
+    this.savedTimePct = 0,
+    this.baselineDistanceKm = 0,
+    this.baselineTimeMinutes = 0,
+    this.vehicleType,
     this.updatedAt,
     this.groups = const [],
     this.stops = const [],
@@ -120,12 +126,18 @@ class MyRoute extends Equatable {
 
   final MyRouteStatus status;
   final int totalStops;
+  final int completedStops;
   final double distanceKm;
   final double timeMinutes;
 
   /// Economia prevista contra a ordem original (baseline).
   final double savedKm;
   final double savedPct;
+  final double savedMinutes;
+  final double savedTimePct;
+  final double baselineDistanceKm;
+  final double baselineTimeMinutes;
+  final String? vehicleType;
 
   /// Quando a IA preparou esta rota.
   final DateTime? updatedAt;
@@ -137,6 +149,28 @@ class MyRoute extends Equatable {
   final NextDelivery? next;
 
   bool get isReady => status == MyRouteStatus.ready;
+  int get remainingStops {
+    final remaining = totalStops - completedStops;
+    return remaining < 0 ? 0 : remaining;
+  }
+
+  double get completionRatio => totalStops == 0
+      ? 0
+      : (completedStops / totalStops).clamp(0.0, 1.0).toDouble();
+
+  bool get usesDefaultFuelEstimate => vehicleType == null;
+
+  double get fuelSavedLiters {
+    final consumption = switch (vehicleType) {
+      'bicycle' => 0.0,
+      'motorcycle' => 3.0,
+      'van' => 11.0,
+      'truck' => 28.0,
+      _ => 8.0,
+    };
+    final distance = savedKm < 0 ? 0 : savedKm;
+    return distance * consumption / 100;
+  }
 
   /// Paradas de um grupo, na ordem da rota.
   List<RouteStopInfo> stopsOf(RouteGroup group) {
@@ -149,10 +183,16 @@ class MyRoute extends Equatable {
   List<Object?> get props => [
         status,
         totalStops,
+        completedStops,
         distanceKm,
         timeMinutes,
         savedKm,
         savedPct,
+        savedMinutes,
+        savedTimePct,
+        baselineDistanceKm,
+        baselineTimeMinutes,
+        vehicleType,
         updatedAt,
         groups,
         stops,

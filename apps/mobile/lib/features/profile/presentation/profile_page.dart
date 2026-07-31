@@ -7,7 +7,7 @@ import '../../../core/session/session_state.dart';
 import '../../../core/ui/navix_button.dart';
 import '../../../core/ui/navix_card.dart';
 import '../../../l10n/gen/app_localizations.dart';
-import '../../finance/presentation/finance_page.dart';
+import '../../finance/presentation/driver_results_page.dart';
 import '../../maintenance/presentation/maintenance_page.dart';
 
 /// Perfil com identidade da sessão (RBAC) e logout.
@@ -66,12 +66,14 @@ class ProfilePage extends StatelessWidget {
                 NavixCard(
                   child: ListTile(
                     contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.account_balance_wallet_outlined),
-                    title: Text(l10n.finTitle),
-                    subtitle: Text(l10n.profileFinanceSubtitle),
+                    leading: const Icon(Icons.insights_outlined),
+                    title: Text(l10n.resultsTitle),
+                    subtitle: Text(l10n.profileResultsSubtitle),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => Navigator.of(context).push<void>(
-                      MaterialPageRoute(builder: (_) => const FinancePage()),
+                      MaterialPageRoute(
+                        builder: (_) => const DriverResultsPage(),
+                      ),
                     ),
                   ),
                 ),

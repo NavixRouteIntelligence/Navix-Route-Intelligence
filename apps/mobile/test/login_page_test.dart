@@ -13,7 +13,7 @@ class _MockBiometric extends Mock implements BiometricService {}
 void main() {
   setUp(() {
     final biometric = _MockBiometric();
-    when(biometric.isAvailable).thenAnswer((_) async => false);
+    when(biometric.isAvailable).thenAnswer((_) async => true);
     GetIt.instance.registerSingleton<BiometricService>(biometric);
   });
 
@@ -46,12 +46,14 @@ void main() {
 
     expect(find.text('Olá, seja bem-vindo(a) à Navix'), findsOneWidget);
     expect(
-      find.text('Rotas mais inteligentes. Entregas mais simples.'),
+      find.text('Sua rota, mais inteligente. Cada entrega, mais simples.'),
       findsOneWidget,
     );
     expect(find.text('Não possui conta?'), findsOneWidget);
     expect(find.text('Criar conta'), findsOneWidget);
     expect(find.text('Recebi um convite'), findsOneWidget);
+    expect(find.byIcon(Icons.alternate_email_rounded), findsOneWidget);
+    expect(find.byIcon(Icons.visibility_off_outlined), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

@@ -50,7 +50,7 @@ class DriverDeliveriesPage extends StatelessWidget {
           floatingActionButton: ImportFab(
             onPressed: () => _openImport(context),
           ),
-          body: const DeliveriesListView(),
+          body: const DeliveriesListView(driverView: true),
         ),
       ),
     );

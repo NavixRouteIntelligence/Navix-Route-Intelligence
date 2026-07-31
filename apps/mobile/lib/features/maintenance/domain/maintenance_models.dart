@@ -6,12 +6,16 @@ class MaintenanceVehicle extends Equatable {
     required this.id,
     required this.plate,
     required this.type,
+    this.capacity = 0,
+    this.status = 'active',
     this.odometerKm,
   });
 
   final String id;
   final String plate;
   final String type;
+  final int capacity;
+  final String status;
   final int? odometerKm;
 
   factory MaintenanceVehicle.fromJson(Map<String, dynamic> j) =>
@@ -19,11 +23,39 @@ class MaintenanceVehicle extends Equatable {
         id: (j['id'] as String?) ?? '',
         plate: (j['plate'] as String?) ?? '',
         type: (j['type'] as String?) ?? 'car',
+        capacity: (j['capacity'] as num?)?.toInt() ?? 0,
+        status: (j['status'] as String?) ?? 'active',
         odometerKm: (j['odometerKm'] as num?)?.toInt(),
       );
 
   @override
-  List<Object?> get props => [id, plate, type, odometerKm];
+  List<Object?> get props => [id, plate, type, capacity, status, odometerKm];
+}
+
+/// Dados necessários para cadastrar um veículo pelo contrato existente de
+/// Fleet. A capacidade usa a unidade configurada pelo tenant.
+class NewVehicle {
+  const NewVehicle({
+    required this.plate,
+    required this.type,
+    required this.capacity,
+    this.status = 'active',
+    this.odometerKm,
+  });
+
+  final String plate;
+  final String type;
+  final int capacity;
+  final String status;
+  final int? odometerKm;
+
+  Map<String, dynamic> toJson() => {
+        'plate': plate.trim().toUpperCase(),
+        'type': type,
+        'capacity': capacity,
+        'status': status,
+        if (odometerKm != null) 'odometerKm': odometerKm,
+      };
 }
 
 /// Registro de manutenção. `type` ∈ oil_change/revision/tires/insurance/inspection/ipo/other.

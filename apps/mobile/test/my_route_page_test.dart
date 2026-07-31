@@ -67,6 +67,7 @@ class _FakeApi extends Interceptor {
             'data': [
               {
                 'id': 'd1',
+                'status': 'delivered',
                 'address': {
                   'street': 'Rua Alfa',
                   'number': '10',
@@ -76,6 +77,7 @@ class _FakeApi extends Interceptor {
               },
               {
                 'id': 'd2',
+                'status': 'pending',
                 'address': {
                   'street': 'Rua Beta',
                   'number': '20',
@@ -97,6 +99,16 @@ Widget host() => MaterialApp(
       supportedLocales: AppLocalizations.supportedLocales,
       home: const MyRoutePage(),
     );
+
+Future<void> pumpPhone(WidgetTester tester) async {
+  tester.view
+    ..physicalSize = const Size(390, 844)
+    ..devicePixelRatio = 1;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+  await tester.pumpWidget(host());
+  await tester.pumpAndSettle();
+}
 
 void main() {
   setUp(() {
@@ -120,57 +132,58 @@ void main() {
 
   tearDown(() => GetIt.instance.reset());
 
-  CrossFadeState fadeState(WidgetTester tester) => tester
-      .widget<AnimatedCrossFade>(find.byType(AnimatedCrossFade))
-      .crossFadeState;
-
-  // O grupo fica abaixo do resumo e do painel da IA; a ListView é lazy, então
-  // o teste rola até ele antes de asseverar (locale padrão do ambiente é en).
-  Future<Finder> scrollToGroup(WidgetTester tester) async {
-    final group = find.text('Commerce');
+  // A sequência fica abaixo do resumo; a ListView é lazy, então o teste rola
+  // até a última parada antes de asseverar (locale padrão do ambiente é en).
+  Future<Finder> scrollToLastStop(WidgetTester tester) async {
+    final stop = find.text('Rua Beta, 20').last;
     await tester.scrollUntilVisible(
-      group,
+      stop,
       200,
       scrollable: find.byType(Scrollable).first,
     );
     await tester.pumpAndSettle();
-    return group;
+    return stop;
   }
 
-  testWidgets('mostra o resumo e o grupo da IA', (tester) async {
-    await tester.pumpWidget(host());
-    await tester.pumpAndSettle();
-
-    expect(find.textContaining('10.0 km'), findsWidgets);
-    expect(await scrollToGroup(tester), findsOneWidget);
-  });
-
-  testWidgets('tocar no grupo expande e recolhe a lista de paradas', (
+  testWidgets('mostra resumo, tipos de destino e ordem das entregas', (
     tester,
   ) async {
-    await tester.pumpWidget(host());
-    await tester.pumpAndSettle();
-    await scrollToGroup(tester);
+    await pumpPhone(tester);
 
-    // AnimatedCrossFade mantém os dois filhos na árvore: o que muda é qual
-    // está visível, então a asserção é sobre o estado do crossfade — não sobre
-    // a presença do texto.
-    expect(fadeState(tester), CrossFadeState.showFirst);
-
-    await tester.tap(find.text('Commerce'));
+    expect(find.text('1 of 2 deliveries'), findsOneWidget);
+    expect(find.text('1 remaining'), findsOneWidget);
+    expect(find.text('Next stop'), findsOneWidget);
+    expect(find.text('Route summary'), findsOneWidget);
+    expect(find.textContaining('10.0 km'), findsWidgets);
+    await tester.scrollUntilVisible(
+      find.text('Destination types'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.pumpAndSettle();
-    expect(fadeState(tester), CrossFadeState.showSecond);
+    expect(find.text('Destination types'), findsOneWidget);
+    expect(find.text('Commerce'), findsWidgets);
+    expect(find.text('How this route was prepared'), findsNothing);
+    expect(await scrollToLastStop(tester), findsOneWidget);
+  });
 
-    await tester.tap(find.text('Commerce'));
-    await tester.pumpAndSettle();
-    expect(fadeState(tester), CrossFadeState.showFirst);
+  testWidgets('mostra as paradas na ordem da rota e com a sua categoria', (
+    tester,
+  ) async {
+    await pumpPhone(tester);
+    await scrollToLastStop(tester);
+
+    expect(find.text('Rua Alfa, 10'), findsOneWidget);
+    // A próxima parada também aparece no painel de progresso.
+    expect(find.text('Rua Beta, 20'), findsNWidgets(2));
+    // Uma vez no resumo e uma vez em cada parada.
+    expect(find.text('Commerce'), findsNWidgets(3));
   });
 
   testWidgets(
     'a barra de registrar entrega aparece habilitada quando há pendente',
     (tester) async {
-      await tester.pumpWidget(host());
-      await tester.pumpAndSettle();
+      await pumpPhone(tester);
 
       final button = tester.widget<FilledButton>(
         find.widgetWithText(FilledButton, 'Register delivery'),
@@ -182,8 +195,7 @@ void main() {
   testWidgets('a ação de reorganizar abre o sheet com IA (padrão) e Manual', (
     tester,
   ) async {
-    await tester.pumpWidget(host());
-    await tester.pumpAndSettle();
+    await pumpPhone(tester);
 
     // Ação secundária no AppBar (só com rota pronta e ≥2 paradas).
     await tester.tap(find.byIcon(Icons.tune));

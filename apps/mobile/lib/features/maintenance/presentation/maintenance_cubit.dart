@@ -89,6 +89,28 @@ class MaintenanceCubit extends Cubit<MaintenanceState> {
   Future<void> addRecord(NewMaintenanceRecord record) =>
       _mutate((vehicleId) => _repository.addRecord(vehicleId, record));
 
+  Future<void> createVehicle(NewVehicle input) async {
+    if (state.busy) return;
+    emit(state.copyWith(busy: true, clearError: true));
+    try {
+      final vehicle = await _repository.createVehicle(input);
+      final records = await _repository.records(vehicle.id);
+      final reminders = await _repository.reminders(vehicle.id);
+      emit(
+        MaintenanceState(
+          status: MaintenanceStatus.ready,
+          vehicle: vehicle,
+          records: records,
+          reminders: reminders,
+        ),
+      );
+    } on Failure catch (f) {
+      emit(state.copyWith(busy: false, error: f));
+    } catch (_) {
+      emit(state.copyWith(busy: false, error: const UnknownFailure()));
+    }
+  }
+
   Future<void> deleteRecord(String id) =>
       _mutate((vehicleId) => _repository.deleteRecord(vehicleId, id));
 
