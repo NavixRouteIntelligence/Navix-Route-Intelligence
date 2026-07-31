@@ -14,6 +14,9 @@ export interface PositionRepositoryPort {
   /** Última posição de cada motorista do tenant (visão de frota). */
   findLatestPerDriver(tenantId: string): Promise<DriverPosition[]>;
   /** Histórico recente de um motorista, do mais novo ao mais antigo. */
+  /** Posições de um motorista num intervalo, em ordem crescente de tempo. */
+  findBetween(tenantId: string, driverId: string, from: Date, to: Date): Promise<DriverPosition[]>;
+
   findHistory(tenantId: string, driverId: string, limit: number): Promise<DriverPosition[]>;
   /**
    * Expurga as posições do tenant anteriores a `olderThan` e devolve quantas

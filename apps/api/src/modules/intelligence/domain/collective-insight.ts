@@ -6,6 +6,18 @@ import type {
 } from '@navix/contracts';
 
 /**
+ * Procedência da observação (ADR-0088). Decide em que ela pode ser usada:
+ *
+ * - `derived` — **medida** pelo backend a partir do rastro de GPS. É a única
+ *   fonte confiável de tempo de atendimento.
+ * - `reported` — relatada pelo motorista (estacionamento, dica de acesso).
+ *   Subjetiva por natureza, mas sem semântica de tempo a errar.
+ * - `client_cycle` — o `service_time` que o cliente enviava contando **do fim
+ *   da parada anterior**: media o ciclo, não o atendimento. Em quarentena.
+ */
+export type ObservationSource = 'derived' | 'reported' | 'client_cycle';
+
+/**
  * Observação de campo persistida (ADR-0031). Uma linha por relato de motorista;
  * o `driverId` serve para dedupe/anti-abuso e **nunca** é exposto no insight.
  */
@@ -20,6 +32,7 @@ export interface CollectiveObservation {
   parkingDifficulty: ParkingDifficulty | null;
   serviceMinutes: number | null;
   accessTip: string | null;
+  source: ObservationSource;
   createdAt: Date;
 }
 
@@ -95,8 +108,12 @@ export function aggregateInsight(
     .filter((o) => o.kind === 'parking' && o.parkingDifficulty !== null)
     .map((o) => o.parkingDifficulty as ParkingDifficulty);
 
+  // Só o tempo **medido** entra: o `client_cycle` incluía o deslocamento e
+  // inflava o tempo de serviço do otimizador (ADR-0088).
   const serviceMinutes = observations
-    .filter((o) => o.kind === 'service_time' && o.serviceMinutes !== null)
+    .filter(
+      (o) => o.kind === 'service_time' && o.source === 'derived' && o.serviceMinutes !== null,
+    )
     .map((o) => o.serviceMinutes as number);
 
   const accessTips = observations

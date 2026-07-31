@@ -16,6 +16,7 @@ import { IdempotencyModule } from './shared/idempotency/idempotency.module';
 import { ThrottlingModule } from './shared/security/throttling.module';
 import { DeliveryModule } from './modules/delivery/delivery.module';
 import { DriverInviteModule } from './modules/driver-invite/driver-invite.module';
+import { EtaQualityModule } from './modules/eta-quality/eta-quality.module';
 import { PublicTrackingModule } from './modules/public-tracking/public-tracking.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { FinanceModule } from './modules/finance/finance.module';
@@ -58,6 +59,9 @@ import { UserSettingsModule } from './modules/user-settings/user-settings.module
     // Convite de motorista (ADR-0085): compõe Identity e Fleet para ligar o
     // login à ficha da frota, sem que um passe a depender do outro.
     DriverInviteModule,
+    // Mede o erro do ETA a cada entrega concluída (ADR-0087): é a régua sem a
+    // qual não dá para afirmar que um modelo melhorou a previsão.
+    EtaQualityModule,
     FinanceModule,
     DeliveryModule,
     // Rastreamento público do destinatário (ADR-0082): compõe Delivery,

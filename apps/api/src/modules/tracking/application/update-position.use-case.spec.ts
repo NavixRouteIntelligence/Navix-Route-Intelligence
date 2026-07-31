@@ -14,6 +14,7 @@ function build(fichaPorLogin: Record<string, string> = {}) {
     saveMany: async (ps) => void saved.push(...ps),
     findLatestForDriver: async () => null,
     findLatestPerDriver: async () => [],
+    findBetween: async () => [],
     findHistory: async () => [],
     pruneOlderThan: async () => 0,
   };

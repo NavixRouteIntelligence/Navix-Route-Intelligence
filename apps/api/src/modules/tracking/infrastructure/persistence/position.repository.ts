@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Between, Repository } from 'typeorm';
 
 import { AppConfigService } from '../../../../shared/config/app-config.service';
 import { scopedRepository } from '../../../../shared/database/transaction-context';
@@ -100,6 +100,19 @@ export class PositionRepository implements PositionRepositoryPort {
       .orderBy('p.driver_id')
       .addOrderBy('p.recorded_at', 'DESC')
       .getMany();
+    return rows.map((r) => this.toDomain(r));
+  }
+
+  async findBetween(
+    tenantId: string,
+    driverId: string,
+    from: Date,
+    to: Date,
+  ): Promise<DriverPosition[]> {
+    const rows = await this.repo.find({
+      where: { tenantId, driverId, recordedAt: Between(from, to) },
+      order: { recordedAt: 'ASC' },
+    });
     return rows.map((r) => this.toDomain(r));
   }
 

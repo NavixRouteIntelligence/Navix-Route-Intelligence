@@ -17,7 +17,7 @@ import {
 import type { VoiceCommandView } from '@navix/contracts';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 
 import { DriverInsights } from '@/components/driver/driver-insights';
 import { DriverStopIntelligence } from '@/components/driver/driver-stop-intelligence';
@@ -38,7 +38,7 @@ import { intelligenceApi } from '@/lib/api/intelligence';
 import { optimizerApi } from '@/lib/api/optimizer';
 import { trackingApi } from '@/lib/api/tracking';
 import { useAuth } from '@/lib/auth/auth-provider';
-import { dwellMinutes, reportedParkingDifficulty } from '@/lib/driver/field-observations';
+import { reportedParkingDifficulty } from '@/lib/driver/field-observations';
 import { TRACKING_STATUS } from '@/lib/tracking/status';
 import { useShareLocation } from '@/lib/tracking/use-share-location';
 import { formatDateTime, formatNumber } from '@/lib/utils';
@@ -64,8 +64,6 @@ export default function DriverDashboardPage() {
   const [running, setRunning] = useState(false);
   const [podFor, setPodFor] = useState<string | null>(null);
   const share = useShareLocation();
-  // Instante em que a parada atual ficou ativa — base do dwell (tempo de atendimento).
-  const stopStartedRef = useRef<number>(Date.now());
 
   const myPosition = useQuery({
     queryKey: ['driver-position'],
@@ -133,10 +131,6 @@ export default function DriverDashboardPage() {
     ? forecast.data?.data.schedule.stops.find((st) => st.id === nextStop.deliveryId)
     : undefined;
 
-  // Reinicia o cronômetro de dwell sempre que uma nova parada fica ativa.
-  useEffect(() => {
-    stopStartedRef.current = Date.now();
-  }, [completed, running]);
 
   // Abre o comprovante (POD) para a próxima parada.
   function concludeStop() {
@@ -144,21 +138,14 @@ export default function DriverDashboardPage() {
     setPodFor(nextStop.deliveryId);
   }
 
-  // Após registrar o comprovante: captura o tempo de atendimento na coletiva
-  // (ADR-0031, integração D), avança a parada e atualiza os dados.
+  // Após registrar o comprovante: avança a parada e atualiza os dados.
+  //
+  // O tempo de atendimento **não** é mais enviado daqui (ADR-0088). O relógio
+  // do cliente só sabe quando a parada anterior terminou, então o número
+  // incluía o deslocamento — era tempo de ciclo gravado como atendimento, e
+  // inflava o tempo de serviço do otimizador. Agora o backend o mede no rastro
+  // de GPS, na conclusão da entrega.
   function onPodDone() {
-    const done = stops[completed];
-    if (done) {
-      const minutes = dwellMinutes(stopStartedRef.current, Date.now());
-      void intelligenceApi
-        .recordObservation({
-          latitude: done.latitude,
-          longitude: done.longitude,
-          kind: 'service_time',
-          serviceMinutes: minutes,
-        })
-        .catch(() => undefined);
-    }
     setCompleted((c) => c + 1);
     qc.invalidateQueries({ queryKey: ['driver-history'] });
     qc.invalidateQueries({ queryKey: ['deliveries'] });

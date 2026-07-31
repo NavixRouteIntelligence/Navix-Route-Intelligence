@@ -12,6 +12,10 @@ import {
   type RoutePlanRepositoryPort,
 } from '../domain/ports/route-plan-repository.port';
 import type { OptimizationWeights } from '../domain/ports/route-optimization-strategy.port';
+import {
+  ETA_CORRECTION,
+  type EtaCorrectionPort,
+} from '../../intelligence/application/eta-correction.service';
 import { computeMetrics, computeSavings } from './scoring';
 import { OptimizeRouteUseCase } from './optimize-route.use-case';
 import { StrategyRegistry } from './strategy-registry';
@@ -40,6 +44,16 @@ export interface OptimizerServicePort {
    * ao destinatário; o modelo real é a Fase 3 do roadmap.
    */
   etaForDelivery(tenantId: string, deliveryId: string): Promise<Date | null>;
+  /**
+   * A mesma previsão, com o plano de onde saiu — para **medir o erro** depois
+   * (ADR-0087). Existe separada de `etaForDelivery` porque quem mede precisa
+   * saber a origem: sem o `routePlanId` não dá para distinguir uma previsão que
+   * envelheceu de outra recém-reotimizada.
+   */
+  etaPredictionForDelivery(
+    tenantId: string,
+    deliveryId: string,
+  ): Promise<{ routePlanId: string; arrivalAt: Date; correctionMinutes: number } | null>;
 }
 
 export const OPTIMIZER_SERVICE = Symbol('OPTIMIZER_SERVICE');
@@ -55,6 +69,7 @@ export class OptimizerService implements OptimizerServicePort {
     private readonly registry: StrategyRegistry,
     private readonly optimizeRoute: OptimizeRouteUseCase,
     @Inject(ROUTE_PLAN_REPOSITORY) private readonly plans: RoutePlanRepositoryPort,
+    @Inject(ETA_CORRECTION) private readonly etaCorrection: EtaCorrectionPort,
   ) {}
 
   async estimate(stops: EstimateInput[]): Promise<EstimateOutput> {
@@ -98,16 +113,34 @@ export class OptimizerService implements OptimizerServicePort {
   }
 
   async etaForDelivery(tenantId: string, deliveryId: string): Promise<Date | null> {
+    const prediction = await this.etaPredictionForDelivery(tenantId, deliveryId);
+    return prediction?.arrivalAt ?? null;
+  }
+
+  async etaPredictionForDelivery(
+    tenantId: string,
+    deliveryId: string,
+  ): Promise<{ routePlanId: string; arrivalAt: Date; correctionMinutes: number } | null> {
     // O plano mais recente é a rota vigente (mesma leitura que o app do
     // motorista faz). A busca respeita a RLS: só enxerga planos deste tenant.
     const page = await this.plans.findAll(tenantId, { page: 1, pageSize: 1 });
     const plan = page.items[0];
     if (!plan) return null;
 
-    const stop = plan.snapshot().stops.find((s) => s.deliveryId === deliveryId);
+    const snapshot = plan.snapshot();
+    const stop = snapshot.stops.find((s) => s.deliveryId === deliveryId);
     if (!stop) return null;
 
-    const startedAt = plan.snapshot().createdAt.getTime();
-    return new Date(startedAt + stop.etaMinutes * 60_000);
+    const heuristica = new Date(snapshot.createdAt.getTime() + stop.etaMinutes * 60_000);
+    // Único ponto onde heurística e modelo se encontram (ADR-0090). Sem modelo
+    // treinado a correção é zero e o resultado é idêntico ao anterior — quem
+    // consome ETA (rastreio público, avisos, medição) não muda em nada.
+    const correctionMinutes = await this.etaCorrection.correctionMinutes(tenantId, heuristica);
+
+    return {
+      routePlanId: snapshot.id,
+      arrivalAt: new Date(heuristica.getTime() + correctionMinutes * 60_000),
+      correctionMinutes,
+    };
   }
 }

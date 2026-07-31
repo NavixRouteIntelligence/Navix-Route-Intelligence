@@ -1,3 +1,9 @@
+import type {
+  AuthenticatedUser,
+  CollectionResponse,
+  ResourceResponse,
+  Vehicle as VehicleView,
+} from '@navix/contracts';
 import {
   Body,
   Controller,
@@ -12,12 +18,6 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import type {
-  AuthenticatedUser,
-  CollectionResponse,
-  ResourceResponse,
-  Vehicle as VehicleView,
-} from '@navix/contracts';
 
 import { CurrentUser } from '../../../shared/interface/current-user.decorator';
 import { buildCollection } from '../../../shared/kernel/pagination';
@@ -29,6 +29,7 @@ import { DeleteVehicleUseCase } from '../application/vehicles/delete-vehicle.use
 import { GetVehicleUseCase } from '../application/vehicles/get-vehicle.use-case';
 import { ListVehiclesUseCase } from '../application/vehicles/list-vehicles.use-case';
 import { UpdateVehicleUseCase } from '../application/vehicles/update-vehicle.use-case';
+
 import { CreateVehicleDto } from './dto/create-vehicle.dto';
 import { ListQueryDto } from './dto/list-query.dto';
 import { UpdateVehicleDto } from './dto/update-vehicle.dto';
@@ -37,7 +38,8 @@ const BASE_PATH = '/api/v1/fleet/vehicles';
 
 /**
  * Endpoints de veículos (ver docs/api.md). Todas as rotas exigem autenticação;
- * mutações exigem papel 'admin' ou 'fleet_manager' (RBAC — docs/security.md §3).
+ * Mutações da frota exigem `admin`/`fleet_manager`. O cadastro também aceita
+ * `driver`, mas o caso de uso restringe esse papel ao motorista autônomo.
  */
 @Controller({ path: 'fleet/vehicles', version: '1' })
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -51,13 +53,18 @@ export class VehicleController {
   ) {}
 
   @Post()
-  @Roles('admin', 'fleet_manager')
+  @Roles('driver', 'admin', 'fleet_manager')
   @HttpCode(HttpStatus.CREATED)
   async create(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: CreateVehicleDto,
   ): Promise<ResourceResponse<VehicleView>> {
-    const data = await this.createVehicle.execute({ ...dto, tenantId: user.tenantId });
+    const data = await this.createVehicle.execute({
+      ...dto,
+      tenantId: user.tenantId,
+      actorId: user.id,
+      actorRoles: user.roles,
+    });
     return { data };
   }
 

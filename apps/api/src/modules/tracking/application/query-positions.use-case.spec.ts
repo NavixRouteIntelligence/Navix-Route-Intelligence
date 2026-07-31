@@ -35,6 +35,7 @@ function build(rows: DriverPosition[] = [], vinculos: Record<string, string> = {
     saveMany: jest.fn(),
     findLatestForDriver,
     findLatestPerDriver: jest.fn().mockResolvedValue(rows),
+    findBetween: jest.fn().mockResolvedValue(rows),
     findHistory,
     pruneOlderThan: jest.fn(),
   };

@@ -11,6 +11,7 @@ function build() {
     saveMany: async (ps) => void savedBatches.push(ps),
     findLatestForDriver: async () => null,
     findLatestPerDriver: async () => [],
+    findBetween: async () => [],
     findHistory: async () => [],
     pruneOlderThan: async () => 0,
   };

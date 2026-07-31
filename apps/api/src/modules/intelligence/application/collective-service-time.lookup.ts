@@ -1,10 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
 
-import { aggregateInsight, locationCell } from '../domain/collective-insight';
+import { resolveFeature } from '../domain/cell-features';
+import { locationCell } from '../domain/collective-insight';
 import {
-  COLLECTIVE_INSIGHTS,
-  type CollectiveInsightsPort,
-} from '../domain/collective-insights.port';
+  CELL_FEATURE_REPOSITORY,
+  type CellFeatureRepositoryPort,
+} from '../domain/ports/cell-feature-repository.port';
 
 export interface ServiceTimePoint {
   latitude: number;
@@ -22,48 +23,52 @@ export interface CollectiveServiceTimeLookupPort {
    * quando não há amostra suficiente (< MIN_SAMPLE) — o consumidor cai no seu
    * próprio default. Consulta em lote (uma query para todos os pontos).
    */
-  typicalServiceMinutes(tenantId: string, points: ServiceTimePoint[]): Promise<(number | null)[]>;
+  typicalServiceMinutes(
+    tenantId: string,
+    points: ServiceTimePoint[],
+    at?: Date,
+  ): Promise<(number | null)[]>;
 }
 
 export const COLLECTIVE_SERVICE_TIMES = Symbol('COLLECTIVE_SERVICE_TIMES');
 
-const WINDOW_DAYS = 90;
-const MAX_OBSERVATIONS = 2000;
-
 @Injectable()
 export class CollectiveServiceTimeLookup implements CollectiveServiceTimeLookupPort {
-  constructor(@Inject(COLLECTIVE_INSIGHTS) private readonly store: CollectiveInsightsPort) {}
+  constructor(
+    @Inject(CELL_FEATURE_REPOSITORY)
+    private readonly features: CellFeatureRepositoryPort,
+  ) {}
 
+  /**
+   * Lê as features **materializadas** (ADR-0089) em vez de agregar as
+   * observações cruas a cada chamada: uma busca por chave, e não até 2000
+   * linhas medianizadas por consulta — o que fazia a leitura piorar à medida
+   * que o histórico melhorava.
+   *
+   * `at` escolhe o contexto temporal; sem ele, o balde global da célula. O
+   * otimizador ainda não informa o instante de cada parada, então hoje cai no
+   * global — e passa a ganhar o recorte por hora assim que informar, sem
+   * mudança aqui.
+   */
   async typicalServiceMinutes(
     tenantId: string,
     points: ServiceTimePoint[],
+    at: Date = new Date(),
   ): Promise<(number | null)[]> {
     if (points.length === 0) return [];
 
     const cells = points.map((p) => locationCell(p.latitude, p.longitude));
-    const uniqueCells = [...new Set(cells)];
-    const since = new Date(Date.now() - WINDOW_DAYS * 24 * 60 * 60 * 1000);
+    const rows = await this.features.findByCells(tenantId, [...new Set(cells)]);
 
-    const observations = await this.store.findRecentByCells(
-      tenantId,
-      uniqueCells,
-      since,
-      MAX_OBSERVATIONS,
+    const byCell = new Map<string, typeof rows>();
+    for (const f of rows) {
+      const list = byCell.get(f.cell);
+      if (list) list.push(f);
+      else byCell.set(f.cell, [f]);
+    }
+
+    return cells.map(
+      (cell) => resolveFeature(byCell.get(cell) ?? [], at)?.serviceMinutesP50 ?? null,
     );
-
-    // Agrupa por célula e agrega uma vez por célula (evita reprocessar).
-    const byCell = new Map<string, typeof observations>();
-    for (const o of observations) {
-      const list = byCell.get(o.cell);
-      if (list) list.push(o);
-      else byCell.set(o.cell, [o]);
-    }
-    const typicalByCell = new Map<string, number | null>();
-    for (const cell of uniqueCells) {
-      const insight = aggregateInsight(cell, byCell.get(cell) ?? []);
-      typicalByCell.set(cell, insight.typicalServiceMinutes ?? null);
-    }
-
-    return cells.map((cell) => typicalByCell.get(cell) ?? null);
   }
 }
