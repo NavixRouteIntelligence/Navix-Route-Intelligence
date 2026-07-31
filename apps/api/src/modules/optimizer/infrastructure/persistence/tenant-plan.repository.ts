@@ -21,6 +21,12 @@ export class TenantPlanRepository implements TenantPlanPort {
 
   constructor(@InjectDataSource() private readonly dataSource: DataSource) {}
 
+  allowsPredictiveAlerts(tenantId: string): Promise<boolean> {
+    // Mesmo direito, mesmo cache: os dois recursos premium andam juntos nos
+    // planos de hoje (ver `PREMIUM_PLANS`).
+    return this.allowsDynamicReoptimization(tenantId);
+  }
+
   async allowsDynamicReoptimization(tenantId: string): Promise<boolean> {
     const cached = this.cache.get(tenantId);
     if (cached && Date.now() - cached.at < CACHE_TTL_MS) return cached.allowed;

@@ -47,6 +47,23 @@ export class EtaObservationRepository implements EtaObservationRepositoryPort {
     return rows.map((r) => r.errorMinutes);
   }
 
+  async errorSamples(
+    tenantId: string,
+    since: Date,
+    limit: number,
+  ): Promise<{ errorMinutes: number; hourOfWeek: number }[]> {
+    const rows = await this.repo.find({
+      where: { tenantId, createdAt: MoreThanOrEqual(since), errorMinutes: Not(IsNull()) },
+      order: { createdAt: 'DESC' },
+      take: limit,
+      select: ['errorMinutes', 'hourOfWeek'],
+    });
+    return rows.map((r) => ({
+      errorMinutes: r.errorMinutes as number,
+      hourOfWeek: r.hourOfWeek,
+    }));
+  }
+
   async trainingSamples(
     tenantId: string,
     since: Date,

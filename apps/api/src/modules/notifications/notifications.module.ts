@@ -48,5 +48,10 @@ import { PublicOptOutController } from './interface/public-opt-out.controller';
     { provide: NOTIFICATION_REGISTRY, useClass: NotificationRepository },
     { provide: NOTIFICATION_SENDER, useClass: LoggingNotificationSender },
   ],
+  // API pública do módulo: notificar o destinatário. Consumida pelos alertas
+  // preditivos de atraso (ADR-0091), que reusam este canal em vez de abrir um
+  // segundo caminho de aviso — a dedup, o opt-out e o i18n moram todos aqui.
+  exports: [NotifyRecipientUseCase],
+
 })
 export class NotificationsModule {}

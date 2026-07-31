@@ -2,11 +2,14 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { DeliveryModule } from '../delivery/delivery.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { IntelligenceModule } from '../intelligence/intelligence.module';
 import { OptimizerModule } from '../optimizer/optimizer.module';
 import { TrackingModule } from '../tracking/tracking.module';
 import { EtaQualityListener } from './application/eta-quality.listener';
 import { GetEtaQualityUseCase } from './application/get-eta-quality.use-case';
+import { DelayRiskAlertListener } from './application/delay-risk-alert.listener';
+import { PredictBreachRiskUseCase } from './application/predict-breach-risk.use-case';
 import { RecordEtaObservationUseCase } from './application/record-eta-observation.use-case';
 import { TrainEtaModelUseCase } from './application/train-eta-model.use-case';
 import { ETA_OBSERVATION_REPOSITORY } from './domain/ports/eta-observation-repository.port';
@@ -41,12 +44,16 @@ import { EtaQualityController } from './interface/eta-quality.controller';
     // gravada) — ADR-0088. Ambos pelas suas APIs públicas.
     TrackingModule,
     IntelligenceModule,
+    // Canal ao destinatário (ADR-0084), reusado pelos alertas preditivos.
+    NotificationsModule,
   ],
   controllers: [EtaQualityController],
   providers: [
     RecordEtaObservationUseCase,
     GetEtaQualityUseCase,
     TrainEtaModelUseCase,
+    PredictBreachRiskUseCase,
+    DelayRiskAlertListener,
     EtaQualityListener,
     EtaMetrics,
     { provide: ETA_OBSERVATION_REPOSITORY, useClass: EtaObservationRepository },

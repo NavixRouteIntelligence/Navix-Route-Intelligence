@@ -57,7 +57,8 @@ function buildWorld(opts: { premium?: boolean; delayMinutes?: number } = {}) {
   };
 
   const plans: TenantPlanPort = {
-    allowsDynamicReoptimization: jest.fn().mockResolvedValue(opts.premium ?? true),
+    allowsPredictiveAlerts: jest.fn().mockResolvedValue(true),
+  allowsDynamicReoptimization: jest.fn().mockResolvedValue(opts.premium ?? true),
   };
   const metrics = {
     observeReoptimizationTrigger: jest.fn(),

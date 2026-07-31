@@ -149,6 +149,14 @@ export class AppConfigService {
     };
   }
 
+  /** Alertas preditivos de estouro de janela (ADR-0091). */
+  get delayRiskAlerts() {
+    return {
+      enabled: this.get('DELAY_RISK_ALERTS_ENABLED'),
+      checkIntervalMs: this.get('DELAY_RISK_CHECK_INTERVAL_MS'),
+    };
+  }
+
   get tracking() {
     return { retentionDays: this.get('TRACKING_RETENTION_DAYS') };
   }
