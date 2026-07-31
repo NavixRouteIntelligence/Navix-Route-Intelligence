@@ -73,6 +73,13 @@ class SessionCubit extends Cubit<SessionState> {
     emit(_authenticated(session.user));
   }
 
+  /// Aceita um convite de motorista (ADR-0085) e autentica na sequência.
+  Future<void> acceptInvite(AcceptInviteParams params) async {
+    final session = await _repository.acceptInvite(params);
+    await _store.setKeepConnected(true);
+    emit(_authenticated(session.user));
+  }
+
   Future<void> logout() async {
     await _repository.logout();
     emit(const SessionState.unauthenticated());

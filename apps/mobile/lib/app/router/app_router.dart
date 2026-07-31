@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/session/session_cubit.dart';
 import '../../core/session/session_state.dart';
+import '../../features/auth/presentation/invite_page.dart';
 import '../../features/auth/presentation/login_page.dart';
 import '../../features/auth/presentation/register_page.dart';
 import '../shell/company_shell.dart';
@@ -32,6 +33,9 @@ class _StreamRefresh extends ChangeNotifier {
 abstract final class Routes {
   static const login = '/login';
   static const register = '/register';
+
+  /// Aceite de convite (ADR-0085). Público: o convidado ainda não tem conta.
+  static const invite = '/convite';
   static const driver = '/driver';
   static const dashboard = '/dashboard';
 }
@@ -45,7 +49,11 @@ GoRouter createRouter(SessionCubit session) {
     redirect: (context, state) {
       final s = session.state;
       final loc = state.matchedLocation;
-      final atAuth = loc == Routes.login || loc == Routes.register;
+      // O convite entra no conjunto público pelo mesmo motivo do login: quem
+      // chega por ele ainda não tem conta — criá-la é o objetivo da tela.
+      final atAuth = loc == Routes.login ||
+          loc == Routes.register ||
+          loc.startsWith(Routes.invite);
 
       // Ainda restaurando a sessão: não redireciona.
       if (s.status == SessionStatus.unknown) return null;
@@ -67,6 +75,12 @@ GoRouter createRouter(SessionCubit session) {
     routes: [
       GoRoute(path: Routes.login, builder: (_, __) => const LoginPage()),
       GoRoute(path: Routes.register, builder: (_, __) => const RegisterPage()),
+      GoRoute(path: Routes.invite, builder: (_, __) => const InvitePage()),
+      // Link direto (`/convite/<token>`): o token já vem resolvido na rota.
+      GoRoute(
+        path: '${Routes.invite}/:token',
+        builder: (_, state) => InvitePage(token: state.pathParameters['token']),
+      ),
       GoRoute(path: Routes.driver, builder: (_, __) => const DriverShell()),
       GoRoute(path: Routes.dashboard, builder: (_, __) => const CompanyShell()),
     ],

@@ -18,6 +18,7 @@ extension FailureL10n on Failure {
         NetworkFailure() => l10n.errorNetwork,
         UnauthorizedFailure() => l10n.errorSessionExpired,
         InvalidCredentialsFailure() => l10n.loginInvalidCredentials,
+        InviteNotFoundFailure() => l10n.inviteNotFound,
         CacheFailure() => l10n.errorCache,
         LocationFailure(:final reason) => switch (reason) {
             LocationErrorReason.serviceDisabled => l10n.errorLocationDisabled,

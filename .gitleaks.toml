@@ -13,9 +13,13 @@ paths = [
   '''docker/docker-compose\.yml$''',
   '''^docs/''',
   '''package-lock\.json$''',
-  # Testes usam valores fake (ex.: uma Idempotency-Key literal), que disparam o
-  # rule generic-api-key. Fixtures de teste não são segredos reais.
+  # Testes usam valores fake (ex.: uma Idempotency-Key literal, uma senha de
+  # fixture), que disparam o rule generic-api-key. Fixtures de teste não são
+  # segredos reais. `.spec.ts` cobre o Jest da API; `.test.ts(x)` cobre o
+  # Vitest do web, que usa a outra convenção de nome.
   '''\.spec\.ts$''',
+  '''\.test\.tsx?$''',
   '''\.e2e-spec\.ts$''',
   '''^apps/api/test/''',
+  '''^apps/mobile/test/''',
 ]

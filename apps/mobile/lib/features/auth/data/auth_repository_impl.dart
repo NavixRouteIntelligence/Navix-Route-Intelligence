@@ -37,6 +37,37 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<DriverInvitePreview> validateInvite(String token) async {
+    try {
+      final json = await api.validateInvite(token);
+      final data = json['data'] as Map<String, dynamic>;
+      return DriverInvitePreview(
+        email: data['email'] as String,
+        organizationName: data['organizationName'] as String,
+        requiresDriverDetails: data['requiresDriverDetails'] as bool,
+      );
+    } on DioException catch (e) {
+      throw mapDioException(e, notFound: const InviteNotFoundFailure());
+    }
+  }
+
+  @override
+  Future<AuthSession> acceptInvite(AcceptInviteParams params) async {
+    final String email;
+    try {
+      final json = await api.acceptInvite(params);
+      // O e-mail vem da resposta, não do que o app supôs: quem manda é o token.
+      email = (json['data'] as Map<String, dynamic>)['email'] as String;
+    } on DioException catch (e) {
+      throw mapDioException(e, notFound: const InviteNotFoundFailure());
+    }
+
+    // O aceite cria a conta mas não emite sessão — o endpoint é público
+    // (ADR-0085). Entramos com a senha que o motorista acabou de escolher.
+    return login(LoginParams(email: email, password: params.password));
+  }
+
+  @override
   Future<AuthUser?> restore() async {
     if (!await store.hasSession()) return null;
     try {

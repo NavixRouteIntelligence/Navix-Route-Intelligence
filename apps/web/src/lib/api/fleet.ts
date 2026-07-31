@@ -1,8 +1,10 @@
 import type {
   CollectionResponse,
+  CreateDriverInviteRequest,
   CreateDriverRequest,
   CreateVehicleRequest,
   Driver,
+  DriverInvite,
   ResourceResponse,
   UpdateDriverRequest,
   UpdateVehicleRequest,
@@ -34,4 +36,11 @@ export const fleetApi = {
     apiRequest<ResourceResponse<Driver>>(`/fleet/drivers/${id}`, { method: 'PATCH', body }),
   deleteDriver: (id: string) =>
     apiRequest<void>(`/fleet/drivers/${id}`, { method: 'DELETE' }),
+
+  /** Convida um motorista a criar conta na organização (ADR-0085). */
+  inviteDriver: (body: CreateDriverInviteRequest) =>
+    apiRequest<ResourceResponse<DriverInvite>>('/fleet/drivers/invites', {
+      method: 'POST',
+      body,
+    }),
 };

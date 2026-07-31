@@ -1,9 +1,9 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { DRIVER_STATUSES, type Driver } from '@navix/contracts';
+import { DRIVER_STATUSES, type Driver, type DriverInvite } from '@navix/contracts';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Pencil, Plus, Trash2, Users } from 'lucide-react';
+import { Check, Copy, Mail, Pencil, Plus, Smartphone, Trash2, Users } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -46,6 +46,8 @@ export default function DriversPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Driver | null>(null);
   const [deleting, setDeleting] = useState<Driver | null>(null);
+  // `undefined` = fechado; `null` = convite sem ficha; Driver = convite para a ficha.
+  const [inviting, setInviting] = useState<Driver | null | undefined>(undefined);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['drivers'],
@@ -90,10 +92,16 @@ export default function DriversPage() {
         title="Motoristas"
         description="Gerencie os motoristas da operação."
         action={
-          <Button onClick={() => { setEditing(null); setFormOpen(true); }}>
-            <Plus className="h-4 w-4" />
-            Novo motorista
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setInviting(null)}>
+              <Mail className="h-4 w-4" />
+              Convidar motorista
+            </Button>
+            <Button onClick={() => { setEditing(null); setFormOpen(true); }}>
+              <Plus className="h-4 w-4" />
+              Novo motorista
+            </Button>
+          </div>
         }
       />
 
@@ -123,6 +131,7 @@ export default function DriversPage() {
                   <TH>CNH</TH>
                   <TH>Habilidades</TH>
                   <TH>Status</TH>
+                  <TH>App</TH>
                   <TH className="text-right">Ações</TH>
                 </TR>
               </THead>
@@ -142,6 +151,19 @@ export default function DriversPage() {
                     </TD>
                     <TD>
                       <DriverStatusBadge status={d.status} />
+                    </TD>
+                    <TD>
+                      {d.userId ? (
+                        <span className="inline-flex items-center gap-1 text-sm text-success">
+                          <Smartphone className="h-4 w-4" aria-hidden />
+                          Conectado
+                        </span>
+                      ) : (
+                        <Button variant="ghost" size="sm" onClick={() => setInviting(d)}>
+                          <Mail className="h-4 w-4" />
+                          Convidar
+                        </Button>
+                      )}
                     </TD>
                     <TD>
                       <div className="flex justify-end gap-1">
@@ -167,6 +189,13 @@ export default function DriversPage() {
           saving={save.isPending}
           onCancel={() => setFormOpen(false)}
           onSubmit={(values) => save.mutate(values)}
+        />
+      )}
+
+      {inviting !== undefined && (
+        <InviteDialog
+          driver={inviting}
+          onClose={() => { setInviting(undefined); invalidate(); }}
         />
       )}
 
@@ -239,6 +268,105 @@ function DriverFormDialog({
             </Button>
           </DialogFooter>
         </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+const inviteSchema = z.object({
+  email: z.string().email('E-mail inválido.'),
+});
+type InviteValues = z.infer<typeof inviteSchema>;
+
+/**
+ * Convite de motorista (ADR-0085). Duas etapas na mesma caixa: informar o
+ * e-mail e, depois, copiar o link.
+ *
+ * O link é mostrado a quem convida em vez de enviado por e-mail — hoje é assim
+ * que ele chega ao motorista (WhatsApp, SMS), e é o canal que a frota já usa.
+ */
+function InviteDialog({ driver, onClose }: { driver: Driver | null; onClose: () => void }) {
+  const { toast } = useToast();
+  const [invite, setInvite] = useState<DriverInvite | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<InviteValues>({
+    resolver: zodResolver(inviteSchema),
+    defaultValues: { email: '' },
+  });
+
+  const send = useMutation({
+    mutationFn: (values: InviteValues) =>
+      fleetApi.inviteDriver({ email: values.email, ...(driver ? { driverId: driver.id } : {}) }),
+    onSuccess: (res) => setInvite(res.data),
+    onError: (e: Error) =>
+      toast({ tone: 'error', title: 'Não foi possível convidar', description: e.message }),
+  });
+
+  async function copyLink(url: string) {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      toast({ tone: 'success', title: 'Link copiado' });
+    } catch {
+      // Sem permissão de área de transferência: o link continua visível e
+      // selecionável, então o convite não fica bloqueado por isso.
+      toast({ tone: 'error', title: 'Não foi possível copiar', description: 'Selecione e copie o link.' });
+    }
+  }
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent title={driver ? `Convidar ${driver.name}` : 'Convidar motorista'}>
+        {invite ? (
+          <div className="grid gap-4">
+            <Alert tone="success" title="Convite criado">
+              Envie o link para {invite.email}. Ele expira em{' '}
+              {new Date(invite.expiresAt).toLocaleDateString()}.
+            </Alert>
+            <Field label="Link do convite" hint="Envie por WhatsApp, SMS ou e-mail.">
+              {(id) => (
+                <div className="flex gap-2">
+                  <Input id={id} value={invite.url} readOnly onFocus={(e) => e.currentTarget.select()} />
+                  <Button type="button" variant="outline" onClick={() => copyLink(invite.url)}>
+                    {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                    {copied ? 'Copiado' : 'Copiar'}
+                  </Button>
+                </div>
+              )}
+            </Field>
+            <DialogFooter>
+              <Button type="button" onClick={onClose}>
+                Concluir
+              </Button>
+            </DialogFooter>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit((v) => send.mutate(v))} className="grid gap-4" noValidate>
+            <p className="text-sm text-muted-foreground">
+              {driver
+                ? `O motorista cria a própria senha e a conta fica ligada à ficha de ${driver.name}.`
+                : 'Sem ficha selecionada: o motorista informa nome e CNH ao aceitar, e a ficha é criada.'}
+            </p>
+            <Field label="E-mail do motorista" error={errors.email?.message} required>
+              {(id) => (
+                <Input id={id} type="email" {...register('email')} placeholder="motorista@exemplo.com" autoComplete="off" />
+              )}
+            </Field>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={onClose}>
+                Cancelar
+              </Button>
+              <Button type="submit" loading={send.isPending}>
+                Gerar convite
+              </Button>
+            </DialogFooter>
+          </form>
+        )}
       </DialogContent>
     </Dialog>
   );
