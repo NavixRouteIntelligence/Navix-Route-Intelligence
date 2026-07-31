@@ -46,9 +46,11 @@ const RouteMap = dynamic(() => import('@/components/map/route-map').then((m) => 
   loading: () => <Skeleton className="h-[420px] w-full" />,
 });
 import { deliveriesApi } from '@/lib/api/deliveries';
+import { analyticsApi } from '@/lib/api/analytics';
+import { useT } from '@/lib/i18n/locale-provider';
 import { fleetApi } from '@/lib/api/fleet';
 import { optimizerApi } from '@/lib/api/optimizer';
-import { formatNumber } from '@/lib/utils';
+import { formatCurrency, formatNumber } from '@/lib/utils';
 
 const FUEL_L_PER_KM = 0.12; // fator médio de consumo (litros por km) — demo
 const STATUS_LABEL: Record<DeliveryStatus, string> = {
@@ -74,6 +76,10 @@ export default function DashboardPage() {
   const vehicles = useQuery({ queryKey: ['vehicles', 'dashboard'], queryFn: () => fleetApi.listVehicles({ pageSize: 100 }) });
   const drivers = useQuery({ queryKey: ['drivers', 'dashboard'], queryFn: () => fleetApi.listDrivers({ pageSize: 100 }) });
   const plans = useQuery({ queryKey: ['route-plans', 'dashboard'], queryFn: () => optimizerApi.listPlans({ pageSize: 100 }) });
+  // KPIs do **read model** (ADR-0092), não das listas acima: cobre o período
+  // inteiro, e não só a primeira página de cada tabela.
+  const kpis = useQuery({ queryKey: ['kpis', 'summary'], queryFn: () => analyticsApi.kpiSummary(30) });
+  const t = useT();
 
   const loading = deliveries.isLoading || vehicles.isLoading || drivers.isLoading || plans.isLoading;
   const error = deliveries.error || vehicles.error || drivers.error || plans.error;
@@ -83,10 +89,14 @@ export default function DashboardPage() {
   const counts = countByStatus(deliveryItems);
   const chartStatus = (Object.keys(STATUS_LABEL) as DeliveryStatus[]).map((s) => ({ name: STATUS_LABEL[s], value: counts[s] }));
 
-  const savedKm = planItems.reduce((acc, p) => acc + p.savings.distanceKm, 0);
+  // Estes vêm do read model: somar `planItems` daria apenas as 100 rotas mais
+  // recentes, que era o defeito silencioso do dashboard anterior (ADR-0092).
+  const kpi = kpis.data?.data;
+  const savedKm = kpi?.savedKm ?? 0;
+  const optimizedKm = kpi?.optimizedKm ?? 0;
+  const avgScore = kpi?.averageScore ?? 0;
+  // Economia de tempo ainda não está no read model — segue derivada do plano.
   const savedMin = planItems.reduce((acc, p) => acc + p.savings.timeMinutes, 0);
-  const optimizedKm = planItems.reduce((acc, p) => acc + p.metrics.totalDistanceKm, 0);
-  const avgScore = planItems.length ? Math.round(planItems.reduce((a, p) => a + p.score, 0) / planItems.length) : 0;
   // Ganho médio de otimização (real) — usado nos chips de variação.
   const avgSavingsPct = planItems.length
     ? planItems.reduce((a, p) => a + p.savings.distancePct, 0) / planItems.length
@@ -125,6 +135,43 @@ export default function DashboardPage() {
         <StatCard label="Economia de tempo" value={formatMinutes(savedMin)} icon={Clock} tone="warning" loading={loading} />
         <StatCard label="Distância otimizada" value={`${formatNumber(optimizedKm, 1)} km`} icon={Navigation} tone="accent" delta={savingsDelta} loading={loading} />
         <StatCard label="Score médio" value={`${avgScore}/100`} icon={Gauge} tone="warning" loading={loading} />
+      </div>
+
+      {/* KPIs de operação — read model (ADR-0092). `—` quando ainda não há
+          denominador: dizer "0%" a quem nunca entregou seria mentira. */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          label={t('kpi.savedKm')}
+          value={`${formatNumber(savedKm, 1)} km`}
+          hint={t('kpi.window')}
+          icon={Navigation}
+          tone="success"
+          loading={kpis.isLoading}
+        />
+        <StatCard
+          label={t('kpi.successRate')}
+          value={kpi?.successRate != null ? `${formatNumber(kpi.successRate * 100, 1)}%` : '—'}
+          hint={kpi ? `${formatNumber(kpi.finished)} ${t('kpi.deliveriesFinished')}` : t('kpi.noData')}
+          icon={Package}
+          tone="primary"
+          loading={kpis.isLoading}
+        />
+        <StatCard
+          label={t('kpi.onTimeRate')}
+          value={kpi?.onTimeRate != null ? `${formatNumber(kpi.onTimeRate * 100, 1)}%` : '—'}
+          hint={t('kpi.window')}
+          icon={Clock}
+          tone="accent"
+          loading={kpis.isLoading}
+        />
+        <StatCard
+          label={t('kpi.costPerDelivery')}
+          value={kpi?.costPerDelivery != null ? formatCurrency(kpi.costPerDelivery) : '—'}
+          hint={t('kpi.window')}
+          icon={Gauge}
+          tone="warning"
+          loading={kpis.isLoading}
+        />
       </div>
 
       {/* AI Insights */}

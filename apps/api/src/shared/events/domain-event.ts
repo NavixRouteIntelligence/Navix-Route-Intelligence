@@ -16,7 +16,16 @@ export type DomainEventType =
    */
   | 'tracking.position-recorded'
   /** A rota corrente está atrasada além do limiar — aí sim, reotimiza. */
-  | 'route.delay-detected';
+  | 'route.delay-detected'
+  /**
+   * Plano de rota persistido. Existe para o read model de KPIs (ADR-0092): a
+   * economia de km nasce aqui, e sem este evento o rollup do dia só se
+   * atualizaria na próxima mudança de entrega — um atraso sem motivo.
+   *
+   * **Não** entra nos gatilhos de reotimização, por razão óbvia: reotimizar em
+   * resposta a um plano recém-criado seria um laço infinito.
+   */
+  | 'route.plan-created';
 
 /**
  * Eventos que indicam mudança relevante no plano de rota.

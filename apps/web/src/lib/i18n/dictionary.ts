@@ -217,6 +217,15 @@ const pt_BR = {
   'invite.error.title': 'Não foi possível carregar',
   'invite.error.description': 'Tente novamente em instantes.',
   'invite.privacy': 'Sua conta pertence apenas a esta empresa.',
+
+  // KPIs do dashboard (ADR-0092) — servidos pelo read model.
+  'kpi.savedKm': 'Km economizados',
+  'kpi.costPerDelivery': 'Custo por entrega',
+  'kpi.successRate': 'Taxa de sucesso',
+  'kpi.onTimeRate': 'No prazo',
+  'kpi.window': 'últimos 30 dias',
+  'kpi.noData': 'Sem dados no período',
+  'kpi.deliveriesFinished': 'entregas finalizadas',
 };
 
 type Keys = typeof pt_BR;
@@ -260,6 +269,11 @@ const pt_PT: Keys = {
   'invite.success.description': 'A entrar na sua conta…',
   'invite.notFound.description': 'Peça um novo convite a quem administra a frota.',
   'invite.privacy': 'A sua conta pertence apenas a esta empresa.',
+
+  'kpi.savedKm': 'Km poupados',
+  'kpi.costPerDelivery': 'Custo por entrega',
+  'kpi.window': 'últimos 30 dias',
+  'kpi.noData': 'Sem dados no período',
 };
 
 const en: Keys = {
@@ -459,6 +473,14 @@ const en: Keys = {
   'invite.error.title': 'Could not load',
   'invite.error.description': 'Please try again in a moment.',
   'invite.privacy': 'Your account belongs to this company only.',
+
+  'kpi.savedKm': 'Kilometres saved',
+  'kpi.costPerDelivery': 'Cost per delivery',
+  'kpi.successRate': 'Success rate',
+  'kpi.onTimeRate': 'On time',
+  'kpi.window': 'last 30 days',
+  'kpi.noData': 'No data in the period',
+  'kpi.deliveriesFinished': 'finished deliveries',
 };
 
 const es: Keys = {
@@ -658,6 +680,14 @@ const es: Keys = {
   'invite.error.title': 'No se pudo cargar',
   'invite.error.description': 'Inténtalo de nuevo en un momento.',
   'invite.privacy': 'Tu cuenta pertenece solo a esta empresa.',
+
+  'kpi.savedKm': 'Kilómetros ahorrados',
+  'kpi.costPerDelivery': 'Costo por entrega',
+  'kpi.successRate': 'Tasa de éxito',
+  'kpi.onTimeRate': 'A tiempo',
+  'kpi.window': 'últimos 30 días',
+  'kpi.noData': 'Sin datos en el período',
+  'kpi.deliveriesFinished': 'entregas finalizadas',
 };
 
 export const DICTIONARY: Record<Locale, Keys> = {
