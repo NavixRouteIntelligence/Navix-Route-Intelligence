@@ -10,6 +10,10 @@ export interface DriverRepositoryPort {
   existsByLicense(tenantId: string, licenseNumber: string, excludeId?: string): Promise<boolean>;
   /** Já há ficha ligada a este login neste tenant? (índice único — ADR-0085). */
   existsByUser(tenantId: string, userId: string): Promise<boolean>;
+  /** Login ligado a esta ficha, se houver (ADR-0086). */
+  findUserIdById(tenantId: string, driverId: string): Promise<string | null>;
+  /** Fichas destes logins, em uma consulta só — evita N+1 na visão de frota. */
+  findIdsByUserIds(tenantId: string, userIds: string[]): Promise<Map<string, string>>;
   delete(tenantId: string, id: string): Promise<void>;
 }
 

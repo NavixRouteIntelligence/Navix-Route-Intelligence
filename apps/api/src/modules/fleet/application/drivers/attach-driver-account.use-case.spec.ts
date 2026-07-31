@@ -19,6 +19,8 @@ function build(opts: { found?: Driver | null; userLinked?: boolean; licenseTaken
     findAll: jest.fn(),
     existsByLicense: jest.fn().mockResolvedValue(opts.licenseTaken ?? false),
     existsByUser: jest.fn().mockResolvedValue(opts.userLinked ?? false),
+    findUserIdById: jest.fn().mockResolvedValue(null),
+    findIdsByUserIds: jest.fn().mockResolvedValue(new Map()),
     delete: jest.fn(),
   };
   const audit: AuditLogPort = { record: jest.fn().mockResolvedValue(undefined) };
