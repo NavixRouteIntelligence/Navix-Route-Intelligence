@@ -1,7 +1,11 @@
+import type {
+  CreateFinancialEntryRequest,
+  FinancialEntry as FinancialEntryView,
+} from '@navix/contracts';
 import { Inject, Injectable } from '@nestjs/common';
-import type { CreateFinancialEntryRequest, FinancialEntry as FinancialEntryView } from '@navix/contracts';
 
 import { AUDIT_LOG, type AuditLogPort } from '../../../shared/audit/audit-log.port';
+import { DomainEventBus } from '../../../shared/events/domain-event-bus';
 import { ValidationError } from '../../../shared/kernel/domain-error';
 import { TenantContextStore } from '../../../shared/tenancy/tenant-context';
 import { FinancialEntry } from '../domain/financial-entry';
@@ -9,6 +13,7 @@ import {
   FINANCIAL_ENTRY_REPOSITORY,
   type FinancialEntryRepositoryPort,
 } from '../domain/ports/financial-entry-repository.port';
+
 import { toFinancialEntryView } from './financial-entry.mapper';
 
 export type CreateFinancialEntryCommand = CreateFinancialEntryRequest & { tenantId: string };
@@ -25,6 +30,7 @@ export class CreateFinancialEntryUseCase {
   constructor(
     @Inject(FINANCIAL_ENTRY_REPOSITORY) private readonly entries: FinancialEntryRepositoryPort,
     @Inject(AUDIT_LOG) private readonly audit: AuditLogPort,
+    private readonly events: DomainEventBus,
   ) {}
 
   async execute(command: CreateFinancialEntryCommand): Promise<FinancialEntryView> {
@@ -47,6 +53,11 @@ export class CreateFinancialEntryUseCase {
       action: 'finance.entry.created',
       resource: `financial-entry:${view.id}`,
       metadata: { type: command.type, category: command.category },
+    });
+    this.events.publish(command.tenantId, {
+      type: 'finance.entry-created',
+      aggregateId: view.id,
+      affectedDay: view.occurredAt,
     });
     return view;
   }

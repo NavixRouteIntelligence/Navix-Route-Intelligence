@@ -15,6 +15,19 @@ export function formatNumber(value: number, digits = 0): string {
 }
 
 /** Formata data ISO para exibição curta (pt-BR). */
+/**
+ * Valor monetário em euros. A operação e os preços do produto são em EUR
+ * (ver docs/strategy/pricing-navix.md); quando houver multi-moeda, a unidade
+ * passa a vir do tenant e só esta função muda.
+ */
+export function formatCurrency(value: number): string {
+  return new Intl.NumberFormat('pt-PT', {
+    style: 'currency',
+    currency: 'EUR',
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
 export function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
 }

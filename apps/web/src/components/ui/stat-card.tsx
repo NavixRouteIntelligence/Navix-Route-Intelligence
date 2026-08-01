@@ -48,7 +48,7 @@ export function StatCard({
               <StatChip label={delta.label} positive={delta.positive} />
             </div>
           )}
-          {hint && !loading && !delta && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
+          {hint && !loading && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
         </div>
         <span className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-lg', TONE_BG[tone])}>
           <Icon className="h-5 w-5" aria-hidden />

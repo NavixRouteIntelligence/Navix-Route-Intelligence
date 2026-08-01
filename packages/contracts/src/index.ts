@@ -11,3 +11,4 @@ export * from './pod';
 export * from './settings';
 export * from './realtime';
 export * from './intelligence';
+export * from './analytics';

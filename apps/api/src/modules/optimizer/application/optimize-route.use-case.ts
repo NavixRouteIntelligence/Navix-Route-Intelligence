@@ -1,4 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
+
+import { DomainEventBus } from '../../../shared/events/domain-event-bus';
 import type {
   EconomyMode,
   OptimizationStopInput,
@@ -71,6 +73,7 @@ export class OptimizeRouteUseCase {
     @Inject(SERVICE_TIME_HISTORY) private readonly history: ServiceTimeHistoryPort,
     private readonly solver: RouteSolver,
     private readonly metrics: OptimizerMetrics,
+    private readonly bus: DomainEventBus,
   ) {}
 
   async execute(command: OptimizeRouteCommand): Promise<RoutePlanView> {
@@ -95,6 +98,13 @@ export class OptimizeRouteUseCase {
       : await this.planSingle(command, rawStops, service);
 
     await this.plans.save(plan);
+    const planSnapshot = plan.snapshot();
+    // Avisa o read model de KPIs (ADR-0092) que há economia nova a contabilizar.
+    this.bus.publish(command.tenantId, {
+      type: 'route.plan-created',
+      aggregateId: planSnapshot.id,
+      affectedDay: planSnapshot.createdAt.toISOString().slice(0, 10),
+    });
     await this.audit.record({
       tenantId: command.tenantId,
       actorId: command.actorId,

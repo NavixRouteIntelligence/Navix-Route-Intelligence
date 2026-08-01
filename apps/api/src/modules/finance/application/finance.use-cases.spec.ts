@@ -1,7 +1,9 @@
 import type { AuditLogPort } from '../../../shared/audit/audit-log.port';
+import { DomainEventBus } from '../../../shared/events/domain-event-bus';
 import { NotFoundError } from '../../../shared/kernel/domain-error';
 import { FinancialEntry } from '../domain/financial-entry';
 import type { FinancialEntryRepositoryPort } from '../domain/ports/financial-entry-repository.port';
+
 import { CreateFinancialEntryUseCase } from './create-financial-entry.use-case';
 import { DeleteFinancialEntryUseCase } from './delete-financial-entry.use-case';
 import { GetFinancialSummaryUseCase } from './get-financial-summary.use-case';
@@ -23,7 +25,12 @@ const deliveryCount = (n: number): DeliveryCountPort => ({
   countDeliveredInRange: jest.fn().mockResolvedValue(n),
 });
 
-function entry(type: 'income' | 'expense', euros: number, category = 'other', odometerKm: number | null = null): FinancialEntry {
+function entry(
+  type: 'income' | 'expense',
+  euros: number,
+  category = 'other',
+  odometerKm: number | null = null,
+): FinancialEntry {
   return FinancialEntry.create({
     tenantId: 't1',
     type,
@@ -37,7 +44,10 @@ function entry(type: 'income' | 'expense', euros: number, category = 'other', od
 describe('CreateFinancialEntryUseCase', () => {
   it('cria convertendo euros → cents e devolve a view em euros', async () => {
     const r = repo();
-    const uc = new CreateFinancialEntryUseCase(r, audit);
+    const events = new DomainEventBus();
+    const published: unknown[] = [];
+    events.stream().subscribe((event) => published.push(event));
+    const uc = new CreateFinancialEntryUseCase(r, audit, events);
     const view = await uc.execute({
       tenantId: 't1',
       type: 'expense',
@@ -50,6 +60,16 @@ describe('CreateFinancialEntryUseCase', () => {
     expect(view.amount).toBe(62.5);
     expect(view.category).toBe('fuel');
     expect(r.save).toHaveBeenCalledTimes(1);
+    expect(published).toEqual([
+      {
+        tenantId: 't1',
+        event: {
+          type: 'finance.entry-created',
+          aggregateId: view.id,
+          affectedDay: '2026-07-10',
+        },
+      },
+    ]);
   });
 });
 
@@ -60,7 +80,10 @@ describe('GetFinancialSummaryUseCase', () => {
       entry('expense', 60, 'fuel', 100000),
       entry('expense', 65, 'fuel', 100400),
     ];
-    const uc = new GetFinancialSummaryUseCase(repo({ findInRange: jest.fn().mockResolvedValue(entries) }), deliveryCount(4));
+    const uc = new GetFinancialSummaryUseCase(
+      repo({ findInRange: jest.fn().mockResolvedValue(entries) }),
+      deliveryCount(4),
+    );
     const s = await uc.execute('t1', new Date('2026-07-01'), new Date('2026-07-31'));
     expect(s.totalIncome).toBe(200);
     expect(s.totalExpense).toBe(125);
@@ -74,14 +97,31 @@ describe('GetFinancialSummaryUseCase', () => {
 
 describe('DeleteFinancialEntryUseCase', () => {
   it('404 quando o lançamento não existe', async () => {
-    const uc = new DeleteFinancialEntryUseCase(repo({ findById: jest.fn().mockResolvedValue(null) }), audit);
+    const uc = new DeleteFinancialEntryUseCase(
+      repo({ findById: jest.fn().mockResolvedValue(null) }),
+      audit,
+      new DomainEventBus(),
+    );
     await expect(uc.execute('t1', 'x')).rejects.toBeInstanceOf(NotFoundError);
   });
 
   it('apaga quando existe', async () => {
     const r = repo({ findById: jest.fn().mockResolvedValue(entry('income', 10)) });
-    const uc = new DeleteFinancialEntryUseCase(r, audit);
+    const events = new DomainEventBus();
+    const published: unknown[] = [];
+    events.stream().subscribe((event) => published.push(event));
+    const uc = new DeleteFinancialEntryUseCase(r, audit, events);
     await uc.execute('t1', 'x');
     expect(r.delete).toHaveBeenCalledWith('t1', 'x');
+    expect(published).toEqual([
+      {
+        tenantId: 't1',
+        event: {
+          type: 'finance.entry-deleted',
+          aggregateId: 'x',
+          affectedDay: '2026-07-10',
+        },
+      },
+    ]);
   });
 });

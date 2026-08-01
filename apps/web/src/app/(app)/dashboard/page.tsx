@@ -16,8 +16,8 @@ import {
   Upload,
   Users,
 } from 'lucide-react';
-import Link from 'next/link';
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
 
 import { ActivityTimeline } from '@/components/dashboard/activity-timeline';
 import { AiInsights } from '@/components/dashboard/ai-insights';
@@ -31,6 +31,12 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/ui/page-header';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatCard } from '@/components/ui/stat-card';
+import { analyticsApi } from '@/lib/api/analytics';
+import { deliveriesApi } from '@/lib/api/deliveries';
+import { fleetApi } from '@/lib/api/fleet';
+import { optimizerApi } from '@/lib/api/optimizer';
+import { useT } from '@/lib/i18n/locale-provider';
+import { formatCurrency, formatNumber } from '@/lib/utils';
 
 // Componentes pesados (Mapbox/recharts) carregados sob demanda, sem SSR.
 const StatusChart = dynamic(() => import('@/components/charts/status-chart').then((m) => m.StatusChart), {
@@ -45,10 +51,6 @@ const RouteMap = dynamic(() => import('@/components/map/route-map').then((m) => 
   ssr: false,
   loading: () => <Skeleton className="h-[420px] w-full" />,
 });
-import { deliveriesApi } from '@/lib/api/deliveries';
-import { fleetApi } from '@/lib/api/fleet';
-import { optimizerApi } from '@/lib/api/optimizer';
-import { formatNumber } from '@/lib/utils';
 
 const FUEL_L_PER_KM = 0.12; // fator médio de consumo (litros por km) — demo
 const STATUS_LABEL: Record<DeliveryStatus, string> = {
@@ -74,24 +76,35 @@ export default function DashboardPage() {
   const vehicles = useQuery({ queryKey: ['vehicles', 'dashboard'], queryFn: () => fleetApi.listVehicles({ pageSize: 100 }) });
   const drivers = useQuery({ queryKey: ['drivers', 'dashboard'], queryFn: () => fleetApi.listDrivers({ pageSize: 100 }) });
   const plans = useQuery({ queryKey: ['route-plans', 'dashboard'], queryFn: () => optimizerApi.listPlans({ pageSize: 100 }) });
+  // KPIs do **read model** (ADR-0092), não das listas acima: cobre o período
+  // inteiro, e não só a primeira página de cada tabela.
+  const kpis = useQuery({ queryKey: ['kpis', 'summary'], queryFn: () => analyticsApi.kpiSummary(30) });
+  const t = useT();
 
   const loading = deliveries.isLoading || vehicles.isLoading || drivers.isLoading || plans.isLoading;
-  const error = deliveries.error || vehicles.error || drivers.error || plans.error;
+  const error = deliveries.error || vehicles.error || drivers.error || plans.error || kpis.error;
 
   const deliveryItems = deliveries.data?.data ?? [];
   const planItems = plans.data?.data ?? [];
   const counts = countByStatus(deliveryItems);
   const chartStatus = (Object.keys(STATUS_LABEL) as DeliveryStatus[]).map((s) => ({ name: STATUS_LABEL[s], value: counts[s] }));
 
-  const savedKm = planItems.reduce((acc, p) => acc + p.savings.distanceKm, 0);
-  const savedMin = planItems.reduce((acc, p) => acc + p.savings.timeMinutes, 0);
-  const optimizedKm = planItems.reduce((acc, p) => acc + p.metrics.totalDistanceKm, 0);
-  const avgScore = planItems.length ? Math.round(planItems.reduce((a, p) => a + p.score, 0) / planItems.length) : 0;
-  // Ganho médio de otimização (real) — usado nos chips de variação.
-  const avgSavingsPct = planItems.length
-    ? planItems.reduce((a, p) => a + p.savings.distancePct, 0) / planItems.length
-    : 0;
-  const savingsDelta = avgSavingsPct > 0 ? { label: `${formatNumber(avgSavingsPct, 0)}%`, positive: true } : undefined;
+  // Estes vêm do read model: somar `planItems` daria apenas as 100 rotas mais
+  // recentes, que era o defeito silencioso do dashboard anterior (ADR-0092).
+  const kpi = kpis.data?.data;
+  const savedKm = kpi?.savedKm;
+  const savedMinutes = kpi?.savedMinutes;
+  const optimizedKm = kpi?.optimizedKm;
+  const avgScore = kpi?.averageScore;
+  // Razão do período inteiro: km poupados ÷ baseline agregada. Não é a média
+  // truncada dos percentuais das 100 rotas mais recentes.
+  const savingsDelta =
+    kpi?.distanceSavingsRate != null
+      ? {
+          label: `${formatNumber(kpi.distanceSavingsRate * 100, 0)}%`,
+          positive: kpi.distanceSavingsRate >= 0,
+        }
+      : undefined;
   const activeVehicles = (vehicles.data?.data ?? []).filter((v) => v.status === 'active').length;
   const activeDrivers = (drivers.data?.data ?? []).filter((d) => d.status === 'active').length;
   const latestPlan = planItems[0];
@@ -121,10 +134,47 @@ export default function DashboardPage() {
         <StatCard label="Rotas otimizadas" value={formatNumber(plans.data?.meta.total ?? 0)} icon={Route} tone="accent" loading={loading} />
         <StatCard label="Motoristas" value={formatNumber(drivers.data?.meta.total ?? 0)} icon={Users} tone="primary" hint={`${activeDrivers} ativos`} loading={loading} />
         <StatCard label="Veículos" value={formatNumber(vehicles.data?.meta.total ?? 0)} icon={Truck} tone="primary" hint={`${activeVehicles} ativos`} loading={loading} />
-        <StatCard label="Economia de combustível" value={`${formatNumber(savedKm * FUEL_L_PER_KM, 1)} L`} icon={Fuel} tone="success" delta={savingsDelta} loading={loading} />
-        <StatCard label="Economia de tempo" value={formatMinutes(savedMin)} icon={Clock} tone="warning" loading={loading} />
-        <StatCard label="Distância otimizada" value={`${formatNumber(optimizedKm, 1)} km`} icon={Navigation} tone="accent" delta={savingsDelta} loading={loading} />
-        <StatCard label="Score médio" value={`${avgScore}/100`} icon={Gauge} tone="warning" loading={loading} />
+        <StatCard label="Economia de combustível" value={savedKm != null ? `${formatNumber(savedKm * FUEL_L_PER_KM, 1)} L` : '—'} icon={Fuel} tone="success" hint={t('kpi.window')} delta={savingsDelta} loading={kpis.isLoading} />
+        <StatCard label="Economia de tempo" value={savedMinutes != null ? formatMinutes(savedMinutes) : '—'} icon={Clock} tone="warning" hint={t('kpi.window')} loading={kpis.isLoading} />
+        <StatCard label="Distância otimizada" value={optimizedKm != null ? `${formatNumber(optimizedKm, 1)} km` : '—'} icon={Navigation} tone="accent" hint={t('kpi.window')} delta={savingsDelta} loading={kpis.isLoading} />
+        <StatCard label="Score médio" value={avgScore != null ? `${avgScore}/100` : '—'} icon={Gauge} tone="warning" hint={t('kpi.window')} loading={kpis.isLoading} />
+      </div>
+
+      {/* KPIs de operação — read model (ADR-0092). `—` quando ainda não há
+          denominador: dizer "0%" a quem nunca entregou seria mentira. */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          label={t('kpi.savedKm')}
+          value={savedKm != null ? `${formatNumber(savedKm, 1)} km` : '—'}
+          hint={t('kpi.window')}
+          icon={Navigation}
+          tone="success"
+          loading={kpis.isLoading}
+        />
+        <StatCard
+          label={t('kpi.successRate')}
+          value={kpi?.successRate != null ? `${formatNumber(kpi.successRate * 100, 1)}%` : '—'}
+          hint={kpi ? `${formatNumber(kpi.finished)} ${t('kpi.deliveriesFinished')}` : t('kpi.noData')}
+          icon={Package}
+          tone="primary"
+          loading={kpis.isLoading}
+        />
+        <StatCard
+          label={t('kpi.onTimeRate')}
+          value={kpi?.onTimeRate != null ? `${formatNumber(kpi.onTimeRate * 100, 1)}%` : '—'}
+          hint={t('kpi.window')}
+          icon={Clock}
+          tone="accent"
+          loading={kpis.isLoading}
+        />
+        <StatCard
+          label={t('kpi.costPerDelivery')}
+          value={kpi?.costPerDelivery != null ? formatCurrency(kpi.costPerDelivery) : '—'}
+          hint={t('kpi.window')}
+          icon={Gauge}
+          tone="warning"
+          loading={kpis.isLoading}
+        />
       </div>
 
       {/* AI Insights */}
@@ -174,8 +224,8 @@ export default function DashboardPage() {
         </Panel>
         <Panel title="Rotas preparadas pela IA">
           <Row icon={<Route className="h-4 w-4 text-accent" />} label="Rotas geradas" value={formatNumber(plans.data?.meta.total ?? 0)} />
-          <Row icon={<Gauge className="h-4 w-4 text-warning" />} label="Score médio" value={`${avgScore}/100`} />
-          <Row icon={<Navigation className="h-4 w-4 text-success" />} label="Km economizados" value={`${formatNumber(savedKm, 1)} km`} />
+          <Row icon={<Gauge className="h-4 w-4 text-warning" />} label="Score médio" value={avgScore != null ? `${avgScore}/100` : '—'} />
+          <Row icon={<Navigation className="h-4 w-4 text-success" />} label="Km economizados" value={savedKm != null ? `${formatNumber(savedKm, 1)} km` : '—'} />
         </Panel>
       </div>
 

@@ -1,5 +1,5 @@
-import { Inject, Injectable } from '@nestjs/common';
 import type { DeliveryStatus, Delivery as DeliveryView } from '@navix/contracts';
+import { Inject, Injectable } from '@nestjs/common';
 
 import { AUDIT_LOG, type AuditLogPort } from '../../../shared/audit/audit-log.port';
 import { DomainEventBus } from '../../../shared/events/domain-event-bus';
@@ -8,6 +8,7 @@ import {
   DELIVERY_REPOSITORY,
   type DeliveryRepositoryPort,
 } from '../domain/ports/delivery-repository.port';
+
 import { toDeliveryView } from './mappers/delivery.mapper';
 
 export interface ChangeDeliveryStatusCommand {
@@ -46,6 +47,7 @@ export class ChangeDeliveryStatusUseCase {
     this.events.publish(command.tenantId, {
       type: 'delivery.status-changed',
       aggregateId: view.id,
+      affectedDay: view.updatedAt.slice(0, 10),
     });
     return view;
   }

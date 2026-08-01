@@ -7,6 +7,7 @@ import type { RoutePlan } from '../domain/route-plan';
 import type { DeliveryGatewayPort } from './ports/delivery-gateway.port';
 import type { RoutePlanRepositoryPort } from '../domain/ports/route-plan-repository.port';
 import { OptimizeRouteUseCase } from './optimize-route.use-case';
+import { DomainEventBus } from '../../../shared/events/domain-event-bus';
 import { RouteSolver } from './route-solver';
 import { StrategyRegistry } from './strategy-registry';
 
@@ -30,8 +31,9 @@ function build() {
     markInfeasible: jest.fn(),
   } as unknown as OptimizerMetrics;
   const solver = new RouteSolver(new HaversineRoutingProvider(), { augment: () => ({}) }, registry);
-  const uc = new OptimizeRouteUseCase(plans, gateway, audit, history, solver, metrics);
-  return { uc, saved, metrics };
+  const bus = new DomainEventBus();
+  const uc = new OptimizeRouteUseCase(plans, gateway, audit, history, solver, metrics, bus);
+  return { uc, saved, metrics, bus };
 }
 
 const S1 = '019f3364-0001-7665-bcb4-2cc75f065d01';

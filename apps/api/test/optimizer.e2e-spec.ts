@@ -3,6 +3,7 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 
 import { AUDIT_LOG } from '../src/shared/audit/audit-log.port';
+import { DomainEventBus } from '../src/shared/events/domain-event-bus';
 import { DomainExceptionFilter } from '../src/shared/interface/domain-exception.filter';
 import { JwtAuthGuard } from '../src/shared/security/jwt-auth.guard';
 import { RolesGuard } from '../src/shared/security/roles.guard';
@@ -156,6 +157,7 @@ describe('Optimizer (e2e, assíncrono)', () => {
           },
         },
         { provide: AUDIT_LOG, useValue: { record: async () => undefined } },
+        DomainEventBus,
         {
           provide: OptimizerMetrics,
           useValue: { observeSolve: () => undefined, markInfeasible: () => undefined },

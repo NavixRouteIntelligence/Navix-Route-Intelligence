@@ -15,6 +15,7 @@ import { TenancyModule } from './shared/tenancy/tenancy.module';
 import { IdempotencyModule } from './shared/idempotency/idempotency.module';
 import { ThrottlingModule } from './shared/security/throttling.module';
 import { DeliveryModule } from './modules/delivery/delivery.module';
+import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { DriverInviteModule } from './modules/driver-invite/driver-invite.module';
 import { EtaQualityModule } from './modules/eta-quality/eta-quality.module';
 import { PublicTrackingModule } from './modules/public-tracking/public-tracking.module';
@@ -62,6 +63,8 @@ import { UserSettingsModule } from './modules/user-settings/user-settings.module
     // Mede o erro do ETA a cada entrega concluída (ADR-0087): é a régua sem a
     // qual não dá para afirmar que um modelo melhorou a previsão.
     EtaQualityModule,
+    // Read models dos dashboards (ADR-0092): a tela deixa de somar OLTP.
+    AnalyticsModule,
     FinanceModule,
     DeliveryModule,
     // Rastreamento público do destinatário (ADR-0082): compõe Delivery,
