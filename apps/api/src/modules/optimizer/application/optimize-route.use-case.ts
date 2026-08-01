@@ -98,10 +98,12 @@ export class OptimizeRouteUseCase {
       : await this.planSingle(command, rawStops, service);
 
     await this.plans.save(plan);
+    const planSnapshot = plan.snapshot();
     // Avisa o read model de KPIs (ADR-0092) que há economia nova a contabilizar.
     this.bus.publish(command.tenantId, {
       type: 'route.plan-created',
-      aggregateId: plan.snapshot().id,
+      aggregateId: planSnapshot.id,
+      affectedDay: planSnapshot.createdAt.toISOString().slice(0, 10),
     });
     await this.audit.record({
       tenantId: command.tenantId,

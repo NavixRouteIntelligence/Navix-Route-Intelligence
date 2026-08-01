@@ -23,6 +23,7 @@ export class DeleteDeliveryUseCase {
       throw new NotFoundError('Entrega não encontrada.');
     }
 
+    const affectedDay = delivery.snapshot().updatedAt.toISOString().slice(0, 10);
     delivery.softDelete();
     await this.deliveries.save(delivery);
 
@@ -32,6 +33,10 @@ export class DeleteDeliveryUseCase {
       action: 'delivery.deleted',
       resource: `delivery:${id}`,
     });
-    this.events.publish(tenantId, { type: 'delivery.deleted', aggregateId: id });
+    this.events.publish(tenantId, {
+      type: 'delivery.deleted',
+      aggregateId: id,
+      affectedDay,
+    });
   }
 }

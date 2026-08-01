@@ -1,10 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
 
 import { KPI_REPOSITORY, type KpiRepositoryPort } from '../domain/ports/kpi-repository.port';
+
 import { isoDay } from './get-kpi-summary.use-case';
 
 /** Teto do recálculo manual, para uma chamada não varrer anos por engano. */
 const MAX_BACKFILL_DAYS = 365;
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
  * Reconstrói o read model (ADR-0092).
@@ -18,8 +20,10 @@ const MAX_BACKFILL_DAYS = 365;
 export class RebuildKpisUseCase {
   constructor(@Inject(KPI_REPOSITORY) private readonly kpis: KpiRepositoryPort) {}
 
-  day(tenantId: string, at: Date = new Date()): Promise<void> {
-    return this.kpis.rebuildDay(tenantId, isoDay(at));
+  day(tenantId: string, at: Date | string = new Date()): Promise<void> {
+    const day = typeof at === 'string' ? at : isoDay(at);
+    if (!ISO_DAY.test(day)) throw new Error(`Dia de projeção inválido: ${day}`);
+    return this.kpis.rebuildDay(tenantId, day);
   }
 
   /** Recalcula os últimos `days` dias. Devolve quantos foram reconstruídos. */

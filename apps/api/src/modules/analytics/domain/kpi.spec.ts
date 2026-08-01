@@ -5,7 +5,9 @@ function dia(over: Partial<KpiDailyRow> = {}): KpiDailyRow {
     day: '2026-07-30',
     plans: 0,
     savedKm: 0,
+    savedMinutes: 0,
     optimizedKm: 0,
+    baselineKm: 0,
     scoreSum: 0,
     delivered: 0,
     failed: 0,
@@ -27,6 +29,20 @@ describe('summarizeKpis', () => {
     );
 
     expect(resumo.savedKm).toBe(20);
+  });
+
+  it('agrega economia de tempo e calcula ganho de distância pela baseline inteira', () => {
+    const resumo = summarizeKpis(
+      [
+        dia({ savedKm: 10, savedMinutes: 20, baselineKm: 100 }),
+        dia({ day: '2026-07-31', savedKm: 5, savedMinutes: 15, baselineKm: 50 }),
+      ],
+      PERIODO.from,
+      PERIODO.to,
+    );
+
+    expect(resumo.savedMinutes).toBe(35);
+    expect(resumo.distanceSavingsRate).toBe(0.1);
   });
 
   it('taxa de sucesso é entregues sobre finalizadas', () => {
@@ -53,11 +69,7 @@ describe('summarizeKpis', () => {
   });
 
   it('custo por entrega divide a despesa pelas concluídas', () => {
-    const resumo = summarizeKpis(
-      [dia({ delivered: 4, expense: 100 })],
-      PERIODO.from,
-      PERIODO.to,
-    );
+    const resumo = summarizeKpis([dia({ delivered: 4, expense: 100 })], PERIODO.from, PERIODO.to);
 
     expect(resumo.costPerDelivery).toBe(25);
   });
@@ -71,6 +83,7 @@ describe('summarizeKpis', () => {
     expect(resumo.onTimeRate).toBeNull();
     expect(resumo.costPerDelivery).toBeNull();
     expect(resumo.averageScore).toBeNull();
+    expect(resumo.distanceSavingsRate).toBeNull();
   });
 
   it('período sem nenhum dia não quebra', () => {
@@ -106,7 +119,11 @@ describe('summarizeKpis', () => {
     );
 
     expect(resumo.series).toHaveLength(2);
-    expect(resumo.series[0]).toMatchObject({ day: '2026-07-30', successRate: 0.8, onTimeRate: 0.5 });
+    expect(resumo.series[0]).toMatchObject({
+      day: '2026-07-30',
+      successRate: 0.8,
+      onTimeRate: 0.5,
+    });
     expect(resumo.series[1]).toMatchObject({ onTimeRate: 1 });
   });
 });

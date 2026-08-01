@@ -11,7 +11,9 @@ export interface KpiDailyRow {
   day: string;
   plans: number;
   savedKm: number;
+  savedMinutes: number;
   optimizedKm: number;
+  baselineKm: number;
   scoreSum: number;
   delivered: number;
   failed: number;
@@ -34,7 +36,10 @@ export interface KpiSummary {
   to: string;
   /** Quilômetros poupados pela otimização no período. */
   savedKm: number;
+  savedMinutes: number;
   optimizedKm: number;
+  /** Economia de distância agregada: km poupados ÷ km da baseline. */
+  distanceSavingsRate: number | null;
   /** Score médio das rotas, ponderado pelo nº de planos. `null` sem planos. */
   averageScore: number | null;
   delivered: number;
@@ -71,7 +76,9 @@ export function summarizeKpis(rows: KpiDailyRow[], from: string, to: string): Kp
     (acc, r) => ({
       plans: acc.plans + r.plans,
       savedKm: acc.savedKm + r.savedKm,
+      savedMinutes: acc.savedMinutes + r.savedMinutes,
       optimizedKm: acc.optimizedKm + r.optimizedKm,
+      baselineKm: acc.baselineKm + r.baselineKm,
       scoreSum: acc.scoreSum + r.scoreSum,
       delivered: acc.delivered + r.delivered,
       failed: acc.failed + r.failed,
@@ -82,7 +89,9 @@ export function summarizeKpis(rows: KpiDailyRow[], from: string, to: string): Kp
     {
       plans: 0,
       savedKm: 0,
+      savedMinutes: 0,
       optimizedKm: 0,
+      baselineKm: 0,
       scoreSum: 0,
       delivered: 0,
       failed: 0,
@@ -98,7 +107,9 @@ export function summarizeKpis(rows: KpiDailyRow[], from: string, to: string): Kp
     from,
     to,
     savedKm: round(total.savedKm, 1),
+    savedMinutes: round(total.savedMinutes, 1),
     optimizedKm: round(total.optimizedKm, 1),
+    distanceSavingsRate: rate(total.savedKm, total.baselineKm),
     // Média ponderada pelo nº de planos do dia — a média das médias diárias
     // daria peso igual a um dia com 1 rota e outro com 50.
     averageScore: total.plans > 0 ? round(total.scoreSum / total.plans, 0) : null,

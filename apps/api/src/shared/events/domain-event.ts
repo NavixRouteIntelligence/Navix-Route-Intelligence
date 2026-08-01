@@ -9,6 +9,8 @@ export type DomainEventType =
   | 'delivery.updated'
   | 'delivery.status-changed'
   | 'delivery.deleted'
+  | 'finance.entry-created'
+  | 'finance.entry-deleted'
   /**
    * Posição de motorista registrada. **Não** dispara reotimização sozinha: é o
    * *tick* que faz o detector de atraso reavaliar a rota (ADR-0083). Posições
@@ -45,4 +47,12 @@ export interface DomainEvent {
   type: DomainEventType;
   /** ID do agregado afetado (ex.: deliveryId). */
   aggregateId: string;
+  /**
+   * Dia do read model afetado, em UTC (`YYYY-MM-DD`).
+   *
+   * Eventos que não alimentam projeções podem omitir. Guardar o dia no evento
+   * evita recalcular "hoje" para uma alteração retroativa e também elimina a
+   * corrida do debounce ao atravessar a meia-noite.
+   */
+  affectedDay?: string;
 }

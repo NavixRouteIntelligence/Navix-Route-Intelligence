@@ -20,7 +20,11 @@ export interface KpiSummary {
   to: string;
   /** Quilômetros poupados pela otimização no período inteiro. */
   savedKm: number;
+  /** Minutos poupados pela otimização no período inteiro. */
+  savedMinutes: number;
   optimizedKm: number;
+  /** Km poupados ÷ distância da ordem original. */
+  distanceSavingsRate: number | null;
   /** Score médio das rotas, ponderado pelo nº de planos. */
   averageScore: number | null;
   delivered: number;

@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 
 import { AUDIT_LOG, type AuditLogPort } from '../../../shared/audit/audit-log.port';
+import { DomainEventBus } from '../../../shared/events/domain-event-bus';
 import { NotFoundError } from '../../../shared/kernel/domain-error';
 import { TenantContextStore } from '../../../shared/tenancy/tenant-context';
 import {
@@ -13,6 +14,7 @@ export class DeleteFinancialEntryUseCase {
   constructor(
     @Inject(FINANCIAL_ENTRY_REPOSITORY) private readonly entries: FinancialEntryRepositoryPort,
     @Inject(AUDIT_LOG) private readonly audit: AuditLogPort,
+    private readonly events: DomainEventBus,
   ) {}
 
   async execute(tenantId: string, id: string): Promise<void> {
@@ -24,6 +26,11 @@ export class DeleteFinancialEntryUseCase {
       actorId: TenantContextStore.get()?.userId ?? null,
       action: 'finance.entry.deleted',
       resource: `financial-entry:${id}`,
+    });
+    this.events.publish(tenantId, {
+      type: 'finance.entry-deleted',
+      aggregateId: id,
+      affectedDay: existing.snapshot().occurredAt.toISOString().slice(0, 10),
     });
   }
 }
