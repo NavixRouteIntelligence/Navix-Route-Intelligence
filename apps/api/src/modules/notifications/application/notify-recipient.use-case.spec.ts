@@ -1,4 +1,5 @@
 import type { AppConfigService } from '../../../shared/config/app-config.service';
+import type { FeatureAccessService } from '../../../shared/tenancy/feature-access.service';
 import type { NotificationRegistryPort } from '../domain/ports/notification-registry.port';
 import type { NotificationSenderPort } from '../domain/ports/notification-sender.port';
 import { NotifyRecipientUseCase } from './notify-recipient.use-case';
@@ -26,6 +27,7 @@ function build(opts: {
   optedOut?: boolean;
   claimed?: boolean;
   sendFails?: boolean;
+  premium?: boolean;
 } = {}) {
   const config = {
     notifications: {
@@ -58,10 +60,16 @@ function build(opts: {
     }),
   };
 
+  const features = {
+    isEnabled: jest.fn().mockResolvedValue(opts.premium ?? true),
+    require: jest.fn(),
+  } as unknown as FeatureAccessService;
+
   return {
-    uc: new NotifyRecipientUseCase(config, deliveries, links, registry, sender),
+    uc: new NotifyRecipientUseCase(config, deliveries, links, registry, sender, features),
     registry,
     links,
+    deliveries,
     sent,
   };
 }
@@ -86,6 +94,18 @@ describe('NotifyRecipientUseCase', () => {
       sent: false,
       reason: 'desligado',
     });
+    expect(sent).toHaveLength(0);
+  });
+
+  it('plano básico não consulta entrega, não reserva e não envia', async () => {
+    const { uc, deliveries, registry, sent } = build({ premium: false });
+
+    await expect(uc.execute('t-free', 'del-1', 'dispatched')).resolves.toEqual({
+      sent: false,
+      reason: 'plano',
+    });
+    expect(deliveries.find).not.toHaveBeenCalled();
+    expect(registry.claim).not.toHaveBeenCalled();
     expect(sent).toHaveLength(0);
   });
 

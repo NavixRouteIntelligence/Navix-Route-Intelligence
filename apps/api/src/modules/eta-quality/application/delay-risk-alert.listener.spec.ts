@@ -3,11 +3,11 @@ import type { RealtimeEvent } from '@navix/contracts';
 
 import type { AppConfigService } from '../../../shared/config/app-config.service';
 import { DomainEventBus } from '../../../shared/events/domain-event-bus';
+import type { FeatureAccessService } from '../../../shared/tenancy/feature-access.service';
 import type { RealtimeHub } from '../../../shared/realtime/realtime-hub';
 import type { DeliveryLookupPort } from '../../delivery/application/delivery-lookup.service';
 import type { NotifyRecipientUseCase } from '../../notifications/application/notify-recipient.use-case';
 import type { OptimizerServicePort } from '../../optimizer/application/optimizer.service';
-import type { TenantPlanPort } from '../../optimizer/application/ports/tenant-plan.port';
 import { DelayRiskAlertListener } from './delay-risk-alert.listener';
 import { DelayRiskRegistry } from './delay-risk.registry';
 import type { AssessedStop, PredictBreachRiskUseCase } from './predict-breach-risk.use-case';
@@ -72,11 +72,11 @@ function build(opts: {
       .mockResolvedValue({ routePlanId: 'p1', arrivalAt: previsto, correctionMinutes: 0 }),
   } as unknown as OptimizerServicePort;
 
-  const allowsPredictiveAlerts = jest.fn().mockResolvedValue(opts.premium ?? true);
-  const plan = {
-    allowsPredictiveAlerts,
-    allowsDynamicReoptimization: jest.fn(),
-  } as TenantPlanPort;
+  const isEnabled = jest.fn().mockResolvedValue(opts.premium ?? true);
+  const features = {
+    isEnabled,
+    require: jest.fn(),
+  } as unknown as FeatureAccessService;
 
   const publicados: RealtimeEvent[] = [];
   const realtime = {
@@ -94,7 +94,7 @@ function build(opts: {
     predict,
     deliveries,
     optimizer,
-    plan,
+    features,
     realtime,
     notify,
     registry,
@@ -106,7 +106,7 @@ function build(opts: {
     publicados,
     notificar,
     execute,
-    allowsPredictiveAlerts,
+    isEnabled,
     listNotifiableActive,
     tenantSets,
     registry,
@@ -184,12 +184,12 @@ describe('DelayRiskAlertListener (ADR-0091)', () => {
   });
 
   it('flag mestre desligada não assina o evento', async () => {
-    const { listener, bus, allowsPredictiveAlerts } = build({ enabled: false });
+    const { listener, bus, isEnabled } = build({ enabled: false });
     listener.onModuleInit();
 
     await tick(bus);
 
-    expect(allowsPredictiveAlerts).not.toHaveBeenCalled();
+    expect(isEnabled).not.toHaveBeenCalled();
     listener.onModuleDestroy();
   });
 

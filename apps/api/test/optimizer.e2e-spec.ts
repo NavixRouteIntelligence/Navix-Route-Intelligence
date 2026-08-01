@@ -7,6 +7,7 @@ import { DomainEventBus } from '../src/shared/events/domain-event-bus';
 import { DomainExceptionFilter } from '../src/shared/interface/domain-exception.filter';
 import { JwtAuthGuard } from '../src/shared/security/jwt-auth.guard';
 import { RolesGuard } from '../src/shared/security/roles.guard';
+import { FeatureAccessService } from '../src/shared/tenancy/feature-access.service';
 import { EnqueueOptimizationUseCase } from '../src/modules/optimizer/application/enqueue-optimization.use-case';
 import { GetOptimizationJobUseCase } from '../src/modules/optimizer/application/get-optimization-job.use-case';
 import { GetRoutePlanUseCase } from '../src/modules/optimizer/application/get-route-plan.use-case';
@@ -114,6 +115,14 @@ describe('Optimizer (e2e, assíncrono)', () => {
         GetRoutePlanUseCase,
         ListRoutePlansUseCase,
         ReoptimizeActiveUseCase,
+        DomainEventBus,
+        {
+          provide: FeatureAccessService,
+          useValue: {
+            isEnabled: async () => true,
+            require: async () => undefined,
+          },
+        },
         StrategyRegistry,
         RouteSolver,
         NearestNeighbor2OptStrategy,

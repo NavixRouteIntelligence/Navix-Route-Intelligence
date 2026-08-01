@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 
 import { AppConfigService } from '../../../shared/config/app-config.service';
+import { FeatureAccessService } from '../../../shared/tenancy/feature-access.service';
 import type { NotificationChannel, NotificationEvent } from '../domain/notification-event';
 import {
   NOTIFICATION_REGISTRY,
@@ -25,6 +26,7 @@ export type SkipReason =
   | 'ja-enviado'
   | 'entrega-inexistente'
   | 'canal-indisponivel'
+  | 'plano'
   | 'desligado';
 
 export type NotifyOutcome = { sent: true } | { sent: false; reason: SkipReason };
@@ -50,6 +52,7 @@ export class NotifyRecipientUseCase {
     @Inject(TRACKING_LINK_GATEWAY) private readonly links: TrackingLinkGatewayPort,
     @Inject(NOTIFICATION_REGISTRY) private readonly registry: NotificationRegistryPort,
     @Inject(NOTIFICATION_SENDER) private readonly sender: NotificationSenderPort,
+    private readonly features: FeatureAccessService,
   ) {}
 
   async execute(
@@ -59,6 +62,9 @@ export class NotifyRecipientUseCase {
   ): Promise<NotifyOutcome> {
     const { enabled, channel } = this.config.notifications;
     if (!enabled) return { sent: false, reason: 'desligado' };
+    if (!(await this.features.isEnabled(tenantId, 'advanced_cx'))) {
+      return { sent: false, reason: 'plano' };
+    }
     if (!this.sender.supports(channel)) return { sent: false, reason: 'canal-indisponivel' };
 
     const delivery = await this.deliveries.find(tenantId, deliveryId);

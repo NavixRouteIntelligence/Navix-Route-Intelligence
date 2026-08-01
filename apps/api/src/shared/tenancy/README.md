@@ -20,6 +20,21 @@ Desde o hardening da Fase 1 (ADR-0012) o isolamento por transação está **ativ
 
 Requests **públicos** (sem `req.user`, como login/refresh) passam sem transação de tenant; as tabelas de auth ficam sem RLS por isso.
 
+## Feature flags por plano
+
+O `FeatureAccessService` é o ponto único para direitos comerciais por tenant
+(ADR-0093). A matriz fica em `plan-feature.ts`; módulos de negócio não devem
+comparar diretamente strings como `free`, `fleet` ou `enterprise`.
+
+- `dynamic_reoptimization`: reotimização automática e endpoint manual;
+- `predictive_alerts`: alertas preditivos de estouro de janela;
+- `advanced_cx`: emissão de link público e notificações ao destinatário.
+
+A leitura de `tenants.plan` é parametrizada e mantida em cache por 60 segundos.
+Tenant/plano desconhecido ou falha de banco **nega acesso**. A leitura pública de
+um link já emitido não é interrompida após downgrade; somente novas emissões e
+notificações são bloqueadas, evitando quebrar um link já entregue ao destinatário.
+
 ## Roadmap
 
 - Estratégia de multi-tenancy para enterprise (schema/DB por tenant) — quando houver exigência de residência de dados.
