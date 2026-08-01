@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { cn, formatNumber } from './utils';
+import { cn, formatCurrency, formatNumber } from './utils';
 
 describe('utils', () => {
   it('cn resolve conflitos do Tailwind (mantém a última classe)', () => {
@@ -11,5 +11,11 @@ describe('utils', () => {
   it('formatNumber usa separador pt-BR', () => {
     expect(formatNumber(1234)).toBe('1.234');
     expect(formatNumber(3318.9, 1)).toBe('3.318,9');
+  });
+
+  it('formatCurrency exibe valores em euros no formato pt-PT', () => {
+    const formatted = formatCurrency(1234.5);
+
+    expect(formatted.replace(/\s/g, '')).toBe('1234,50€');
   });
 });
