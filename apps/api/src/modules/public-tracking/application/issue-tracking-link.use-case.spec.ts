@@ -1,10 +1,11 @@
 import type { AppConfigService } from '../../../shared/config/app-config.service';
-import { NotFoundError } from '../../../shared/kernel/domain-error';
+import { ForbiddenError, NotFoundError } from '../../../shared/kernel/domain-error';
+import type { FeatureAccessService } from '../../../shared/tenancy/feature-access.service';
 import type { DeliveryLookupPort } from '../../delivery/application/delivery-lookup.service';
 import type { TrackingTokenRepositoryPort } from '../domain/ports/tracking-token-repository.port';
 import { IssueTrackingLinkUseCase } from './issue-tracking-link.use-case';
 
-function build(opts: { found?: unknown; existing?: string | null } = {}) {
+function build(opts: { found?: unknown; existing?: string | null; premium?: boolean } = {}) {
   // `'found' in opts` e não `??`: o caso interessante é justamente `found: null`
   // (entrega de outro tenant, que a RLS esconde), que o `??` engoliria.
   const deliveries = {
@@ -23,7 +24,18 @@ function build(opts: { found?: unknown; existing?: string | null } = {}) {
     publicTracking: { baseUrl: 'https://track.navix.pt' },
   } as unknown as AppConfigService;
 
-  return { uc: new IssueTrackingLinkUseCase(deliveries, tokens, config), tokens, deliveries };
+  const features = {
+    isEnabled: jest.fn().mockResolvedValue(opts.premium ?? true),
+    require: jest.fn().mockImplementation(async () => {
+      if (opts.premium === false) throw new ForbiddenError();
+    }),
+  } as unknown as FeatureAccessService;
+
+  return {
+    uc: new IssueTrackingLinkUseCase(deliveries, tokens, config, features),
+    tokens,
+    deliveries,
+  };
 }
 
 describe('IssueTrackingLinkUseCase', () => {
@@ -62,6 +74,14 @@ describe('IssueTrackingLinkUseCase', () => {
     const { uc, tokens } = build({ found: null });
 
     await expect(uc.execute('tenant-a', 'del-de-outro')).rejects.toBeInstanceOf(NotFoundError);
+    expect(tokens.issue).not.toHaveBeenCalled();
+  });
+
+  it('plano básico não emite link nem consulta a entrega', async () => {
+    const { uc, tokens, deliveries } = build({ premium: false });
+
+    await expect(uc.execute('tenant-free', 'del-1')).rejects.toBeInstanceOf(ForbiddenError);
+    expect(deliveries.getPublicSnapshot).not.toHaveBeenCalled();
     expect(tokens.issue).not.toHaveBeenCalled();
   });
 });

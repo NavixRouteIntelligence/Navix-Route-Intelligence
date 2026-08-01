@@ -5,6 +5,7 @@ import type { TrackingLinkResponse } from '@navix/contracts';
 
 import { AppConfigService } from '../../../shared/config/app-config.service';
 import { NotFoundError } from '../../../shared/kernel/domain-error';
+import { FeatureAccessService } from '../../../shared/tenancy/feature-access.service';
 import {
   DELIVERY_LOOKUP,
   type DeliveryLookupPort,
@@ -28,9 +29,14 @@ export class IssueTrackingLinkUseCase {
     @Inject(DELIVERY_LOOKUP) private readonly deliveries: DeliveryLookupPort,
     @Inject(TRACKING_TOKEN_REPOSITORY) private readonly tokens: TrackingTokenRepositoryPort,
     private readonly config: AppConfigService,
+    private readonly features: FeatureAccessService,
   ) {}
 
   async execute(tenantId: string, deliveryId: string): Promise<TrackingLinkResponse> {
+    // CX avançado é recurso de Frota/Enterprise. O gate vem antes de qualquer
+    // leitura da entrega ou geração de token para não gastar recursos do plano básico.
+    await this.features.require(tenantId, 'advanced_cx');
+
     // Confirma que a entrega existe NESTE tenant antes de emitir o link. A
     // leitura passa pela RLS, então um id de outro tenant simplesmente não é
     // encontrado — não há como emitir token para entrega alheia.

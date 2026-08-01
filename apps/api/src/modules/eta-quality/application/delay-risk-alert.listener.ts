@@ -10,6 +10,7 @@ import { AppConfigService } from '../../../shared/config/app-config.service';
 import { transactionContext } from '../../../shared/database/transaction-context';
 import { DomainEventBus } from '../../../shared/events/domain-event-bus';
 import { RealtimeHub } from '../../../shared/realtime/realtime-hub';
+import { FeatureAccessService } from '../../../shared/tenancy/feature-access.service';
 import {
   DELIVERY_LOOKUP,
   type DeliveryLookupPort,
@@ -20,10 +21,6 @@ import {
   OPTIMIZER_SERVICE,
   type OptimizerServicePort,
 } from '../../optimizer/application/optimizer.service';
-import {
-  TENANT_PLAN,
-  type TenantPlanPort,
-} from '../../optimizer/application/ports/tenant-plan.port';
 import { DelayRiskRegistry } from './delay-risk.registry';
 import { PredictBreachRiskUseCase, type StopToAssess } from './predict-breach-risk.use-case';
 
@@ -61,7 +58,7 @@ export class DelayRiskAlertListener implements OnModuleInit, OnModuleDestroy {
     private readonly predict: PredictBreachRiskUseCase,
     @Inject(DELIVERY_LOOKUP) private readonly deliveries: DeliveryLookupPort,
     @Inject(OPTIMIZER_SERVICE) private readonly optimizer: OptimizerServicePort,
-    @Inject(TENANT_PLAN) private readonly plan: TenantPlanPort,
+    private readonly features: FeatureAccessService,
     private readonly realtime: RealtimeHub,
     private readonly notify: NotifyRecipientUseCase,
     private readonly registry: DelayRiskRegistry,
@@ -98,8 +95,8 @@ export class DelayRiskAlertListener implements OnModuleInit, OnModuleDestroy {
     this.inFlight.add(tenantId);
     try {
       // Gate antes de qualquer consulta: recurso pago não gasta banco de quem
-      // não paga. Negar é o padrão em caso de falha (ver `TenantPlanPort`).
-      if (!(await this.plan.allowsPredictiveAlerts(tenantId))) return;
+      // não paga. Negar é o padrão em caso de falha (`FeatureAccessService`).
+      if (!(await this.features.isEnabled(tenantId, 'predictive_alerts'))) return;
 
       await this.withTenant(tenantId, () => this.assess(tenantId));
     } catch (err) {

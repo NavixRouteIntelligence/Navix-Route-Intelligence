@@ -1,12 +1,12 @@
 import type { AppConfigService } from '../../../shared/config/app-config.service';
 import { DomainEventBus } from '../../../shared/events/domain-event-bus';
+import type { FeatureAccessService } from '../../../shared/tenancy/feature-access.service';
 import type { OptimizerMetrics } from '../infrastructure/observability/optimizer-metrics';
 import {
   AutoReoptimizationService,
   type ReoptimizationTriggerPort,
 } from './auto-reoptimization.service';
 import { DelayDetectionService, type RouteDelayEvaluatorPort } from './delay-detection.service';
-import type { TenantPlanPort } from './ports/tenant-plan.port';
 import { ReoptimizeActiveUseCase } from './reoptimize-active.use-case';
 import type { DeliveryGatewayPort } from './ports/delivery-gateway.port';
 import type { EnqueueOptimizationUseCase } from './enqueue-optimization.use-case';
@@ -48,7 +48,14 @@ function buildWorld(opts: { premium?: boolean; delayMinutes?: number } = {}) {
     ]),
   } as unknown as DeliveryGatewayPort;
 
-  const reoptimize = new ReoptimizeActiveUseCase(delivery, enqueue);
+  const features = {
+    isEnabled: jest.fn().mockResolvedValue(opts.premium ?? true),
+    require: jest.fn().mockImplementation(async () => {
+      if (opts.premium === false) throw new Error('plano');
+    }),
+  } as unknown as FeatureAccessService;
+
+  const reoptimize = new ReoptimizeActiveUseCase(delivery, enqueue, features);
 
   // O trigger real estabeleceria a transação de tenant; aqui chamamos o caso de
   // uso direto, que é o que ele faz depois de abrir a transação.
@@ -56,10 +63,6 @@ function buildWorld(opts: { premium?: boolean; delayMinutes?: number } = {}) {
     run: (tenantId) => reoptimize.execute({ tenantId, actorId: 'system' }).then(() => undefined),
   };
 
-  const plans: TenantPlanPort = {
-    allowsPredictiveAlerts: jest.fn().mockResolvedValue(true),
-  allowsDynamicReoptimization: jest.fn().mockResolvedValue(opts.premium ?? true),
-  };
   const metrics = {
     observeReoptimizationTrigger: jest.fn(),
     reoptimizationSkipped: jest.fn(),
@@ -69,7 +72,7 @@ function buildWorld(opts: { premium?: boolean; delayMinutes?: number } = {}) {
     evaluate: jest.fn().mockResolvedValue(opts.delayMinutes ?? 0),
   };
 
-  const auto = new AutoReoptimizationService(bus, config, trigger, plans, metrics);
+  const auto = new AutoReoptimizationService(bus, config, trigger, features, metrics);
   const detector = new DelayDetectionService(bus, config, evaluator);
   auto.onModuleInit();
   detector.onModuleInit();

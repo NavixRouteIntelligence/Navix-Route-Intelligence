@@ -3,9 +3,10 @@
 > **O que este documento é:** a definição dos três planos comerciais e a fórmula que
 > liga cada plano ao custo real de servi-lo. É a peça de **precificação** da T1.4.
 >
-> **O que este documento NÃO é:** implementação de billing. Nada aqui cria cobrança,
-> gateway de pagamento ou enforcement de plano — isso é Fase 4 do
-> [roadmap](../roadmap.md) e depende de decisão comercial sobre este documento.
+> **O que este documento NÃO é:** implementação de billing. Nada aqui cria cobrança
+> ou gateway de pagamento. O enforcement técnico das funcionalidades premium já
+> existe (ADR-0093); quotas, cobrança e self-service continuam na Fase 4 do
+> [roadmap](../roadmap.md).
 >
 > **Status:** proposta · **Data:** 2026-07-24 · **Base:**
 > [`custo-por-tenant.md`](../infrastructure/custo-por-tenant.md) · §4 de
@@ -106,9 +107,9 @@ Tudo do Autônomo, mais:
 | Papéis e permissões (admin / despachante / gestor de frota / motorista) | ✅ |
 | Otimização com **malha viária real** (`MAPS_PROVIDER=mapbox`) | ✅ (opt-in) |
 | Convite de motorista pela empresa (multi-usuário) | ⬜ §3.4 |
-| Dashboards e KPIs de eficiência por read model (CQRS) | ⬜ §3.2 / Fase 2 |
-| Reotimização dinâmica em tempo real | ⬜ Fase 2 |
-| Rastreamento público + notificação ao destinatário (CX B2B2C) | ⬜ §3.1 |
+| Dashboards e KPIs de eficiência por read model (CQRS) | ✅ |
+| Reotimização dinâmica em tempo real | ✅ |
+| Rastreamento público + notificação ao destinatário (CX B2B2C) | ✅ |
 
 > ⚠️ Hoje o convite de motorista **não existe** — a empresa não consegue vincular
 > motoristas sozinha. Enquanto isso não for entregue, o plano Frota exige
@@ -138,6 +139,22 @@ Tudo do Frota, mais:
 > **Não prometa SLA numérico antes da T1.2.** Um SLA é um compromisso contratual sobre
 > capacidade que ainda não medimos — e o teste de restore do DR também nunca foi
 > executado (runbook §4 em branco), então RTO/RTO seguem sendo *intenção*.
+
+### 2.4 Enforcement técnico dos planos
+
+O `FeatureAccessService` (ADR-0093) é a única fonte de decisão por tenant/plano.
+Ele lê `tenants.plan`, mantém cache curto e **nega por padrão** se o tenant, o plano
+ou o banco não puderem ser confirmados.
+
+| Feature flag | Autônomo (`free`) | Frota | Enterprise |
+|--------------|-------------------|-------|------------|
+| `dynamic_reoptimization` | ❌ | ✅ | ✅ |
+| `predictive_alerts` | ❌ | ✅ | ✅ |
+| `advanced_cx` (link público + notificações) | ❌ | ✅ | ✅ |
+
+`pro` permanece como alias legado de plano premium para o ambiente demo. A matriz
+não implementa cobrança nem quotas: apenas impede que um plano básico execute uma
+funcionalidade premium.
 
 ---
 
@@ -224,7 +241,7 @@ converte cada item de estimativa em fato:
 | P3 | Preço ancorado em custo, não em valor | Medir km/tempo economizado por cliente-piloto: é o argumento de preço real |
 | P4 | Enterprise exige SLA que ainda não podemos sustentar | T1.2 + teste de restore do DR antes de qualquer compromisso contratual |
 | P5 | Sem cost allocation tags, não há custo por tenant observável | Ação já listada no `custo-por-tenant.md`; fazer junto com a T1.2 |
-| P6 | Limites por plano não são aplicáveis sem enforcement | Billing/quotas é Fase 4; até lá os limites são contratuais, não técnicos |
+| P6 | Limites quantitativos ainda não são aplicáveis | Features premium já têm enforcement (ADR-0093); billing/quotas é Fase 4 |
 
 ---
 

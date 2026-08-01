@@ -5,8 +5,8 @@ import type { Subscription } from 'rxjs';
 import { AppConfigService } from '../../../shared/config/app-config.service';
 import { DomainEventBus } from '../../../shared/events/domain-event-bus';
 import { REOPTIMIZATION_TRIGGERS } from '../../../shared/events/domain-event';
+import { FeatureAccessService } from '../../../shared/tenancy/feature-access.service';
 import { OptimizerMetrics } from '../infrastructure/observability/optimizer-metrics';
-import { TENANT_PLAN, type TenantPlanPort } from './ports/tenant-plan.port';
 
 /** Executa a reotimização de um tenant (estabelece contexto de tenant/tx). */
 export interface ReoptimizationTriggerPort {
@@ -41,7 +41,7 @@ export class AutoReoptimizationService implements OnModuleInit, OnModuleDestroy 
     private readonly bus: DomainEventBus,
     private readonly config: AppConfigService,
     @Inject(REOPTIMIZATION_TRIGGER) private readonly trigger: ReoptimizationTriggerPort,
-    @Inject(TENANT_PLAN) private readonly plans: TenantPlanPort,
+    private readonly features: FeatureAccessService,
     private readonly metrics: OptimizerMetrics,
   ) {}
 
@@ -94,7 +94,7 @@ export class AutoReoptimizationService implements OnModuleInit, OnModuleDestroy 
    * ele continua com a rota que a IA preparou na importação.
    */
   private async runIfAllowed(tenantId: string, startedAt: number): Promise<void> {
-    if (!(await this.plans.allowsDynamicReoptimization(tenantId))) {
+    if (!(await this.features.isEnabled(tenantId, 'dynamic_reoptimization'))) {
       this.metrics.reoptimizationSkipped('plan');
       return;
     }

@@ -1,7 +1,7 @@
 import type { AppConfigService } from '../../../shared/config/app-config.service';
 import { DomainEventBus } from '../../../shared/events/domain-event-bus';
+import type { FeatureAccessService } from '../../../shared/tenancy/feature-access.service';
 import type { OptimizerMetrics } from '../infrastructure/observability/optimizer-metrics';
-import type { TenantPlanPort } from './ports/tenant-plan.port';
 import {
   AutoReoptimizationService,
   type ReoptimizationTriggerPort,
@@ -12,9 +12,11 @@ function configWith(autoReoptimize: boolean, debounce = 2000): AppConfigService 
 }
 
 /** Por padrão, todo tenant é premium — os testes de gate ligam/desligam. */
-function planAllowing(allowed = true): TenantPlanPort {
-  return { allowsPredictiveAlerts: jest.fn().mockResolvedValue(true),
-  allowsDynamicReoptimization: jest.fn().mockResolvedValue(allowed) };
+function featureAccess(allowed = true): FeatureAccessService {
+  return {
+    isEnabled: jest.fn().mockResolvedValue(allowed),
+    require: jest.fn().mockResolvedValue(undefined),
+  } as unknown as FeatureAccessService;
 }
 
 /**
@@ -39,7 +41,7 @@ describe('AutoReoptimizationService', () => {
   it('desligado (opt-out): não assina nem dispara', () => {
     const bus = new DomainEventBus();
     const trigger: ReoptimizationTriggerPort = { run: jest.fn().mockResolvedValue(undefined) };
-    const svc = new AutoReoptimizationService(bus, configWith(false), trigger, planAllowing(), metricsSpy());
+    const svc = new AutoReoptimizationService(bus, configWith(false), trigger, featureAccess(), metricsSpy());
     svc.onModuleInit();
 
     bus.publish('t1', { type: 'delivery.created', aggregateId: 'd1' });
@@ -51,7 +53,7 @@ describe('AutoReoptimizationService', () => {
   it('ligado: debounce coalesce uma rajada em um único disparo por tenant', async () => {
     const bus = new DomainEventBus();
     const trigger: ReoptimizationTriggerPort = { run: jest.fn().mockResolvedValue(undefined) };
-    const svc = new AutoReoptimizationService(bus, configWith(true, 2000), trigger, planAllowing(), metricsSpy());
+    const svc = new AutoReoptimizationService(bus, configWith(true, 2000), trigger, featureAccess(), metricsSpy());
     svc.onModuleInit();
 
     bus.publish('t1', { type: 'delivery.created', aggregateId: 'd1' });
@@ -70,7 +72,7 @@ describe('AutoReoptimizationService', () => {
   it('tenants distintos disparam independentemente', async () => {
     const bus = new DomainEventBus();
     const trigger: ReoptimizationTriggerPort = { run: jest.fn().mockResolvedValue(undefined) };
-    const svc = new AutoReoptimizationService(bus, configWith(true, 1000), trigger, planAllowing(), metricsSpy());
+    const svc = new AutoReoptimizationService(bus, configWith(true, 1000), trigger, featureAccess(), metricsSpy());
     svc.onModuleInit();
 
     bus.publish('t1', { type: 'delivery.created', aggregateId: 'd1' });
@@ -94,7 +96,7 @@ describe('AutoReoptimizationService', () => {
       bus,
       configWith(true, 1000),
       trigger,
-      planAllowing(false),
+      featureAccess(false),
       metrics,
     );
     svc.onModuleInit();
@@ -115,7 +117,7 @@ describe('AutoReoptimizationService', () => {
       bus,
       configWith(true, 1000),
       trigger,
-      planAllowing(),
+      featureAccess(),
       metricsSpy(),
     );
     svc.onModuleInit();
@@ -137,7 +139,7 @@ describe('AutoReoptimizationService', () => {
       bus,
       configWith(true, 1000),
       trigger,
-      planAllowing(),
+      featureAccess(),
       metricsSpy(),
     );
     svc.onModuleInit();
@@ -160,7 +162,7 @@ describe('AutoReoptimizationService', () => {
       bus,
       configWith(true, 1000),
       trigger,
-      planAllowing(),
+      featureAccess(),
       metrics,
     );
     svc.onModuleInit();
