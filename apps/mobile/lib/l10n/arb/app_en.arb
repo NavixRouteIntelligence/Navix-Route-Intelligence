@@ -11,6 +11,7 @@
   "navProfile": "Profile",
   "navVehicle": "Vehicle",
   "navFinance": "Finance",
+  "navResults": "Results",
   "navMaintenance": "Maintenance",
   "navStatistics": "Statistics",
   "navNotifications": "Notifications",
@@ -20,7 +21,7 @@
   "statusEnRoute": "En route",
   "statusOffline": "Offline",
   "loginTitle": "Hello, welcome to Navix",
-  "loginSubtitle": "Smarter routes. Simpler deliveries.",
+  "loginSubtitle": "Your route, smarter. Every delivery, simpler.",
   "loginInvalidCredentials": "Incorrect email or password.",
   "signInAsDriver": "Continue as Driver",
   "signInAsCompany": "Continue as Company",
@@ -52,6 +53,41 @@
   "accountDriver": "Independent Driver",
   "accountCompany": "Company",
   "deliveriesFilterAll": "All",
+  "deliveriesTodaySummary": "Today's deliveries",
+  "deliveriesSummaryTotal": "{count, plural, =1{1 delivery today} other{{count} deliveries today}}",
+  "@deliveriesSummaryTotal": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deliveriesSummaryDelivered": "{count, plural, =1{1 completed} other{{count} completed}}",
+  "@deliveriesSummaryDelivered": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deliveriesSummaryRemaining": "{count, plural, =1{1 remaining} other{{count} remaining}}",
+  "@deliveriesSummaryRemaining": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deliveriesPriorityNow": "Priority now",
+  "deliveriesOthers": "Other deliveries",
+  "deliveriesDeliverBy": "Deliver by {time}",
+  "@deliveriesDeliverBy": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "deliveryStatusPending": "Pending",
   "deliveryStatusInRoute": "In route",
   "deliveryStatusDelivered": "Delivered",
@@ -114,6 +150,27 @@
   "earningsPerKm": "Per km",
   "earningsSave": "Save",
   "commonCancel": "Cancel",
+  "vehicleTitle": "My vehicle",
+  "vehicleMaintenanceSection": "Maintenance",
+  "vehicleAdd": "Add vehicle",
+  "vehicleAddTitle": "Add your vehicle",
+  "vehiclePlate": "License plate",
+  "vehiclePlateInvalid": "Enter a valid license plate.",
+  "vehicleType": "Vehicle type",
+  "vehicleTypeCar": "Car",
+  "vehicleTypeVan": "Van",
+  "vehicleTypeTruck": "Truck",
+  "vehicleTypeMotorcycle": "Motorcycle",
+  "vehicleTypeBicycle": "Bicycle",
+  "vehicleCapacity": "Capacity",
+  "vehicleCapacityHint": "Use your fleet's configured unit.",
+  "vehicleCapacityInvalid": "Enter a capacity greater than zero.",
+  "vehicleOdometerOptional": "Odometer (optional)",
+  "vehicleSave": "Save vehicle",
+  "vehicleStatusActive": "Active",
+  "vehicleStatusInactive": "Inactive",
+  "vehicleStatusMaintenance": "Maintenance",
+  "vehicleNotInformed": "Not provided",
   "maintTitle": "Vehicle maintenance",
   "maintLoadError": "Couldn't load maintenance.",
   "maintNoVehicleTitle": "No vehicle",
@@ -122,7 +179,27 @@
   "maintHistory": "History",
   "maintNoRecords": "No maintenance records yet.",
   "maintOdometerUnset": "Odometer not set",
-  "maintUpdateOdometer": "Odometer",
+  "maintUpdateOdometer": "Update odometer",
+  "maintNextMaintenance": "Next maintenance",
+  "maintAssistantTitle": "Navix maintenance assistant",
+  "maintAssistantNeedsDataTitle": "Add your maintenance history",
+  "maintAssistantNeedsDataDescription": "Tell Navix about the latest oil change, tires, inspection or other service to start calculating deadlines.",
+  "maintAssistantLowConfidence": "More data needed",
+  "maintAssistantOverdueTitle": "Maintenance needs attention",
+  "maintAssistantOverdueDescription": "There are overdue items. Prioritize them before starting another intensive period of routes.",
+  "maintAssistantPlanTitle": "Plan your next maintenance",
+  "maintAssistantPlanDescription": "One or more items are approaching the registered deadline.",
+  "maintAssistantNoDeadlineTitle": "Add the next deadline",
+  "maintAssistantNoDeadlineDescription": "Your history is saved, but the next date or odometer target is still missing.",
+  "maintAssistantOkTitle": "Everything is up to date",
+  "maintAssistantOkDescription": "The registered maintenance deadlines are currently within the expected range.",
+  "maintAssistantExplanation": "Recommendations use your odometer and the deadlines registered in the history.",
+  "maintNoDeadlinesTitle": "Configure the first deadlines",
+  "maintNoDeadlinesDescription": "Add the latest service and its next date or odometer target. Navix will then show what is approaching or overdue.",
+  "maintConfigure": "Configure maintenance",
+  "maintOverduePrefix": "Overdue",
+  "maintRemainingPrefix": "Remaining",
+  "maintBasedOnDeadline": "Based on the registered deadline",
   "maintAddTitle": "Add record",
   "maintType": "Type",
   "maintPerformedAt": "Date",
@@ -185,12 +262,78 @@
   "finCategoryDelivery": "Delivery",
   "finCategoryOther": "Other",
   "profileFinanceSubtitle": "Cost/km, profit and history",
+  "profileResultsSubtitle": "Distance, time, fuel and productivity",
   "finInsights": "Insights",
   "finBestRegion": "Best region",
   "finBestHour": "Best hour",
   "finHistory": "History",
+  "resultsTitle": "Results",
+  "resultsNoRouteTitle": "No results yet",
+  "resultsNoRouteDescription": "Complete a route with Navix to see your distance, time and fuel savings.",
+  "resultsComparisonTitle": "Route comparison",
+  "resultsImpactTitle": "Your impact",
+  "resultsFuelSaved": "Fuel saved",
+  "resultsFuelDefaultEstimate": "Standard estimate based on a car (8 L/100 km)",
+  "resultsFuelVehicleEstimate": "Estimate based on the vehicle used for this route",
+  "resultsMoreEfficient": "{pct}% less distance than the original order",
+  "@resultsMoreEfficient": {
+    "placeholders": {
+      "pct": {
+        "type": "String"
+      }
+    }
+  },
+  "resultsLessEfficient": "{pct}% more distance than the original order",
+  "@resultsLessEfficient": {
+    "placeholders": {
+      "pct": {
+        "type": "String"
+      }
+    }
+  },
+  "resultsOriginalOrder": "Original order",
+  "resultsNavixRoute": "Navix route",
+  "resultsDistanceSaved": "Distance saved",
+  "resultsTimeSaved": "Time saved",
+  "resultsProductivity": "Productivity gain",
+  "resultsDailyProductivity": "Route progress",
+  "resultsDeliveriesCompleted": "{completed} of {total} deliveries completed",
+  "@resultsDeliveriesCompleted": {
+    "placeholders": {
+      "completed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "routeLoadError": "Could not load your route.",
-  "routeReadyByAi": "Route prepared by AI",
+  "routeGreetingMorning": "Good morning",
+  "routeGreetingAfternoon": "Good afternoon",
+  "routeGreetingEvening": "Good evening",
+  "routeProgressCount": "{completed} of {total} deliveries",
+  "@routeProgressCount": {
+    "placeholders": {
+      "completed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "routeProgressRemaining": "{count} remaining",
+  "@routeProgressRemaining": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "routeNextStop": "Next stop",
+  "routeAllDeliveriesDone": "All deliveries completed",
+  "routeSummaryTitle": "Route summary",
   "routeStatusReady": "Ready",
   "routeStops": "stops",
   "routeDistance": "distance",
@@ -214,7 +357,8 @@
       }
     }
   },
-  "routeGroups": "Smart groups",
+  "routeDestinationTypes": "Destination types",
+  "routeDeliveryOrder": "Delivery order",
   "routeGroupStops": "{count, plural, =1{1 stop} other{{count} stops}}",
   "@routeGroupStops": {
     "placeholders": {

@@ -2,6 +2,7 @@
  * Contratos do transporte em tempo real (SSE — ver ADR-0018). O servidor
  * empurra eventos ao cliente do tenant; o polling permanece apenas como fallback.
  */
+import type { DelayRiskAlert } from './intelligence';
 import type { OptimizationJob } from './optimizer';
 import type { DriverPositionView } from './tracking';
 
@@ -9,6 +10,8 @@ import type { DriverPositionView } from './tracking';
 export type RealtimeEvent =
   | { type: 'tracking.position'; data: DriverPositionView }
   | { type: 'optimization.job'; data: OptimizationJob }
+  /** Parada em risco de estourar a janela (ADR-0091) — alerta à empresa. */
+  | { type: 'alert.delay-risk'; data: DelayRiskAlert }
   | { type: 'ping'; data: { at: string } };
 
 export type RealtimeEventType = RealtimeEvent['type'];

@@ -7,7 +7,9 @@ import 'voice_assistant_cubit.dart';
 /// Botão do assistente por voz (ADR-0037): dispara a escuta e reflete o estado
 /// (ouvindo/pensando). Requer um [VoiceAssistantCubit] no contexto.
 class VoiceAssistantButton extends StatelessWidget {
-  const VoiceAssistantButton({super.key});
+  const VoiceAssistantButton({super.key, this.compact = false});
+
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -21,15 +23,29 @@ class VoiceAssistantButton extends StatelessWidget {
           VoiceStatus.thinking => 'Processando…',
           _ => 'Falar',
         };
+        final onPressed =
+            busy ? null : () => context.read<VoiceAssistantCubit>().start();
+        final background =
+            busy ? t.danger : Theme.of(context).colorScheme.primary;
+        final icon = Icon(busy ? Icons.mic : Icons.mic_none_outlined);
+
+        if (compact) {
+          return FloatingActionButton.small(
+            // Tag única: as abas vivem juntas num IndexedStack, e FABs com a tag
+            // padrão colidem no Hero ao animar uma rota (ex.: abrir o Drawer).
+            heroTag: 'fab-voice-assistant',
+            tooltip: label,
+            onPressed: onPressed,
+            backgroundColor: background,
+            child: icon,
+          );
+        }
+
         return FloatingActionButton.extended(
-          // Tag única: as abas vivem juntas num IndexedStack, e FABs com a tag
-          // padrão colidem no Hero ao animar uma rota (ex.: abrir o Drawer).
           heroTag: 'fab-voice-assistant',
-          onPressed:
-              busy ? null : () => context.read<VoiceAssistantCubit>().start(),
-          backgroundColor:
-              busy ? t.danger : Theme.of(context).colorScheme.primary,
-          icon: Icon(busy ? Icons.mic : Icons.mic_none_outlined),
+          onPressed: onPressed,
+          backgroundColor: background,
+          icon: icon,
           label: Text(label),
         );
       },

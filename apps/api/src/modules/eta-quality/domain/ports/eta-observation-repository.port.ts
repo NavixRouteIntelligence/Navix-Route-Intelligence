@@ -24,6 +24,16 @@ export interface EtaObservationRepositoryPort {
   ): Promise<
     { errorMinutes: number; correctionMinutes: number; predictedArrivalAt: Date }[]
   >;
+
+  /**
+   * Erros observados com o contexto temporal (ADR-0091), para estimar o risco
+   * de estouro de janela. Só medições com erro conhecido.
+   */
+  errorSamples(
+    tenantId: string,
+    since: Date,
+    limit: number,
+  ): Promise<{ errorMinutes: number; hourOfWeek: number }[]>;
 }
 
 export const ETA_OBSERVATION_REPOSITORY = Symbol('ETA_OBSERVATION_REPOSITORY');

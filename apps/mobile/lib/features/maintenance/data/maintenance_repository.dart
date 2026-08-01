@@ -25,6 +25,18 @@ class MaintenanceRepository {
     }
   }
 
+  Future<MaintenanceVehicle> createVehicle(NewVehicle vehicle) async {
+    try {
+      final res = await _dio.post<dynamic>(
+        '/fleet/vehicles',
+        data: vehicle.toJson(),
+      );
+      return MaintenanceVehicle.fromJson(_resource(res));
+    } on DioException catch (e) {
+      throw mapDioException(e);
+    }
+  }
+
   Future<List<MaintenanceRecord>> records(String vehicleId) async {
     try {
       final res = await _dio.get<dynamic>(
@@ -88,4 +100,10 @@ class MaintenanceRepository {
 
   /// `data` de um recurso cujo payload é uma lista (`{ data: [...] }`).
   List<Map<String, dynamic>> _data(Response<dynamic> res) => _list(res);
+
+  Map<String, dynamic> _resource(Response<dynamic> res) {
+    final body = res.data;
+    final data = body is Map<String, dynamic> ? body['data'] : null;
+    return data is Map<String, dynamic> ? data : const {};
+  }
 }

@@ -104,14 +104,33 @@ class MyRouteRepository {
               .toList() ??
           const [];
       final stops = planStops.map((s) => _stop(s, byId)).toList();
+      final distanceKm = _nested(plan, ['metrics', 'totalDistanceKm']) ?? 0;
+      final timeMinutes = _nested(plan, ['metrics', 'totalTimeMinutes']) ?? 0;
+      final savedKm = _nested(plan, ['savings', 'distanceKm']) ?? 0;
+      final savedMinutes = _nested(plan, ['savings', 'timeMinutes']) ?? 0;
+      final params = plan['params'];
+      final vehicleType = params is Map<String, dynamic>
+          ? params['vehicleType'] as String?
+          : null;
 
       return MyRoute(
         status: MyRouteStatus.ready,
         totalStops: planStops.length,
-        distanceKm: _nested(plan, ['metrics', 'totalDistanceKm']) ?? 0,
-        timeMinutes: _nested(plan, ['metrics', 'totalTimeMinutes']) ?? 0,
-        savedKm: _nested(plan, ['savings', 'distanceKm']) ?? 0,
+        completedStops: stops.where((stop) {
+          final status = byId[stop.deliveryId]?['status'] as String?;
+          return status == 'delivered' || status == 'failed';
+        }).length,
+        distanceKm: distanceKm,
+        timeMinutes: timeMinutes,
+        savedKm: savedKm,
         savedPct: _nested(plan, ['savings', 'distancePct']) ?? 0,
+        savedMinutes: savedMinutes,
+        savedTimePct: _nested(plan, ['savings', 'timePct']) ?? 0,
+        baselineDistanceKm: _nested(plan, ['baseline', 'totalDistanceKm']) ??
+            distanceKm + savedKm,
+        baselineTimeMinutes: _nested(plan, ['baseline', 'totalTimeMinutes']) ??
+            timeMinutes + savedMinutes,
+        vehicleType: vehicleType,
         updatedAt: DateTime.tryParse(
           plan['createdAt'] as String? ?? '',
         )?.toLocal(),

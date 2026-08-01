@@ -44,6 +44,7 @@ void main() {
         status: DeliveriesStatus.success,
         items: [_delivery],
         total: 1,
+        stats: DeliveryStats(all: 1, pending: 1),
       ),
     ],
   );

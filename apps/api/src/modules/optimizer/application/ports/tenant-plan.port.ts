@@ -15,6 +15,17 @@ export interface TenantPlanPort {
    * de infraestrutura é pior do que não reotimizar.
    */
   allowsDynamicReoptimization(tenantId: string): Promise<boolean>;
+
+  /**
+   * `true` quando o plano dá direito aos **alertas preditivos** de atraso
+   * (ADR-0091). Mesma leitura, mesma política de negar em caso de dúvida.
+   *
+   * Nota: com a segunda funcionalidade paga, este port começa a extrapolar o
+   * Optimizer — plano é assunto de tenant, não de otimização. Na terceira, vale
+   * movê-lo para `shared/tenancy`; hoje mudar de lugar custaria mais do que
+   * rende.
+   */
+  allowsPredictiveAlerts(tenantId: string): Promise<boolean>;
 }
 
 export const TENANT_PLAN = Symbol('TENANT_PLAN');

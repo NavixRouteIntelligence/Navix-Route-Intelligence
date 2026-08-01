@@ -288,3 +288,29 @@ export interface VoiceCommandView {
   /** Parâmetros extraídos da fala. */
   slots: VoiceCommandSlots;
 }
+
+// ---------- Risco de estouro de janela (ADR-0091) ----------
+
+/**
+ * Alerta preditivo de estouro de janela numa parada.
+ *
+ * Diferente do `DelayRiskView` (ADR-0025), que é determinístico e só acusa a
+ * parada já prevista para chegar atrasada, este carrega **probabilidade**:
+ * estimada a partir do quanto o ETA da própria operação costuma errar naquele
+ * contexto (ADR-0087/0091). Uma parada que chega "a tempo" no papel pode vir
+ * com risco alto.
+ */
+export interface DelayRiskAlert {
+  deliveryId: string;
+  /** Ficha do motorista responsável, quando atribuída. */
+  driverId: string | null;
+  severity: DelaySeverity;
+  /** Probabilidade estimada de estourar a janela (0–1). */
+  probability: number;
+  /** Minutos entre a chegada prevista e o fim da janela. Negativo = já estourou. */
+  slackMinutes: number;
+  predictedArrival: string;
+  windowEnd: string;
+  /** Observações que sustentam a estimativa — a base da confiança. */
+  samples: number;
+}

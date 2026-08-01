@@ -46,13 +46,21 @@ export function hourOfWeek(at: Date): number {
  * define a cascata na leitura.
  */
 export function bucketsFor(at: Date): string[] {
-  const day = at.getDay();
+  return bucketsForHourOfWeek(hourOfWeek(at));
+}
+
+/**
+ * Os mesmos baldes a partir da **hora da semana** já materializada.
+ *
+ * `eta_observations` guarda `hour_of_week` como inteiro (ADR-0087), e reconstruir
+ * um `Date` só para redescobrir o balde seria dar a volta — pior, abriria espaço
+ * para os dois caminhos divergirem. Fonte única.
+ */
+export function bucketsForHourOfWeek(hw: number): string[] {
+  const day = Math.floor(hw / 24) % 7;
+  const hour = hw % 24;
   const fimDeSemana = day === 0 || day === 6;
-  return [
-    `hw:${hourOfWeek(at)}`,
-    `dp:${fimDeSemana ? 'fds' : 'util'}:${dayPart(at.getHours())}`,
-    BUCKET_ALL,
-  ];
+  return [`hw:${hw}`, `dp:${fimDeSemana ? 'fds' : 'util'}:${dayPart(hour)}`, BUCKET_ALL];
 }
 
 /** Uma amostra de tempo de atendimento medido, com o instante em que ocorreu. */

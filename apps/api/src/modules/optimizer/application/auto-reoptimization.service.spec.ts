@@ -13,7 +13,8 @@ function configWith(autoReoptimize: boolean, debounce = 2000): AppConfigService 
 
 /** Por padrão, todo tenant é premium — os testes de gate ligam/desligam. */
 function planAllowing(allowed = true): TenantPlanPort {
-  return { allowsDynamicReoptimization: jest.fn().mockResolvedValue(allowed) };
+  return { allowsPredictiveAlerts: jest.fn().mockResolvedValue(true),
+  allowsDynamicReoptimization: jest.fn().mockResolvedValue(allowed) };
 }
 
 /**

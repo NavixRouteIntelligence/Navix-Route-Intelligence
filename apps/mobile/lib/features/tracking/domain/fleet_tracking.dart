@@ -81,10 +81,17 @@ class TrackPoint extends Equatable {
 
 /// Instantâneo da frota.
 class FleetSnapshot extends Equatable {
-  const FleetSnapshot({required this.drivers, this.updatedAt});
+  const FleetSnapshot({
+    required this.drivers,
+    this.updatedAt,
+    this.risks = const [],
+  });
 
   final List<TrackedDriver> drivers;
   final DateTime? updatedAt;
+
+  /// Riscos previstos de estouro de janela (ADR-0091), vindos do servidor.
+  final List<DelayRisk> risks;
 
   int get onlineCount => drivers.where((d) => d.isOnline).length;
   int get offlineCount => drivers.where((d) => !d.isOnline).length;
@@ -94,10 +101,46 @@ class FleetSnapshot extends Equatable {
   List<TrackedDriver> get onMap => drivers.where((d) => d.hasPosition).toList();
 
   @override
-  List<Object?> get props => [drivers, updatedAt];
+  List<Object?> get props => [drivers, updatedAt, risks];
 }
 
 /// Alerta operacional derivado do estado da frota.
+/// Risco previsto de estourar a janela numa parada (ADR-0091).
+///
+/// Diferente dos alertas operacionais, que a app deriva do próprio retrato da
+/// frota, este vem calculado do servidor: depende do histórico de erro do ETA
+/// daquela operação, que só o backend tem.
+class DelayRisk extends Equatable {
+  const DelayRisk({
+    required this.deliveryId,
+    required this.driverId,
+    required this.severity,
+    required this.probability,
+    required this.slackMinutes,
+  });
+
+  final String deliveryId;
+  final String? driverId;
+
+  /// `medium` ou `high` — o servidor não envia risco baixo.
+  final String severity;
+
+  /// Probabilidade estimada de estourar a janela (0–1).
+  final double probability;
+
+  /// Minutos até o fim da janela. Negativo = já passou.
+  final double slackMinutes;
+
+  @override
+  List<Object?> get props => [
+        deliveryId,
+        driverId,
+        severity,
+        probability,
+        slackMinutes,
+      ];
+}
+
 class FleetAlert extends Equatable {
   const FleetAlert({
     required this.id,

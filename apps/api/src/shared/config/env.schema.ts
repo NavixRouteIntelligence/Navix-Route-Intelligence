@@ -80,6 +80,16 @@ export const envSchema = z.object({
   // Prazo do convite. 7 dias: longo o bastante para o motorista responder sem
   // pressa, curto o bastante para um link vazado não valer indefinidamente.
   DRIVER_INVITE_TTL_HOURS: z.coerce.number().int().positive().max(720).default(168),
+  // Alertas preditivos de estouro de janela (ADR-0091). Premium por plano, e
+  // desligáveis por aqui — a flag mestre existe para cortar o recurso sem
+  // depender de mudar o plano de ninguém.
+  DELAY_RISK_ALERTS_ENABLED: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((v) => v === 'true'),
+  // Intervalo mínimo entre avaliações do mesmo tenant. Posição chega a cada
+  // poucos segundos; reavaliar a rota inteira a cada uma seria insano.
+  DELAY_RISK_CHECK_INTERVAL_MS: z.coerce.number().int().positive().default(120_000),
   S3_ENDPOINT: z.string().optional(),
   S3_REGION: z.string().default('auto'),
   S3_BUCKET: z.string().optional(),

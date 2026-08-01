@@ -33,6 +33,7 @@ function build(opts: {
     }),
     recentErrors: jest.fn(),
     trainingSamples: jest.fn(),
+    errorSamples: jest.fn(),
   };
   const deliveries = {
     getPublicSnapshot: jest

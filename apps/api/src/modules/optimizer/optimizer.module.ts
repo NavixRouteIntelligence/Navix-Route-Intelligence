@@ -132,6 +132,8 @@ import { OptimizerController } from './interface/optimizer.controller';
     { provide: SERVICE_TIME_HISTORY, useClass: IntelligenceServiceTimeHistory },
     { provide: OPTIMIZER_SERVICE, useClass: OptimizerService },
   ],
-  exports: [OPTIMIZER_SERVICE],
+  // `TENANT_PLAN` sai para que o gate premium seja o mesmo em toda parte
+  // (ADR-0091) — dois recursos pagos lendo `tenants.plan` de um lugar só.
+  exports: [OPTIMIZER_SERVICE, TENANT_PLAN],
 })
 export class OptimizerModule {}
