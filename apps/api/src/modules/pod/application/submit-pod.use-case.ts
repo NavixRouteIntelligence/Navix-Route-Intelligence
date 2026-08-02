@@ -1,7 +1,11 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import type { CreatePodRequest, ProofOfDeliveryView } from '@navix/contracts';
 
 import { AUDIT_LOG, type AuditLogPort } from '../../../shared/audit/audit-log.port';
+import {
+  EXTERNAL_EVENT_OUTBOX,
+  type ExternalEventOutboxPort,
+} from '../../../shared/events/external-event-outbox.port';
 import { ConflictError, ValidationError } from '../../../shared/kernel/domain-error';
 import { newId } from '../../../shared/kernel/id';
 import { decodeDataUrl, isDataUrl } from '../../../shared/storage/data-url';
@@ -31,6 +35,9 @@ export class SubmitPodUseCase {
     @Inject(DELIVERY_OUTCOME) private readonly delivery: DeliveryOutcomePort,
     @Inject(AUDIT_LOG) private readonly audit: AuditLogPort,
     @Inject(STORAGE) private readonly storage: StoragePort,
+    @Optional()
+    @Inject(EXTERNAL_EVENT_OUTBOX)
+    private readonly externalEvents?: ExternalEventOutboxPort,
   ) {}
 
   async execute(command: SubmitPodCommand): Promise<ProofOfDeliveryView> {
@@ -80,7 +87,26 @@ export class SubmitPodUseCase {
       actorId: command.driverId,
       action: 'pod.submitted',
       resource: `delivery:${command.deliveryId}`,
-      metadata: { status: command.status, hasPhoto: Boolean(photo), hasSignature: Boolean(signature) },
+      metadata: {
+        status: command.status,
+        hasPhoto: Boolean(photo),
+        hasSignature: Boolean(signature),
+      },
+    });
+
+    await this.externalEvents?.record({
+      tenantId: command.tenantId,
+      type: 'pod.submitted',
+      aggregateId: command.deliveryId,
+      payload: {
+        id: pod.id,
+        deliveryId: pod.deliveryId,
+        status: pod.status,
+        note: pod.note,
+        recordedAt: pod.recordedAt.toISOString(),
+        hasPhoto: Boolean(pod.photo),
+        hasSignature: Boolean(pod.signature),
+      },
     });
 
     return toPodViewSigned(pod, this.storage);

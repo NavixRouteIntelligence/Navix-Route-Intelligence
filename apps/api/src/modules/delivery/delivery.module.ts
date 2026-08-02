@@ -40,6 +40,14 @@ import { DeliveryController } from './interface/delivery.controller';
     { provide: DELIVERY_LOOKUP, useClass: DeliveryLookupService },
     { provide: DELIVERY_WRITER, useClass: DeliveryWriterService },
   ],
-  exports: [DELIVERY_LOOKUP, DELIVERY_WRITER],
+  exports: [
+    DELIVERY_LOOKUP,
+    DELIVERY_WRITER,
+    CreateDeliveryUseCase,
+    GetDeliveryUseCase,
+    ListDeliveriesUseCase,
+    UpdateDeliveryUseCase,
+    ChangeDeliveryStatusUseCase,
+  ],
 })
 export class DeliveryModule {}

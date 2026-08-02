@@ -1,6 +1,10 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 
 import { DomainEventBus } from '../../../shared/events/domain-event-bus';
+import {
+  EXTERNAL_EVENT_OUTBOX,
+  type ExternalEventOutboxPort,
+} from '../../../shared/events/external-event-outbox.port';
 import type {
   EconomyMode,
   OptimizationStopInput,
@@ -28,9 +32,7 @@ import {
   SERVICE_TIME_HISTORY,
   type ServiceTimeHistoryPort,
 } from './ports/service-time-history.port';
-import type {
-  OptimizationWeights,
-} from '../domain/ports/route-optimization-strategy.port';
+import type { OptimizationWeights } from '../domain/ports/route-optimization-strategy.port';
 import { RoutePlan } from '../domain/route-plan';
 import { VehicleProfile } from '../domain/vehicle-profile';
 import { OptimizerMetrics } from '../infrastructure/observability/optimizer-metrics';
@@ -74,6 +76,9 @@ export class OptimizeRouteUseCase {
     private readonly solver: RouteSolver,
     private readonly metrics: OptimizerMetrics,
     private readonly bus: DomainEventBus,
+    @Optional()
+    @Inject(EXTERNAL_EVENT_OUTBOX)
+    private readonly externalEvents?: ExternalEventOutboxPort,
   ) {}
 
   async execute(command: OptimizeRouteCommand): Promise<RoutePlanView> {
@@ -105,6 +110,18 @@ export class OptimizeRouteUseCase {
       aggregateId: planSnapshot.id,
       affectedDay: planSnapshot.createdAt.toISOString().slice(0, 10),
     });
+    await this.externalEvents?.record({
+      tenantId: command.tenantId,
+      type: 'eta.updated',
+      aggregateId: planSnapshot.id,
+      payload: {
+        routePlanId: planSnapshot.id,
+        stops: planSnapshot.stops.map((stop) => ({
+          deliveryId: stop.deliveryId,
+          etaMinutes: stop.etaMinutes,
+        })),
+      },
+    });
     await this.audit.record({
       tenantId: command.tenantId,
       actorId: command.actorId,
@@ -122,9 +139,14 @@ export class OptimizeRouteUseCase {
   }
 
   /** Pesos da função de custo: modo inteligente (contexto) vence Modo Economia. */
-  private resolveWeights(command: OptimizeRouteCommand, stops: OptimizationStop[]): OptimizationWeights {
+  private resolveWeights(
+    command: OptimizeRouteCommand,
+    stops: OptimizationStop[],
+  ): OptimizationWeights {
     if (command.smart) {
-      return smartWeights(stops.map((s) => ({ priority: s.priority, hasTimeWindow: s.timeWindow != null })));
+      return smartWeights(
+        stops.map((s) => ({ priority: s.priority, hasTimeWindow: s.timeWindow != null })),
+      );
     }
     return weightsFor(command.economyMode);
   }
@@ -210,7 +232,9 @@ export class OptimizeRouteUseCase {
       throw new ValidationError(`Máximo de ${MAX_VEHICLES} veículos por plano.`);
     }
     const profiles = vehicles.map((v) => VehicleProfile.resolve(v, DEFAULT_SPEED_KMH));
-    const origin = command.origin ? GeoPoint.create(command.origin.latitude, command.origin.longitude) : null;
+    const origin = command.origin
+      ? GeoPoint.create(command.origin.latitude, command.origin.longitude)
+      : null;
     const hasOrigin = origin != null;
 
     const partition = partitionByCapacity(
@@ -259,7 +283,15 @@ export class OptimizeRouteUseCase {
     const unassignedStops = partition.unassigned.map((i) => rawStops[i].id);
     if (unassignedStops.length > 0) this.metrics.markInfeasible();
 
-    return this.aggregatePlan(command, service, hasOrigin, routes, solvedRoutes, unassignedStops, strategyName);
+    return this.aggregatePlan(
+      command,
+      service,
+      hasOrigin,
+      routes,
+      solvedRoutes,
+      unassignedStops,
+      strategyName,
+    );
   }
 
   /** Agrega as rotas por veículo em um único RoutePlan (métricas somadas). */
