@@ -11,4 +11,13 @@ export const optimizerApi = {
   listPlans: (params: { page?: number; pageSize?: number } = {}) =>
     apiRequest<CollectionResponse<RoutePlan>>(`/route-plans${toQuery({ ...params })}`),
   getPlan: (id: string) => apiRequest<ResourceResponse<RoutePlan>>(`/route-plans/${id}`),
+
+  /**
+   * Rota vigente do **próprio** motorista (ADR-0098).
+   *
+   * Substitui o `listPlans({ pageSize: 1 })` que a tela do motorista usava: o
+   * mais recente do tenant não é "a minha rota" quando o tenant tem frota.
+   */
+  myActivePlan: () =>
+    apiRequest<ResourceResponse<RoutePlan | null>>('/route-plans/mine/active'),
 };

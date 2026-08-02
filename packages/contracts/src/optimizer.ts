@@ -209,6 +209,14 @@ export interface VehicleRouteView {
 export interface RoutePlan {
   id: string;
   tenantId: string;
+  /**
+   * **Ficha** do motorista dono da rota (ADR-0098). `null` no plano de frota do
+   * despacho, que cobre vários veículos, e no motorista autônomo, que não tem
+   * ficha. Planos criados antes do vínculo existir também vêm nulos.
+   */
+  driverId: string | null;
+  /** Dia operacional do plano (`YYYY-MM-DD`) — o eixo da rota vigente. */
+  operationalDay: string;
   strategy: OptimizationStrategyName;
   status: 'completed';
   params: RoutePlanParams;

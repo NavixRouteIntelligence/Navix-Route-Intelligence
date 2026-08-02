@@ -3,8 +3,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 
 import { DeliveryModule } from '../delivery/delivery.module';
+import { FleetModule } from '../fleet/fleet.module';
 import { IntelligenceModule } from '../intelligence/intelligence.module';
 import { EnqueueOptimizationUseCase } from './application/enqueue-optimization.use-case';
+import { GetActiveRoutePlanUseCase } from './application/get-active-route-plan.use-case';
 import { GetOptimizationJobUseCase } from './application/get-optimization-job.use-case';
 import { GetRoutePlanUseCase } from './application/get-route-plan.use-case';
 import { ListRoutePlansUseCase } from './application/list-route-plans.use-case';
@@ -19,6 +21,7 @@ import {
 } from './application/auto-reoptimization.service';
 import { StrategyRegistry } from './application/strategy-registry';
 import { DELIVERY_GATEWAY } from './application/ports/delivery-gateway.port';
+import { DRIVER_ROSTER_LINK } from './application/ports/driver-roster-link.port';
 import { SERVICE_TIME_HISTORY } from './application/ports/service-time-history.port';
 import { COST_AUGMENTATION } from './domain/ports/cost-augmentation.port';
 import { DISTANCE_PROVIDER } from './domain/ports/distance-provider.port';
@@ -42,6 +45,7 @@ import { MapboxRoutingProvider } from './infrastructure/routing/mapbox-routing.p
 import { CachedRoutingProvider } from './infrastructure/routing/cached-routing.provider';
 import { RealtimeJobEvents } from './infrastructure/events/realtime-job-events';
 import { DeliveryGateway } from './infrastructure/gateways/delivery.gateway';
+import { DriverRosterLinkGateway } from './infrastructure/gateways/driver-roster-link.gateway';
 import { IntelligenceServiceTimeHistory } from './infrastructure/history/intelligence-service-time-history';
 import { OptimizationJobOrmEntity } from './infrastructure/persistence/optimization-job.orm-entity';
 import { OptimizationJobRepository } from './infrastructure/persistence/optimization-job.repository';
@@ -65,12 +69,15 @@ import { OptimizerController } from './interface/optimizer.controller';
   imports: [
     TypeOrmModule.forFeature([RoutePlanOrmEntity, OptimizationJobOrmEntity]),
     DeliveryModule,
+    // Só pela API pública `FLEET_LOOKUP`, para traduzir login → ficha (ADR-0098).
+    FleetModule,
     IntelligenceModule,
   ],
   controllers: [OptimizerController],
   providers: [
     OptimizeRouteUseCase,
     EnqueueOptimizationUseCase,
+    GetActiveRoutePlanUseCase,
     ProcessOptimizationJobUseCase,
     GetOptimizationJobUseCase,
     GetRoutePlanUseCase,
@@ -134,6 +141,7 @@ import { OptimizerController } from './interface/optimizer.controller';
     // quando driver=bullmq e worker habilitado — via guarda no onModuleInit.
     OptimizationJobWorker,
     { provide: JOB_EVENTS, useClass: RealtimeJobEvents },
+    { provide: DRIVER_ROSTER_LINK, useClass: DriverRosterLinkGateway },
     { provide: DELIVERY_GATEWAY, useClass: DeliveryGateway },
     { provide: SERVICE_TIME_HISTORY, useClass: IntelligenceServiceTimeHistory },
     { provide: OPTIMIZER_SERVICE, useClass: OptimizerService },

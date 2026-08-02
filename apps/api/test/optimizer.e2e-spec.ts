@@ -39,6 +39,8 @@ import { HaversineDistanceProvider } from '../src/modules/optimizer/infrastructu
 import { OptimizerMetrics } from '../src/modules/optimizer/infrastructure/observability/optimizer-metrics';
 import { NearestNeighbor2OptStrategy } from '../src/modules/optimizer/infrastructure/strategies/nearest-neighbor-2opt.strategy';
 import { OrOpt2OptStrategy } from '../src/modules/optimizer/infrastructure/strategies/or-opt-2opt.strategy';
+import { GetActiveRoutePlanUseCase } from '../src/modules/optimizer/application/get-active-route-plan.use-case';
+import { DRIVER_ROSTER_LINK } from '../src/modules/optimizer/application/ports/driver-roster-link.port';
 import { OptimizerController } from '../src/modules/optimizer/interface/optimizer.controller';
 
 class InMemoryRoutePlanRepository implements RoutePlanRepositoryPort {
@@ -52,7 +54,25 @@ class InMemoryRoutePlanRepository implements RoutePlanRepositoryPort {
   }
   async findAll(tenantId: string, page: { page: number; pageSize: number }) {
     const items = [...this.store.values()].filter((p) => p.snapshot().tenantId === tenantId);
-    return { items: items.slice((page.page - 1) * page.pageSize, page.page * page.pageSize), total: items.length };
+    return {
+      items: items.slice((page.page - 1) * page.pageSize, page.page * page.pageSize),
+      total: items.length,
+    };
+  }
+  /** Espelha o repositório real: mais recente do motorista no dia (ADR-0098). */
+  async findActiveForDriver(
+    tenantId: string,
+    driverId: string | null,
+    operationalDay: string,
+  ): Promise<RoutePlan | null> {
+    const matches = [...this.store.values()]
+      .map((p) => p.snapshot())
+      .filter(
+        (s) =>
+          s.tenantId === tenantId && s.driverId === driverId && s.operationalDay === operationalDay,
+      )
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    return matches.length > 0 ? (this.store.get(matches[0].id) ?? null) : null;
   }
 }
 
@@ -94,7 +114,9 @@ const stops = [
 
 async function pollJob(app: INestApplication, jobId: string) {
   for (let i = 0; i < 30; i++) {
-    const r = await request(app.getHttpServer()).get(`/api/v1/route-plans/jobs/${jobId}`).expect(200);
+    const r = await request(app.getHttpServer())
+      .get(`/api/v1/route-plans/jobs/${jobId}`)
+      .expect(200);
     if (r.body.data.status === 'succeeded' || r.body.data.status === 'failed') return r.body.data;
     await new Promise((res) => setTimeout(res, 20));
   }
@@ -115,6 +137,10 @@ describe('Optimizer (e2e, assíncrono)', () => {
         GetRoutePlanUseCase,
         ListRoutePlansUseCase,
         ReoptimizeActiveUseCase,
+        GetActiveRoutePlanUseCase,
+        // Ficha do motorista (ADR-0098). Fixa: o e2e do otimizador não exercita
+        // o Fleet, só precisa que a tradução exista e seja determinística.
+        { provide: DRIVER_ROSTER_LINK, useValue: { driverIdForUser: async () => 'driver-e2e' } },
         DomainEventBus,
         {
           provide: FeatureAccessService,
@@ -138,7 +164,9 @@ describe('Optimizer (e2e, assíncrono)', () => {
         // Sem histórico de tempo de serviço no e2e (todos os pontos = null).
         {
           provide: SERVICE_TIME_HISTORY,
-          useValue: { typicalServiceMinutes: async (_t: string, pts: unknown[]) => pts.map(() => null) },
+          useValue: {
+            typicalServiceMinutes: async (_t: string, pts: unknown[]) => pts.map(() => null),
+          },
         },
         { provide: ROUTE_PLAN_REPOSITORY, useClass: InMemoryRoutePlanRepository },
         { provide: OPTIMIZATION_JOB_REPOSITORY, useClass: InMemoryJobRepository },
@@ -228,9 +256,7 @@ describe('Optimizer (e2e, assíncrono)', () => {
   });
 
   it('GET /api/v1/route-plans/:id retorna o plano', async () => {
-    const res = await request(app.getHttpServer())
-      .get(`/api/v1/route-plans/${planId}`)
-      .expect(200);
+    const res = await request(app.getHttpServer()).get(`/api/v1/route-plans/${planId}`).expect(200);
     expect(res.body.data.id).toBe(planId);
   });
 
@@ -315,5 +341,36 @@ describe('Optimizer (e2e, assíncrono)', () => {
     expect(plan.body.data.metrics.totalDistanceKm).toBeLessThanOrEqual(
       plan.body.data.baseline.totalDistanceKm + 1e-6,
     );
+  });
+
+  // NAV-4.1 / ADR-0098: a rota do motorista sai carimbada com a ficha e com o
+  // dia, e `mine/active` devolve **essa** — não o plano mais recente do tenant.
+  it('POST /route-plans/mine carimba a ficha e GET mine/active devolve só a dele', async () => {
+    const antes = await request(app.getHttpServer())
+      .post('/api/v1/route-plans/mine')
+      .send({ stops })
+      .expect(202);
+    const job = await pollJob(app, antes.body.data.jobId);
+    expect(job.status).toBe('succeeded');
+
+    const plano = await request(app.getHttpServer())
+      .get(`/api/v1/route-plans/${job.routePlanId}`)
+      .expect(200);
+    expect(plano.body.data.driverId).toBe('driver-e2e');
+    expect(plano.body.data.operationalDay).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+
+    // Um plano do despacho, criado DEPOIS: sob a regra antiga ("o mais recente
+    // do tenant"), seria ele que voltaria para o motorista.
+    const doDespacho = await request(app.getHttpServer())
+      .post('/api/v1/route-plans')
+      .send({ stops })
+      .expect(202);
+    await pollJob(app, doDespacho.body.data.jobId);
+
+    const ativa = await request(app.getHttpServer())
+      .get('/api/v1/route-plans/mine/active')
+      .expect(200);
+    expect(ativa.body.data.id).toBe(job.routePlanId);
+    expect(ativa.body.data.driverId).toBe('driver-e2e');
   });
 });

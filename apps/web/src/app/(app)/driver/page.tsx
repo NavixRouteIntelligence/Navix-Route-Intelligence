@@ -75,14 +75,15 @@ export default function DriverDashboardPage() {
 
   const plans = useQuery({
     queryKey: ['driver-route'],
-    queryFn: () => optimizerApi.listPlans({ page: 1, pageSize: 1 }),
+    queryFn: () => optimizerApi.myActivePlan(),
   });
   const history = useQuery({
     queryKey: ['driver-history'],
     queryFn: () => deliveriesApi.list({ status: 'delivered', pageSize: 8, sort: '-createdAt' }),
   });
 
-  const plan = plans.data?.data?.[0] ?? null;
+  // A rota vigente já vem resolvida para este motorista e para o dia (ADR-0098).
+  const plan = plans.data?.data ?? null;
   const stops = plan?.stops ?? [];
   const remaining = Math.max(0, stops.length - completed);
   const nextStop = stops[completed] ?? null;

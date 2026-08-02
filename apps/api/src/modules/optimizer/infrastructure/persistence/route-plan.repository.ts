@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
 
 import type { PageParams, PagedResult } from '../../../../shared/kernel/pagination';
 import { scopedRepository } from '../../../../shared/database/transaction-context';
@@ -25,6 +25,8 @@ export class RoutePlanRepository implements RoutePlanRepositoryPort {
     const row = new RoutePlanOrmEntity();
     row.id = s.id;
     row.tenantId = s.tenantId;
+    row.driverId = s.driverId;
+    row.operationalDay = s.operationalDay;
     row.strategy = s.strategy;
     row.status = s.status;
     row.params = s.params;
@@ -56,10 +58,26 @@ export class RoutePlanRepository implements RoutePlanRepositoryPort {
     return { items: rows.map((r) => this.toDomain(r)), total };
   }
 
+  async findActiveForDriver(
+    tenantId: string,
+    driverId: string | null,
+    operationalDay: string,
+  ): Promise<RoutePlan | null> {
+    const row = await this.repo.findOne({
+      // `IsNull()` e não `driverId: null`: o TypeORM traduz `null` literal para
+      // `= NULL`, que nunca casa, e a rota do autônomo simplesmente sumiria.
+      where: { tenantId, driverId: driverId ?? IsNull(), operationalDay },
+      order: { createdAt: 'DESC' },
+    });
+    return row ? this.toDomain(row) : null;
+  }
+
   private toDomain(row: RoutePlanOrmEntity): RoutePlan {
     return RoutePlan.restore({
       id: row.id,
       tenantId: row.tenantId,
+      driverId: row.driverId,
+      operationalDay: row.operationalDay,
       strategy: row.strategy,
       status: row.status,
       params: row.params,

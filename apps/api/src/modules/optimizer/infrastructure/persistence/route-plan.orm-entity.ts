@@ -16,12 +16,21 @@ import { Column, Entity, Index, PrimaryColumn } from 'typeorm';
  */
 @Entity({ name: 'route_plans' })
 @Index('idx_route_plans_tenant_created', ['tenantId', 'createdAt'])
+@Index('idx_route_plans_driver_day', ['tenantId', 'driverId', 'operationalDay'])
 export class RoutePlanOrmEntity {
   @PrimaryColumn('uuid')
   id!: string;
 
   @Column('uuid', { name: 'tenant_id' })
   tenantId!: string;
+
+  /** Ficha do motorista dono da rota (ADR-0098). Null: autônomo ou plano de frota. */
+  @Column('uuid', { name: 'driver_id', nullable: true })
+  driverId!: string | null;
+
+  /** Dia operacional (`YYYY-MM-DD`). `date` volta como string do driver. */
+  @Column('date', { name: 'operational_day' })
+  operationalDay!: string;
 
   @Column('text')
   strategy!: OptimizationStrategyName;

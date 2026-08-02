@@ -72,13 +72,13 @@ class MyRouteRepository {
 
   Future<MyRoute> load() async {
     try {
-      // O plano mais recente é a rota vigente; as entregas dão o endereço de
-      // cada parada (o plano guarda só coordenadas e a sequência).
-      final plans = _map(
-        await _dio.get<dynamic>(
-          '/route-plans',
-          queryParameters: {'pageSize': 1},
-        ),
+      // A rota vigente vem do backend já resolvida para este motorista e para o
+      // dia operacional (ADR-0098). Antes daqui saía `/route-plans?pageSize=1`,
+      // que é o plano mais recente do **tenant**: numa frota, todo motorista
+      // via a rota do último que otimizou. As entregas dão o endereço de cada
+      // parada (o plano guarda só coordenadas e a sequência).
+      final active = _map(
+        await _dio.get<dynamic>('/route-plans/mine/active'),
       );
       final deliveries = _map(
         await _dio.get<dynamic>(
@@ -88,7 +88,9 @@ class MyRouteRepository {
       );
 
       final items = _items(deliveries);
-      final plan = _items(plans).isNotEmpty ? _items(plans).first : null;
+      // `data: null` é a resposta normal de quem ainda não tem rota do dia.
+      final data = active['data'];
+      final plan = data is Map<String, dynamic> ? data : null;
 
       if (plan == null) {
         // Sem plano: distinguir "poucas entregas" de "a IA ainda não preparou"

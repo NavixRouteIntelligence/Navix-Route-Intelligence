@@ -8,6 +8,8 @@ export function toRoutePlanView(plan: RoutePlan): RoutePlanView {
   return {
     id: s.id,
     tenantId: s.tenantId,
+    driverId: s.driverId,
+    operationalDay: s.operationalDay,
     strategy: s.strategy,
     status: s.status,
     params: s.params,

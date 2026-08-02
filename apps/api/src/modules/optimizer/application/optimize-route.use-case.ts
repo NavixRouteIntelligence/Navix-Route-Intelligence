@@ -54,6 +54,11 @@ const round = (n: number, d = 2): number => {
 export interface OptimizeRouteCommand {
   tenantId: string;
   actorId: string;
+  /**
+   * **Ficha** do motorista dono da rota (ADR-0098). Ausente no plano de frota
+   * do despacho e no motorista autônomo, que não tem ficha.
+   */
+  driverId?: string | null;
   origin?: OriginInput | null;
   deliveryIds?: string[];
   stops?: OptimizationStopInput[];
@@ -190,6 +195,7 @@ export class OptimizeRouteUseCase {
 
     return RoutePlan.create({
       tenantId: command.tenantId,
+      driverId: command.driverId ?? null,
       strategy: solved.strategyName,
       status: 'completed',
       params: {
@@ -328,6 +334,8 @@ export class OptimizeRouteUseCase {
 
     return RoutePlan.create({
       tenantId: command.tenantId,
+      // Plano de frota cobre vários veículos e não pertence a uma pessoa só.
+      driverId: null,
       strategy: strategyName,
       status: 'completed',
       params: {
