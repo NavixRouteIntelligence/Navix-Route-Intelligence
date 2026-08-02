@@ -6,15 +6,15 @@
 
 ## Custo fixo da plataforma (independe do nº de clientes)
 
-| Item (AWS Frankfurt, produção enxuta) | Custo/mês aprox. |
-|---------------------------------------|------------------|
-| RDS Postgres (db.t4g.medium, Multi-AZ) | €90–130 |
-| ElastiCache Redis (2 nós t4g.small) | €35–55 |
-| ECS Fargate (api x2, worker x1, web x2) | €70–120 |
-| Load balancer (ALB) | €18–25 |
-| NAT gateway (produção, 2 AZ) | €60–70 |
-| S3 + ECR + Secrets + logs | €10–25 |
-| **Total fixo aprox.** | **€280–420** |
+| Item (AWS Frankfurt, produção enxuta)   | Custo/mês aprox. |
+| --------------------------------------- | ---------------- |
+| RDS Postgres (db.t4g.medium, Multi-AZ)  | €90–130          |
+| ElastiCache Redis (2 nós t4g.small)     | €35–55           |
+| ECS Fargate (api x2, worker x1, web x2) | €70–120          |
+| Load balancer (ALB)                     | €18–25           |
+| NAT gateway (produção, 2 AZ)            | €60–70           |
+| S3 + ECR + Secrets + logs               | €10–25           |
+| **Total fixo aprox.**                   | **€280–420**     |
 
 > No piloto (Neon+Render+Upstash) esse fixo cai para ~€25–70/mês, ao custo de menos
 > robustez — adequado para validar, não para escala.
@@ -26,10 +26,9 @@ Os direcionadores reais de custo por tenant:
 1. **Otimizações de rota/dia** → CPU do worker (o item mais caro por operação).
 2. **Posições de rastreamento ingeridas** → escrita no Postgres/TimescaleDB + storage.
 3. **Chamadas ao provedor de mapas/geocodificação** → custo externo por request.
-   **Hoje sem mitigação:** o cache de matriz por geohash é escopo previsto da Fase 1
-   do [roadmap](../roadmap.md), mas **não existe no código** — não há cache no
-   `MapboxRoutingProvider` nem uso de geohash no repositório. Enquanto não existir,
-   cada otimização com `MAPS_PROVIDER=mapbox` paga chamada cheia.
+   **Mitigado:** a porta de roteamento usa cache Redis por geohash (precisão 9),
+   velocidade e provedor, com TTL de 5 minutos. Falha do cache degrada para a
+   chamada normal sem interromper a otimização.
    Atenuante: o default é `MAPS_PROVIDER=haversine` (cálculo local, custo externo
    **zero**); o Mapbox é opt-in — o que também é a alavanca de tiering usada em
    [pricing-navix.md](../strategy/pricing-navix.md).
@@ -53,7 +52,7 @@ escala do SaaS. O objetivo antes do GA é medir o `custo_variável` de um tenant
 - [ ] Rodar o teste de carga (R4) e medir custo por 1.000 otimizações e por
       1M de posições ingeridas.
 - [ ] Definir teto de gasto (billing alarm) por ambiente.
-- [ ] **Implementar o cache de matriz por geohash** (direcionador 3) — hoje inexistente.
+- [x] **Implementar o cache de matriz por geohash** (direcionador 3).
       É pré-requisito de custo para vender qualquer plano que prometa roteamento com
       malha viária/trânsito real (ver risco P1 em
       [pricing-navix.md](../strategy/pricing-navix.md)).

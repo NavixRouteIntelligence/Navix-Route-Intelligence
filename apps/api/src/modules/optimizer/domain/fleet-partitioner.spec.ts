@@ -1,4 +1,8 @@
-import { partitionByCapacity, type PartitionStop, type PartitionVehicle } from './fleet-partitioner';
+import {
+  partitionByCapacity,
+  type PartitionStop,
+  type PartitionVehicle,
+} from './fleet-partitioner';
 import { GeoPoint } from './geo-point';
 
 const at = (lat: number, lng: number, weightKg = 0, volumeM3 = 0): PartitionStop => ({
@@ -9,6 +13,14 @@ const at = (lat: number, lng: number, weightKg = 0, volumeM3 = 0): PartitionStop
 const uncapped: PartitionVehicle = { capacity: null };
 const capped = (weightKg: number): PartitionVehicle => ({
   capacity: { weightKg, volumeM3: Infinity },
+});
+
+const windowed = (lat: number, lng: number, hour: number): PartitionStop => ({
+  ...at(lat, lng),
+  timeWindow: {
+    start: new Date(`2026-08-03T${String(hour).padStart(2, '0')}:00:00Z`),
+    end: new Date(`2026-08-03T${String(hour + 1).padStart(2, '0')}:00:00Z`),
+  },
 });
 
 describe('partitionByCapacity (sweep)', () => {
@@ -43,5 +55,19 @@ describe('partitionByCapacity (sweep)', () => {
     const { clusters, unassigned } = partitionByCapacity(stops, [], null);
     expect(clusters).toHaveLength(0);
     expect(unassigned).toEqual([0, 1]);
+  });
+
+  it('mantém a mesma zona e janela no mesmo veículo quando há capacidade', () => {
+    const stops = [
+      windowed(38.7201, -9.1401, 9),
+      windowed(41.1501, -8.6101, 15),
+      windowed(38.7202, -9.1402, 9),
+      windowed(41.1502, -8.6102, 15),
+    ];
+    const { clusters } = partitionByCapacity(stops, [uncapped, uncapped], null);
+    expect(clusters.map((cluster) => [...cluster].sort((a, b) => a - b))).toEqual([
+      [0, 2],
+      [1, 3],
+    ]);
   });
 });

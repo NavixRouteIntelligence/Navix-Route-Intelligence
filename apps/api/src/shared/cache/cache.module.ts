@@ -6,9 +6,8 @@ import { RedisCache } from './redis-cache';
 
 /**
  * Disponibiliza o `CachePort` (implementação Redis) para toda a aplicação.
- * Ainda **não é consumido** por nenhum módulo — infraestrutura preparada para os
- * casos previstos (matriz de distância, geocodificação — docs/database.md §6),
- * sem alterar o comportamento atual.
+ * Consumido pelo cache de matriz de roteamento; falhas continuam degradando para
+ * a chamada do provedor sem alterar o resultado de negócio.
  */
 @Global()
 @Module({

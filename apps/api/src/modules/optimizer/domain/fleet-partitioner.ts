@@ -1,16 +1,16 @@
 import type { GeoPoint } from './geo-point';
 import { addDemand, ZERO_DEMAND, type Demand } from './optimization-stop';
+import { geohash } from '../../../shared/kernel/geohash';
 
 /**
  * Agrupamento de paradas em rotas por veículo (ADR-0022, Fase 2).
  *
- * Heurística de **sweep** (varredura angular): ordena as paradas pelo ângulo
- * polar em torno do centro (a origem/depósito, ou o centroide), e as distribui
- * em ordem angular entre os veículos, respeitando a **capacidade** (peso/volume)
- * e balanceando a contagem (~N/V por veículo). Isso produz clusters **compactos
- * e contíguos** (proximidade geográfica) sem dependências externas —
- * determinístico e testável. O solver ótimo (OR-Tools) é a Fase 4; aqui é a
- * construção que alimenta a otimização por rota (reuso do RouteSolver).
+ * Heurística de **sweep**: agrupa primeiro por zona (geohash) e janela horária,
+ * usa o ângulo polar em torno da origem/centroide como desempate e distribui as
+ * paradas entre os veículos respeitando **capacidade** (peso/volume) e equilíbrio
+ * de contagem (~N/V). Produz clusters compactos e operacionais sem dependências
+ * externas, de forma determinística e testável. O solver ótimo (OR-Tools) é a
+ * Fase 4; aqui é a construção que alimenta a otimização por rota existente.
  *
  * Paradas cuja demanda não cabe em nenhum veículo saem em `unassigned`.
  */
@@ -22,6 +22,7 @@ export interface PartitionVehicle {
 export interface PartitionStop {
   point: GeoPoint;
   demand: Demand;
+  timeWindow?: { start: Date; end: Date } | null;
 }
 
 export interface FleetPartition {
@@ -48,12 +49,18 @@ export function partitionByCapacity(
   if (v === 0) return { clusters: [], unassigned: stops.map((_, i) => i) };
   if (stops.length === 0) return { clusters: vehicles.map(() => []), unassigned: [] };
 
-  const center = origin
-    ? { lat: origin.latitude, lng: origin.longitude }
-    : centroid(stops);
+  const center = origin ? { lat: origin.latitude, lng: origin.longitude } : centroid(stops);
   const order = stops
-    .map((s, i) => ({ i, angle: Math.atan2(s.point.latitude - center.lat, s.point.longitude - center.lng) }))
-    .sort((a, b) => a.angle - b.angle)
+    .map((s, i) => ({
+      i,
+      zone: geohash(s.point.latitude, s.point.longitude, 5),
+      window: s.timeWindow ? Math.floor(s.timeWindow.start.getTime() / 3_600_000) : Infinity,
+      angle: Math.atan2(s.point.latitude - center.lat, s.point.longitude - center.lng),
+    }))
+    .sort(
+      (a, b) =>
+        a.zone.localeCompare(b.zone) || a.window - b.window || a.angle - b.angle || a.i - b.i,
+    )
     .map((x) => x.i);
 
   const clusters: number[][] = vehicles.map(() => []);
@@ -65,7 +72,11 @@ export function partitionByCapacity(
   for (const idx of order) {
     const demand = stops[idx].demand;
     const chosen =
-      pick(sweep, v, (vi) => clusters[vi].length < target && fits(loads[vi], demand, vehicles[vi].capacity)) ??
+      pick(
+        sweep,
+        v,
+        (vi) => clusters[vi].length < target && fits(loads[vi], demand, vehicles[vi].capacity),
+      ) ??
       pick(sweep, v, (vi) => fits(loads[vi], demand, vehicles[vi].capacity)) ??
       pick(0, v, (vi) => fits(loads[vi], demand, vehicles[vi].capacity));
 
