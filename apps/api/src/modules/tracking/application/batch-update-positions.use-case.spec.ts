@@ -1,8 +1,12 @@
+import { DomainEventBus } from '../../../shared/events/domain-event-bus';
 import { ValidationError } from '../../../shared/kernel/domain-error';
 import type { DriverPosition } from '../domain/driver-position';
 import type { PositionRepositoryPort } from '../domain/ports/position-repository.port';
 import type { TrackingEventsPort } from '../domain/ports/tracking-events.port';
+
 import { BatchUpdatePositionsUseCase } from './batch-update-positions.use-case';
+import type { DriverAccountLinkPort } from './ports/driver-account-link.port';
+import type { GeofenceStatusAutomationPort } from './ports/geofence-status-automation.port';
 
 function build() {
   const savedBatches: DriverPosition[][] = [];
@@ -18,7 +22,21 @@ function build() {
   const events: TrackingEventsPort & { positionUpdated: jest.Mock } = {
     positionUpdated: jest.fn(),
   };
-  return { uc: new BatchUpdatePositionsUseCase(repo, events), savedBatches, events };
+  const link: DriverAccountLinkPort = {
+    userIdForDriver: jest.fn(),
+    driverIdsForUsers: jest.fn(async (_tenantId, ids) => new Map(ids.map((id) => [id, 'ficha-1']))),
+  };
+  const bus = new DomainEventBus();
+  const automation: GeofenceStatusAutomationPort = {
+    evaluate: jest.fn().mockResolvedValue(0),
+  };
+  return {
+    uc: new BatchUpdatePositionsUseCase(repo, events, link, bus, automation),
+    savedBatches,
+    events,
+    bus,
+    automation,
+  };
 }
 
 const cmd = (positions: { latitude: number; longitude: number }[]) => ({
@@ -49,7 +67,12 @@ describe('BatchUpdatePositionsUseCase', () => {
   it('rejeita o lote se qualquer posição tiver coordenadas inválidas', async () => {
     const { uc, savedBatches } = build();
     await expect(
-      uc.execute(cmd([{ latitude: -23.55, longitude: -46.63 }, { latitude: 200, longitude: 0 }])),
+      uc.execute(
+        cmd([
+          { latitude: -23.55, longitude: -46.63 },
+          { latitude: 200, longitude: 0 },
+        ]),
+      ),
     ).rejects.toBeInstanceOf(ValidationError);
     // Nada é gravado se a validação falha (a construção ocorre antes do saveMany).
     expect(savedBatches).toHaveLength(0);
@@ -58,5 +81,27 @@ describe('BatchUpdatePositionsUseCase', () => {
   it('rejeita lote vazio', async () => {
     const { uc } = build();
     await expect(uc.execute(cmd([]))).rejects.toBeInstanceOf(ValidationError);
+  });
+
+  it('publica um único tick e avalia o geofence da posição mais recente', async () => {
+    const { uc, bus, automation } = build();
+    const events: { type: string; aggregateId: string }[] = [];
+    bus.stream().subscribe(({ event }) => events.push(event));
+
+    await uc.execute({
+      tenantId: 't1',
+      driverId: 'u1',
+      positions: [
+        { latitude: -23.55, longitude: -46.63, recordedAt: '2026-08-02T10:00:00.000Z' },
+        { latitude: -23.56, longitude: -46.64, recordedAt: '2026-08-02T10:05:00.000Z' },
+      ],
+    });
+
+    expect(events).toEqual([{ type: 'tracking.position-recorded', aggregateId: 'ficha-1' }]);
+    expect(automation.evaluate).toHaveBeenCalledWith({
+      tenantId: 't1',
+      driverId: 'ficha-1',
+      recordedAt: new Date('2026-08-02T10:05:00.000Z'),
+    });
   });
 });
