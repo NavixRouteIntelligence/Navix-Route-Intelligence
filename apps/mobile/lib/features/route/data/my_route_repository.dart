@@ -184,6 +184,8 @@ class MyRouteRepository {
       addressLine: [street, number].where((p) => p.isNotEmpty).join(', '),
       cityLine: [city, state].where((p) => p.isNotEmpty).join(' — '),
       etaMinutes: (stop['etaMinutes'] as num?)?.toDouble() ?? 0,
+      latitude: (stop['latitude'] as num?)?.toDouble(),
+      longitude: (stop['longitude'] as num?)?.toDouble(),
     );
   }
 

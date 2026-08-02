@@ -17,6 +17,8 @@ import '../../features/intelligence/presentation/stop_intelligence_cubit.dart';
 import '../../features/intelligence/presentation/voice_assistant_cubit.dart';
 import '../voice/speech_service.dart';
 import '../../features/route/data/my_route_repository.dart';
+import '../../features/route/data/url_route_navigation_launcher.dart';
+import '../../features/route/domain/route_navigation.dart';
 import '../../features/route/presentation/my_route_cubit.dart';
 import '../../features/earnings/data/tariff_store.dart';
 import '../../features/earnings/presentation/earnings_cubit.dart';
@@ -138,8 +140,14 @@ Future<void> configureDependencies(AppConfig config) async {
     ..registerLazySingleton<MyRouteRepository>(
       () => MyRouteRepository(getIt<DioClient>().apiDio),
     )
+    ..registerLazySingleton<RouteNavigationLauncher>(
+      UrlRouteNavigationLauncher.new,
+    )
     ..registerFactory<MyRouteCubit>(
-      () => MyRouteCubit(getIt<MyRouteRepository>()),
+      () => MyRouteCubit(
+        getIt<MyRouteRepository>(),
+        getIt<RouteNavigationLauncher>(),
+      ),
     )
     ..registerLazySingleton<TariffStore>(() => TariffStore())
     ..registerFactory<EarningsCubit>(() => EarningsCubit(getIt<TariffStore>()))
