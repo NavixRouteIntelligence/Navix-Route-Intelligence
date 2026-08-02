@@ -1,3 +1,6 @@
+'use client';
+
+import { useBranding } from '@/lib/branding/branding-provider';
 import { cn } from '@/lib/utils';
 
 /** Glifo da marca Navix: um caminho (rota) com um pin de destino. */
@@ -28,11 +31,26 @@ export function LogoMark({ className }: { className?: string }) {
   );
 }
 
-export function Logo({ className, showWordmark = true }: { className?: string; showWordmark?: boolean }) {
+export function Logo({
+  className,
+  showWordmark = true,
+}: {
+  className?: string;
+  showWordmark?: boolean;
+}) {
+  const { branding } = useBranding();
   return (
     <span className={cn('inline-flex items-center gap-2', className)}>
-      <LogoMark />
-      {showWordmark && <span className="text-h3 font-semibold tracking-tight">Navix</span>}
+      {branding.logoUrl ? (
+        // Domínio arbitrário verificado pelo backend não pode ser enumerado em next.config.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={branding.logoUrl} alt="" className="h-8 w-8 rounded-lg object-contain" />
+      ) : (
+        <LogoMark />
+      )}
+      {showWordmark && (
+        <span className="text-h3 font-semibold tracking-tight">{branding.displayName}</span>
+      )}
     </span>
   );
 }

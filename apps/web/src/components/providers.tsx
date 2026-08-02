@@ -7,6 +7,7 @@ import { useState, type ReactNode } from 'react';
 import { OfflineOverlay } from '@/components/system/offline-overlay';
 import { ToastProvider } from '@/components/ui/toast';
 import { AuthProvider } from '@/lib/auth/auth-provider';
+import { BrandingProvider } from '@/lib/branding/branding-provider';
 import { LocaleProvider } from '@/lib/i18n/locale-provider';
 import { PreferencesProvider } from '@/lib/preferences/preferences-provider';
 import { RealtimeProvider } from '@/lib/realtime/realtime-provider';
@@ -29,9 +30,11 @@ export function Providers({ children }: { children: ReactNode }) {
           <QueryClientProvider client={queryClient}>
             <ToastProvider>
               <AuthProvider>
-                <RealtimeProvider>
-                  <SettingsSyncProvider>{children}</SettingsSyncProvider>
-                </RealtimeProvider>
+                <BrandingProvider>
+                  <RealtimeProvider>
+                    <SettingsSyncProvider>{children}</SettingsSyncProvider>
+                  </RealtimeProvider>
+                </BrandingProvider>
               </AuthProvider>
               <OfflineOverlay />
             </ToastProvider>

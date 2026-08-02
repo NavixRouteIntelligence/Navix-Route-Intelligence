@@ -78,6 +78,19 @@ describe('Isolamento multi-tenant via RLS (integração)', () => {
       );
     });
 
+    for (const [tenant, displayName] of [
+      [TENANT_A, 'Marca A'],
+      [TENANT_B, 'Marca B'],
+    ]) {
+      await ds.transaction(async (m) => {
+        await setTenant(m, tenant);
+        await m.query(`INSERT INTO tenant_branding (tenant_id, display_name) VALUES ($1,$2)`, [
+          tenant,
+          displayName,
+        ]);
+      });
+    }
+
     // audit_log (ADR-0054): INSERT é permitido sem contexto — é assim que o
     // AuditLogWriter e o RolesGuard gravam de verdade.
     await ds.query(
@@ -184,6 +197,34 @@ describe('Isolamento multi-tenant via RLS (integração)', () => {
       return m.query(`SELECT id FROM deliveries WHERE id = $1`, [DELIVERY_A]);
     });
     expect(rows).toHaveLength(0);
+  });
+
+  describe('tenant_branding público, mas com escrita isolada (ADR-0096)', () => {
+    it('permite resolver somente os campos públicos antes do login', async () => {
+      const rows = await ds.query(
+        `SELECT tenant_id, display_name FROM tenant_branding
+          WHERE tenant_id IN ($1,$2) ORDER BY display_name`,
+        [TENANT_A, TENANT_B],
+      );
+      expect(rows).toEqual([
+        { tenant_id: TENANT_A, display_name: 'Marca A' },
+        { tenant_id: TENANT_B, display_name: 'Marca B' },
+      ]);
+    });
+
+    it('o tenant A não consegue alterar a marca do tenant B', async () => {
+      await ds.transaction(async (m) => {
+        await setTenant(m, TENANT_A);
+        await m.query(`UPDATE tenant_branding SET display_name = 'Invadida' WHERE tenant_id = $1`, [
+          TENANT_B,
+        ]);
+      });
+
+      const rows = await ds.query(`SELECT display_name FROM tenant_branding WHERE tenant_id = $1`, [
+        TENANT_B,
+      ]);
+      expect(rows).toEqual([{ display_name: 'Marca B' }]);
+    });
   });
 
   describe('audit_log (ADR-0054)', () => {

@@ -12,3 +12,4 @@ export * from './settings';
 export * from './realtime';
 export * from './intelligence';
 export * from './analytics';
+export * from './enterprise';

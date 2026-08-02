@@ -149,6 +149,13 @@ export class AppConfigService {
     };
   }
 
+  /** Resolução pública de tenant por subdomínio/domínio verificado (ADR-0096). */
+  get enterprise() {
+    return {
+      tenantBaseDomain: this.get('TENANT_BASE_DOMAIN').trim().toLowerCase(),
+    };
+  }
+
   /** Alertas preditivos de estouro de janela (ADR-0091). */
   get delayRiskAlerts() {
     return {

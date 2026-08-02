@@ -32,6 +32,7 @@ import { IdentityModule } from './modules/identity/identity.module';
 import { UserSettingsModule } from './modules/user-settings/user-settings.module';
 import { WebhooksModule } from './modules/webhooks/webhooks.module';
 import { PublicApiModule } from './modules/public-api/public-api.module';
+import { EnterpriseModule } from './modules/enterprise/enterprise.module';
 
 /**
  * Módulo raiz. Compõe infraestrutura transversal (config, logging, banco) e
@@ -84,6 +85,7 @@ import { PublicApiModule } from './modules/public-api/public-api.module';
     TrackingModule,
     PodModule,
     PublicApiModule,
+    EnterpriseModule,
   ],
 })
 export class AppModule {}

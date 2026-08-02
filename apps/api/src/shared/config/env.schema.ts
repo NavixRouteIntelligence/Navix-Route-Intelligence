@@ -84,6 +84,8 @@ export const envSchema = z.object({
   // rastreio: monta a URL entregue ao convidado; a validação é sempre do lado
   // do servidor, então um valor errado gera link quebrado, não brecha.
   DRIVER_INVITE_BASE_URL: z.string().default('http://localhost:3000/convite'),
+  // Domínio raiz usado para resolver `<slug>.navix.pt` antes do login.
+  TENANT_BASE_DOMAIN: z.string().min(1).default('navix.pt'),
   // Prazo do convite. 7 dias: longo o bastante para o motorista responder sem
   // pressa, curto o bastante para um link vazado não valer indefinidamente.
   DRIVER_INVITE_TTL_HOURS: z.coerce.number().int().positive().max(720).default(168),

@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ApiError } from '@/lib/api/client';
 import { useAuth } from '@/lib/auth/auth-provider';
+import { useBranding } from '@/lib/branding/branding-provider';
 
 const schema = z.object({
   email: z.string().email('E-mail inválido.'),
@@ -24,6 +25,7 @@ type FormValues = z.infer<typeof schema>;
 export default function LoginPage() {
   const router = useRouter();
   const { login } = useAuth();
+  const { branding } = useBranding();
   const [formError, setFormError] = useState<string | null>(null);
   const {
     register,
@@ -38,8 +40,14 @@ export default function LoginPage() {
     setFormError(null);
     try {
       // Tenant é resolvido pelo e-mail; envia organization só se preenchido.
-      const organization = values.organization?.trim();
-      await login({ email: values.email, password: values.password, ...(organization ? { organization } : {}) });
+      const organization =
+        values.organization?.trim() ||
+        (branding.tenantSlug !== 'navix' ? branding.tenantSlug : undefined);
+      await login({
+        email: values.email,
+        password: values.password,
+        ...(organization ? { organization } : {}),
+      });
       router.push('/dashboard');
     } catch (error) {
       setFormError(error instanceof ApiError ? error.message : 'Falha ao entrar.');
@@ -55,14 +63,34 @@ export default function LoginPage() {
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4" noValidate>
           <Field label="E-mail" error={errors.email?.message}>
-            <Input type="email" {...register('email')} placeholder="voce@empresa.com" autoComplete="email" />
+            <Input
+              type="email"
+              {...register('email')}
+              placeholder="voce@empresa.com"
+              autoComplete="email"
+            />
           </Field>
           <Field label="Senha" error={errors.password?.message}>
-            <Input type="password" {...register('password')} placeholder="••••••••" autoComplete="current-password" />
+            <Input
+              type="password"
+              {...register('password')}
+              placeholder="••••••••"
+              autoComplete="current-password"
+            />
           </Field>
-          <Field label="Empresa (opcional)" error={errors.organization?.message}>
-            <Input {...register('organization')} placeholder="identificador da empresa" autoComplete="organization" />
-          </Field>
+          {branding.tenantSlug === 'navix' ? (
+            <Field label="Empresa (opcional)" error={errors.organization?.message}>
+              <Input
+                {...register('organization')}
+                placeholder="identificador da empresa"
+                autoComplete="organization"
+              />
+            </Field>
+          ) : (
+            <p className="rounded-md bg-primary/10 px-3 py-2 text-sm text-primary">
+              Acesso à organização <strong>{branding.displayName}</strong>
+            </p>
+          )}
 
           {formError && (
             <p role="alert" className="text-sm text-danger">
