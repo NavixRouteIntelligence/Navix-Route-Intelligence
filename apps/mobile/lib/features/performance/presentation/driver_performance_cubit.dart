@@ -25,7 +25,8 @@ class DriverPerformanceState extends Equatable {
 }
 
 class DriverPerformanceCubit extends Cubit<DriverPerformanceState> {
-  DriverPerformanceCubit(this._repository) : super(const DriverPerformanceState());
+  DriverPerformanceCubit(this._repository)
+      : super(const DriverPerformanceState());
 
   final DriverPerformanceRepository _repository;
 
@@ -40,7 +41,8 @@ class DriverPerformanceCubit extends Cubit<DriverPerformanceState> {
         ),
       );
     } on Failure catch (e) {
-      emit(DriverPerformanceState(status: DriverPerformanceStatus.error, error: e));
+      emit(DriverPerformanceState(
+          status: DriverPerformanceStatus.error, error: e));
     }
   }
 }

@@ -142,7 +142,8 @@ void main() {
     });
 
     // A ausência é o requisito: nada no cartão compara com outro motorista.
-    testWidgets('não exibe ranking, posição nem média da frota', (tester) async {
+    testWidgets('não exibe ranking, posição nem média da frota',
+        (tester) async {
       await _pump(
         tester,
         _perf(goal: const DriverGoal(target: 0.9, current: 0.96, met: true)),

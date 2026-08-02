@@ -60,13 +60,21 @@ class DriverPerformance extends Equatable {
           ? HealthyStreak.fromJson(streak)
           : const HealthyStreak(days: 0, current: false),
       goal: goal is Map<String, dynamic> ? DriverGoal.fromJson(goal) : null,
-      restAdvice: rest is Map<String, dynamic> ? RestAdvice.fromJson(rest) : null,
+      restAdvice:
+          rest is Map<String, dynamic> ? RestAdvice.fromJson(rest) : null,
     );
   }
 
   @override
-  List<Object?> get props =>
-      [delivered, workedDays, successRate, onTimeRate, streak, goal, restAdvice];
+  List<Object?> get props => [
+        delivered,
+        workedDays,
+        successRate,
+        onTimeRate,
+        streak,
+        goal,
+        restAdvice
+      ];
 }
 
 /// Sequência de dias trabalhados **sem entrega falhada**.
