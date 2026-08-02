@@ -1,10 +1,12 @@
+import { DomainEventBus } from '../../../shared/events/domain-event-bus';
 import { ValidationError } from '../../../shared/kernel/domain-error';
 import type { DriverPosition } from '../domain/driver-position';
 import type { PositionRepositoryPort } from '../domain/ports/position-repository.port';
 import type { TrackingEventsPort } from '../domain/ports/tracking-events.port';
+
 import type { DriverAccountLinkPort } from './ports/driver-account-link.port';
+import type { GeofenceStatusAutomationPort } from './ports/geofence-status-automation.port';
 import { UpdatePositionUseCase } from './update-position.use-case';
-import { DomainEventBus } from '../../../shared/events/domain-event-bus';
 
 /** Por padrão o login não tem ficha (autônomo): o id anunciado é o do login. */
 function build(fichaPorLogin: Record<string, string> = {}) {
@@ -23,17 +25,22 @@ function build(fichaPorLogin: Record<string, string> = {}) {
   };
   const link: DriverAccountLinkPort = {
     userIdForDriver: jest.fn(),
-    driverIdsForUsers: jest.fn(async (_t: string, ids: string[]) =>
-      new Map(ids.filter((id) => fichaPorLogin[id]).map((id) => [id, fichaPorLogin[id]])),
+    driverIdsForUsers: jest.fn(
+      async (_t: string, ids: string[]) =>
+        new Map(ids.filter((id) => fichaPorLogin[id]).map((id) => [id, fichaPorLogin[id]])),
     ),
   };
   const bus = new DomainEventBus();
+  const geofenceAutomation: GeofenceStatusAutomationPort = {
+    evaluate: jest.fn().mockResolvedValue(0),
+  };
   return {
-    uc: new UpdatePositionUseCase(repo, events, link, bus),
+    uc: new UpdatePositionUseCase(repo, events, link, bus, geofenceAutomation),
     saved,
     events,
     bus,
     link,
+    geofenceAutomation,
   };
 }
 
@@ -61,15 +68,37 @@ describe('UpdatePositionUseCase', () => {
     await expect(uc.execute({ ...base, latitude: 200 })).rejects.toBeInstanceOf(ValidationError);
   });
 
+  it('avalia o geofence depois de persistir a posição', async () => {
+    const { uc, geofenceAutomation } = build({ u1: 'ficha-1' });
+
+    await uc.execute({ ...base, recordedAt: '2026-08-02T10:00:00.000Z' });
+
+    expect(geofenceAutomation.evaluate).toHaveBeenCalledWith({
+      tenantId: 't1',
+      driverId: 'ficha-1',
+      recordedAt: new Date('2026-08-02T10:00:00.000Z'),
+    });
+  });
+
+  it('falha da automação não desfaz a posição', async () => {
+    const { uc, saved, geofenceAutomation } = build();
+    (geofenceAutomation.evaluate as jest.Mock).mockRejectedValue(new Error('fora'));
+
+    await expect(uc.execute(base)).resolves.toBeDefined();
+    expect(saved).toHaveLength(1);
+  });
+
   // A junção ficha↔login (ADR-0086). A linha é gravada sob o LOGIN, mas o que
   // sai daqui é anunciado sob a FICHA: todos os assinantes vêm do lado da
   // frota e partem da entrega, que aponta para a ficha.
   describe('identificador anunciado (ADR-0086)', () => {
     function eventosDe(bus: DomainEventBus): { type: string; aggregateId: string }[] {
       const capturados: { type: string; aggregateId: string }[] = [];
-      bus.stream().subscribe((m) =>
-        capturados.push({ type: m.event.type, aggregateId: m.event.aggregateId }),
-      );
+      bus
+        .stream()
+        .subscribe((m) =>
+          capturados.push({ type: m.event.type, aggregateId: m.event.aggregateId }),
+        );
       return capturados;
     }
 
@@ -82,9 +111,7 @@ describe('UpdatePositionUseCase', () => {
       expect(saved[0].driverId).toBe('u1');
       expect(view.driverId).toBe('ficha-1');
       expect(events.positionUpdated).toHaveBeenCalledWith('t1', view);
-      expect(capturados).toEqual([
-        { type: 'tracking.position-recorded', aggregateId: 'ficha-1' },
-      ]);
+      expect(capturados).toEqual([{ type: 'tracking.position-recorded', aggregateId: 'ficha-1' }]);
     });
 
     it('motorista autônomo (sem ficha) é anunciado sob o próprio login', async () => {

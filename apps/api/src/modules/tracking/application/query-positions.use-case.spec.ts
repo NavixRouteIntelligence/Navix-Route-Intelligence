@@ -1,5 +1,6 @@
 import type { DriverPosition } from '../domain/driver-position';
 import type { PositionRepositoryPort } from '../domain/ports/position-repository.port';
+
 import type { DriverAccountLinkPort } from './ports/driver-account-link.port';
 import { QueryPositionsUseCase } from './query-positions.use-case';
 
@@ -24,18 +25,18 @@ function position(driverId: string): DriverPosition {
 /** `vinculos` mapeia ficha → login; o resto do mock deriva daí. */
 function build(rows: DriverPosition[] = [], vinculos: Record<string, string> = {}) {
   const findLatestForDriver = jest.fn(
-    async (_t: string, driverId: string) =>
-      rows.find((r) => r.driverId === driverId) ?? null,
+    async (_t: string, driverId: string) => rows.find((r) => r.driverId === driverId) ?? null,
   );
   const findHistory = jest.fn(async (_t: string, driverId: string) =>
     rows.filter((r) => r.driverId === driverId),
   );
+  const findBetween = jest.fn().mockResolvedValue(rows);
   const positions: PositionRepositoryPort = {
     save: jest.fn(),
     saveMany: jest.fn(),
     findLatestForDriver,
     findLatestPerDriver: jest.fn().mockResolvedValue(rows),
-    findBetween: jest.fn().mockResolvedValue(rows),
+    findBetween,
     findHistory,
     pruneOlderThan: jest.fn(),
   };
@@ -45,13 +46,16 @@ function build(rows: DriverPosition[] = [], vinculos: Record<string, string> = {
     userIdForDriver: jest.fn(async (_t: string, ficha: string) => vinculos[ficha] ?? null),
     driverIdsForUsers: jest.fn(
       async (_t: string, logins: string[]) =>
-        new Map(
-          logins.filter((l) => porLogin.has(l)).map((l) => [l, porLogin.get(l) as string]),
-        ),
+        new Map(logins.filter((l) => porLogin.has(l)).map((l) => [l, porLogin.get(l) as string])),
     ),
   };
 
-  return { uc: new QueryPositionsUseCase(positions, link), findLatestForDriver, findHistory };
+  return {
+    uc: new QueryPositionsUseCase(positions, link),
+    findLatestForDriver,
+    findHistory,
+    findBetween,
+  };
 }
 
 describe('QueryPositionsUseCase — junção ficha↔login (ADR-0086)', () => {
@@ -146,5 +150,39 @@ describe('QueryPositionsUseCase — junção ficha↔login (ADR-0086)', () => {
       expect(findHistory).toHaveBeenCalledWith(TENANT, LOGIN, 200);
       expect(result.driverId).toBe(LOGIN);
     });
+  });
+
+  it('calcula vários geofences com uma única leitura de rastro', async () => {
+    const endedAt = new Date('2026-08-02T10:02:00.000Z');
+    const rows = [
+      {
+        ...position(LOGIN),
+        latitude: 38.7223,
+        longitude: -9.1393,
+        recordedAt: new Date('2026-08-02T10:00:00.000Z'),
+      },
+      {
+        ...position(LOGIN),
+        id: 'pos-2',
+        latitude: 38.7223,
+        longitude: -9.1393,
+        recordedAt: endedAt,
+      },
+    ];
+    const { uc, findBetween } = build(rows, { [FICHA]: LOGIN });
+
+    const result = await uc.serviceMinutesAtStops(
+      TENANT,
+      FICHA,
+      [
+        { id: 'd1', latitude: 38.7223, longitude: -9.1393 },
+        { id: 'd2', latitude: 41.1579, longitude: -8.6291 },
+      ],
+      endedAt,
+    );
+
+    expect(result.get('d1')).toBe(2);
+    expect(result.get('d2')).toBeNull();
+    expect(findBetween).toHaveBeenCalledTimes(1);
   });
 });

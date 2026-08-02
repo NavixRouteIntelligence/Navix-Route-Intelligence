@@ -1,20 +1,19 @@
-import { Inject, Injectable } from '@nestjs/common';
 import type { DriverPositionView, PositionUpdateRequest } from '@navix/contracts';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 
+import { DomainEventBus } from '../../../shared/events/domain-event-bus';
 import {
   POSITION_REPOSITORY,
   type PositionRepositoryPort,
 } from '../domain/ports/position-repository.port';
-import {
-  TRACKING_EVENTS,
-  type TrackingEventsPort,
-} from '../domain/ports/tracking-events.port';
-import { DomainEventBus } from '../../../shared/events/domain-event-bus';
-import {
-  DRIVER_ACCOUNT_LINK,
-  type DriverAccountLinkPort,
-} from './ports/driver-account-link.port';
+import { TRACKING_EVENTS, type TrackingEventsPort } from '../domain/ports/tracking-events.port';
+
 import { createDriverPosition } from './create-driver-position';
+import { DRIVER_ACCOUNT_LINK, type DriverAccountLinkPort } from './ports/driver-account-link.port';
+import {
+  GEOFENCE_STATUS_AUTOMATION,
+  type GeofenceStatusAutomationPort,
+} from './ports/geofence-status-automation.port';
 import { toPositionView } from './position.mapper';
 
 export interface UpdatePositionCommand extends PositionUpdateRequest {
@@ -34,11 +33,15 @@ export interface UpdatePositionCommand extends PositionUpdateRequest {
  */
 @Injectable()
 export class UpdatePositionUseCase {
+  private readonly logger = new Logger(UpdatePositionUseCase.name);
+
   constructor(
     @Inject(POSITION_REPOSITORY) private readonly positions: PositionRepositoryPort,
     @Inject(TRACKING_EVENTS) private readonly events: TrackingEventsPort,
     @Inject(DRIVER_ACCOUNT_LINK) private readonly link: DriverAccountLinkPort,
     private readonly bus: DomainEventBus,
+    @Inject(GEOFENCE_STATUS_AUTOMATION)
+    private readonly geofenceAutomation: GeofenceStatusAutomationPort,
   ) {}
 
   async execute(command: UpdatePositionCommand): Promise<DriverPositionView> {
@@ -58,7 +61,24 @@ export class UpdatePositionUseCase {
       type: 'tracking.position-recorded',
       aggregateId: announcedId,
     });
+    await this.automateStatus(command.tenantId, announcedId, position.recordedAt);
     return view;
+  }
+
+  private async automateStatus(
+    tenantId: string,
+    driverId: string,
+    recordedAt: Date,
+  ): Promise<void> {
+    try {
+      await this.geofenceAutomation.evaluate({ tenantId, driverId, recordedAt });
+    } catch (error) {
+      // A posição já foi salva. Automação auxiliar nunca pode transformar um
+      // ponto válido em erro para o motorista.
+      this.logger.warn(
+        `Automação de geofence falhou: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
   }
 
   /**

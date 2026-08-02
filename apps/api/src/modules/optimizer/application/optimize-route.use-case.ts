@@ -238,7 +238,7 @@ export class OptimizeRouteUseCase {
     const hasOrigin = origin != null;
 
     const partition = partitionByCapacity(
-      rawStops.map((s) => ({ point: s.point, demand: s.demand })),
+      rawStops.map((s) => ({ point: s.point, demand: s.demand, timeWindow: s.timeWindow })),
       profiles.map((p) => ({ capacity: p.capacity })),
       origin,
     );

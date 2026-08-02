@@ -69,6 +69,13 @@ export const envSchema = z.object({
   MEDIA_URL_TTL_SECONDS: z.coerce.number().int().positive().default(900),
   // Retenção de posições de tracking (dias); 0 desliga o expurgo (ADR-0048).
   TRACKING_RETENTION_DAYS: z.coerce.number().int().min(0).default(90),
+  // Automação conservadora: permanência no geofence só promove pending→in_route.
+  TRACKING_GEOFENCE_AUTOMATION_ENABLED: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((v) => v === 'true'),
+  TRACKING_GEOFENCE_DWELL_MINUTES: z.coerce.number().positive().max(60).default(2),
+  TRACKING_GEOFENCE_CHECK_INTERVAL_MS: z.coerce.number().int().min(5_000).default(30_000),
   // Base do link público de rastreamento (ADR-0082). Só monta a URL enviada ao
   // destinatário; o token em si é validado no backend, então um valor errado
   // aqui gera link inválido, não brecha de acesso.

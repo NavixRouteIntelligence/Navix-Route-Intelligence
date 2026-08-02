@@ -332,6 +332,8 @@
     }
   },
   "routeNextStop": "Next stop",
+  "routeNavigate": "Navigate",
+  "routeNavigationUnavailable": "Navigation could not be opened on this device.",
   "routeAllDeliveriesDone": "All deliveries completed",
   "routeSummaryTitle": "Route summary",
   "routeStatusReady": "Ready",

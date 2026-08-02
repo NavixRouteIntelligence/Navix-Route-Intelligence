@@ -70,6 +70,8 @@ class RouteStopInfo extends Equatable {
     required this.addressLine,
     required this.cityLine,
     required this.etaMinutes,
+    this.latitude,
+    this.longitude,
   });
 
   final int sequence;
@@ -77,6 +79,16 @@ class RouteStopInfo extends Equatable {
   final String addressLine;
   final String cityLine;
   final double etaMinutes;
+  final double? latitude;
+  final double? longitude;
+
+  bool get hasNavigableCoordinates =>
+      latitude?.isFinite == true &&
+      longitude?.isFinite == true &&
+      latitude! >= -90 &&
+      latitude! <= 90 &&
+      longitude! >= -180 &&
+      longitude! <= 180;
 
   @override
   List<Object?> get props => [
@@ -85,6 +97,8 @@ class RouteStopInfo extends Equatable {
         addressLine,
         cityLine,
         etaMinutes,
+        latitude,
+        longitude,
       ];
 }
 

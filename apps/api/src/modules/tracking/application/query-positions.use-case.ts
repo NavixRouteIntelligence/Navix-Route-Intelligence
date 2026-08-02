@@ -1,15 +1,13 @@
-import { Inject, Injectable } from '@nestjs/common';
 import type { DriverPositionView, PositionHistoryResponse } from '@navix/contracts';
+import { Inject, Injectable } from '@nestjs/common';
 
+import { DWELL_WINDOW_MINUTES, dwellMinutesAtStop } from '../domain/dwell';
 import {
   POSITION_REPOSITORY,
   type PositionRepositoryPort,
 } from '../domain/ports/position-repository.port';
-import {
-  DRIVER_ACCOUNT_LINK,
-  type DriverAccountLinkPort,
-} from './ports/driver-account-link.port';
-import { DWELL_WINDOW_MINUTES, dwellMinutesAtStop } from '../domain/dwell';
+
+import { DRIVER_ACCOUNT_LINK, type DriverAccountLinkPort } from './ports/driver-account-link.port';
 import { toPositionView } from './position.mapper';
 
 const DEFAULT_HISTORY_LIMIT = 200;
@@ -96,12 +94,37 @@ export class QueryPositionsUseCase {
     stop: { latitude: number; longitude: number },
     endedAt: Date,
   ): Promise<number | null> {
+    const result = await this.serviceMinutesAtStops(
+      tenantId,
+      driverId,
+      [{ id: 'stop', ...stop }],
+      endedAt,
+    );
+    return result.get('stop') ?? null;
+  }
+
+  /**
+   * Variante em lote para geofences: traduz o motorista e lê o rastro apenas
+   * uma vez, depois calcula cada destino em memória.
+   */
+  async serviceMinutesAtStops(
+    tenantId: string,
+    driverId: string,
+    stops: readonly { id: string; latitude: number; longitude: number }[],
+    endedAt: Date,
+  ): Promise<Map<string, number | null>> {
+    const result = new Map<string, number | null>(stops.map((stop) => [stop.id, null]));
+    if (stops.length === 0) return result;
+
     const userId = await this.link.userIdForDriver(tenantId, driverId);
-    if (!userId) return null;
+    if (!userId) return result;
 
     const from = new Date(endedAt.getTime() - DWELL_WINDOW_MINUTES * 60_000);
     const trail = await this.positions.findBetween(tenantId, userId, from, endedAt);
-    return dwellMinutesAtStop(trail, stop);
+    for (const stop of stops) {
+      result.set(stop.id, dwellMinutesAtStop(trail, stop));
+    }
+    return result;
   }
 
   /** Histórico de uma **ficha** da frota. */

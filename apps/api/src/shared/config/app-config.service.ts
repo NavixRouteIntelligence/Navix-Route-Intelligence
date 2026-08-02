@@ -158,7 +158,12 @@ export class AppConfigService {
   }
 
   get tracking() {
-    return { retentionDays: this.get('TRACKING_RETENTION_DAYS') };
+    return {
+      retentionDays: this.get('TRACKING_RETENTION_DAYS'),
+      geofenceAutomationEnabled: this.get('TRACKING_GEOFENCE_AUTOMATION_ENABLED'),
+      geofenceDwellMinutes: this.get('TRACKING_GEOFENCE_DWELL_MINUTES'),
+      geofenceCheckIntervalMs: this.get('TRACKING_GEOFENCE_CHECK_INTERVAL_MS'),
+    };
   }
 
   get observability() {

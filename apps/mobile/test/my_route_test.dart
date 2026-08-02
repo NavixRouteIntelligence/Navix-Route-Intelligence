@@ -121,8 +121,20 @@ void main() {
             },
             'params': {'vehicleType': 'van'},
             'stops': [
-              {'sequence': 1, 'deliveryId': 'd1', 'etaMinutes': 12},
-              {'sequence': 2, 'deliveryId': 'd2', 'etaMinutes': 40},
+              {
+                'sequence': 1,
+                'deliveryId': 'd1',
+                'etaMinutes': 12,
+                'latitude': 38.7223,
+                'longitude': -9.1393,
+              },
+              {
+                'sequence': 2,
+                'deliveryId': 'd2',
+                'etaMinutes': 40,
+                'latitude': 38.7369,
+                'longitude': -9.1427,
+              },
             ],
             'groups': [
               {
@@ -168,6 +180,8 @@ void main() {
       expect(route.groups.map((g) => g.type), ['commerce', 'residence']);
       expect(route.stops.first.addressLine, 'Rua A, 10');
       expect(route.stops.first.cityLine, 'Lisboa — LX');
+      expect(route.stops.first.hasNavigableCoordinates, isTrue);
+      expect(route.stops.first.latitude, 38.7223);
     },
   );
 

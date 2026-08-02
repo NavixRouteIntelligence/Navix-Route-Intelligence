@@ -25,16 +25,21 @@ import { DISTANCE_PROVIDER } from './domain/ports/distance-provider.port';
 import { ROUTING_PROVIDER } from './domain/ports/routing-provider.port';
 import { JOB_EVENTS } from './domain/ports/job-events.port';
 import { OPTIMIZATION_JOB_QUEUE } from './domain/ports/optimization-job-queue.port';
-import { DelayDetectionService, ROUTE_DELAY_EVALUATOR } from './application/delay-detection.service';
+import {
+  DelayDetectionService,
+  ROUTE_DELAY_EVALUATOR,
+} from './application/delay-detection.service';
 import { TenantScopedDelayEvaluator } from './infrastructure/reoptimization/tenant-scoped-delay-evaluator';
 import { OPTIMIZATION_JOB_REPOSITORY } from './domain/ports/optimization-job-repository.port';
 import { OPTIMIZATION_STRATEGIES } from './domain/ports/route-optimization-strategy.port';
 import { ROUTE_PLAN_REPOSITORY } from './domain/ports/route-plan-repository.port';
 import { AppConfigService } from '../../shared/config/app-config.service';
+import { CACHE, type CachePort } from '../../shared/cache/cache.port';
 import { ConfigurableCostAugmentation } from './infrastructure/augmentation/configurable-cost-augmentation';
 import { HaversineDistanceProvider } from './infrastructure/distance/haversine-distance.provider';
 import { HaversineRoutingProvider } from './infrastructure/routing/haversine-routing.provider';
 import { MapboxRoutingProvider } from './infrastructure/routing/mapbox-routing.provider';
+import { CachedRoutingProvider } from './infrastructure/routing/cached-routing.provider';
 import { RealtimeJobEvents } from './infrastructure/events/realtime-job-events';
 import { DeliveryGateway } from './infrastructure/gateways/delivery.gateway';
 import { IntelligenceServiceTimeHistory } from './infrastructure/history/intelligence-service-time-history';
@@ -97,12 +102,16 @@ import { OptimizerController } from './interface/optimizer.controller';
     {
       // Provedor de roteamento por configuração (ADR-0027); mapbox degrada p/ Haversine.
       provide: ROUTING_PROVIDER,
-      inject: [AppConfigService, HaversineRoutingProvider, MapboxRoutingProvider],
+      inject: [AppConfigService, HaversineRoutingProvider, MapboxRoutingProvider, CACHE],
       useFactory: (
         config: AppConfigService,
         haversine: HaversineRoutingProvider,
         mapbox: MapboxRoutingProvider,
-      ) => (config.maps.provider === 'mapbox' ? mapbox : haversine),
+        cache: CachePort,
+      ) => {
+        const provider = config.maps.provider === 'mapbox' ? mapbox : haversine;
+        return new CachedRoutingProvider(cache, provider, config.maps.provider);
+      },
     },
     { provide: COST_AUGMENTATION, useClass: ConfigurableCostAugmentation },
     { provide: ROUTE_PLAN_REPOSITORY, useClass: RoutePlanRepository },

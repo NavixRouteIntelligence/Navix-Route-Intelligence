@@ -5,6 +5,7 @@ import 'package:get_it/get_it.dart';
 import 'package:navix_mobile/app/theme/app_theme.dart';
 import 'package:navix_mobile/features/finance/presentation/driver_results_page.dart';
 import 'package:navix_mobile/features/route/data/my_route_repository.dart';
+import 'package:navix_mobile/features/route/domain/route_navigation.dart';
 import 'package:navix_mobile/features/route/presentation/my_route_cubit.dart';
 import 'package:navix_mobile/l10n/gen/app_localizations.dart';
 
@@ -69,6 +70,11 @@ class _FakeApi extends Interceptor {
   }
 }
 
+class _FakeNavigation implements RouteNavigationLauncher {
+  @override
+  Future<bool> open(RouteNavigationTarget target) async => false;
+}
+
 Widget _host() => MaterialApp(
       locale: const Locale('pt', 'BR'),
       theme: AppTheme.dark(),
@@ -82,7 +88,7 @@ void main() {
     final dio = Dio(BaseOptions(baseUrl: 'http://localhost'))
       ..interceptors.add(_FakeApi());
     GetIt.instance.registerFactory<MyRouteCubit>(
-      () => MyRouteCubit(MyRouteRepository(dio)),
+      () => MyRouteCubit(MyRouteRepository(dio), _FakeNavigation()),
     );
   });
 

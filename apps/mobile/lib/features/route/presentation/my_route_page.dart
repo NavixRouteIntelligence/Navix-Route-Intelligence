@@ -37,62 +37,67 @@ class MyRoutePage extends StatelessWidget {
         // Singleton: vive enquanto o app vive; não é fechado aqui.
         BlocProvider.value(value: GetIt.instance<PodSyncCubit>()),
       ],
-      child: Scaffold(
-        appBar: AppBar(
-          leading: const NavLeading(),
-          title: Text(l10n.navRoute),
-          actions: [
-            // Ação SECUNDÁRIA (ADR-0078): reorganizar. A IA é o padrão; só aparece
-            // quando há rota com paradas suficientes.
-            BlocBuilder<MyRouteCubit, MyRouteState>(
-              buildWhen: (p, c) =>
-                  p.route.isReady != c.route.isReady ||
-                  p.reorganizing != c.reorganizing,
-              builder: (context, state) =>
-                  state.route.isReady && state.route.stops.length >= 2
-                      ? IconButton(
-                          tooltip: l10n.routeReorganize,
-                          icon: const Icon(Icons.tune),
-                          onPressed: state.reorganizing
-                              ? null
-                              : () => _openReorganize(context, state.route),
-                        )
-                      : const SizedBox.shrink(),
-            ),
-          ],
-        ),
-        floatingActionButton: const VoiceAssistantButton(compact: true),
-        body: BlocConsumer<MyRouteCubit, MyRouteState>(
-          listenWhen: (p, c) => p.error != c.error && c.error != null,
-          listener: (context, state) => ScaffoldMessenger.of(context)
-            ..hideCurrentSnackBar()
-            ..showSnackBar(
-              SnackBar(content: Text(context.failureText(state.error!))),
-            ),
-          builder: (context, state) {
-            final body = switch (state.status) {
-              MyRouteLoadStatus.loading => const Center(
-                  child: CircularProgressIndicator(),
-                ),
-              MyRouteLoadStatus.error => NavixErrorState(
-                  description: state.error == null
-                      ? l10n.routeLoadError
-                      : context.failureText(state.error!),
-                  onRetry: () => context.read<MyRouteCubit>().load(),
-                ),
-              MyRouteLoadStatus.ready => _Content(state: state),
-            };
-            // Enquanto reorganiza, cobre a tela com um véu + progresso: a rota
-            // atual continua atrás, sem sensação de "recomeçar do zero".
-            return Stack(
-              children: [body, if (state.reorganizing) _ReorganizingOverlay()],
-            );
-          },
-        ),
-        bottomNavigationBar: BlocBuilder<MyRouteCubit, MyRouteState>(
-          buildWhen: (p, c) =>
-              p.route.next != c.route.next || p.status != c.status,
-          builder: (context, state) => _RegisterBar(next: state.route.next),
+      child: _RouteLifecycle(
+        child: Scaffold(
+          appBar: AppBar(
+            leading: const NavLeading(),
+            title: Text(l10n.navRoute),
+            actions: [
+              // Ação SECUNDÁRIA (ADR-0078): reorganizar. A IA é o padrão; só aparece
+              // quando há rota com paradas suficientes.
+              BlocBuilder<MyRouteCubit, MyRouteState>(
+                buildWhen: (p, c) =>
+                    p.route.isReady != c.route.isReady ||
+                    p.reorganizing != c.reorganizing,
+                builder: (context, state) =>
+                    state.route.isReady && state.route.stops.length >= 2
+                        ? IconButton(
+                            tooltip: l10n.routeReorganize,
+                            icon: const Icon(Icons.tune),
+                            onPressed: state.reorganizing
+                                ? null
+                                : () => _openReorganize(context, state.route),
+                          )
+                        : const SizedBox.shrink(),
+              ),
+            ],
+          ),
+          floatingActionButton: const VoiceAssistantButton(compact: true),
+          body: BlocConsumer<MyRouteCubit, MyRouteState>(
+            listenWhen: (p, c) => p.error != c.error && c.error != null,
+            listener: (context, state) => ScaffoldMessenger.of(context)
+              ..hideCurrentSnackBar()
+              ..showSnackBar(
+                SnackBar(content: Text(context.failureText(state.error!))),
+              ),
+            builder: (context, state) {
+              final body = switch (state.status) {
+                MyRouteLoadStatus.loading => const Center(
+                    child: CircularProgressIndicator(),
+                  ),
+                MyRouteLoadStatus.error => NavixErrorState(
+                    description: state.error == null
+                        ? l10n.routeLoadError
+                        : context.failureText(state.error!),
+                    onRetry: () => context.read<MyRouteCubit>().load(),
+                  ),
+                MyRouteLoadStatus.ready => _Content(state: state),
+              };
+              // Enquanto reorganiza, cobre a tela com um véu + progresso: a rota
+              // atual continua atrás, sem sensação de "recomeçar do zero".
+              return Stack(
+                children: [
+                  body,
+                  if (state.reorganizing) _ReorganizingOverlay()
+                ],
+              );
+            },
+          ),
+          bottomNavigationBar: BlocBuilder<MyRouteCubit, MyRouteState>(
+            buildWhen: (p, c) =>
+                p.route.next != c.route.next || p.status != c.status,
+            builder: (context, state) => _RegisterBar(next: state.route.next),
+          ),
         ),
       ),
     );
@@ -130,6 +135,42 @@ class MyRoutePage extends StatelessWidget {
         ..showSnackBar(SnackBar(content: Text(l10n.routeReorganized)));
     }
   }
+}
+
+/// Observa apenas o retorno da navegação externa. A rota permanece montada e o
+/// Cubit decide se há contexto pendente para atualizar.
+class _RouteLifecycle extends StatefulWidget {
+  const _RouteLifecycle({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_RouteLifecycle> createState() => _RouteLifecycleState();
+}
+
+class _RouteLifecycleState extends State<_RouteLifecycle>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      context.read<MyRouteCubit>().resumeFromNavigation();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 /// Véu de progresso durante a reorganização.
@@ -616,6 +657,18 @@ class _RouteHero extends StatelessWidget {
                                 ),
                               ),
                             ],
+                            const SizedBox(width: 4),
+                            IconButton(
+                              key: const ValueKey('navigate-next-stop'),
+                              tooltip: l10n.routeNavigate,
+                              visualDensity: VisualDensity.compact,
+                              icon: Icon(
+                                Icons.navigation_rounded,
+                                color: t.accent,
+                                size: 20,
+                              ),
+                              onPressed: () => _navigate(context),
+                            ),
                           ],
                         ),
                 ),
@@ -647,6 +700,20 @@ class _RouteHero extends StatelessWidget {
       if (stop.deliveryId == deliveryId) return stop.etaMinutes;
     }
     return null;
+  }
+
+  Future<void> _navigate(BuildContext context) async {
+    final opened = await context.read<MyRouteCubit>().navigateToNext();
+    if (!opened && context.mounted) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content:
+                Text(AppLocalizations.of(context).routeNavigationUnavailable),
+          ),
+        );
+    }
   }
 }
 

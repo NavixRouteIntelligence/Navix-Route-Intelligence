@@ -12,6 +12,7 @@ import 'package:navix_mobile/features/pod/data/pod_queue_store.dart';
 import 'package:navix_mobile/features/pod/data/pod_repository.dart';
 import 'package:navix_mobile/features/pod/presentation/pod_sync_cubit.dart';
 import 'package:navix_mobile/features/route/data/my_route_repository.dart';
+import 'package:navix_mobile/features/route/domain/route_navigation.dart';
 import 'package:navix_mobile/features/route/presentation/my_route_cubit.dart';
 import 'package:navix_mobile/features/route/presentation/my_route_page.dart';
 import 'package:navix_mobile/l10n/gen/app_localizations.dart';
@@ -35,6 +36,16 @@ class _FakeSpeech implements SpeechService {
   Future<void> cancel() async {}
 }
 
+class _FakeNavigation implements RouteNavigationLauncher {
+  RouteNavigationTarget? opened;
+
+  @override
+  Future<bool> open(RouteNavigationTarget target) async {
+    opened = target;
+    return true;
+  }
+}
+
 class _FakeApi extends Interceptor {
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
@@ -47,8 +58,20 @@ class _FakeApi extends Interceptor {
                 'metrics': {'totalDistanceKm': 10, 'totalTimeMinutes': 60},
                 'savings': {'distanceKm': 2, 'distancePct': 17},
                 'stops': [
-                  {'sequence': 1, 'deliveryId': 'd1', 'etaMinutes': 20},
-                  {'sequence': 2, 'deliveryId': 'd2', 'etaMinutes': 45},
+                  {
+                    'sequence': 1,
+                    'deliveryId': 'd1',
+                    'etaMinutes': 20,
+                    'latitude': 38.7223,
+                    'longitude': -9.1393,
+                  },
+                  {
+                    'sequence': 2,
+                    'deliveryId': 'd2',
+                    'etaMinutes': 45,
+                    'latitude': 41.1579,
+                    'longitude': -8.6291,
+                  },
                 ],
                 'groups': [
                   {
@@ -118,9 +141,11 @@ void main() {
     when(
       () => conn.onlineChanges,
     ).thenAnswer((_) => const Stream<bool>.empty());
+    final navigation = _FakeNavigation();
     GetIt.instance
+      ..registerSingleton<RouteNavigationLauncher>(navigation)
       ..registerFactory<MyRouteCubit>(
-        () => MyRouteCubit(MyRouteRepository(dio)),
+        () => MyRouteCubit(MyRouteRepository(dio), navigation),
       )
       ..registerFactory<VoiceAssistantCubit>(
         () => VoiceAssistantCubit(_FakeSpeech(), _MockIntel()),
@@ -191,6 +216,19 @@ void main() {
       expect(button.onPressed, isNotNull);
     },
   );
+
+  testWidgets('abre navegação externa para a próxima parada', (tester) async {
+    await pumpPhone(tester);
+
+    await tester.tap(find.byKey(const ValueKey('navigate-next-stop')));
+    await tester.pump();
+
+    final target = GetIt.instance<RouteNavigationLauncher>() as _FakeNavigation;
+    expect(target.opened?.deliveryId, 'd2');
+    expect(target.opened?.latitude, 41.1579);
+    expect(target.opened?.uri.host, 'www.google.com');
+    expect(target.opened?.uri.queryParameters['dir_action'], 'navigate');
+  });
 
   testWidgets('a ação de reorganizar abre o sheet com IA (padrão) e Manual', (
     tester,

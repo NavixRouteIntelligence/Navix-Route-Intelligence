@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/error/failure.dart';
 import '../data/my_route_repository.dart';
 import '../domain/my_route.dart';
+import '../domain/route_navigation.dart';
 
 enum MyRouteLoadStatus { loading, ready, error }
 
@@ -49,9 +50,12 @@ class MyRouteState extends Equatable {
 }
 
 class MyRouteCubit extends Cubit<MyRouteState> {
-  MyRouteCubit(this._repository) : super(const MyRouteState());
+  MyRouteCubit(this._repository, this._navigation)
+      : super(const MyRouteState());
 
   final MyRouteRepository _repository;
+  final RouteNavigationLauncher _navigation;
+  String? _navigationDeliveryId;
 
   Future<void> load() async {
     emit(state.copyWith(status: MyRouteLoadStatus.loading));
@@ -67,6 +71,42 @@ class MyRouteCubit extends Cubit<MyRouteState> {
     final next = Set<String>.from(state.expanded);
     if (!next.remove(type)) next.add(type);
     emit(state.copyWith(expanded: next));
+  }
+
+  /// Abre a navegação da próxima parada sem alterar o estado da entrega.
+  Future<bool> navigateToNext() async {
+    final next = state.route.next;
+    if (next == null) return false;
+    RouteStopInfo? stop;
+    for (final candidate in state.route.stops) {
+      if (candidate.deliveryId == next.id) {
+        stop = candidate;
+        break;
+      }
+    }
+    if (stop == null || !stop.hasNavigableCoordinates) return false;
+
+    final opened = await _navigation.open(
+      RouteNavigationTarget(
+        deliveryId: stop.deliveryId,
+        latitude: stop.latitude!,
+        longitude: stop.longitude!,
+      ),
+    );
+    if (opened) _navigationDeliveryId = stop.deliveryId;
+    return opened;
+  }
+
+  /// Ao regressar do mapa, mantém a tela atual e atualiza o contexto da rota.
+  Future<void> resumeFromNavigation() async {
+    if (_navigationDeliveryId == null) return;
+    _navigationDeliveryId = null;
+    try {
+      final route = await _repository.load();
+      emit(state.copyWith(status: MyRouteLoadStatus.ready, route: route));
+    } on Failure catch (failure) {
+      emit(state.copyWith(error: failure));
+    }
   }
 
   /// Reorganiza a rota (IA ou manual) e recarrega. [order] é a sequência de

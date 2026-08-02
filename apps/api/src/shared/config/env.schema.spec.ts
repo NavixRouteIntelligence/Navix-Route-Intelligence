@@ -74,4 +74,14 @@ describe('validateEnv — guarda de produção (ADR-0052)', () => {
       /Configuração de ambiente inválida/,
     );
   });
+
+  it('valida os limites da automação de geofence', () => {
+    const env = validateEnv(baseEnv);
+    expect(env.TRACKING_GEOFENCE_AUTOMATION_ENABLED).toBe(true);
+    expect(env.TRACKING_GEOFENCE_DWELL_MINUTES).toBe(2);
+    expect(env.TRACKING_GEOFENCE_CHECK_INTERVAL_MS).toBe(30_000);
+    expect(() => validateEnv({ ...baseEnv, TRACKING_GEOFENCE_CHECK_INTERVAL_MS: '1000' })).toThrow(
+      /Configuração de ambiente inválida/,
+    );
+  });
 });

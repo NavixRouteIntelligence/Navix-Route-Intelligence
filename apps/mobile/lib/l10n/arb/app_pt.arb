@@ -219,6 +219,8 @@
   "routeProgressCount": "{completed} de {total} entregas",
   "routeProgressRemaining": "{count} restantes",
   "routeNextStop": "Próxima parada",
+  "routeNavigate": "Navegar",
+  "routeNavigationUnavailable": "Não foi possível abrir a navegação neste dispositivo.",
   "routeAllDeliveriesDone": "Todas as entregas foram finalizadas",
   "routeSummaryTitle": "Resumo da rota",
   "routeStatusReady": "Pronta",

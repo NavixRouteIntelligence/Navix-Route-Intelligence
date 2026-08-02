@@ -1,11 +1,15 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
+import { DeliveryModule } from '../delivery/delivery.module';
 import { FleetModule } from '../fleet/fleet.module';
+
 import { BatchUpdatePositionsUseCase } from './application/batch-update-positions.use-case';
+import { GeofenceStatusAutomationService } from './application/geofence-status-automation.service';
+import { DRIVER_ACCOUNT_LINK } from './application/ports/driver-account-link.port';
+import { GEOFENCE_STATUS_AUTOMATION } from './application/ports/geofence-status-automation.port';
 import { QueryPositionsUseCase } from './application/query-positions.use-case';
 import { UpdatePositionUseCase } from './application/update-position.use-case';
-import { DRIVER_ACCOUNT_LINK } from './application/ports/driver-account-link.port';
 import { POSITION_REPOSITORY } from './domain/ports/position-repository.port';
 import { TRACKING_EVENTS } from './domain/ports/tracking-events.port';
 import { RealtimeTrackingEvents } from './infrastructure/events/realtime-tracking-events';
@@ -23,12 +27,16 @@ import { TrackingController } from './interface/tracking.controller';
   // FleetModule entra para traduzir ficha↔login (ADR-0086), sempre pela API
   // pública `FLEET_LOOKUP`. A direção só aponta para baixo — o Fleet não
   // conhece o Tracking —, então não há ciclo.
-  imports: [TypeOrmModule.forFeature([DriverPositionOrmEntity]), FleetModule],
+  imports: [TypeOrmModule.forFeature([DriverPositionOrmEntity]), FleetModule, DeliveryModule],
   controllers: [TrackingController],
   providers: [
     UpdatePositionUseCase,
     BatchUpdatePositionsUseCase,
     QueryPositionsUseCase,
+    {
+      provide: GEOFENCE_STATUS_AUTOMATION,
+      useClass: GeofenceStatusAutomationService,
+    },
     { provide: POSITION_REPOSITORY, useClass: PositionRepository },
     { provide: TRACKING_EVENTS, useClass: RealtimeTrackingEvents },
     { provide: DRIVER_ACCOUNT_LINK, useClass: DriverAccountLinkGateway },
