@@ -10,6 +10,8 @@ import 'package:navix_mobile/features/intelligence/data/intelligence_repository.
 import 'package:navix_mobile/features/intelligence/presentation/voice_assistant_cubit.dart';
 import 'package:navix_mobile/features/pod/data/pod_queue_store.dart';
 import 'package:navix_mobile/features/pod/data/pod_repository.dart';
+import 'package:navix_mobile/features/performance/data/driver_performance_repository.dart';
+import 'package:navix_mobile/features/performance/presentation/driver_performance_cubit.dart';
 import 'package:navix_mobile/features/pod/presentation/pod_sync_cubit.dart';
 import 'package:navix_mobile/features/route/data/my_route_repository.dart';
 import 'package:navix_mobile/features/route/domain/route_navigation.dart';
@@ -152,6 +154,12 @@ void main() {
       )
       ..registerSingleton<PodSyncCubit>(
         PodSyncCubit(_MockPodRepo(), _MockQueue(), conn),
+      )
+      // O cartão de desempenho (ADR-0097) vive na Minha Rota. O `_FakeApi` não
+      // conhece `/me/performance`, então ele cai no estado vazio — o que estes
+      // testes exigem é que a rota siga utilizável de qualquer forma.
+      ..registerFactory<DriverPerformanceCubit>(
+        () => DriverPerformanceCubit(DriverPerformanceRepository(dio)),
       );
   });
 

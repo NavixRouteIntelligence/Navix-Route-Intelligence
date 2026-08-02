@@ -295,5 +295,20 @@
   "inviteSubmit": "Crear cuenta",
   "invitePrivacy": "Tu cuenta pertenece solo a esta empresa.",
   "inviteNotFound": "Invitación inválida o vencida. Pide una nueva.",
-  "inviteHaveOne": "Tengo una invitación"
+  "inviteHaveOne": "Tengo una invitación",
+  "perfTitle": "Mi desempeño",
+  "perfWindow": "últimos 30 días",
+  "perfEmpty": "Todavía no hay días trabajados en el período.",
+  "perfDelivered": "Entregadas",
+  "perfWorkedDays": "Días trabajados",
+  "perfSuccessRate": "Tasa de éxito",
+  "perfOnTimeRate": "A tiempo",
+  "perfStreakDays": "{count, plural, =1{1 día sin fallos} other{{count} días seguidos sin fallos}}",
+  "perfStreakHint": "Los días de descanso no rompen la racha.",
+  "perfGoal": "Tu meta",
+  "perfGoalSemantics": "Meta: {current}% de {target}%",
+  "perfGoalHint": "La meta es tu propia media — nadie más entra en la cuenta.",
+  "perfGoalMet": "Meta cumplida. Ahora toca mantenerla, no superarla.",
+  "perfRestTitle": "Llevas {hours}h en la carretera hoy",
+  "perfRestHint": "Vale una pausa. Nada de esto mejora si conduces cansado."
 }

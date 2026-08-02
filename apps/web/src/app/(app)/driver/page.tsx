@@ -20,6 +20,7 @@ import dynamic from 'next/dynamic';
 import { useState } from 'react';
 
 import { DriverInsights } from '@/components/driver/driver-insights';
+import { DriverPerformanceCard } from '@/components/driver/driver-performance-card';
 import { DriverStopIntelligence } from '@/components/driver/driver-stop-intelligence';
 import { VoiceAssistantButton } from '@/components/driver/voice-assistant-button';
 import { PodCapture } from '@/components/pod/pod-capture';
@@ -282,6 +283,9 @@ export default function DriverDashboardPage() {
 
       {/* IA Insights — paridade com o app do motorista */}
       <DriverInsights plan={plan} remaining={remaining} trackingActive={share.sharing || trackStatus !== 'offline'} />
+
+      {/* Desempenho consolidado, meta e sequência (ADR-0097). */}
+      <DriverPerformanceCard />
 
       {plans.isLoading ? (
         <Skeleton className="h-[420px] w-full" />

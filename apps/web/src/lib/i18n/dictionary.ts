@@ -226,6 +226,26 @@ const pt_BR = {
   'kpi.window': 'últimos 30 dias',
   'kpi.noData': 'Sem dados no período',
   'kpi.deliveriesFinished': 'entregas finalizadas',
+
+  // Desempenho do motorista (ADR-0097). Sem ranking, sem média da frota, sem
+  // nada por hora — ver a nota do domínio.
+  'perf.title': 'Meu desempenho',
+  'perf.window': 'últimos 30 dias',
+  'perf.empty': 'Ainda sem dias trabalhados no período.',
+  'perf.delivered': 'Entregues',
+  'perf.workedDays': 'Dias trabalhados',
+  'perf.successRate': 'Taxa de sucesso',
+  'perf.onTimeRate': 'No prazo',
+  'perf.streak.day': 'dia seguido sem falha',
+  'perf.streak.days': 'dias seguidos sem falha',
+  'perf.streak.hint': 'Dias de folga não quebram a sequência.',
+  'perf.goal': 'Sua meta',
+  'perf.goal.of': 'de',
+  'perf.goal.hint': 'A meta é a sua própria média — ninguém mais entra na conta.',
+  'perf.goal.met': 'Meta cumprida. Agora é manter, não superar.',
+  'perf.rest.title': 'Você já está na estrada há',
+  'perf.rest.hours': 'h hoje',
+  'perf.rest.hint': 'Vale uma pausa. Nada aqui melhora se você dirigir cansado.',
 };
 
 type Keys = typeof pt_BR;
@@ -274,6 +294,11 @@ const pt_PT: Keys = {
   'kpi.costPerDelivery': 'Custo por entrega',
   'kpi.window': 'últimos 30 dias',
   'kpi.noData': 'Sem dados no período',
+
+  'perf.empty': 'Ainda sem dias trabalhados no período.',
+  'perf.workedDays': 'Dias trabalhados',
+  'perf.goal.hint': 'A meta é a sua própria média — mais ninguém entra na conta.',
+  'perf.rest.hint': 'Vale uma pausa. Nada aqui melhora se conduzir cansado.',
 };
 
 const en: Keys = {
@@ -481,6 +506,26 @@ const en: Keys = {
   'kpi.window': 'last 30 days',
   'kpi.noData': 'No data in the period',
   'kpi.deliveriesFinished': 'finished deliveries',
+
+  // Driver performance (ADR-0097). No ranking, no fleet average, nothing
+  // per-hour — see the domain note.
+  'perf.title': 'My performance',
+  'perf.window': 'last 30 days',
+  'perf.empty': 'No working days in this period yet.',
+  'perf.delivered': 'Delivered',
+  'perf.workedDays': 'Days worked',
+  'perf.successRate': 'Success rate',
+  'perf.onTimeRate': 'On time',
+  'perf.streak.day': 'day in a row with no failed delivery',
+  'perf.streak.days': 'days in a row with no failed delivery',
+  'perf.streak.hint': 'Days off do not break the streak.',
+  'perf.goal': 'Your goal',
+  'perf.goal.of': 'of',
+  'perf.goal.hint': 'The goal is your own average — nobody else is counted.',
+  'perf.goal.met': 'Goal met. Now it is about keeping it, not beating it.',
+  'perf.rest.title': 'You have been on the road for',
+  'perf.rest.hours': 'h today',
+  'perf.rest.hint': 'Worth a break. Nothing here improves if you drive tired.',
 };
 
 const es: Keys = {
@@ -688,6 +733,26 @@ const es: Keys = {
   'kpi.window': 'últimos 30 días',
   'kpi.noData': 'Sin datos en el período',
   'kpi.deliveriesFinished': 'entregas finalizadas',
+
+  // Desempeño del conductor (ADR-0097). Sin ranking, sin media de la flota, sin
+  // nada por hora — ver la nota del dominio.
+  'perf.title': 'Mi desempeño',
+  'perf.window': 'últimos 30 días',
+  'perf.empty': 'Todavía no hay días trabajados en el período.',
+  'perf.delivered': 'Entregadas',
+  'perf.workedDays': 'Días trabajados',
+  'perf.successRate': 'Tasa de éxito',
+  'perf.onTimeRate': 'A tiempo',
+  'perf.streak.day': 'día seguido sin fallos',
+  'perf.streak.days': 'días seguidos sin fallos',
+  'perf.streak.hint': 'Los días de descanso no rompen la racha.',
+  'perf.goal': 'Tu meta',
+  'perf.goal.of': 'de',
+  'perf.goal.hint': 'La meta es tu propia media — nadie más entra en la cuenta.',
+  'perf.goal.met': 'Meta cumplida. Ahora toca mantenerla, no superarla.',
+  'perf.rest.title': 'Llevas en la carretera',
+  'perf.rest.hours': 'h hoy',
+  'perf.rest.hint': 'Vale una pausa. Nada de esto mejora si conduces cansado.',
 };
 
 export const DICTIONARY: Record<Locale, Keys> = {

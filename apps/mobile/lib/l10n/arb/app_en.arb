@@ -435,5 +435,47 @@
   "inviteSubmit": "Create account",
   "invitePrivacy": "Your account belongs to this company only.",
   "inviteNotFound": "Invalid or expired invitation. Ask for a new one.",
-  "inviteHaveOne": "I have an invitation"
+  "inviteHaveOne": "I have an invitation",
+  "perfTitle": "My performance",
+  "perfWindow": "last 30 days",
+  "perfEmpty": "No working days in this period yet.",
+  "perfDelivered": "Delivered",
+  "perfWorkedDays": "Days worked",
+  "perfSuccessRate": "Success rate",
+  "perfOnTimeRate": "On time",
+  "perfStreakDays": "{count, plural, =1{1 day in a row with no failed delivery} other{{count} days in a row with no failed delivery}}",
+  "@perfStreakDays": {
+    "description": "Sequência de dias trabalhados sem falha (ADR-0097).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "perfStreakHint": "Days off do not break the streak.",
+  "perfGoal": "Your goal",
+  "perfGoalSemantics": "Goal: {current}% of {target}%",
+  "@perfGoalSemantics": {
+    "description": "Rótulo da barra de meta para leitor de tela.",
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "target": {
+        "type": "int"
+      }
+    }
+  },
+  "perfGoalHint": "The goal is your own average — nobody else is counted.",
+  "perfGoalMet": "Goal met. Now it is about keeping it, not beating it.",
+  "perfRestTitle": "You have been on the road for {hours}h today",
+  "@perfRestTitle": {
+    "description": "Sugestão de descanso após um dia longo.",
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "perfRestHint": "Worth a break. Nothing here improves if you drive tired."
 }
