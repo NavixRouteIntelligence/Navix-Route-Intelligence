@@ -12,6 +12,7 @@ import '../../../core/ui/navix_states.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../../intelligence/presentation/voice_assistant_button.dart';
 import '../../intelligence/presentation/voice_assistant_cubit.dart';
+import '../../performance/presentation/driver_performance_card.dart';
 import '../../pod/presentation/pod_capture_sheet.dart';
 import '../../pod/presentation/pod_sync_cubit.dart';
 import '../data/my_route_repository.dart';
@@ -416,6 +417,9 @@ class _Content extends StatelessWidget {
           _RouteHero(route: route),
           const SizedBox(height: 12),
           _Summary(route: route),
+          const SizedBox(height: 12),
+          // Desempenho consolidado, meta e sequência (ADR-0097).
+          const DriverPerformanceCard(),
           const SizedBox(height: 20),
           NavixSectionHeader(
             title: l10n.routeDestinationTypes,

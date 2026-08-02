@@ -1,5 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
 
+import {
+  DRIVER_KPI_REPOSITORY,
+  type DriverKpiRepositoryPort,
+} from '../domain/ports/driver-kpi-repository.port';
 import { KPI_REPOSITORY, type KpiRepositoryPort } from '../domain/ports/kpi-repository.port';
 
 import { isoDay } from './get-kpi-summary.use-case';
@@ -18,7 +22,10 @@ const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
  */
 @Injectable()
 export class RebuildKpisUseCase {
-  constructor(@Inject(KPI_REPOSITORY) private readonly kpis: KpiRepositoryPort) {}
+  constructor(
+    @Inject(KPI_REPOSITORY) private readonly kpis: KpiRepositoryPort,
+    @Inject(DRIVER_KPI_REPOSITORY) private readonly driverKpis: DriverKpiRepositoryPort,
+  ) {}
 
   day(tenantId: string, at: Date | string = new Date()): Promise<void> {
     const day = typeof at === 'string' ? at : isoDay(at);
@@ -33,7 +40,9 @@ export class RebuildKpisUseCase {
     // Sequencial de propósito: recomputar é I/O de banco, e disparar 365
     // consultas em paralelo competiria com o tráfego real do tenant.
     for (let i = 0; i < total; i++) {
-      await this.kpis.rebuildDay(tenantId, isoDay(new Date(hoje - i * 24 * 60 * 60 * 1000)));
+      const dia = isoDay(new Date(hoje - i * 24 * 60 * 60 * 1000));
+      await this.kpis.rebuildDay(tenantId, dia);
+      await this.driverKpis.rebuildDay(tenantId, dia);
     }
     return total;
   }

@@ -16,6 +16,8 @@ import '../../features/intelligence/data/intelligence_repository.dart';
 import '../../features/intelligence/presentation/stop_intelligence_cubit.dart';
 import '../../features/intelligence/presentation/voice_assistant_cubit.dart';
 import '../voice/speech_service.dart';
+import '../../features/performance/data/driver_performance_repository.dart';
+import '../../features/performance/presentation/driver_performance_cubit.dart';
 import '../../features/route/data/my_route_repository.dart';
 import '../../features/route/data/url_route_navigation_launcher.dart';
 import '../../features/route/domain/route_navigation.dart';
@@ -148,6 +150,12 @@ Future<void> configureDependencies(AppConfig config) async {
         getIt<MyRouteRepository>(),
         getIt<RouteNavigationLauncher>(),
       ),
+    )
+    ..registerLazySingleton<DriverPerformanceRepository>(
+      () => DriverPerformanceRepository(getIt<DioClient>().apiDio),
+    )
+    ..registerFactory<DriverPerformanceCubit>(
+      () => DriverPerformanceCubit(getIt<DriverPerformanceRepository>()),
     )
     ..registerLazySingleton<TariffStore>(() => TariffStore())
     ..registerFactory<EarningsCubit>(() => EarningsCubit(getIt<TariffStore>()))
