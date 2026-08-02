@@ -441,6 +441,28 @@ POST /api/v1/intelligence/voice-command     # assistente por voz: classifica a i
 - **`POST /intelligence/voice-command`** — classifica a **intenção** de um comando falado. Payload: `{ transcript, locale? }` (a transcrição vem do STT do navegador). Resposta (`VoiceCommandView`): `{ intent ('next_stop'|'route_summary'|'remaining'|'mark_delivered'|'report_parking'|'help'|'unknown'), confidence, slots {parkingDifficulty?} }`.
 - **STT/TTS no navegador** (Web Speech API); o backend só faz NLU (heurística de palavras-chave PT/EN/ES atrás do `VoiceCommandInterpreterPort`, plugável para NLU/LLM). A resposta falada é **montada e localizada no cliente** a partir da intenção. Componente web `VoiceAssistantButton` com _fallback_ quando não há suporte. O assistente **não executa ações** — o host reage à intenção.
 
+### 14.8 Enterprise e white-label
+
+**Público, antes do login**
+
+```http
+GET /api/v1/public/enterprise/branding/resolve?host=cliente.navix.pt
+```
+
+Resolve apenas nome, logo, cores e slug pelo subdomínio padrão ou por um domínio próprio verificado. Host desconhecido devolve `data: null`; o cliente deve usar a marca Navix como fallback.
+
+**Admin do tenant (JWT; escrita com papel `admin`)**
+
+```http
+GET   /api/v1/enterprise/branding
+PATCH /api/v1/enterprise/branding
+POST  /api/v1/enterprise/branding/domain/verify
+```
+
+O `GET` é autenticado e permite que todos os papéis apliquem a marca do próprio tenant. O `PATCH` e a verificação exigem `admin`; aceitam `displayName`, `logoUrl` HTTPS, cores `#RRGGBB` e `customDomain`. White-label e verificação de domínio exigem plano Enterprise. Ao alterar o domínio, a verificação anterior é invalidada. A resposta administrativa inclui as instruções TXT enquanto o domínio estiver pendente.
+
+O SSO SAML/OIDC possui apenas uma port interna com adaptador _fail closed_; não há callback público até a implementação segura de um provedor.
+
 ## 15. Documentação viva
 
 - OpenAPI/Swagger exposto em ambiente não-produtivo.
@@ -498,3 +520,4 @@ GET /api/v1/health/ready     -> 200 | 503 (Postgres duro; Redis reportado, não 
 | 2026-07-15 | 0.31 | Design+Arch | Assistente por voz: POST /intelligence/voice-command (VoiceCommandInterpreterPort — intenção PT/EN/ES); VoiceAssistantButton (Web Speech API) no web (§14.7, ADR-0032) |
 | 2026-07-16 | 0.32 | Arquitetura | Estacionamento ciente da comunidade: ParkingPredictorPort assíncrona/por tenant + CommunityAwareParkingPredictor realimenta a previsão com a coletiva (§14.7, ADR-0034) |
 | 2026-08-02 | 0.33 | Arquitetura | API pública com API keys escopadas/quotas e webhooks de saída assinados, transacionais e resilientes (ADR-0094) |
+| 2026-08-02 | 0.34 | Arquitetura | Base Enterprise: branding por tenant, subdomínio/domínio verificado e seam SSO fail-closed (§14.8, ADR-0096) |
