@@ -52,41 +52,40 @@ class _FakeApi extends Interceptor {
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
     final body = options.path.contains('route-plans')
+        // Rota vigente do motorista: um plano só, não uma lista (ADR-0098).
         ? {
-            'data': [
-              {
-                'id': 'p1',
-                'createdAt': '2026-07-23T09:00:00.000Z',
-                'metrics': {'totalDistanceKm': 10, 'totalTimeMinutes': 60},
-                'savings': {'distanceKm': 2, 'distancePct': 17},
-                'stops': [
-                  {
-                    'sequence': 1,
-                    'deliveryId': 'd1',
-                    'etaMinutes': 20,
-                    'latitude': 38.7223,
-                    'longitude': -9.1393,
-                  },
-                  {
-                    'sequence': 2,
-                    'deliveryId': 'd2',
-                    'etaMinutes': 45,
-                    'latitude': 41.1579,
-                    'longitude': -8.6291,
-                  },
-                ],
-                'groups': [
-                  {
-                    'type': 'commerce',
-                    'order': 1,
-                    'stops': 2,
-                    'sequences': [1, 2],
-                    'distanceKm': 10.0,
-                    'timeMinutes': 45,
-                  },
-                ],
-              },
-            ],
+            'data': {
+              'id': 'p1',
+              'createdAt': '2026-07-23T09:00:00.000Z',
+              'metrics': {'totalDistanceKm': 10, 'totalTimeMinutes': 60},
+              'savings': {'distanceKm': 2, 'distancePct': 17},
+              'stops': [
+                {
+                  'sequence': 1,
+                  'deliveryId': 'd1',
+                  'etaMinutes': 20,
+                  'latitude': 38.7223,
+                  'longitude': -9.1393,
+                },
+                {
+                  'sequence': 2,
+                  'deliveryId': 'd2',
+                  'etaMinutes': 45,
+                  'latitude': 41.1579,
+                  'longitude': -8.6291,
+                },
+              ],
+              'groups': [
+                {
+                  'type': 'commerce',
+                  'order': 1,
+                  'stops': 2,
+                  'sequences': [1, 2],
+                  'distanceKm': 10.0,
+                  'timeMinutes': 45,
+                },
+              ],
+            },
           }
         : {
             'data': [

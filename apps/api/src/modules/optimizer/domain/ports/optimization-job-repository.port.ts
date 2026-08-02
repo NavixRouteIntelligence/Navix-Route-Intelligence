@@ -10,6 +10,8 @@ import type {
 /** Requisição de otimização persistida no job (o comando, sem o `tenantId`). */
 export interface OptimizationJobRequest {
   actorId: string;
+  /** Ficha do motorista dono da rota (ADR-0098), quando há uma. */
+  driverId?: string | null;
   origin?: OriginInput | null;
   deliveryIds?: string[];
   stops?: OptimizationStopInput[];

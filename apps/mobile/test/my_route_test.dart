@@ -6,15 +6,21 @@ import 'package:navix_mobile/features/route/domain/my_route.dart';
 
 /// Interceptor que responde às duas chamadas do repositório sem rede.
 class _FakeApi extends Interceptor {
-  _FakeApi({required this.plans, required this.deliveries});
+  _FakeApi({required this.plans, required this.deliveries, this.paths});
+
+  /// Caminhos chamados, quando o teste quiser inspecioná-los.
+  final List<String>? paths;
 
   final List<Map<String, dynamic>> plans;
   final List<Map<String, dynamic>> deliveries;
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+    paths?.add(options.path);
+    // `/route-plans/mine/active` devolve **um** plano (ou null), não uma lista
+    // — a rota vigente já vem resolvida para o motorista (ADR-0098).
     final body = options.path.contains('route-plans')
-        ? {'data': plans}
+        ? {'data': plans.isEmpty ? null : plans.first}
         : {'data': deliveries};
     handler.resolve(
       Response(requestOptions: options, statusCode: 200, data: body),
@@ -64,10 +70,13 @@ class _ReorgApi extends Interceptor {
 MyRouteRepository repo({
   List<Map<String, dynamic>> plans = const [],
   List<Map<String, dynamic>> deliveries = const [],
+  List<String>? paths,
 }) {
   final dio = Dio(BaseOptions(baseUrl: 'http://localhost'))
     ..httpClientAdapter = IOHttpClientAdapter()
-    ..interceptors.add(_FakeApi(plans: plans, deliveries: deliveries));
+    ..interceptors.add(
+      _FakeApi(plans: plans, deliveries: deliveries, paths: paths),
+    );
   return MyRouteRepository(dio);
 }
 
@@ -88,6 +97,18 @@ Map<String, dynamic> delivery(
     };
 
 void main() {
+  // Guarda de regressão do defeito que a ADR-0098 conserta: enquanto a rota
+  // vinha de `/route-plans?pageSize=1`, o app mostrava o plano mais recente do
+  // **tenant** — numa frota, a rota de outro motorista.
+  test('a rota vem do endpoint do próprio motorista', () async {
+    final paths = <String>[];
+
+    await repo(deliveries: [delivery('d1', 'Rua A')], paths: paths).load();
+
+    expect(paths, contains('/route-plans/mine/active'));
+    expect(paths.any((p) => p.startsWith('/route-plans?')), isFalse);
+  });
+
   test('sem plano e sem entregas suficientes: rota vazia', () async {
     final route = await repo(deliveries: [delivery('d1', 'Rua A')]).load();
 

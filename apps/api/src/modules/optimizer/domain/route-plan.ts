@@ -13,6 +13,20 @@ import { newId } from '../../../shared/kernel/id';
 export interface RoutePlanProps {
   id: string;
   tenantId: string;
+  /**
+   * **Ficha** do motorista dono da rota (ADR-0086/0098). Nula em dois casos
+   * legítimos: o motorista autônomo, que não tem ficha, e o plano de frota do
+   * despacho, que cobre vários veículos e não pertence a uma pessoa só.
+   */
+  driverId: string | null;
+  /**
+   * Dia operacional a que o plano pertence (`YYYY-MM-DD`).
+   *
+   * É o eixo por onde a rota vigente é encontrada. Derivado de `createdAt` na
+   * criação — e a mesma derivação é usada na leitura, o que importa mais do que
+   * qual fuso se escolhe: escrita e leitura têm de concordar.
+   */
+  operationalDay: string;
   strategy: OptimizationStrategyName;
   status: 'completed';
   params: RoutePlanParams;
@@ -31,7 +45,12 @@ export interface RoutePlanProps {
   createdAt: Date;
 }
 
-export type NewRoutePlan = Omit<RoutePlanProps, 'id' | 'createdAt'>;
+export type NewRoutePlan = Omit<RoutePlanProps, 'id' | 'createdAt' | 'operationalDay'>;
+
+/** Dia operacional de um instante (`YYYY-MM-DD`). Ver a nota em `operationalDay`. */
+export function operationalDayOf(at: Date): string {
+  return at.toISOString().slice(0, 10);
+}
 
 /**
  * Resultado de uma otimização, persistido para histórico, auditoria e futura
@@ -41,7 +60,13 @@ export class RoutePlan {
   private constructor(private readonly props: RoutePlanProps) {}
 
   static create(data: NewRoutePlan): RoutePlan {
-    return new RoutePlan({ ...data, id: newId(), createdAt: new Date() });
+    const createdAt = new Date();
+    return new RoutePlan({
+      ...data,
+      id: newId(),
+      createdAt,
+      operationalDay: operationalDayOf(createdAt),
+    });
   }
 
   static restore(props: RoutePlanProps): RoutePlan {
@@ -54,5 +79,9 @@ export class RoutePlan {
 
   get id(): string {
     return this.props.id;
+  }
+
+  get driverId(): string | null {
+    return this.props.driverId;
   }
 }

@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   HttpCode,
+  Inject,
   HttpStatus,
   Param,
   ParseUUIDPipe,
@@ -27,9 +28,14 @@ import { Idempotent } from '../../../shared/idempotency/idempotency.decorator';
 import { Roles } from '../../../shared/security/roles.decorator';
 import { RolesGuard } from '../../../shared/security/roles.guard';
 import { EnqueueOptimizationUseCase } from '../application/enqueue-optimization.use-case';
+import { GetActiveRoutePlanUseCase } from '../application/get-active-route-plan.use-case';
 import { GetOptimizationJobUseCase } from '../application/get-optimization-job.use-case';
 import { GetRoutePlanUseCase } from '../application/get-route-plan.use-case';
 import { ListRoutePlansUseCase } from '../application/list-route-plans.use-case';
+import {
+  DRIVER_ROSTER_LINK,
+  type DriverRosterLinkPort,
+} from '../application/ports/driver-roster-link.port';
 import { ReoptimizeActiveUseCase } from '../application/reoptimize-active.use-case';
 import { ListRoutePlansQueryDto } from './dto/list-query.dto';
 import { OptimizeRouteDto } from './dto/optimize-route.dto';
@@ -43,6 +49,8 @@ const BASE_PATH = '/api/v1/route-plans';
 export class OptimizerController {
   constructor(
     private readonly enqueue: EnqueueOptimizationUseCase,
+    private readonly activePlan: GetActiveRoutePlanUseCase,
+    @Inject(DRIVER_ROSTER_LINK) private readonly roster: DriverRosterLinkPort,
     private readonly getJob: GetOptimizationJobUseCase,
     private readonly getPlan: GetRoutePlanUseCase,
     private readonly listPlans: ListRoutePlansUseCase,
@@ -80,11 +88,32 @@ export class OptimizerController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: OptimizeRouteDto,
   ): Promise<ResourceResponse<OptimizationJobAccepted>> {
+    // A ficha vem do login autenticado (ADR-0086/0098), nunca do corpo: é o que
+    // impede alguém de carimbar a própria otimização com o motorista de outro.
+    const driverId = await this.roster.driverIdForUser(user.tenantId, user.id);
     const data = await this.enqueue.execute({
       ...dto,
       tenantId: user.tenantId,
       actorId: user.id,
+      driverId,
     });
+    return { data };
+  }
+
+  /**
+   * Rota vigente do próprio motorista (ADR-0098).
+   *
+   * Existe porque a regra "a mais recente do tenant, `pageSize=1`" vivia
+   * duplicada no app e no web — e numa frota devolvia a rota de outra pessoa.
+   * Não há parâmetro de motorista: quem pergunta é quem recebe.
+   */
+  @Get('mine/active')
+  @Roles('driver')
+  @ApiOperation({ summary: 'Rota vigente do motorista autenticado no dia operacional' })
+  async mineActive(
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<ResourceResponse<RoutePlanView | null>> {
+    const data = await this.activePlan.execute(user.tenantId, user.id);
     return { data };
   }
 

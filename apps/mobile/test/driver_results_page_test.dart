@@ -13,31 +13,30 @@ class _FakeApi extends Interceptor {
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
     final body = options.path.contains('route-plans')
+        // Rota vigente do motorista: um plano só, não uma lista (ADR-0098).
         ? {
-            'data': [
-              {
-                'id': 'plan-1',
-                'metrics': {
-                  'totalDistanceKm': 30,
-                  'totalTimeMinutes': 90,
-                },
-                'baseline': {
-                  'totalDistanceKm': 40,
-                  'totalTimeMinutes': 120,
-                },
-                'savings': {
-                  'distanceKm': 10,
-                  'distancePct': 25,
-                  'timeMinutes': 30,
-                  'timePct': 25,
-                },
-                'params': {'vehicleType': 'car'},
-                'stops': [
-                  {'sequence': 1, 'deliveryId': 'd1', 'etaMinutes': 30},
-                  {'sequence': 2, 'deliveryId': 'd2', 'etaMinutes': 60},
-                ],
+            'data': {
+              'id': 'plan-1',
+              'metrics': {
+                'totalDistanceKm': 30,
+                'totalTimeMinutes': 90,
               },
-            ],
+              'baseline': {
+                'totalDistanceKm': 40,
+                'totalTimeMinutes': 120,
+              },
+              'savings': {
+                'distanceKm': 10,
+                'distancePct': 25,
+                'timeMinutes': 30,
+                'timePct': 25,
+              },
+              'params': {'vehicleType': 'car'},
+              'stops': [
+                {'sequence': 1, 'deliveryId': 'd1', 'etaMinutes': 30},
+                {'sequence': 2, 'deliveryId': 'd2', 'etaMinutes': 60},
+              ],
+            },
           }
         : {
             'data': [
