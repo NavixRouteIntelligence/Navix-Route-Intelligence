@@ -70,6 +70,7 @@ async function bootstrap(): Promise<void> {
       .setDescription('API da plataforma de inteligência logística de última milha.')
       .setVersion('1.0')
       .addBearerAuth()
+      .addApiKey({ type: 'apiKey', in: 'header', name: 'X-Api-Key' }, 'api-key')
       .build();
     const document = SwaggerModule.createDocument(app, swaggerConfig);
     SwaggerModule.setup(`${globalPrefix}/docs`, app, document);

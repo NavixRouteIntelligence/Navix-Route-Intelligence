@@ -23,5 +23,6 @@ import { PodController } from './interface/pod.controller';
     { provide: POD_REPOSITORY, useClass: PodRepository },
     { provide: DELIVERY_OUTCOME, useClass: DeliveryOutcomeGateway },
   ],
+  exports: [QueryPodUseCase],
 })
 export class PodModule {}

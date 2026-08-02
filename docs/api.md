@@ -1,10 +1,10 @@
 # API — Navix Route Intelligence
 
-> **Status:** Em revisão · **Versão:** 0.10 · **Atualizado:** 2026-07-12
+> **Status:** Em revisão · **Versão:** 0.11 · **Atualizado:** 2026-08-02
 
 Convenções e contrato da API. Toda mudança de contrato deve atualizar este documento no mesmo PR.
 
-> **⚠️ Estado da implementação.** A maioria dos endpoints abaixo já existe (auth, fleet, deliveries, imports, route-plans, tracking, pod, settings). **Exceções importantes:** as **operações assíncronas com `202` + recurso de job** (§5.1, §5.2) e o endpoint `GET /jobs/{jobId}` **não existem** — otimização e importação são hoje **síncronas** (respondem `201`/`200` com o resultado). A **autenticação M2M por API key** (§5) também é roadmap. Itens não implementados estão marcados com ⬜.
+> **⚠️ Estado da implementação.** A maioria dos endpoints abaixo já existe. A autenticação M2M por API key e os webhooks de saída estão implementados no T4.1/ADR-0094; veja [public-api.md](./public-api.md). Itens não implementados permanecem marcados com ⬜.
 
 ## 1. Princípios
 
@@ -46,7 +46,7 @@ Convenções e contrato da API. Toda mudança de contrato deve atualizar este do
 - Endpoints de conta (`/auth/me`, `change-password`, `forgot/reset-password`) são **compartilhados** (dependem do access token).
 - Detalhes de tokens em [security.md](./security.md).
 
-- ⬜ *Planejado:* integrações máquina-a-máquina usarão **API key** (`X-Api-Key`) ou OAuth2 client credentials, com escopo mínimo (ver [security.md](./security.md)). *Ainda não implementado — hoje só há o fluxo JWT.*
+- ✅ Integrações máquina-a-máquina usam **API key** (`X-Api-Key`) com escopo e quota próprios. A gestão requer JWT de administrador; o segredo é exibido uma vez e persistido somente como hash. OAuth2 client credentials segue como evolução.
 
 ## 5.1 Operações assíncronas (jobs)
 
@@ -196,13 +196,15 @@ GET /api/v1/deliveries/sync?updatedSince=<ISO>&cursor=<opaco>&limit=<1..500>
 ## 12. Rate limiting e quotas
 
 - Limites por tenant/usuário retornam headers `RateLimit-*` e `429` ao exceder.
+- Chaves públicas têm quota por minuto própria, compartilhada no Redis entre réplicas, com fallback local degradado quando o Redis está indisponível.
 - **Quotas por plano** (ex.: otimizações/dia, tamanho de bulk import) — endpoints caros são enfileirados por tenant para isolamento (ver [security.md](./security.md)).
 
-## 13. Webhooks / eventos (Fase 2+)
+## 13. Webhooks / eventos
 
-- Eventos como `route.planned`, `route.reoptimized`, `delivery.completed`.
-- Payload assinado (HMAC) para verificação de origem.
-- Retentativas com backoff e *dead-letter*.
+- ✅ Eventos `delivery.created`, `delivery.updated`, `pod.submitted` e `eta.updated`.
+- Payload assinado por HMAC-SHA256; segredo cifrado com AES-256-GCM.
+- Outbox transacional, retentativas com backoff e *dead-letter* após seis tentativas.
+- Contrato completo em [public-api.md](./public-api.md).
 
 ## 14. Exemplos de endpoints (preliminar)
 
@@ -495,3 +497,4 @@ GET /api/v1/health/ready     -> 200 | 503 (Postgres duro; Redis reportado, não 
 | 2026-07-15 | 0.30 | Design+Arch | Inteligência coletiva: POST /intelligence/observations + GET /intelligence/insights (observações por tenant/RLS agregadas por célula); CollectiveInsightCard no web (§14.7, ADR-0031) |
 | 2026-07-15 | 0.31 | Design+Arch | Assistente por voz: POST /intelligence/voice-command (VoiceCommandInterpreterPort — intenção PT/EN/ES); VoiceAssistantButton (Web Speech API) no web (§14.7, ADR-0032) |
 | 2026-07-16 | 0.32 | Arquitetura | Estacionamento ciente da comunidade: ParkingPredictorPort assíncrona/por tenant + CommunityAwareParkingPredictor realimenta a previsão com a coletiva (§14.7, ADR-0034) |
+| 2026-08-02 | 0.33 | Arquitetura | API pública com API keys escopadas/quotas e webhooks de saída assinados, transacionais e resilientes (ADR-0094) |

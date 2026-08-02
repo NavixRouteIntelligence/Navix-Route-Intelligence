@@ -2,7 +2,7 @@
 
 > **Status:** Em revisão · **Versão:** 0.3 · **Atualizado:** 2026-07-12
 
-> **⚠️ Estado da implementação.** Este documento mistura o modelo **atual** com o modelo **alvo**. **Tabelas que existem hoje** (via migrações): `tenants`, `roles`, `users`, `user_roles`, `refresh_tokens`, `api_keys`, `audit_log`, `outbox`, `password_reset_tokens`, `vehicles`, `drivers`, `deliveries`, `route_plans`, `import_batches`, `driver_positions`, `proof_of_delivery`, `user_settings`, `user_profiles`. **Ainda não existem** (roadmap): `depots`, `routes`, `route_stops`, read models (ex.: `tenant_efficiency_daily`), tabelas de Intelligence e Billing. **TimescaleDB** não está habilitado (posições em tabela comum). **Redis** está provisionado mas **sem uso no código**. **Criptografia de coluna (AES-256/DEK por tenant)** ainda **não** existe — PII está em texto puro. Cada item é rastreado na coluna "Status da implementação" em [decisions.md](./decisions.md).
+> **⚠️ Estado da implementação.** Este documento mistura o modelo **atual** com o modelo **alvo**. As integrações públicas usam `api_keys`, `webhook_subscriptions` e `webhook_deliveries` (ADR-0094), todas isoladas por tenant. **TimescaleDB** não está habilitado. **Criptografia de coluna (AES-256/DEK por tenant)** ainda **não** existe — PII está em texto puro. Cada item é rastreado na coluna "Status da implementação" em [decisions.md](./decisions.md).
 
 ## 1. Tecnologias
 
@@ -51,7 +51,9 @@ CREATE POLICY tenant_isolation ON deliveries
 - **roles** — `id`, `tenant_id`, `name`.
 - **user_roles** — `user_id`, `role_id`.
 - **refresh_tokens** — `id`, `user_id`, `token_hash`, `expires_at`, `revoked_at`.
-- **api_keys** — `id`, `tenant_id`, `name`, `key_hash`, `scopes`, `last_used_at`, `revoked_at` (M2M — ver [security.md](./security.md)).
+- **api_keys** — `id`, `tenant_id`, `name`, `key_hash`, `key_prefix`, `scopes`, `quota_per_minute`, `expires_at`, `last_used_at`, `revoked_at` (M2M — ver [security.md](./security.md)).
+- **webhook_subscriptions** — destino HTTPS, eventos assinados, segredo cifrado e estado por tenant.
+- **webhook_deliveries** — outbox de entrega com tentativas, agendamento, erro e estado terminal; reivindicação concorrente via `claim_webhook_delivery()`.
 - **audit_log** — `id`, `tenant_id`, `actor_id`, `action`, `resource`, `metadata (jsonb)`, `created_at`. **Append-only / imutável** (sem UPDATE/DELETE).
 - **outbox** — `id`, `aggregate`, `event_type`, `payload (jsonb)`, `occurred_at`, `published_at`. Escrita na mesma transação do agregado (ver ADR-0006). 🟡 *Tabela criada, mas ainda sem producer/relay — nenhum evento é gravado hoje.*
 
@@ -144,3 +146,4 @@ CREATE POLICY tenant_isolation ON deliveries
 | 2026-07-05 | 0.1 | Engenharia | Estrutura inicial |
 | 2026-07-05 | 0.2 | CTO | UUIDv7, TimescaleDB, outbox/audit/api_keys, read models, PgBouncer, cache de matriz, envelope encryption |
 | 2026-07-12 | 0.3 | Arquitetura | Callout de estado da implementação; marcação do que existe vs. planejado (tabelas, TimescaleDB, Redis, cripto de coluna) |
+| 2026-08-02 | 0.4 | Arquitetura | Schema da API pública e dos webhooks: scopes/quotas, segredos cifrados, RLS e claim seguro multi-réplica (ADR-0094) |

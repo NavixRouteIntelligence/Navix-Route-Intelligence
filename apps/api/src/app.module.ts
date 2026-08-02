@@ -30,6 +30,8 @@ import { TrackingModule } from './modules/tracking/tracking.module';
 import { HealthModule } from './modules/health/health.module';
 import { IdentityModule } from './modules/identity/identity.module';
 import { UserSettingsModule } from './modules/user-settings/user-settings.module';
+import { WebhooksModule } from './modules/webhooks/webhooks.module';
+import { PublicApiModule } from './modules/public-api/public-api.module';
 
 /**
  * Módulo raiz. Compõe infraestrutura transversal (config, logging, banco) e
@@ -42,6 +44,9 @@ import { UserSettingsModule } from './modules/user-settings/user-settings.module
     LoggerModule,
     MetricsModule,
     EventsModule,
+    // Outbox transacional para integrações externas (ADR-0094). Global para que
+    // os casos de uso registrem eventos na mesma transação da mudança.
+    WebhooksModule,
     RedisModule,
     RealtimeModule,
     StorageModule,
@@ -78,6 +83,7 @@ import { UserSettingsModule } from './modules/user-settings/user-settings.module
     ImportModule,
     TrackingModule,
     PodModule,
+    PublicApiModule,
   ],
 })
 export class AppModule {}

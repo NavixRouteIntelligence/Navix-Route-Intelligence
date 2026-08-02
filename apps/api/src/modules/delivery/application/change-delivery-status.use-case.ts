@@ -1,8 +1,12 @@
 import type { DeliveryStatus, Delivery as DeliveryView } from '@navix/contracts';
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 
 import { AUDIT_LOG, type AuditLogPort } from '../../../shared/audit/audit-log.port';
 import { DomainEventBus } from '../../../shared/events/domain-event-bus';
+import {
+  EXTERNAL_EVENT_OUTBOX,
+  type ExternalEventOutboxPort,
+} from '../../../shared/events/external-event-outbox.port';
 import { NotFoundError } from '../../../shared/kernel/domain-error';
 import {
   DELIVERY_REPOSITORY,
@@ -24,6 +28,9 @@ export class ChangeDeliveryStatusUseCase {
     @Inject(DELIVERY_REPOSITORY) private readonly deliveries: DeliveryRepositoryPort,
     @Inject(AUDIT_LOG) private readonly audit: AuditLogPort,
     private readonly events: DomainEventBus,
+    @Optional()
+    @Inject(EXTERNAL_EVENT_OUTBOX)
+    private readonly externalEvents?: ExternalEventOutboxPort,
   ) {}
 
   async execute(command: ChangeDeliveryStatusCommand): Promise<DeliveryView> {
@@ -48,6 +55,12 @@ export class ChangeDeliveryStatusUseCase {
       type: 'delivery.status-changed',
       aggregateId: view.id,
       affectedDay: view.updatedAt.slice(0, 10),
+    });
+    await this.externalEvents?.record({
+      tenantId: command.tenantId,
+      type: 'delivery.updated',
+      aggregateId: view.id,
+      payload: { ...view },
     });
     return view;
   }

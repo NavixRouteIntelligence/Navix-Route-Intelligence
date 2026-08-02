@@ -25,6 +25,9 @@ const AUDIT_SISTEMA = randomUUID();
 const KEY_A = randomUUID();
 const KEY_B = randomUUID();
 const KEY_HASH_B = `hash-b-${TENANT_B}`;
+const WEBHOOK_A = randomUUID();
+const WEBHOOK_B = randomUUID();
+const WEBHOOK_DELIVERY_A = randomUUID();
 
 /**
  * Conecta como o role de RUNTIME (não-superusuário) — é ele que fica sujeito à
@@ -42,7 +45,10 @@ function makeDataSource(): DataSource {
   });
 }
 
-async function setTenant(manager: { query: (q: string, p?: unknown[]) => Promise<unknown> }, tenantId: string) {
+async function setTenant(
+  manager: { query: (q: string, p?: unknown[]) => Promise<unknown> },
+  tenantId: string,
+) {
   await manager.query("SELECT set_config('app.current_tenant', $1, true)", [tenantId]);
 }
 
@@ -88,14 +94,37 @@ describe('Isolamento multi-tenant via RLS (integração)', () => {
     ]) {
       await ds.transaction(async (m) => {
         await setTenant(m, tenant);
-        await m.query(`INSERT INTO api_keys (id, tenant_id, name, key_hash) VALUES ($1,$2,$3,$4)`, [
-          id,
-          tenant,
-          `key-${tenant}`,
-          hash,
-        ]);
+        await m.query(
+          `INSERT INTO api_keys (id, tenant_id, name, key_hash, key_prefix)
+           VALUES ($1,$2,$3,$4,$5)`,
+          [id, tenant, `key-${tenant}`, hash, `test_${id.slice(0, 12)}`],
+        );
       });
     }
+
+    for (const [id, tenant] of [
+      [WEBHOOK_A, TENANT_A],
+      [WEBHOOK_B, TENANT_B],
+    ]) {
+      await ds.transaction(async (m) => {
+        await setTenant(m, tenant);
+        await m.query(
+          `INSERT INTO webhook_subscriptions
+             (id, tenant_id, name, url, events, encrypted_secret)
+           VALUES ($1,$2,'ERP','https://example.com/navix',ARRAY['delivery.created'],'cipher')`,
+          [id, tenant],
+        );
+      });
+    }
+    await ds.transaction(async (m) => {
+      await setTenant(m, TENANT_A);
+      await m.query(
+        `INSERT INTO webhook_deliveries
+           (id, tenant_id, subscription_id, event_type, aggregate_id, payload)
+         VALUES ($1,$2,$3,'delivery.created',$4,'{}')`,
+        [WEBHOOK_DELIVERY_A, TENANT_A, WEBHOOK_A, DELIVERY_A],
+      );
+    });
   });
 
   afterAll(async () => {
@@ -125,6 +154,11 @@ describe('Isolamento multi-tenant via RLS (integração)', () => {
     // Linhas criadas pelos testes de INSERT sem contexto e pelo writer real.
     await owner.query(`DELETE FROM audit_log WHERE action IN ('iso.sem-contexto', 'iso.writer')`);
     await owner.query(`DELETE FROM api_keys WHERE id IN ($1,$2)`, [KEY_A, KEY_B]);
+    await owner.query(`DELETE FROM webhook_deliveries WHERE id = $1`, [WEBHOOK_DELIVERY_A]);
+    await owner.query(`DELETE FROM webhook_subscriptions WHERE id IN ($1,$2)`, [
+      WEBHOOK_A,
+      WEBHOOK_B,
+    ]);
     await owner.query(`DELETE FROM tenants WHERE id IN ($1,$2)`, [TENANT_A, TENANT_B]);
     await owner.destroy();
   });
@@ -242,7 +276,8 @@ describe('Isolamento multi-tenant via RLS (integração)', () => {
         ds.transaction(async (m) => {
           await setTenant(m, TENANT_A);
           return m.query(
-            `INSERT INTO api_keys (id, tenant_id, name, key_hash) VALUES ($1,$2,'invasora',$3)`,
+            `INSERT INTO api_keys (id, tenant_id, name, key_hash, key_prefix)
+             VALUES ($1,$2,'invasora',$3,'test_invasora')`,
             [randomUUID(), TENANT_B, `hash-x-${TENANT_B}`],
           );
         }),
@@ -257,6 +292,33 @@ describe('Isolamento multi-tenant via RLS (integração)', () => {
 
       const rows = await ds.query(`SELECT revoked_at FROM api_keys WHERE id = $1`, [KEY_B]);
       expect(rows[0].revoked_at).toBeNull();
+    });
+  });
+
+  describe('webhooks (ADR-0094)', () => {
+    it('isola assinaturas e outbox pelo tenant no banco', async () => {
+      const rowsA = await ds.transaction(async (m) => {
+        await setTenant(m, TENANT_A);
+        return m.query(`SELECT id FROM webhook_subscriptions WHERE id IN ($1,$2)`, [
+          WEBHOOK_A,
+          WEBHOOK_B,
+        ]);
+      });
+      const rowsB = await ds.transaction(async (m) => {
+        await setTenant(m, TENANT_B);
+        return m.query(`SELECT id FROM webhook_deliveries WHERE id = $1`, [WEBHOOK_DELIVERY_A]);
+      });
+      expect(rowsA).toEqual([{ id: WEBHOOK_A }]);
+      expect(rowsB).toHaveLength(0);
+    });
+
+    it('reivindica globalmente uma entrega sem varrer tenants e sem duplicar', async () => {
+      const claimed = await ds.query(
+        `SELECT id, tenant_id, attempts FROM claim_webhook_delivery()`,
+      );
+      const empty = await ds.query(`SELECT id FROM claim_webhook_delivery()`);
+      expect(claimed).toEqual([{ id: WEBHOOK_DELIVERY_A, tenant_id: TENANT_A, attempts: 1 }]);
+      expect(empty).toHaveLength(0);
     });
   });
 });

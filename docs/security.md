@@ -14,8 +14,6 @@
 > **AINDA NÃO IMPLEMENTADO (roadmap) — não presuma que estes controles existem:**
 > criptografia em repouso / **envelope encryption por tenant** (ADR-0010) — a PII
 > está em **texto puro**; **blacklist de tokens no Redis**; **MFA**;
-> **autenticação M2M** (OAuth2 / API keys — a tabela `api_keys` existe mas não há
-> fluxo; a RLS dela já está no lugar, ADR-0054); **webhooks assinados por HMAC**;
 > **SAST/DAST no CI**; hardening de containers (usuário não-root). As seções
 > abaixo descrevem a política **alvo**; itens não implementados estão marcados
 > como ⬜.
@@ -49,13 +47,13 @@ Segurança é requisito de primeira classe, não uma etapa final. Nenhuma featur
 
 ### 2.1 Autenticação máquina-a-máquina (M2M)
 
-> **Status:** ⬜ **Planejado.** Não há autenticação M2M implementada. A tabela `api_keys` existe no schema, mas não há emissão/validação de API keys nem OAuth2 por dispositivo; o app do motorista usa o mesmo fluxo JWT dos demais usuários.
+> **Status:** ✅ **API keys implementadas (ADR-0094).** OAuth2 por dispositivo e client credentials continuam planejados; o app do motorista mantém o fluxo JWT.
 
 Usuários finais (app do motorista) e integrações não devem depender do fluxo de senha:
 
 - **App do motorista / dispositivos:** OAuth2 + tokens de curta duração emitidos por dispositivo, revogáveis individualmente.
-- **Integrações de terceiros (ERP, WMS):** **API keys** com escopo mínimo, armazenadas com **hash**, com `last_used_at` e rotação/revogação. Nunca logadas.
-- **Webhooks de saída:** payload assinado com HMAC (ver [api.md](./api.md)).
+- **Integrações de terceiros (ERP, WMS):** **API keys** com escopo mínimo, quota, expiração e revogação; SHA-256 no banco, prefixo visível e segredo exibido uma vez.
+- **Webhooks de saída:** HMAC-SHA256, segredo cifrado por AES-256-GCM, HTTPS público com defesa contra SSRF/DNS rebinding, outbox e dead-letter.
 
 ## 3. Autorização
 
@@ -175,3 +173,4 @@ Cada tenant possui uma **DEK** (Data Encryption Key) própria, protegida por uma
 | 2026-07-06 | 0.3 | Engenharia | Hardening implementado: RLS forçada + interceptor de tenant, RS256/key ring, throttler, CORS reforçado, auditoria de auth/authz e alterações críticas |
 | 2026-07-12 | 0.4 | Arquitetura | Alinhamento doc↔código: callout do que já existe vs. roadmap; marcação ⬜ em cripto em repouso, Redis/blacklist, M2M, SSDLC e imutabilidade do audit_log |
 | 2026-07-12 | 0.5 | Engenharia | Auth de produção: refresh token em cookie HttpOnly+Secure+SameSite (web), access token só em memória, fim do uso de localStorage; modo bearer para mobile |
+| 2026-08-02 | 0.6 | Segurança | API keys M2M e webhooks assinados implementados com RLS, quotas, cifra de segredo e defesa contra SSRF (ADR-0094) |
