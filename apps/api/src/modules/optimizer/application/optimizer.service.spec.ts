@@ -6,6 +6,7 @@ import type {
 } from '../domain/ports/route-optimization-strategy.port';
 import type { OptimizeRouteUseCase } from './optimize-route.use-case';
 import type { RoutePlanRepositoryPort } from '../domain/ports/route-plan-repository.port';
+import { RoutePlan, type NewRoutePlan } from '../domain/route-plan';
 import { OptimizerService } from './optimizer.service';
 import type { StrategyRegistry } from './strategy-registry';
 
@@ -81,5 +82,79 @@ describe('OptimizerService.optimizeDeliveries', () => {
       actorId: 'user-1',
       deliveryIds: ['d-1', 'd-2'],
     });
+  });
+});
+
+
+describe('OptimizerService.etaPredictionForDelivery', () => {
+  const CRIADO_EM = new Date('2026-08-03T08:00:00.000Z');
+
+  /** Plano com uma parada por entrega, cada uma com o seu ETA. */
+  function plano(paradas: { deliveryId: string; etaMinutes: number }[]): RoutePlan {
+    const base: NewRoutePlan = {
+      tenantId: 'tenant-1',
+      driverId: 'ficha-1',
+      strategy: 'nearest-neighbor-2opt',
+      status: 'completed',
+      params: { averageSpeedKmh: 30, serviceTimeMinutes: 5, hasOrigin: false },
+      stops: paradas.map((p, i) => ({
+        sequence: i + 1,
+        deliveryId: p.deliveryId,
+        latitude: 0,
+        longitude: 0,
+        etaMinutes: p.etaMinutes,
+        legDistanceKm: 0,
+        cumulativeDistanceKm: 0,
+        priority: 'normal',
+        timeWindowRespected: null,
+      })),
+      metrics: { totalDistanceKm: 1, totalTimeMinutes: 10, stops: paradas.length },
+      baseline: { totalDistanceKm: 1, totalTimeMinutes: 10, stops: paradas.length },
+      savings: { distanceKm: 0, timeMinutes: 0, distancePct: 0, timePct: 0 },
+      score: 80,
+      explanation: 'ok',
+    };
+    const p = RoutePlan.create(base);
+    // `createdAt` é a âncora do ETA; fixa para o cálculo ser determinístico.
+    Object.assign(p.snapshot(), { createdAt: CRIADO_EM });
+    return p;
+  }
+
+  function servico(contendo: RoutePlan | null) {
+    const findLatestContainingDelivery = jest.fn().mockResolvedValue(contendo);
+    const findAll = jest.fn();
+    const plans = { findAll, findLatestContainingDelivery } as unknown as RoutePlanRepositoryPort;
+    const service = new OptimizerService(
+      euclidean,
+      registryReturning([0]),
+      { execute: jest.fn() } as unknown as OptimizeRouteUseCase,
+      plans,
+      semCorrecao,
+    );
+    return { service, findLatestContainingDelivery, findAll };
+  }
+
+  // NAV-4.3 / ADR-0102: a entrega pertence ao plano que a roteirizou. Enquanto
+  // o ETA saía do "mais recente do tenant", numa frota ele era nulo para todo
+  // motorista menos quem otimizou por último — e em silêncio.
+  it('lê o plano que contém a entrega, não o mais recente do tenant', async () => {
+    const { service, findLatestContainingDelivery, findAll } = servico(
+      plano([
+        { deliveryId: 'd-1', etaMinutes: 0 },
+        { deliveryId: 'd-2', etaMinutes: 45 },
+      ]),
+    );
+
+    const previsao = await service.etaPredictionForDelivery('tenant-1', 'd-2');
+
+    expect(findLatestContainingDelivery).toHaveBeenCalledWith('tenant-1', 'd-2');
+    expect(findAll).not.toHaveBeenCalled();
+    expect(previsao?.arrivalAt).toEqual(new Date('2026-08-03T08:45:00.000Z'));
+  });
+
+  it('entrega em nenhum plano: sem previsão, e não é erro', async () => {
+    const { service } = servico(null);
+
+    expect(await service.etaPredictionForDelivery('tenant-1', 'd-9')).toBeNull();
   });
 });

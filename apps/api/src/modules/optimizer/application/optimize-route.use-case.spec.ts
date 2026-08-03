@@ -19,6 +19,7 @@ function build() {
     findAll: async (): Promise<PagedResult<RoutePlan>> => ({ items: [], total: 0 }),
     findActiveForDriver: async () => null,
     findActiveForDrivers: async () => new Map(),
+    findLatestContainingDelivery: async () => null,
   };
   const gateway: DeliveryGatewayPort = {
     getStops: async () => [],
