@@ -298,3 +298,82 @@ describe('OptimizeRouteUseCase — preservação da ordem manual', () => {
     expect(view.stops.map((s) => s.sequence)).toEqual([1, 2, 3]);
   });
 });
+
+// NAV-4.6 / ADR-0105: o minuto zero da rota deixa de ser inventado.
+describe('OptimizeRouteUseCase — horário real de início', () => {
+  const paradas = [
+    { id: S1, latitude: 0, longitude: 0 },
+    { id: S2, latitude: 0, longitude: 1 },
+  ];
+
+  function comando(over: Record<string, unknown> = {}) {
+    return { tenantId: 't1', actorId: 'u1', stops: paradas, ...over };
+  }
+
+  it('sem partida informada, a rota começa quando foi pedida', async () => {
+    const pedido = new Date('2026-08-04T14:00:00.000Z');
+    const { uc, saved } = build();
+
+    await uc.execute(comando({ requestedAt: pedido }));
+
+    expect(saved[0].snapshot().departureAt).toEqual(pedido);
+  });
+
+  // Planejar hoje a rota de amanhã: sem `startAt`, os ETAs sairiam ancorados
+  // em hoje, e o rastreio anunciaria a entrega para o dia errado.
+  it('a partida informada vence o instante do pedido', async () => {
+    const pedido = new Date('2026-08-03T18:00:00.000Z');
+    const partida = new Date('2026-08-04T08:00:00.000Z');
+    const { uc, saved } = build();
+
+    await uc.execute(comando({ requestedAt: pedido, startAt: partida }));
+
+    expect(saved[0].snapshot().departureAt).toEqual(partida);
+    // O dia operacional segue o pedido (ADR-0103), não a partida.
+    expect(saved[0].snapshot().operationalDay).toBe('2026-08-03');
+  });
+
+  // A âncora tem de ser a mesma nos dois lados: se o solver medisse a partir de
+  // um instante e o consumidor somasse a outro, o ETA sairia deslocado — que é
+  // exatamente o defeito que esta ADR fecha.
+  it('as janelas são medidas a partir da mesma partida', async () => {
+    const partida = new Date('2026-08-04T08:00:00.000Z');
+    const abre = new Date('2026-08-04T09:00:00.000Z');
+    const fecha = new Date('2026-08-04T17:00:00.000Z');
+    const { uc, saved } = build();
+
+    await uc.execute(
+      comando({
+        startAt: partida,
+        // Paradas vizinhas (~1 km): o trajeto é curto o bastante para o veículo
+        // chegar bem antes de a janela abrir.
+        stops: [
+          { id: S1, latitude: 38.72, longitude: -9.14 },
+          {
+            id: S2,
+            latitude: 38.73,
+            longitude: -9.14,
+            timeWindow: { start: abre.toISOString(), end: fecha.toISOString() },
+          },
+        ],
+      }),
+    );
+
+    const plano = saved[0].snapshot();
+    const comJanela = plano.stops.find((s) => s.deliveryId === S2)!;
+    // A janela abre 60 min depois da partida; o veículo chega antes e espera.
+    expect(comJanela.etaMinutes).toBeLessThan(60);
+    expect(comJanela.waitMinutes).toBeGreaterThan(0);
+    expect(comJanela.etaMinutes + comJanela.waitMinutes!).toBeCloseTo(60, 1);
+  });
+
+  it('o fuso do tenant decide o dia operacional', async () => {
+    // 00:30 UTC = 21:30 do dia anterior em São Paulo.
+    const pedido = new Date('2026-08-04T00:30:00.000Z');
+    const { uc, saved } = build();
+
+    await uc.execute(comando({ requestedAt: pedido, timeZone: 'America/Sao_Paulo' }));
+
+    expect(saved[0].snapshot().operationalDay).toBe('2026-08-03');
+  });
+});

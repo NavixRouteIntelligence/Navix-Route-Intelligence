@@ -38,10 +38,13 @@ export class ProcessOptimizationJobUseCase {
       // `requestedAt` é o nascimento do **job**, não o momento em que o worker
       // o pegou: é o que faz um job antigo perder para uma ordem manual pedida
       // depois, mesmo tendo terminado por último (ADR-0103).
+      const { startAt, ...request } = job.request;
       const plan = await this.optimize.execute({
-        ...job.request,
+        ...request,
         tenantId,
         requestedAt: job.createdAt,
+        // O job é jsonb: a data volta como string e precisa ser reidratada.
+        ...(startAt ? { startAt: new Date(startAt) } : {}),
       });
       await this.transition(tenantId, job, { status: 'succeeded', routePlanId: plan.id });
     } catch (err) {

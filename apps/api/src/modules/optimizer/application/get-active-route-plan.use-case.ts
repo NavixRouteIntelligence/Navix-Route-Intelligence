@@ -5,6 +5,10 @@ import {
   ROUTE_PLAN_REPOSITORY,
   type RoutePlanRepositoryPort,
 } from '../domain/ports/route-plan-repository.port';
+import {
+  TENANT_TIME_ZONE_READER,
+  type TenantTimeZoneReaderPort,
+} from '../../../shared/tenancy/tenant-time-zone.port';
 import { operationalDayOf } from '../domain/route-plan';
 
 import { DRIVER_ROSTER_LINK, type DriverRosterLinkPort } from './ports/driver-roster-link.port';
@@ -27,6 +31,7 @@ export class GetActiveRoutePlanUseCase {
   constructor(
     @Inject(ROUTE_PLAN_REPOSITORY) private readonly plans: RoutePlanRepositoryPort,
     @Inject(DRIVER_ROSTER_LINK) private readonly roster: DriverRosterLinkPort,
+    @Inject(TENANT_TIME_ZONE_READER) private readonly zones: TenantTimeZoneReaderPort,
   ) {}
 
   async execute(
@@ -35,7 +40,14 @@ export class GetActiveRoutePlanUseCase {
     at: Date = new Date(),
   ): Promise<RoutePlanView | null> {
     const ficha = await this.roster.driverIdForUser(tenantId, userId);
-    const plan = await this.plans.findActiveForDriver(tenantId, ficha, operationalDayOf(at));
+    // Mesmo fuso da escrita (ADR-0105): se divergirem, a rota some da tela sem
+    // erro nenhum — é a invariante que a ADR-0098 deixou registrada.
+    const timeZone = await this.zones.findTimeZone(tenantId);
+    const plan = await this.plans.findActiveForDriver(
+      tenantId,
+      ficha,
+      operationalDayOf(at, timeZone),
+    );
     return plan ? toRoutePlanView(plan) : null;
   }
 }

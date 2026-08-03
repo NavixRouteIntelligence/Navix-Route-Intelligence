@@ -36,6 +36,10 @@ export class RoutePlanOrmEntity {
   @Column('timestamptz', { name: 'requested_at' })
   requestedAt!: Date;
 
+  /** Minuto zero da rota (ADR-0105): a âncora de todo ETA do plano. */
+  @Column('timestamptz', { name: 'departure_at' })
+  departureAt!: Date;
+
   /** É a rota de um motorista no dia — uma só. `false` no plano do despacho. */
   @Column('boolean', { name: 'driver_scoped', default: false })
   driverScoped!: boolean;

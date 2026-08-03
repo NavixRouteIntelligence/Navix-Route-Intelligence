@@ -66,6 +66,14 @@ export interface OptimizeRouteCommand {
    */
   requestedAt?: Date;
   /**
+   * Instante em que a rota **começa** (ADR-0105) — o minuto zero dos ETAs.
+   * Ausente: a rota começa quando foi pedida, que para o motorista tocando
+   * "reorganizar" é agora e para uma reotimização é o instante do gatilho.
+   */
+  startAt?: Date;
+  /** Fuso do tenant, para derivar o dia operacional (ADR-0105). */
+  timeZone?: string;
+  /**
    * O resultado é a rota **deste motorista** no dia — uma coisa só, sujeita à
    * regra de substituição. `false`/ausente no plano do despacho.
    */
@@ -104,6 +112,8 @@ export class OptimizeRouteUseCase {
       throw new ValidationError('Forneça "vehicle" (único) OU "vehicles" (frota), não ambos.');
     }
 
+    // Uma âncora só, resolvida aqui: solver, ETA e plano usam a mesma.
+    const departureAt = command.startAt ?? command.requestedAt ?? new Date();
     const rawStops = await this.resolveStops(command);
     if (rawStops.length < 2) {
       throw new ValidationError('É necessário ao menos 2 paradas para otimizar.');
@@ -115,8 +125,8 @@ export class OptimizeRouteUseCase {
     await this.enrichWithHistory(command.tenantId, rawStops);
 
     const plan = command.vehicles?.length
-      ? await this.planFleet(command, rawStops, service)
-      : await this.planSingle(command, rawStops, service);
+      ? await this.planFleet(command, rawStops, service, departureAt)
+      : await this.planSingle(command, rawStops, service, departureAt);
 
     // Um pedido mais recente já definiu a rota deste motorista hoje: este
     // resultado chegou tarde e não pode desfazer o que veio depois (ADR-0103).
@@ -213,6 +223,7 @@ export class OptimizeRouteUseCase {
     command: OptimizeRouteCommand,
     rawStops: OptimizationStop[],
     service: number,
+    departureAt: Date,
   ): Promise<RoutePlan> {
     const profile = VehicleProfile.resolve(command.vehicle, DEFAULT_SPEED_KMH);
     const speed = command.averageSpeedKmh ?? profile.averageSpeedKmh;
@@ -229,6 +240,7 @@ export class OptimizeRouteUseCase {
       strategyName: this.resolveStrategy(command),
       ...(this.strategyLabel(command) ? { strategyLabel: this.strategyLabel(command)! } : {}),
       weights: this.resolveWeights(command, rawStops),
+      departureAt,
     });
     this.metrics.observeSolve(solved.strategyName, solved.solveSeconds, solved.stops.length);
     if (solved.capacity && !solved.capacity.feasible) this.metrics.markInfeasible();
@@ -237,6 +249,8 @@ export class OptimizeRouteUseCase {
       tenantId: command.tenantId,
       driverId: command.driverId ?? null,
       ...(command.requestedAt ? { requestedAt: command.requestedAt } : {}),
+      ...(command.timeZone ? { timeZone: command.timeZone } : {}),
+      departureAt,
       driverScoped: command.driverScoped ?? false,
       strategy: solved.strategyName,
       status: 'completed',
@@ -274,6 +288,7 @@ export class OptimizeRouteUseCase {
     command: OptimizeRouteCommand,
     rawStops: OptimizationStop[],
     service: number,
+    departureAt: Date,
   ): Promise<RoutePlan> {
     const vehicles = command.vehicles!;
     if (vehicles.length > MAX_VEHICLES) {
@@ -313,6 +328,8 @@ export class OptimizeRouteUseCase {
         strategyName: this.resolveStrategy(command),
         ...(this.strategyLabel(command) ? { strategyLabel: this.strategyLabel(command)! } : {}),
         weights: this.resolveWeights(command, rawStops),
+        // Todos os veículos da frota partem do mesmo instante.
+        departureAt,
       });
       strategyName = solved.strategyName;
       this.metrics.observeSolve(solved.strategyName, solved.solveSeconds, solved.stops.length);
@@ -339,6 +356,7 @@ export class OptimizeRouteUseCase {
       solvedRoutes,
       unassignedStops,
       strategyName,
+      departureAt,
     );
   }
 
@@ -351,6 +369,7 @@ export class OptimizeRouteUseCase {
     solvedRoutes: SolvedRoute[],
     unassignedStops: string[],
     strategyName: OptimizationStrategyName,
+    departureAt: Date,
   ): RoutePlan {
     let seq = 0;
     const stops: RouteStopView[] = routes.flatMap((r) =>
@@ -379,6 +398,8 @@ export class OptimizeRouteUseCase {
       // Plano de frota cobre vários veículos e não pertence a uma pessoa só.
       driverId: null,
       ...(command.requestedAt ? { requestedAt: command.requestedAt } : {}),
+      ...(command.timeZone ? { timeZone: command.timeZone } : {}),
+      departureAt,
       driverScoped: false,
       strategy: strategyName,
       status: 'completed',

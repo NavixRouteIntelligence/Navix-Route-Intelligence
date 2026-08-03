@@ -36,6 +36,15 @@ export interface RoutePlanProps {
    */
   requestedAt: Date;
   /**
+   * Instante do **minuto zero** da rota (ADR-0105): quando o veículo parte.
+   *
+   * É a âncora de todo ETA. Antes havia duas, e elas discordavam — o solver
+   * media os minutos a partir da abertura de janela mais cedo, e quem consumia
+   * ETA os somava ao `createdAt` do plano. Com janelas abrindo três horas
+   * depois do planeamento, o rastreio anunciava a entrega para *agora*.
+   */
+  departureAt: Date;
+  /**
    * O plano é a rota **de um motorista** naquele dia — uma coisa só, que o
    * pedido mais recente substitui. `false` no plano do despacho, que roteiriza
    * recortes diferentes da frota e legitimamente tem vários por dia.
@@ -66,12 +75,31 @@ export interface RoutePlanProps {
  */
 export type NewRoutePlan = Omit<
   RoutePlanProps,
-  'id' | 'createdAt' | 'operationalDay' | 'requestedAt'
-> & { requestedAt?: Date };
+  'id' | 'createdAt' | 'operationalDay' | 'requestedAt' | 'departureAt'
+> & { requestedAt?: Date; departureAt?: Date; timeZone?: string };
 
-/** Dia operacional de um instante (`YYYY-MM-DD`). Ver a nota em `operationalDay`. */
-export function operationalDayOf(at: Date): string {
-  return at.toISOString().slice(0, 10);
+/**
+ * Dia operacional de um instante (`YYYY-MM-DD`) **no fuso de quem opera**
+ * (ADR-0105).
+ *
+ * Em UTC — o padrão — o resultado é idêntico ao anterior. Com fuso configurado,
+ * uma rota criada às 21h em São Paulo continua sendo de hoje para o motorista,
+ * em vez de cair no dia seguinte e sumir da tela dele.
+ *
+ * A invariante da ADR-0098 continua valendo e agora tem uma exigência a mais:
+ * escrita e leitura têm de derivar o dia com esta função **e com o mesmo fuso**.
+ * Se divergirem, a rota some da tela sem erro nenhum.
+ */
+export function operationalDayOf(at: Date, timeZone = 'UTC'): string {
+  // `en-CA` produz `YYYY-MM-DD`, que é exatamente o formato de `date` no
+  // Postgres — evita montar a string a partir de partes e errar o zero à
+  // esquerda.
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(at);
 }
 
 /**
@@ -83,14 +111,22 @@ export class RoutePlan {
 
   static create(data: NewRoutePlan): RoutePlan {
     const createdAt = new Date();
+    // `timeZone` orienta a derivação do dia, mas não é propriedade do plano: o
+    // que fica gravado é o dia já resolvido.
+    const { timeZone, departureAt, ...props } = data;
+    const requestedAt = data.requestedAt ?? createdAt;
     return new RoutePlan({
-      ...data,
+      ...props,
       id: newId(),
       createdAt,
-      requestedAt: data.requestedAt ?? createdAt,
+      requestedAt,
+      // Sem partida explícita, a rota começa quando foi pedida — que para o
+      // motorista tocando "reorganizar" é agora, e para uma reotimização é o
+      // instante do gatilho.
+      departureAt: departureAt ?? requestedAt,
       // O dia é o do **pedido**: um job pedido às 23h55 e concluído às 00h05
       // pertence ao dia em que o motorista o pediu, não ao seguinte.
-      operationalDay: operationalDayOf(data.requestedAt ?? createdAt),
+      operationalDay: operationalDayOf(requestedAt, timeZone),
     });
   }
 
@@ -112,5 +148,9 @@ export class RoutePlan {
 
   get requestedAt(): Date {
     return this.props.requestedAt;
+  }
+
+  get departureAt(): Date {
+    return this.props.departureAt;
   }
 }

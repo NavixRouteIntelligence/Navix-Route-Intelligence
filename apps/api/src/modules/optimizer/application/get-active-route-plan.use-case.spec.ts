@@ -27,7 +27,7 @@ function plan(driverId: string | null): RoutePlan {
   return RoutePlan.create(base);
 }
 
-function build(ficha: string | null, found: RoutePlan | null) {
+function build(ficha: string | null, found: RoutePlan | null, timeZone = 'UTC') {
   const chamadas: { driverId: string | null; day: string }[] = [];
   const plans: RoutePlanRepositoryPort = {
     save: async () => undefined,
@@ -45,7 +45,8 @@ function build(ficha: string | null, found: RoutePlan | null) {
     driverIdForUser: async () => ficha,
     activeDrivers: async () => [],
   };
-  return { uc: new GetActiveRoutePlanUseCase(plans, roster), chamadas };
+  const zones = { findTimeZone: async () => timeZone };
+  return { uc: new GetActiveRoutePlanUseCase(plans, roster, zones), chamadas };
 }
 
 describe('GetActiveRoutePlanUseCase', () => {

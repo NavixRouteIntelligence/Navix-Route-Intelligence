@@ -60,3 +60,30 @@ describe('ReoptimizeActiveUseCase', () => {
     expect(enqueue.execute).not.toHaveBeenCalled();
   });
 });
+
+// NAV-4.6 / ADR-0105: a reotimização parte de agora e do que ainda falta.
+describe('ReoptimizeActiveUseCase — instante atual e progresso realizado', () => {
+  it('não informa partida: a rota recomeça no instante do pedido', async () => {
+    const { uc, enqueue } = build([stop('a'), stop('b')]);
+
+    await uc.execute({ tenantId: 't1', actorId: 'system' });
+
+    // Sem `startAt`, `departureAt` cai no `requestedAt` do job — que é agora
+    // (ADR-0105). Passar uma partida futura aqui ancoraria a reotimização num
+    // horário que já passou de ser relevante.
+    const comando = (enqueue.execute as jest.Mock).mock.calls[0][0];
+    expect(comando).not.toHaveProperty('startAt');
+  });
+
+  // O progresso já realizado entra por ausência: entregas concluídas não estão
+  // entre as ativas, então não voltam para a rota.
+  it('reotimiza só o que ainda não foi concluído', async () => {
+    const { uc, enqueue, gateway } = build([stop('pendente-1'), stop('pendente-2')]);
+
+    await uc.execute({ tenantId: 't1', actorId: 'system' });
+
+    expect(gateway.listActiveStops).toHaveBeenCalledWith('t1');
+    const comando = (enqueue.execute as jest.Mock).mock.calls[0][0];
+    expect(comando.deliveryIds).toEqual(['pendente-1', 'pendente-2']);
+  });
+});

@@ -10,6 +10,7 @@ export function toRoutePlanView(plan: RoutePlan): RoutePlanView {
     tenantId: s.tenantId,
     driverId: s.driverId,
     operationalDay: s.operationalDay,
+    departureAt: s.departureAt.toISOString(),
     strategy: s.strategy,
     status: s.status,
     params: s.params,
