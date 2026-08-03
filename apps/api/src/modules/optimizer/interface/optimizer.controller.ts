@@ -96,6 +96,10 @@ export class OptimizerController {
       tenantId: user.tenantId,
       actorId: user.id,
       driverId,
+      // Só este caminho carrega `ownership` (ADR-0099): o motorista só otimiza
+      // as próprias entregas. O `POST /route-plans` do despacho segue livre —
+      // roteirizar a frota inteira é justamente o trabalho de quem despacha.
+      ownership: { driverId },
     });
     return { data };
   }

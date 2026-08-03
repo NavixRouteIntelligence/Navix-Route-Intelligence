@@ -57,6 +57,12 @@ export interface NotifiableDeliveryDto {
   driverId: string | null;
 }
 
+/** A quem uma entrega pertence. `driverId` nulo = sem motorista atribuído. */
+export interface DeliveryOwnershipDto {
+  id: string;
+  driverId: string | null;
+}
+
 /**
  * API pública do contexto Delivery. Expõe apenas o necessário para outros
  * módulos (ex.: Optimizer) sem revelar o agregado/repositório internos.
@@ -72,6 +78,12 @@ export interface DeliveryLookupPort {
   /** Snapshot mínimo para o rastreamento público (ADR-0082). */
   getPublicSnapshot(tenantId: string, id: string): Promise<DeliveryPublicSnapshot | null>;
   getStops(tenantId: string, ids: string[]): Promise<DeliveryStopDto[]>;
+  /**
+   * A quem pertence cada entrega pedida (ADR-0099). Devolve **só as visíveis**
+   * no tenant: quem chama compara com o que pediu e decide o que fazer com a
+   * diferença — este módulo não sabe o que ela significa para o chamador.
+   */
+  getOwnership(tenantId: string, ids: string[]): Promise<DeliveryOwnershipDto[]>;
   /**
    * Nº de entregas **concluídas** (`delivered`) com conclusão no intervalo
    * [from, to] — base do lucro/entrega (Finance, FASE 3). Aproxima a conclusão
@@ -93,6 +105,11 @@ export class DeliveryLookupService implements DeliveryLookupPort {
   async getStops(tenantId: string, ids: string[]): Promise<DeliveryStopDto[]> {
     const found = await this.deliveries.findByIds(tenantId, ids);
     return found.map((d) => this.toDto(d));
+  }
+
+  async getOwnership(tenantId: string, ids: string[]): Promise<DeliveryOwnershipDto[]> {
+    const found = await this.deliveries.findByIds(tenantId, ids);
+    return found.map((d) => ({ id: d.snapshot().id, driverId: d.snapshot().driverId }));
   }
 
   async listActive(tenantId: string): Promise<DeliveryStopDto[]> {

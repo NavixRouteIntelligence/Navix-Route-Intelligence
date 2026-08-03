@@ -5,6 +5,7 @@ import {
   type DeliveryLookupPort,
   type DeliveryStopDto,
 } from '../../../delivery/application/delivery-lookup.service';
+import type { DeliveryOwnership } from '../../domain/delivery-ownership';
 import { classifyDestination } from '../../domain/destination-type';
 import type {
   DeliveryGatewayPort,
@@ -21,6 +22,10 @@ export class DeliveryGateway implements DeliveryGatewayPort {
 
   async getStops(tenantId: string, ids: string[]): Promise<OptimizerDeliveryStop[]> {
     return (await this.lookup.getStops(tenantId, ids)).map(toStop);
+  }
+
+  getOwnership(tenantId: string, ids: string[]): Promise<DeliveryOwnership[]> {
+    return this.lookup.getOwnership(tenantId, ids);
   }
 
   async listActiveStops(tenantId: string): Promise<OptimizerDeliveryStop[]> {
