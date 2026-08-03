@@ -34,6 +34,7 @@ import { ROUTE_PLAN_REPOSITORY } from '../src/modules/optimizer/domain/ports/rou
 import type { RoutePlanRepositoryPort } from '../src/modules/optimizer/domain/ports/route-plan-repository.port';
 import type { RoutePlan } from '../src/modules/optimizer/domain/route-plan';
 import { DistributeDeliveriesUseCase } from '../src/modules/optimizer/application/distribute-deliveries.use-case';
+import { GetFleetDistributionUseCase } from '../src/modules/optimizer/application/get-fleet-distribution.use-case';
 import { ReoptimizeActiveUseCase } from '../src/modules/optimizer/application/reoptimize-active.use-case';
 import { RouteSolver } from '../src/modules/optimizer/application/route-solver';
 import { HaversineDistanceProvider } from '../src/modules/optimizer/infrastructure/distance/haversine-distance.provider';
@@ -74,6 +75,19 @@ class InMemoryRoutePlanRepository implements RoutePlanRepositoryPort {
       )
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     return matches.length > 0 ? (this.store.get(matches[0].id) ?? null) : null;
+  }
+
+  async findActiveForDrivers(
+    tenantId: string,
+    driverIds: string[],
+    operationalDay: string,
+  ): Promise<Map<string, RoutePlan>> {
+    const porFicha = new Map<string, RoutePlan>();
+    for (const driverId of driverIds) {
+      const plano = await this.findActiveForDriver(tenantId, driverId, operationalDay);
+      if (plano) porFicha.set(driverId, plano);
+    }
+    return porFicha;
   }
 }
 
@@ -166,6 +180,10 @@ describe('Optimizer (e2e, assíncrono)', () => {
         {
           provide: DistributeDeliveriesUseCase,
           useValue: { execute: async () => ({ assigned: 0, unassigned: 0, shares: [] }) },
+        },
+        {
+          provide: GetFleetDistributionUseCase,
+          useValue: { execute: async () => ({ drivers: [], unassigned: 0 }) },
         },
         DomainEventBus,
         {

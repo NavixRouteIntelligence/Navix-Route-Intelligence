@@ -14,6 +14,7 @@ import { OptimizeRouteUseCase } from './application/optimize-route.use-case';
 import { OPTIMIZER_SERVICE, OptimizerService } from './application/optimizer.service';
 import { ProcessOptimizationJobUseCase } from './application/process-optimization-job.use-case';
 import { DistributeDeliveriesUseCase } from './application/distribute-deliveries.use-case';
+import { GetFleetDistributionUseCase } from './application/get-fleet-distribution.use-case';
 import { ReoptimizeActiveUseCase } from './application/reoptimize-active.use-case';
 import { RouteSolver } from './application/route-solver';
 import {
@@ -85,6 +86,7 @@ import { OptimizerController } from './interface/optimizer.controller';
     ListRoutePlansUseCase,
     ReoptimizeActiveUseCase,
     DistributeDeliveriesUseCase,
+    GetFleetDistributionUseCase,
     AutoReoptimizationService,
     { provide: REOPTIMIZATION_TRIGGER, useClass: TenantScopedReoptimizationTrigger },
     // Reotimização dinâmica (ADR-0083): detector de atraso + gate por plano.

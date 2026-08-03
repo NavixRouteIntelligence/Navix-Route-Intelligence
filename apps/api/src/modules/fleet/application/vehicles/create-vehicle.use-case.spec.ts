@@ -29,7 +29,7 @@ describe('CreateVehicleUseCase', () => {
       findUserIdById: jest.fn(),
       findIdsByUserIds: jest.fn(),
       delete: jest.fn(),
-      findActiveIds: jest.fn().mockResolvedValue([]),
+      findActive: jest.fn().mockResolvedValue([]),
     };
   }
 

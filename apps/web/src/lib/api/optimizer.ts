@@ -1,6 +1,7 @@
 import type {
   CollectionResponse,
   DeliveryDistribution,
+  FleetDistribution,
   ResourceResponse,
   RoutePlan,
 } from '@navix/contracts';
@@ -35,4 +36,12 @@ export const optimizerApi = {
     apiRequest<ResourceResponse<DeliveryDistribution>>('/route-plans/distribute', {
       method: 'POST',
     }),
+
+  /**
+   * Retrato da distribuição atual da frota (ADR-0101): uma linha por motorista
+   * ativo — inclusive quem está sem nada — mais o que ainda não tem dono. Vem
+   * agregado do servidor, e não de somar listas paginadas aqui (ADR-0092).
+   */
+  fleetDistribution: () =>
+    apiRequest<ResourceResponse<FleetDistribution>>('/route-plans/distribution'),
 };

@@ -36,10 +36,11 @@ function build(ficha: string | null, found: RoutePlan | null) {
       chamadas.push({ driverId, day });
       return found;
     },
+    findActiveForDrivers: async () => new Map(),
   };
   const roster: DriverRosterLinkPort = {
     driverIdForUser: async () => ficha,
-    activeDriverIds: async () => [],
+    activeDrivers: async () => [],
   };
   return { uc: new GetActiveRoutePlanUseCase(plans, roster), chamadas };
 }

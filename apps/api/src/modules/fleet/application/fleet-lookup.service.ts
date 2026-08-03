@@ -3,6 +3,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import {
   DRIVER_REPOSITORY,
   type DriverRepositoryPort,
+  type RosterDriver,
 } from '../domain/ports/driver-repository.port';
 import {
   VEHICLE_REPOSITORY,
@@ -28,11 +29,11 @@ export interface FleetLookupPort {
    */
   driverIdsForUsers(tenantId: string, userIds: string[]): Promise<Map<string, string>>;
   /**
-   * Fichas **ativas** do tenant — quem está apto a receber entrega numa
-   * distribuição (ADR-0101). Vazio é resposta legítima: tenant sem frota, ou
-   * frota inteira inativa.
+   * Fichas **ativas** do tenant (id e nome) — quem está apto a receber entrega
+   * numa distribuição e quem aparece no painel dela (ADR-0101). Vazio é
+   * resposta legítima: tenant sem frota, ou frota inteira inativa.
    */
-  activeDriverIds(tenantId: string): Promise<string[]>;
+  activeDrivers(tenantId: string): Promise<RosterDriver[]>;
 }
 
 export const FLEET_LOOKUP = Symbol('FLEET_LOOKUP');
@@ -60,7 +61,7 @@ export class FleetLookupService implements FleetLookupPort {
     return this.drivers.findIdsByUserIds(tenantId, userIds);
   }
 
-  activeDriverIds(tenantId: string): Promise<string[]> {
-    return this.drivers.findActiveIds(tenantId);
+  activeDrivers(tenantId: string): Promise<RosterDriver[]> {
+    return this.drivers.findActive(tenantId);
   }
 }

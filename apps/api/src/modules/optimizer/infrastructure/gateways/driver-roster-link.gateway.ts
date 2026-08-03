@@ -4,7 +4,10 @@ import {
   FLEET_LOOKUP,
   type FleetLookupPort,
 } from '../../../fleet/application/fleet-lookup.service';
-import type { DriverRosterLinkPort } from '../../application/ports/driver-roster-link.port';
+import type {
+  DriverRosterLinkPort,
+  RosterDriver,
+} from '../../application/ports/driver-roster-link.port';
 
 /**
  * Adaptador anti-corrupção do Optimizer para o Fleet (ADR-0098). Fala com a API
@@ -23,7 +26,7 @@ export class DriverRosterLinkGateway implements DriverRosterLinkPort {
     return fichas.get(userId) ?? null;
   }
 
-  activeDriverIds(tenantId: string): Promise<string[]> {
-    return this.fleet.activeDriverIds(tenantId);
+  activeDrivers(tenantId: string): Promise<RosterDriver[]> {
+    return this.fleet.activeDrivers(tenantId);
   }
 }

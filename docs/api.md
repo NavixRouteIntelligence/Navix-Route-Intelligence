@@ -309,6 +309,7 @@ POST   /api/v1/route-plans          # otimiza e persiste um Route Plan (201) —
 POST   /api/v1/route-plans/mine      # Motorista Autônomo otimiza a própria rota (201) — role driver
 POST   /api/v1/route-plans/reoptimize # reotimiza as entregas ativas do tenant (202 + jobId) — admin/dispatcher
 POST   /api/v1/route-plans/distribute # distribui as entregas sem motorista entre a frota — admin/dispatcher
+GET    /api/v1/route-plans/distribution # como as entregas estão distribuídas hoje — admin/dispatcher/fleet_manager
 GET    /api/v1/route-plans          # histórico (paginado)
 GET    /api/v1/route-plans/{id}     # consulta um Route Plan
 ```
@@ -316,6 +317,8 @@ GET    /api/v1/route-plans/{id}     # consulta um Route Plan
 Corpo do POST: `origin?` (depósito), **uma** das fontes `deliveryIds[]` (busca no Delivery) **ou** `stops[]` (inline: id, lat, lng, priority?, timeWindow?), `strategy?`, `averageSpeedKmh?`, `serviceTimeMinutes?`, `vehicle?`.
 
 **Distribuição entre motoristas (ADR-0101).** `POST /route-plans/distribute` não recebe corpo. Reparte as entregas **ativas sem motorista** entre as **fichas ativas** do tenant (por zona, janela e proximidade, equilibrando a contagem) e enfileira a rota de cada motorista sobre **todas** as entregas ativas dele. Responde `{ assigned, unassigned, shares: [{ driverId, deliveries, jobId }] }`, onde `deliveries` é o que **esta** chamada atribuiu e `jobId` é `null` quando não havia rota a preparar (menos de 2 paradas). É **idempotente**: só toca no que está sem dono, então repetir não redistribui nem desfaz atribuição manual. `unassigned > 0` significa que não há ficha ativa a quem distribuir.
+
+**Painel da distribuição (ADR-0101).** `GET /route-plans/distribution` devolve o retrato de agora: `{ drivers: [{ driverId, driverName, pending, inRoute, routePlanId, stops, distanceKm }], unassigned }`. Lista **toda** ficha ativa, inclusive quem está com zero — motorista ocioso é o que o despacho mais precisa ver. `routePlanId`/`stops`/`distanceKm` vêm `null` quando ainda não há rota do dia, o que não é erro. Os números são agregados no banco (um `GROUP BY` + uma busca de rotas em lote), nunca somando listas paginadas no cliente (ADR-0092).
 
 **Restrições ricas (ADR-0022 — Fase 1, tudo opcional/retrocompatível):**
 - Por parada (`stops[]`): `weightKg?`, `volumeM3?` (demanda de carga) e `serviceTimeMinutes?` (tempo de parada específico, sobrepõe o global).

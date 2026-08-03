@@ -35,8 +35,12 @@ function build(opts: {
   const assignDriver = opts.assignDriver ?? jest.fn().mockResolvedValue(true);
   const writer = { assignDriver } as unknown as DeliveryWriterPort;
 
-  const activeDriverIds = jest.fn().mockResolvedValue(opts.fichas ?? ['ficha-a', 'ficha-b']);
-  const roster = { activeDriverIds } as unknown as DriverRosterLinkPort;
+  const activeDrivers = jest
+    .fn()
+    .mockResolvedValue(
+      (opts.fichas ?? ['ficha-a', 'ficha-b']).map((id) => ({ id, name: `Motorista ${id}` })),
+    );
+  const roster = { activeDrivers } as unknown as DriverRosterLinkPort;
 
   const execute =
     opts.enqueue ?? jest.fn().mockImplementation(() => Promise.resolve({ jobId: 'job-1' }));

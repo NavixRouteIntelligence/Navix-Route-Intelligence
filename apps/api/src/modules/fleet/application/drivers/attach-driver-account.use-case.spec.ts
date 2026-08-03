@@ -22,7 +22,7 @@ function build(opts: { found?: Driver | null; userLinked?: boolean; licenseTaken
     findUserIdById: jest.fn().mockResolvedValue(null),
     findIdsByUserIds: jest.fn().mockResolvedValue(new Map()),
     delete: jest.fn(),
-    findActiveIds: jest.fn().mockResolvedValue([]),
+    findActive: jest.fn().mockResolvedValue([]),
   };
   const audit: AuditLogPort = { record: jest.fn().mockResolvedValue(undefined) };
   return { uc: new AttachDriverAccountUseCase(drivers, audit), drivers, save };

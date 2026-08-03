@@ -109,6 +109,8 @@ export default function DeliveriesPage() {
     mutationFn: () => optimizerApi.distribute(),
     onSuccess: ({ data }) => {
       invalidate();
+      // O painel da frota no dashboard passa a mostrar outra coisa depois disto.
+      qc.invalidateQueries({ queryKey: ['fleet-distribution'] });
       setConfirmingDistribute(false);
       if (data.assigned > 0) {
         toast({

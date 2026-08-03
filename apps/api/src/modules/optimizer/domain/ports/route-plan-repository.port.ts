@@ -23,6 +23,19 @@ export interface RoutePlanRepositoryPort {
     driverId: string | null,
     operationalDay: string,
   ): Promise<RoutePlan | null>;
+  /**
+   * A rota vigente de **várias** fichas, numa consulta só (ADR-0101). O painel
+   * da frota mostra uma linha por motorista; chamar `findActiveForDriver` num
+   * laço seria um N+1 que cresce com o tamanho da equipe.
+   *
+   * Fichas sem rota do dia simplesmente não aparecem no mapa — ausência é
+   * resposta normal, não erro.
+   */
+  findActiveForDrivers(
+    tenantId: string,
+    driverIds: string[],
+    operationalDay: string,
+  ): Promise<Map<string, RoutePlan>>;
 }
 
 export const ROUTE_PLAN_REPOSITORY = Symbol('ROUTE_PLAN_REPOSITORY');

@@ -30,6 +30,7 @@ function build(delivery: Delivery | null) {
     findByIds: jest.fn(),
     findAll: jest.fn(),
     findChangedSince: jest.fn(),
+    countActiveByDriver: jest.fn().mockResolvedValue([]),
   };
   const audit: AuditLogPort = { record: jest.fn().mockResolvedValue(undefined) };
   const createDelivery = { execute: jest.fn() } as unknown as CreateDeliveryUseCase;

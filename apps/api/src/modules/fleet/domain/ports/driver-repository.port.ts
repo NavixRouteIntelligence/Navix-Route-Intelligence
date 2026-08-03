@@ -2,6 +2,12 @@ import type { PageParams } from '../../../../shared/kernel/pagination';
 import type { Driver } from '../driver';
 import type { PagedResult } from './vehicle-repository.port';
 
+/** Ficha reduzida ao que outro contexto pode ver dela (ADR-0101). */
+export interface RosterDriver {
+  id: string;
+  name: string;
+}
+
 /** Port do repositório de motoristas. Toda operação é escopada por `tenantId`. */
 export interface DriverRepositoryPort {
   save(driver: Driver): Promise<void>;
@@ -16,10 +22,11 @@ export interface DriverRepositoryPort {
   findIdsByUserIds(tenantId: string, userIds: string[]): Promise<Map<string, string>>;
   /**
    * Fichas **ativas** do tenant, em ordem estável — quem pode receber entrega
-   * numa distribuição (ADR-0101). Só os ids: quem distribui não precisa de nome
-   * nem de CNH, e trazer a ficha inteira convidaria a vazar o resto.
+   * numa distribuição e quem aparece no painel dela (ADR-0101). Devolve id e
+   * nome, e nada mais: o nome é o que identifica a pessoa na tela; CNH,
+   * habilidades e o resto da ficha não têm o que fazer fora do Fleet.
    */
-  findActiveIds(tenantId: string): Promise<string[]>;
+  findActive(tenantId: string): Promise<RosterDriver[]>;
   delete(tenantId: string, id: string): Promise<void>;
 }
 

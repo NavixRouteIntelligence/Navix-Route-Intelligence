@@ -295,3 +295,33 @@ export interface DeliveryDistribution {
   /** Uma entrada por ficha que recebeu ao menos uma entrega. */
   shares: DriverDistributionShare[];
 }
+
+/** Como está o dia de um motorista da frota (ADR-0101). */
+export interface DriverWorkload {
+  /** Ficha (`drivers.id`). */
+  driverId: string;
+  driverName: string;
+  /** Entregas atribuídas a ele que ainda não saíram. */
+  pending: number;
+  /** Entregas atribuídas a ele já em rota. */
+  inRoute: number;
+  /**
+   * Rota vigente do dia operacional, quando existe. `null` é estado normal:
+   * motorista sem entrega, ou com menos de duas (não há sequência a montar).
+   */
+  routePlanId: string | null;
+  stops: number | null;
+  distanceKm: number | null;
+}
+
+/**
+ * Retrato da distribuição atual da frota (ADR-0101) — quem está com o quê,
+ * agora. É a leitura que responde "a distribuição funcionou?" e "sobrou
+ * alguém sem trabalho?".
+ */
+export interface FleetDistribution {
+  /** Uma linha por ficha **ativa**, inclusive quem está sem nada. */
+  drivers: DriverWorkload[];
+  /** Entregas ativas ainda sem motorista — o que uma distribuição repartiria. */
+  unassigned: number;
+}

@@ -16,6 +16,7 @@ import type {
   AuthenticatedUser,
   CollectionResponse,
   DeliveryDistribution,
+  FleetDistribution,
   OptimizationJob,
   OptimizationJobAccepted,
   ResourceResponse,
@@ -29,6 +30,7 @@ import { Idempotent } from '../../../shared/idempotency/idempotency.decorator';
 import { Roles } from '../../../shared/security/roles.decorator';
 import { RolesGuard } from '../../../shared/security/roles.guard';
 import { DistributeDeliveriesUseCase } from '../application/distribute-deliveries.use-case';
+import { GetFleetDistributionUseCase } from '../application/get-fleet-distribution.use-case';
 import { EnqueueOptimizationUseCase } from '../application/enqueue-optimization.use-case';
 import { GetActiveRoutePlanUseCase } from '../application/get-active-route-plan.use-case';
 import { GetOptimizationJobUseCase } from '../application/get-optimization-job.use-case';
@@ -58,6 +60,7 @@ export class OptimizerController {
     private readonly listPlans: ListRoutePlansUseCase,
     private readonly reoptimizeActive: ReoptimizeActiveUseCase,
     private readonly distributeDeliveries: DistributeDeliveriesUseCase,
+    private readonly fleetDistribution: GetFleetDistributionUseCase,
   ) {}
 
   @Post()
@@ -144,6 +147,20 @@ export class OptimizerController {
       actorId: user.id,
     });
     return { data };
+  }
+
+  /**
+   * Retrato da distribuição atual da frota (ADR-0101): uma linha por motorista
+   * ativo — inclusive quem está sem nada — mais o que ainda não tem dono.
+   * É a leitura que o painel da Empresa consome.
+   */
+  @Get('distribution')
+  @Roles('admin', 'dispatcher', 'fleet_manager')
+  @ApiOperation({ summary: 'Como as entregas estão distribuídas entre os motoristas hoje' })
+  async distribution(
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<ResourceResponse<FleetDistribution>> {
+    return { data: await this.fleetDistribution.execute(user.tenantId) };
   }
 
   @Post('reoptimize')
