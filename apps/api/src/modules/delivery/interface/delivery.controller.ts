@@ -77,26 +77,36 @@ export class DeliveryController {
     return { data };
   }
 
+  /**
+   * Lista entregas. O papel decide o alcance (ADR-0100): operação e frota veem
+   * o tenant; o motorista vê as próprias, com a ficha resolvida do login pelo
+   * caso de uso — o `driverId` da query não escolhe de quem é a lista.
+   */
   @Get()
+  @Roles('admin', 'dispatcher', 'fleet_manager', 'driver')
   @ApiOperation({ summary: 'Lista entregas (filtros, ordenação e paginação)' })
   async list(
     @CurrentUser() user: AuthenticatedUser,
     @Query() query: ListDeliveriesQueryDto,
   ): Promise<CollectionResponse<DeliveryView>> {
     const page = normalizePage(query.page, query.pageSize);
-    const result = await this.listDeliveries.execute(user.tenantId, {
-      page,
-      filters: {
-        status: query.status,
-        priority: query.priority,
-        driverId: query.driverId,
-        vehicleId: query.vehicleId,
-        routeId: query.routeId,
-        windowFrom: query.windowFrom ? new Date(query.windowFrom) : undefined,
-        windowTo: query.windowTo ? new Date(query.windowTo) : undefined,
+    const result = await this.listDeliveries.execute(
+      user.tenantId,
+      {
+        page,
+        filters: {
+          status: query.status,
+          priority: query.priority,
+          driverId: query.driverId,
+          vehicleId: query.vehicleId,
+          routeId: query.routeId,
+          windowFrom: query.windowFrom ? new Date(query.windowFrom) : undefined,
+          windowTo: query.windowTo ? new Date(query.windowTo) : undefined,
+        },
+        sort: this.parseSort(query.sort),
       },
-      sort: this.parseSort(query.sort),
-    });
+      { userId: user.id, roles: user.roles },
+    );
     return buildCollection(result.items, result.total, result.page, BASE_PATH);
   }
 

@@ -135,7 +135,14 @@ export class DeliveryRepository implements DeliveryRepositoryPort {
     const f = query.filters;
     if (f.status) qb.andWhere('delivery.status = :status', { status: f.status });
     if (f.priority) qb.andWhere('delivery.priority = :priority', { priority: f.priority });
-    if (f.driverId) qb.andWhere('delivery.driver_id = :driverId', { driverId: f.driverId });
+    // `!== undefined` e não um teste de verdade: `null` aqui é o filtro do
+    // autônomo ("sem motorista atribuído"), e um `if (f.driverId)` o trataria
+    // como ausência de filtro, devolvendo o tenant inteiro (ADR-0100). Mesma
+    // armadilha que a ADR-0098 resolveu com `IsNull()` no lado do TypeORM.
+    if (f.driverId === null) qb.andWhere('delivery.driver_id IS NULL');
+    else if (f.driverId !== undefined) {
+      qb.andWhere('delivery.driver_id = :driverId', { driverId: f.driverId });
+    }
     if (f.vehicleId) qb.andWhere('delivery.vehicle_id = :vehicleId', { vehicleId: f.vehicleId });
     if (f.routeId) qb.andWhere('delivery.route_id = :routeId', { routeId: f.routeId });
     if (f.windowFrom) qb.andWhere('delivery.window_start >= :windowFrom', { windowFrom: f.windowFrom });

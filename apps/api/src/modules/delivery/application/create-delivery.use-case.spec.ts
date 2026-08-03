@@ -32,6 +32,7 @@ function build(fleet: Partial<FleetGatewayPort> = {}) {
   const gateway: FleetGatewayPort = {
     vehicleExists: jest.fn().mockResolvedValue(true),
     driverExists: jest.fn().mockResolvedValue(true),
+    driverIdForUser: jest.fn().mockResolvedValue(null),
     ...fleet,
   };
   const audit: AuditLogPort = { record: jest.fn().mockResolvedValue(undefined) };
