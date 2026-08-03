@@ -8,6 +8,7 @@ import { scopedRepository } from '../../../../shared/database/transaction-contex
 import type { ListDeliveriesQuery } from '../../application/queries/list-deliveries.query';
 import { Delivery } from '../../domain/delivery';
 import type {
+  ActiveLoadByDriver,
   DeliveryChanges,
   DeliveryRepositoryPort,
 } from '../../domain/ports/delivery-repository.port';
@@ -129,6 +130,30 @@ export class DeliveryRepository implements DeliveryRepositoryPort {
     const hasMore = rows.length > params.limit;
     const page = hasMore ? rows.slice(0, params.limit) : rows;
     return { items: page.map((r) => this.toDomain(r)), hasMore };
+  }
+
+  async countActiveByDriver(tenantId: string): Promise<ActiveLoadByDriver[]> {
+    // Um GROUP BY, não uma varredura paginada: a carga da frota é exatamente o
+    // tipo de número que a ADR-0092 mostrou não poder ser somado no cliente.
+    // `driver_id` nulo vira uma linha como qualquer outra — é o balde das
+    // entregas sem dono, e some se for tratado como ausência de valor.
+    const rows = await this.repo
+      .createQueryBuilder('delivery')
+      .select('delivery.driver_id', 'driverId')
+      .addSelect(`COUNT(*) FILTER (WHERE delivery.status = 'pending')`, 'pending')
+      .addSelect(`COUNT(*) FILTER (WHERE delivery.status = 'in_route')`, 'inRoute')
+      .where('delivery.tenant_id = :tenantId', { tenantId })
+      .andWhere('delivery.deleted_at IS NULL')
+      .andWhere(`delivery.status IN ('pending', 'in_route')`)
+      .groupBy('delivery.driver_id')
+      .getRawMany<{ driverId: string | null; pending: string; inRoute: string }>();
+
+    return rows.map((r) => ({
+      driverId: r.driverId,
+      // O driver do Postgres devolve COUNT como string (bigint).
+      pending: Number(r.pending),
+      inRoute: Number(r.inRoute),
+    }));
   }
 
   private applyFilters(qb: SelectQueryBuilder<DeliveryOrmEntity>, query: ListDeliveriesQuery): void {

@@ -25,6 +25,23 @@ export interface DeliveryRepositoryPort {
    * Inclui **tombstones**; ordenado de forma estável e paginável por cursor.
    */
   findChangedSince(tenantId: string, params: NormalizedSync): Promise<DeliveryChanges>;
+  /**
+   * Carga ativa (pendente/em rota) agrupada por motorista, numa consulta só
+   * (ADR-0101). Agregação no banco, e não somando páginas na aplicação: é o
+   * defeito que a ADR-0092 corrigiu no dashboard, onde os números refletiam
+   * apenas as 100 linhas mais recentes e o erro crescia com o uso.
+   */
+  countActiveByDriver(tenantId: string): Promise<ActiveLoadByDriver[]>;
+}
+
+/**
+ * Carga ativa de um dono (ADR-0101). `driverId: null` é o balde das entregas
+ * **sem motorista** — a mesma semântica de `DeliveryFilters.driverId`.
+ */
+export interface ActiveLoadByDriver {
+  driverId: string | null;
+  pending: number;
+  inRoute: number;
 }
 
 export const DELIVERY_REPOSITORY = Symbol('DELIVERY_REPOSITORY');

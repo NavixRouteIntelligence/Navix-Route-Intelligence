@@ -4,6 +4,7 @@ import type { DeliveryPriority, DeliveryStatus, TimeWindow } from '@navix/contra
 import type { Delivery } from '../domain/delivery';
 import {
   DELIVERY_REPOSITORY,
+  type ActiveLoadByDriver,
   type DeliveryRepositoryPort,
 } from '../domain/ports/delivery-repository.port';
 
@@ -106,6 +107,11 @@ export interface DeliveryLookupPort {
    * rota não precisa de PII.
    */
   listActiveForDriver(tenantId: string, driverId: string): Promise<DeliveryStopDto[]>;
+  /**
+   * Carga ativa por motorista, agregada no banco (ADR-0101). O balde de
+   * `driverId: null` é o que ainda não tem dono.
+   */
+  countActiveByDriver(tenantId: string): Promise<ActiveLoadByDriver[]>;
 }
 
 export const DELIVERY_LOOKUP = Symbol('DELIVERY_LOOKUP');
@@ -171,6 +177,10 @@ export class DeliveryLookupService implements DeliveryLookupPort {
         return status === 'pending' || status === 'in_route';
       })
       .map((d) => this.toDto(d));
+  }
+
+  countActiveByDriver(tenantId: string): Promise<ActiveLoadByDriver[]> {
+    return this.deliveries.countActiveByDriver(tenantId);
   }
 
   async countDeliveredInRange(tenantId: string, from: Date, to: Date): Promise<number> {

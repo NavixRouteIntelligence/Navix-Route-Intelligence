@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { IsNull, Repository } from 'typeorm';
+import { In, IsNull, Repository } from 'typeorm';
 
 import type { PageParams, PagedResult } from '../../../../shared/kernel/pagination';
 import { scopedRepository } from '../../../../shared/database/transaction-context';
@@ -70,6 +70,28 @@ export class RoutePlanRepository implements RoutePlanRepositoryPort {
       order: { createdAt: 'DESC' },
     });
     return row ? this.toDomain(row) : null;
+  }
+
+  async findActiveForDrivers(
+    tenantId: string,
+    driverIds: string[],
+    operationalDay: string,
+  ): Promise<Map<string, RoutePlan>> {
+    if (driverIds.length === 0) return new Map();
+    const rows = await this.repo.find({
+      where: { tenantId, driverId: In(driverIds), operationalDay },
+      order: { createdAt: 'DESC' },
+    });
+
+    // Mesma regra do singular — o mais recente do dia vence —, obtida aqui pela
+    // ordem decrescente: a primeira linha de cada ficha é a que fica.
+    const porFicha = new Map<string, RoutePlan>();
+    for (const row of rows) {
+      if (row.driverId && !porFicha.has(row.driverId)) {
+        porFicha.set(row.driverId, this.toDomain(row));
+      }
+    }
+    return porFicha;
   }
 
   private toDomain(row: RoutePlanOrmEntity): RoutePlan {

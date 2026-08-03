@@ -30,6 +30,7 @@ function build(delivery: Delivery | null) {
     findByIds: jest.fn().mockResolvedValue([]),
     findAll: jest.fn(),
     findChangedSince: jest.fn().mockResolvedValue({ items: [], hasMore: false }),
+    countActiveByDriver: jest.fn().mockResolvedValue([]),
   };
   const audit: AuditLogPort = { record: jest.fn().mockResolvedValue(undefined) };
   const events = new DomainEventBus();

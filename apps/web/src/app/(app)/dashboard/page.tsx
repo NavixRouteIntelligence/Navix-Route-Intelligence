@@ -21,6 +21,7 @@ import Link from 'next/link';
 
 import { ActivityTimeline } from '@/components/dashboard/activity-timeline';
 import { AiInsights } from '@/components/dashboard/ai-insights';
+import { FleetDistribution } from '@/components/dashboard/fleet-distribution';
 import { PodSummaryCard } from '@/components/dashboard/pod-summary-card';
 import { RecentImports } from '@/components/dashboard/recent-imports';
 import { RecentPlans } from '@/components/dashboard/recent-plans';
@@ -205,8 +206,9 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Recentes: Route Optimizer + Import Center */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      {/* Distribuição da frota (ADR-0101) + recentes */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        <FleetDistribution />
         <RecentPlans plans={planItems} loading={loading} />
         <RecentImports />
       </div>

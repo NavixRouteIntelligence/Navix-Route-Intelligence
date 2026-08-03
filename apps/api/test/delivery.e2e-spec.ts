@@ -61,6 +61,20 @@ class InMemoryDeliveryRepository implements DeliveryRepositoryPort {
     return { items, total: items.length };
   }
 
+  async countActiveByDriver(tenantId: string) {
+    const porDono = new Map<string | null, { pending: number; inRoute: number }>();
+    for (const d of this.store.values()) {
+      const s = d.snapshot();
+      if (s.tenantId !== tenantId || s.deletedAt) continue;
+      if (s.status !== 'pending' && s.status !== 'in_route') continue;
+      const atual = porDono.get(s.driverId) ?? { pending: 0, inRoute: 0 };
+      if (s.status === 'pending') atual.pending += 1;
+      else atual.inRoute += 1;
+      porDono.set(s.driverId, atual);
+    }
+    return [...porDono].map(([driverId, c]) => ({ driverId, ...c }));
+  }
+
   async findChangedSince(tenantId: string, params: NormalizedSync): Promise<DeliveryChanges> {
     // Inclui tombstones (soft delete), ordenado por (updatedAt, id) — keyset.
     const ordered = [...this.store.values()]

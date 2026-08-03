@@ -32,6 +32,7 @@ function build(items: Delivery[], byIds: Delivery[] = []) {
     findByIds: jest.fn().mockResolvedValue(byIds),
     findAll: jest.fn().mockResolvedValue({ items, total: items.length }),
     findChangedSince: jest.fn(),
+    countActiveByDriver: jest.fn().mockResolvedValue([]),
   };
   return { service: new DeliveryLookupService(deliveries), deliveries };
 }

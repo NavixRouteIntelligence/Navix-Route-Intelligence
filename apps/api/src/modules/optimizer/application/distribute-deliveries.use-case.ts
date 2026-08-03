@@ -56,13 +56,14 @@ export class DistributeDeliveriesUseCase {
 
   async execute(command: DistributeDeliveriesCommand): Promise<DeliveryDistribution> {
     const { tenantId, actorId } = command;
-    const [pendentes, fichas] = await Promise.all([
+    const [pendentes, frota] = await Promise.all([
       this.deliveries.listUnassignedActive(tenantId),
-      this.roster.activeDriverIds(tenantId),
+      this.roster.activeDrivers(tenantId),
     ]);
 
     // Sem ninguém a quem distribuir, a resposta certa é não mexer em nada — e
     // dizer quantas ficaram esperando, em vez de falhar.
+    const fichas = frota.map((d) => d.id);
     if (fichas.length === 0 || pendentes.length === 0) {
       return { assigned: 0, unassigned: pendentes.length, shares: [] };
     }

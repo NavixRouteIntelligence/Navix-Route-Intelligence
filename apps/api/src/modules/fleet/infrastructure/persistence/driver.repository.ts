@@ -6,6 +6,7 @@ import type { PageParams } from '../../../../shared/kernel/pagination';
 import { scopedRepository } from '../../../../shared/database/transaction-context';
 import type {
   DriverRepositoryPort,
+  RosterDriver,
 } from '../../domain/ports/driver-repository.port';
 import type { PagedResult } from '../../domain/ports/vehicle-repository.port';
 import { Driver } from '../../domain/driver';
@@ -74,15 +75,15 @@ export class DriverRepository implements DriverRepositoryPort {
     return new Map(rows.filter((r) => r.userId).map((r) => [r.userId as string, r.id]));
   }
 
-  async findActiveIds(tenantId: string): Promise<string[]> {
+  async findActive(tenantId: string): Promise<RosterDriver[]> {
     // Ordem por `id` para a distribuição ser determinística: a mesma frota e as
     // mesmas entregas produzem sempre o mesmo recorte (ADR-0101).
     const rows = await this.repo.find({
       where: { tenantId, status: 'active' },
-      select: ['id'],
+      select: ['id', 'name'],
       order: { id: 'ASC' },
     });
-    return rows.map((r) => r.id);
+    return rows.map((r) => ({ id: r.id, name: r.name }));
   }
 
   async delete(tenantId: string, id: string): Promise<void> {

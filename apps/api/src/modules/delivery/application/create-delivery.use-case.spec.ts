@@ -28,6 +28,7 @@ function build(fleet: Partial<FleetGatewayPort> = {}) {
     findByIds: jest.fn().mockResolvedValue([]),
     findAll: jest.fn(),
     findChangedSince: jest.fn().mockResolvedValue({ items: [], hasMore: false }),
+    countActiveByDriver: jest.fn().mockResolvedValue([]),
   };
   const gateway: FleetGatewayPort = {
     vehicleExists: jest.fn().mockResolvedValue(true),
