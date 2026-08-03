@@ -81,19 +81,25 @@ export class PublicDeliveryController {
     @Query() query: ListDeliveriesQueryDto,
   ): Promise<CollectionResponse<DeliveryView>> {
     const page = normalizePage(query.page, query.pageSize);
-    const result = await this.listDeliveries.execute(user.tenantId, {
-      page,
-      filters: {
-        status: query.status,
-        priority: query.priority,
-        driverId: query.driverId,
-        vehicleId: query.vehicleId,
-        routeId: query.routeId,
-        windowFrom: query.windowFrom ? new Date(query.windowFrom) : undefined,
-        windowTo: query.windowTo ? new Date(query.windowTo) : undefined,
+    // A chave de API já é do tenant e limitada por escopo (ADR-0094): o papel
+    // `api` mantém a visão completa que a integração sempre teve.
+    const result = await this.listDeliveries.execute(
+      user.tenantId,
+      {
+        page,
+        filters: {
+          status: query.status,
+          priority: query.priority,
+          driverId: query.driverId,
+          vehicleId: query.vehicleId,
+          routeId: query.routeId,
+          windowFrom: query.windowFrom ? new Date(query.windowFrom) : undefined,
+          windowTo: query.windowTo ? new Date(query.windowTo) : undefined,
+        },
+        sort: this.parseSort(query.sort),
       },
-      sort: this.parseSort(query.sort),
-    });
+      { userId: user.id, roles: user.roles },
+    );
     return buildCollection(result.items, result.total, result.page, BASE_PATH);
   }
 

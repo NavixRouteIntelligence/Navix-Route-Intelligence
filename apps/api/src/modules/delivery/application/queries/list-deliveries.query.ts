@@ -13,7 +13,17 @@ export interface DeliverySort {
 export interface DeliveryFilters {
   status?: DeliveryStatus;
   priority?: DeliveryPriority;
-  driverId?: string;
+  /**
+   * Três estados, não dois (ADR-0100):
+   *
+   * - `undefined` — sem filtro de motorista.
+   * - uma ficha — só as entregas daquela ficha.
+   * - `null` — só as entregas **sem** motorista atribuído, que são as do
+   *   motorista autônomo. Não é sinônimo de "sem filtro": quem escrever
+   *   `if (filters.driverId)` devolve o tenant inteiro ao autônomo, que é
+   *   exatamente o vazamento que a ADR-0100 fecha.
+   */
+  driverId?: string | null;
   vehicleId?: string;
   routeId?: string;
   windowFrom?: Date;

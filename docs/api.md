@@ -285,7 +285,7 @@ Autenticado; mutações exigem `admin` ou `dispatcher`. Escopado ao tenant.
 
 ```
 POST   /api/v1/deliveries                # cadastra (201)
-GET    /api/v1/deliveries                # lista: filtros + ordenação + paginação
+GET    /api/v1/deliveries                # lista: filtros + ordenação + paginação — escopo por papel (ADR-0100)
 GET    /api/v1/deliveries/{id}           # consulta por ID
 PATCH  /api/v1/deliveries/{id}           # atualiza dados
 PATCH  /api/v1/deliveries/{id}/status    # altera status (máquina de estados)
@@ -293,6 +293,8 @@ DELETE /api/v1/deliveries/{id}           # exclusão lógica (204)
 ```
 
 Filtros da listagem: `status`, `priority`, `driverId`, `vehicleId`, `routeId`, `windowFrom`, `windowTo`. Ordenação: `sort=-createdAt,priority` (campos: `createdAt`, `windowStart`, `priority`). Paginação: `page`, `pageSize`.
+
+**Escopo da listagem (ADR-0100).** `admin`, `dispatcher`, `fleet_manager` e a chave de API listam o tenant inteiro e podem filtrar por `driverId`. Para o papel `driver` o escopo é imposto pelo servidor: a **ficha** do motorista é resolvida a partir do login (ADR-0086) e **substitui** o `driverId` da query, que é ignorado — o motorista com ficha recebe apenas as próprias entregas e o autônomo (sem ficha) apenas as **sem motorista atribuído**. Não há parâmetro que amplie esse escopo.
 
 Status: `pending → in_route → {delivered|failed}`; `failed → in_route`; `pending/in_route/failed → canceled`. `delivered` e `canceled` são terminais. `priority ∈ {low,normal,high,urgent}`.
 

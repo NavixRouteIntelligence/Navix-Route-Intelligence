@@ -18,4 +18,11 @@ export class FleetGateway implements FleetGatewayPort {
   driverExists(tenantId: string, driverId: string): Promise<boolean> {
     return this.lookup.driverExists(tenantId, driverId);
   }
+
+  async driverIdForUser(tenantId: string, userId: string): Promise<string | null> {
+    // Sem cache, como o gateway equivalente do Optimizer: a tradução acontece
+    // uma vez por listagem, não a cada ponto de GPS como no Tracking.
+    const fichas = await this.lookup.driverIdsForUsers(tenantId, [userId]);
+    return fichas.get(userId) ?? null;
+  }
 }
