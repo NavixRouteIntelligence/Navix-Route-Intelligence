@@ -4,6 +4,7 @@ import { Delivery } from '../domain/delivery';
 import type { DeliveryRepositoryPort } from '../domain/ports/delivery-repository.port';
 import type { CreateDeliveryUseCase } from './create-delivery.use-case';
 import { DeliveryWriterService, type DeliveryDraft } from './delivery-writer.service';
+import type { UpdateDeliveryUseCase } from './update-delivery.use-case';
 
 function makeDelivery(): Delivery {
   return Delivery.create({
@@ -32,8 +33,9 @@ function build(delivery: Delivery | null) {
   };
   const audit: AuditLogPort = { record: jest.fn().mockResolvedValue(undefined) };
   const createDelivery = { execute: jest.fn() } as unknown as CreateDeliveryUseCase;
-  const service = new DeliveryWriterService(createDelivery, deliveries, audit);
-  return { service, deliveries, audit, createDelivery };
+  const updateDelivery = { execute: jest.fn() } as unknown as UpdateDeliveryUseCase;
+  const service = new DeliveryWriterService(createDelivery, updateDelivery, deliveries, audit);
+  return { service, deliveries, audit, createDelivery, updateDelivery };
 }
 
 describe('DeliveryWriterService.markOutcome', () => {
@@ -203,5 +205,57 @@ describe('DeliveryWriterService.create — destinatário e contato', () => {
     expect(createDelivery.execute).toHaveBeenCalledWith(
       expect.objectContaining({ recipient: null, recipientEmail: null, recipientPhone: null }),
     );
+  });
+});
+
+describe('DeliveryWriterService.assignDriver (ADR-0101)', () => {
+  it('dá dono à entrega sem motorista pelo mesmo caminho do PATCH manual', async () => {
+    const { service, updateDelivery } = build(makeDelivery());
+
+    const atribuiu = await service.assignDriver({
+      tenantId: 'tenant-1',
+      actorId: 'ator-1',
+      deliveryId: 'd-1',
+      driverId: 'ficha-a',
+    });
+
+    expect(atribuiu).toBe(true);
+    // Delegar ao caso de uso é o que garante auditoria, evento e webhook
+    // idênticos aos de uma atribuição feita à mão.
+    expect(updateDelivery.execute).toHaveBeenCalledWith({
+      tenantId: 'tenant-1',
+      id: 'd-1',
+      actorId: 'ator-1',
+      driverId: 'ficha-a',
+    });
+  });
+
+  it('não rouba entrega que já tem dono — devolve false, sem lançar', async () => {
+    const delivery = makeDelivery();
+    delivery.update({ driverId: 'ficha-de-outro' });
+    const { service, updateDelivery } = build(delivery);
+
+    const atribuiu = await service.assignDriver({
+      tenantId: 'tenant-1',
+      actorId: 'ator-1',
+      deliveryId: 'd-1',
+      driverId: 'ficha-a',
+    });
+
+    expect(atribuiu).toBe(false);
+    expect(updateDelivery.execute).not.toHaveBeenCalled();
+  });
+
+  it('entrega inexistente é erro, não silêncio', async () => {
+    const { service } = build(null);
+
+    await expect(
+      service.assignDriver({
+        tenantId: 'tenant-1',
+        actorId: 'ator-1',
+        deliveryId: 'sumiu',
+        driverId: 'ficha-a',
+      }),
+    ).rejects.toBeInstanceOf(NotFoundError);
   });
 });

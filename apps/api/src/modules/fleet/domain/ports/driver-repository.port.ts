@@ -14,6 +14,12 @@ export interface DriverRepositoryPort {
   findUserIdById(tenantId: string, driverId: string): Promise<string | null>;
   /** Fichas destes logins, em uma consulta só — evita N+1 na visão de frota. */
   findIdsByUserIds(tenantId: string, userIds: string[]): Promise<Map<string, string>>;
+  /**
+   * Fichas **ativas** do tenant, em ordem estável — quem pode receber entrega
+   * numa distribuição (ADR-0101). Só os ids: quem distribui não precisa de nome
+   * nem de CNH, e trazer a ficha inteira convidaria a vazar o resto.
+   */
+  findActiveIds(tenantId: string): Promise<string[]>;
   delete(tenantId: string, id: string): Promise<void>;
 }
 

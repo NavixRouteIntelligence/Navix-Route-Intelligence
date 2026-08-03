@@ -19,6 +19,14 @@ export interface OptimizationJobRequest {
   averageSpeedKmh?: number;
   serviceTimeMinutes?: number;
   economyMode?: EconomyMode;
+  /**
+   * Modo inteligente. Já trafegava aqui na prática — o job guarda a requisição
+   * em JSONB e o processamento a repassa inteira ao caso de uso, então o
+   * `smart` do `POST /route-plans/mine` sempre chegou —, só não estava
+   * declarado. Sem o campo, quem monta a requisição fora de um spread não
+   * consegue pedir o modo inteligente sem que o TypeScript recuse.
+   */
+  smart?: boolean;
   vehicle?: OptimizationVehicleInput;
   vehicles?: OptimizationVehicleInput[];
 }

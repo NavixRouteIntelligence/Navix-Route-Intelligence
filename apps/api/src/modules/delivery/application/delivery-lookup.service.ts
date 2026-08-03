@@ -92,6 +92,20 @@ export interface DeliveryLookupPort {
   countDeliveredInRange(tenantId: string, from: Date, to: Date): Promise<number>;
   /** Entregas **ativas** (pendente/em rota) — base da reotimização (ADR-0023). */
   listActive(tenantId: string): Promise<DeliveryStopDto[]>;
+  /**
+   * Entregas ativas **sem motorista atribuído** — o que a distribuição tem para
+   * repartir (ADR-0101). Distinta de `listActive` de propósito: distribuir é
+   * sobre quem ainda não tem dono, e reaproveitar `listActive` obrigaria quem
+   * chama a filtrar por um campo que o `DeliveryStopDto` nem expõe.
+   */
+  listUnassignedActive(tenantId: string): Promise<DeliveryStopDto[]>;
+  /**
+   * Entregas ativas **de uma ficha** — o dia inteiro daquele motorista, que é o
+   * que a rota dele precisa cobrir (ADR-0098/0101). Distinta de
+   * `listNotifiableActive`, que carrega o contato do destinatário: quem monta
+   * rota não precisa de PII.
+   */
+  listActiveForDriver(tenantId: string, driverId: string): Promise<DeliveryStopDto[]>;
 }
 
 export const DELIVERY_LOOKUP = Symbol('DELIVERY_LOOKUP');
@@ -118,6 +132,37 @@ export class DeliveryLookupService implements DeliveryLookupPort {
     const { items } = await this.deliveries.findAll(tenantId, {
       page: { page: 1, pageSize: 500 },
       filters: {},
+      sort: [],
+    });
+    return items
+      .filter((d) => {
+        const status = d.snapshot().status;
+        return status === 'pending' || status === 'in_route';
+      })
+      .map((d) => this.toDto(d));
+  }
+
+  async listUnassignedActive(tenantId: string): Promise<DeliveryStopDto[]> {
+    // `driverId: null` é o filtro "sem motorista atribuído" da ADR-0100 — o
+    // mesmo que serve o motorista autônomo. Aqui ele delimita exatamente o
+    // lote a repartir, sem varrer o tenant inteiro na aplicação.
+    const { items } = await this.deliveries.findAll(tenantId, {
+      page: { page: 1, pageSize: 500 },
+      filters: { driverId: null },
+      sort: [],
+    });
+    return items
+      .filter((d) => {
+        const status = d.snapshot().status;
+        return status === 'pending' || status === 'in_route';
+      })
+      .map((d) => this.toDto(d));
+  }
+
+  async listActiveForDriver(tenantId: string, driverId: string): Promise<DeliveryStopDto[]> {
+    const { items } = await this.deliveries.findAll(tenantId, {
+      page: { page: 1, pageSize: 500 },
+      filters: { driverId },
       sort: [],
     });
     return items

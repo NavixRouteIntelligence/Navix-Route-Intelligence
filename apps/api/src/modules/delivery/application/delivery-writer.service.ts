@@ -8,6 +8,7 @@ import {
   type DeliveryRepositoryPort,
 } from '../domain/ports/delivery-repository.port';
 import { CreateDeliveryUseCase } from './create-delivery.use-case';
+import { UpdateDeliveryUseCase } from './update-delivery.use-case';
 
 /** Rascunho de entrega vindo de outra origem (ex.: Import Center). */
 export interface DeliveryDraft {
@@ -44,11 +45,26 @@ export interface DeliveryOutcomeInput {
   status: 'delivered' | 'failed';
 }
 
+/** Atribuição de uma entrega a uma ficha de motorista (ADR-0101). */
+export interface DeliveryAssignmentInput {
+  tenantId: string;
+  actorId: string;
+  deliveryId: string;
+  /** Ficha (`drivers.id`), nunca o login — ADR-0086. */
+  driverId: string;
+}
+
 /** API pública de escrita do contexto Delivery. */
 export interface DeliveryWriterPort {
   create(draft: DeliveryDraft): Promise<string>;
   /** Registra o desfecho, respeitando a máquina de estados (passa por in_route). */
   markOutcome(input: DeliveryOutcomeInput): Promise<void>;
+  /**
+   * Dá dono a uma entrega **sem motorista**. Devolve `false` — sem lançar —
+   * quando ela já tem um: distribuir é uma operação em lote, e perder a corrida
+   * para uma atribuição manual é desfecho normal, não erro (ADR-0101).
+   */
+  assignDriver(input: DeliveryAssignmentInput): Promise<boolean>;
 }
 
 export const DELIVERY_WRITER = Symbol('DELIVERY_WRITER');
@@ -59,9 +75,36 @@ const DEFAULT_WINDOW_HOURS = 8;
 export class DeliveryWriterService implements DeliveryWriterPort {
   constructor(
     private readonly createDelivery: CreateDeliveryUseCase,
+    private readonly updateDelivery: UpdateDeliveryUseCase,
     @Inject(DELIVERY_REPOSITORY) private readonly deliveries: DeliveryRepositoryPort,
     @Inject(AUDIT_LOG) private readonly audit: AuditLogPort,
   ) {}
+
+  /**
+   * Delega ao `UpdateDeliveryUseCase` — o mesmo caminho do `PATCH` manual — em
+   * vez de gravar aqui. Assim uma entrega atribuída pela distribuição fica
+   * **indistinguível** de uma atribuída à mão: mesma validação de existência da
+   * ficha, mesma auditoria, mesmo `delivery.updated` interno e no outbox de
+   * webhooks. Repetir a gravação aqui criaria um segundo caminho de escrita
+   * para o mesmo campo, que é como as duas metades saem de sincronia.
+   */
+  async assignDriver(input: DeliveryAssignmentInput): Promise<boolean> {
+    const delivery = await this.deliveries.findById(input.tenantId, input.deliveryId);
+    if (!delivery) throw new NotFoundError('Entrega não encontrada.');
+
+    // Relê o dono agora, e não no lote: entre montar a distribuição e gravá-la,
+    // um despachante pode ter atribuído esta entrega à mão. Quem chegou
+    // primeiro vence, e a distribuição não desfaz decisão de gente.
+    if (delivery.snapshot().driverId !== null) return false;
+
+    await this.updateDelivery.execute({
+      tenantId: input.tenantId,
+      id: input.deliveryId,
+      actorId: input.actorId,
+      driverId: input.driverId,
+    });
+    return true;
+  }
 
   async markOutcome(input: DeliveryOutcomeInput): Promise<void> {
     const delivery = await this.deliveries.findById(input.tenantId, input.deliveryId);
