@@ -59,6 +59,17 @@ export interface OptimizeRouteCommand {
    * do despacho e no motorista autônomo, que não tem ficha.
    */
   driverId?: string | null;
+  /**
+   * Instante do **pedido**. O worker passa o `createdAt` do job; no caminho
+   * síncrono fica o agora. É o que permite recusar um job antigo que chega
+   * tarde (ADR-0103).
+   */
+  requestedAt?: Date;
+  /**
+   * O resultado é a rota **deste motorista** no dia — uma coisa só, sujeita à
+   * regra de substituição. `false`/ausente no plano do despacho.
+   */
+  driverScoped?: boolean;
   origin?: OriginInput | null;
   deliveryIds?: string[];
   stops?: OptimizationStopInput[];
@@ -107,6 +118,11 @@ export class OptimizeRouteUseCase {
       ? await this.planFleet(command, rawStops, service)
       : await this.planSingle(command, rawStops, service);
 
+    // Um pedido mais recente já definiu a rota deste motorista hoje: este
+    // resultado chegou tarde e não pode desfazer o que veio depois (ADR-0103).
+    const vigente = await this.currentIfNewer(plan);
+    if (vigente) return toRoutePlanView(vigente);
+
     await this.plans.save(plan);
     const planSnapshot = plan.snapshot();
     // Avisa o read model de KPIs (ADR-0092) que há economia nova a contabilizar.
@@ -141,6 +157,30 @@ export class OptimizeRouteUseCase {
       },
     });
     return toRoutePlanView(plan);
+  }
+
+  /**
+   * Rota vigente do motorista quando ela nasceu de um pedido **mais recente**
+   * que este — caso em que este resultado é descartado.
+   *
+   * Descartar, e não gravar marcado como superado, é deliberado: `route_plans`
+   * alimenta o read model de KPIs (ADR-0092), e dois planos para as mesmas
+   * entregas contariam a economia duas vezes.
+   */
+  private async currentIfNewer(plan: RoutePlan): Promise<RoutePlan | null> {
+    const s = plan.snapshot();
+    if (!s.driverScoped) return null;
+
+    const vigente = await this.plans.findLatestRequestedForDriver(
+      s.tenantId,
+      s.driverId,
+      s.operationalDay,
+    );
+    if (!vigente) return null;
+    // `>` e não `>=`: pedidos no mesmo milissegundo são empate, e o que chega
+    // por último grava — é o comportamento anterior, e não há ordem a preservar
+    // entre dois pedidos simultâneos.
+    return vigente.requestedAt > s.requestedAt ? vigente : null;
   }
 
   /** Pesos da função de custo: modo inteligente (contexto) vence Modo Economia. */
@@ -196,6 +236,8 @@ export class OptimizeRouteUseCase {
     return RoutePlan.create({
       tenantId: command.tenantId,
       driverId: command.driverId ?? null,
+      ...(command.requestedAt ? { requestedAt: command.requestedAt } : {}),
+      driverScoped: command.driverScoped ?? false,
       strategy: solved.strategyName,
       status: 'completed',
       params: {
@@ -336,6 +378,8 @@ export class OptimizeRouteUseCase {
       tenantId: command.tenantId,
       // Plano de frota cobre vários veículos e não pertence a uma pessoa só.
       driverId: null,
+      ...(command.requestedAt ? { requestedAt: command.requestedAt } : {}),
+      driverScoped: false,
       strategy: strategyName,
       status: 'completed',
       params: {
@@ -442,9 +486,17 @@ export class OptimizeRouteUseCase {
       if (found.length !== ids.length) {
         throw new NotFoundError('Uma ou mais entregas não foram encontradas.');
       }
+      // **Na ordem pedida** (ADR-0103). A busca por id devolve as linhas na
+      // ordem do banco, que não é a do cliente: sem este reordenamento, a
+      // estratégia `manual` — que é a identidade — preservava a ordem do
+      // Postgres, não a que o motorista arrastou. Vale para todas as
+      // estratégias, porque a ordem de entrada também é o *baseline* contra o
+      // qual a economia é medida.
+      const porId = new Map(found.map((f) => [f.id, f]));
+      const naOrdem = ids.map((id) => porId.get(id)!);
       // Demanda por entrega ainda não existe no agregado Delivery (evolução do
       // contexto Delivery) — trata-se como zero até lá. Ver ADR-0022.
-      return found.map((f) => ({
+      return naOrdem.map((f) => ({
         id: f.id,
         point: GeoPoint.create(f.latitude, f.longitude),
         priority: f.priority,

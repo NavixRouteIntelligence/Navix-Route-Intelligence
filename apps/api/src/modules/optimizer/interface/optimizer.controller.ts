@@ -102,6 +102,9 @@ export class OptimizerController {
       tenantId: user.tenantId,
       actorId: user.id,
       driverId,
+      // A rota do motorista no dia é uma coisa só: o pedido mais recente
+      // substitui, e um job antigo que chega tarde é descartado (ADR-0103).
+      driverScoped: true,
       // Só este caminho carrega `ownership` (ADR-0099): o motorista só otimiza
       // as próprias entregas. O `POST /route-plans` do despacho segue livre —
       // roteirizar a frota inteira é justamente o trabalho de quem despacha.

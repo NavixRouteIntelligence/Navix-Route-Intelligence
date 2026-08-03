@@ -12,6 +12,12 @@ export interface OptimizationJobRequest {
   actorId: string;
   /** Ficha do motorista dono da rota (ADR-0098), quando há uma. */
   driverId?: string | null;
+  /**
+   * O resultado é a rota **de um motorista** no dia (ADR-0103) — sujeita à
+   * regra de substituição por pedido mais recente. Precisa estar no job
+   * persistido: quem decide é o worker, muito depois da requisição.
+   */
+  driverScoped?: boolean;
   origin?: OriginInput | null;
   deliveryIds?: string[];
   stops?: OptimizationStopInput[];

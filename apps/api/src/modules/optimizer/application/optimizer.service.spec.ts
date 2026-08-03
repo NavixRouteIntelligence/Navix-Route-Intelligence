@@ -94,6 +94,7 @@ describe('OptimizerService.etaPredictionForDelivery', () => {
     const base: NewRoutePlan = {
       tenantId: 'tenant-1',
       driverId: 'ficha-1',
+      driverScoped: true,
       strategy: 'nearest-neighbor-2opt',
       status: 'completed',
       params: { averageSpeedKmh: 30, serviceTimeMinutes: 5, hasOrigin: false },

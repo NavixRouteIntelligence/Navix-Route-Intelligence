@@ -27,6 +27,20 @@ export interface RoutePlanProps {
    * qual fuso se escolhe: escrita e leitura têm de concordar.
    */
   operationalDay: string;
+  /**
+   * Instante em que a otimização foi **pedida** — não em que terminou.
+   *
+   * É por ele que se decide quem substitui quem: comparar conclusões deixaria
+   * um job lento, pedido antes, sobrescrever a ordem manual pedida depois
+   * (ADR-0103).
+   */
+  requestedAt: Date;
+  /**
+   * O plano é a rota **de um motorista** naquele dia — uma coisa só, que o
+   * pedido mais recente substitui. `false` no plano do despacho, que roteiriza
+   * recortes diferentes da frota e legitimamente tem vários por dia.
+   */
+  driverScoped: boolean;
   strategy: OptimizationStrategyName;
   status: 'completed';
   params: RoutePlanParams;
@@ -45,7 +59,15 @@ export interface RoutePlanProps {
   createdAt: Date;
 }
 
-export type NewRoutePlan = Omit<RoutePlanProps, 'id' | 'createdAt' | 'operationalDay'>;
+/**
+ * `requestedAt` é opcional: no caminho síncrono pedido e conclusão são o mesmo
+ * instante. Já `driverScoped` é obrigatório de propósito — um default silencioso
+ * ou desligaria a proteção da ordem manual, ou descartaria plano do despacho.
+ */
+export type NewRoutePlan = Omit<
+  RoutePlanProps,
+  'id' | 'createdAt' | 'operationalDay' | 'requestedAt'
+> & { requestedAt?: Date };
 
 /** Dia operacional de um instante (`YYYY-MM-DD`). Ver a nota em `operationalDay`. */
 export function operationalDayOf(at: Date): string {
@@ -65,7 +87,10 @@ export class RoutePlan {
       ...data,
       id: newId(),
       createdAt,
-      operationalDay: operationalDayOf(createdAt),
+      requestedAt: data.requestedAt ?? createdAt,
+      // O dia é o do **pedido**: um job pedido às 23h55 e concluído às 00h05
+      // pertence ao dia em que o motorista o pediu, não ao seguinte.
+      operationalDay: operationalDayOf(data.requestedAt ?? createdAt),
     });
   }
 
@@ -83,5 +108,9 @@ export class RoutePlan {
 
   get driverId(): string | null {
     return this.props.driverId;
+  }
+
+  get requestedAt(): Date {
+    return this.props.requestedAt;
   }
 }
