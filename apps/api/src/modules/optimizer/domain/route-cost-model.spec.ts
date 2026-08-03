@@ -62,3 +62,62 @@ describe('serviceTimeAt', () => {
     expect(serviceTimeAt(ctx, 2)).toBe(5); // cai no global
   });
 });
+
+// NAV-4.5 / ADR-0104: a janela vira restrição de verdade quando a espera entra
+// no relógio do próprio otimizador — antes ele escolhia a ordem sobre um tempo
+// que o ETA depois contradizia.
+describe('compositeCost — espera pela abertura da janela', () => {
+  /** Tempo = distância; sem serviço, para o relógio ser fácil de conferir. */
+  function ctxComJanelas(windows: StrategyContext['windows']): StrategyContext {
+    const d = [
+      [0, 10, 20],
+      [10, 0, 10],
+      [20, 10, 0],
+    ];
+    return {
+      size: 3,
+      distanceMatrix: d,
+      timeMatrix: d,
+      priorities: [0, 0, 0],
+      windows,
+      serviceTimeMinutes: 0,
+      hasOrigin: false,
+      weights: { distance: 0, timeWindow: 1, priority: 0 },
+    };
+  }
+
+  it('esperar por uma janela atrasa a parada seguinte, e o custo mostra', () => {
+    // Nó 1 abre no minuto 100; chega-se lá no minuto 10 e espera 90.
+    // O nó 2 fecha no minuto 60, mas só é alcançado no minuto 110.
+    const ctx = ctxComJanelas([
+      null,
+      { startMinutes: 100, endMinutes: 200 },
+      { startMinutes: 0, endMinutes: 60 },
+    ]);
+
+    // Sem espera no relógio, o nó 2 chegaria no minuto 20 — dentro da janela —
+    // e o custo seria zero. Com espera, o atraso é real: 110 − 60.
+    expect(compositeCost(ctx, [0, 1, 2])).toBeCloseTo(50);
+  });
+
+  it('a ordem que evita a espera é a mais barata', () => {
+    const ctx = ctxComJanelas([
+      null,
+      { startMinutes: 100, endMinutes: 200 },
+      { startMinutes: 0, endMinutes: 60 },
+    ]);
+
+    // 0 → 2 → 1 visita o nó de janela apertada primeiro e só depois espera.
+    const comEspera = compositeCost(ctx, [0, 1, 2]);
+    const semEspera = compositeCost(ctx, [0, 2, 1]);
+
+    expect(semEspera).toBeLessThan(comEspera);
+    expect(semEspera).toBe(0);
+  });
+
+  it('chegar cedo sem janela seguinte apertada não custa nada', () => {
+    const ctx = ctxComJanelas([null, { startMinutes: 100, endMinutes: 200 }, null]);
+
+    expect(compositeCost(ctx, [0, 1, 2])).toBe(0);
+  });
+});
