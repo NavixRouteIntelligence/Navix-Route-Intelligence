@@ -15,6 +15,7 @@ import { ListRoutePlansUseCase } from '../src/modules/optimizer/application/list
 import { OptimizeRouteUseCase } from '../src/modules/optimizer/application/optimize-route.use-case';
 import { ProcessOptimizationJobUseCase } from '../src/modules/optimizer/application/process-optimization-job.use-case';
 import { StrategyRegistry } from '../src/modules/optimizer/application/strategy-registry';
+import { TENANT_TIME_ZONE_READER } from '../src/shared/tenancy/tenant-time-zone.port';
 import { DELIVERY_GATEWAY } from '../src/modules/optimizer/application/ports/delivery-gateway.port';
 import { SERVICE_TIME_HISTORY } from '../src/modules/optimizer/application/ports/service-time-history.port';
 import { DISTANCE_PROVIDER } from '../src/modules/optimizer/domain/ports/distance-provider.port';
@@ -264,6 +265,9 @@ describe('Optimizer (e2e, assíncrono)', () => {
           inject: [ProcessOptimizationJobUseCase],
         },
         { provide: JOB_EVENTS, useValue: { optimizationJobUpdated: () => undefined } },
+        // Fuso do tenant (ADR-0105). `UTC` mantém o dia igual ao instante, que é
+        // o que os demais casos deste arquivo assumem.
+        { provide: TENANT_TIME_ZONE_READER, useValue: { findTimeZone: async () => 'UTC' } },
         {
           provide: DELIVERY_GATEWAY,
           useValue: {

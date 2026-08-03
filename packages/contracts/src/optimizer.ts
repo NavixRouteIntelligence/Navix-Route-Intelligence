@@ -72,6 +72,12 @@ export interface OptimizationVehicleInput {
 }
 
 export interface OptimizeRouteRequest {
+  /**
+   * Quando a rota **começa** (ISO-8601). Ausente: começa no instante do pedido
+   * (ADR-0105). Informar é o que permite planejar hoje a rota de amanhã sem que
+   * os ETAs saiam ancorados em hoje.
+   */
+  startAt?: string;
   /** Origem/depósito opcional; se ausente, a rota começa na primeira parada. */
   origin?: OriginInput | null;
   /** Fonte A: IDs de entregas existentes (buscadas no módulo Delivery). */
@@ -245,8 +251,18 @@ export interface RoutePlan {
    * ficha. Planos criados antes do vínculo existir também vêm nulos.
    */
   driverId: string | null;
-  /** Dia operacional do plano (`YYYY-MM-DD`) — o eixo da rota vigente. */
+  /**
+   * Dia operacional do plano (`YYYY-MM-DD`) — o eixo da rota vigente. Derivado
+   * no **fuso do tenant** (ADR-0105).
+   */
   operationalDay: string;
+  /**
+   * Horário-base do cálculo (ISO-8601): o instante do minuto zero, de onde
+   * todo `etaMinutes` parte (ADR-0105). A chegada real de uma parada é
+   * `departureAt + etaMinutes` — e é este campo que torna essa conta
+   * verificável por quem consome, em vez de depender de `createdAt`.
+   */
+  departureAt: string;
   strategy: OptimizationStrategyName;
   status: 'completed';
   params: RoutePlanParams;

@@ -21,6 +21,7 @@ import {
   IsArray,
   IsBoolean,
   IsIn,
+  IsISO8601,
   IsNumber,
   IsOptional,
   IsPositive,
@@ -135,6 +136,14 @@ export class OptimizationVehicleDto implements OptimizationVehicleInput {
 }
 
 export class OptimizeRouteDto implements OptimizeRouteRequest {
+  @ApiPropertyOptional({
+    example: '2026-08-04T08:00:00.000Z',
+    description: 'Quando a rota começa (ADR-0105). Ausente: o instante do pedido.',
+  })
+  @IsOptional()
+  @IsISO8601()
+  startAt?: string;
+
   @ApiPropertyOptional({ type: OriginDto, nullable: true })
   @IsOptional()
   @ValidateNested()

@@ -25,7 +25,13 @@ import type {
   StrategyContext,
 } from '../domain/ports/route-optimization-strategy.port';
 import type { VehicleProfile } from '../domain/vehicle-profile';
-import { buildStops, computeMetrics, computeSavings, computeScore, type ScoringNode } from './scoring';
+import {
+  buildStops,
+  computeMetrics,
+  computeSavings,
+  computeScore,
+  type ScoringNode,
+} from './scoring';
 import { StrategyRegistry } from './strategy-registry';
 
 // Pesos da função de custo composta (tunáveis; no futuro, aprendidos por tenant).
@@ -42,6 +48,11 @@ export interface SolveInput {
   strategyLabel?: string;
   /** Pesos da função de custo (Modo Economia — ADR-0026). Default: balanceado. */
   weights?: OptimizationWeights;
+  /**
+   * Instante da partida — o minuto zero de `etaMinutes` (ADR-0105). Quem chama
+   * informa; o solver não inventa mais uma âncora que só ele conhece.
+   */
+  departureAt: Date;
 }
 
 export interface SolvedRoute {
@@ -76,7 +87,7 @@ export class RouteSolver {
       nodes.map((n) => n.point),
       speed,
     );
-    const windows = this.buildWindows(nodes);
+    const windows = this.buildWindows(nodes, input.departureAt);
     // Priorização dinâmica por SLA: o peso cresce conforme o fim da janela se
     // aproxima (ADR-0022 Fase 3). Sem janela, é o peso base (retrocompatível).
     const priorities = nodes.map((n, i) =>
@@ -100,7 +111,7 @@ export class RouteSolver {
 
     // Travas de posição (ADR-0063): a origem (nó 0) nunca trava. Só entra no ctx
     // se houver ao menos uma — mantém o caminho sem-trava idêntico ao legado.
-    const locked = nodes.map((n, i) => (hasOrigin && i === 0 ? false : n.locked ?? false));
+    const locked = nodes.map((n, i) => (hasOrigin && i === 0 ? false : (n.locked ?? false)));
     const hasLocks = locked.some(Boolean);
 
     const ctx: StrategyContext = {
@@ -123,9 +134,7 @@ export class RouteSolver {
     const { order } = strategy.optimize(ctx);
     const solveSeconds = Number(process.hrtime.bigint() - startedAt) / 1e9;
 
-    const deliveryDemands = nodes
-      .filter((_, i) => !(hasOrigin && i === 0))
-      .map((n) => n.demand);
+    const deliveryDemands = nodes.filter((_, i) => !(hasOrigin && i === 0)).map((n) => n.demand);
     const anyDemand = deliveryDemands.some((d) => d.weightKg > 0 || d.volumeM3 > 0);
 
     const scoringNodes: ScoringNode[] = nodes.map((n, i) => ({
@@ -142,8 +151,22 @@ export class RouteSolver {
     }));
     const baselineOrder = nodes.map((_, i) => i);
 
-    const optimized = computeMetrics(order, distanceMatrix, timeMatrix, service, hasOrigin, scoringNodes);
-    const baseline = computeMetrics(baselineOrder, distanceMatrix, timeMatrix, service, hasOrigin, scoringNodes);
+    const optimized = computeMetrics(
+      order,
+      distanceMatrix,
+      timeMatrix,
+      service,
+      hasOrigin,
+      scoringNodes,
+    );
+    const baseline = computeMetrics(
+      baselineOrder,
+      distanceMatrix,
+      timeMatrix,
+      service,
+      hasOrigin,
+      scoringNodes,
+    );
     const stops = buildStops(order, scoringNodes, distanceMatrix, timeMatrix, service, hasOrigin);
     const savings = computeSavings(baseline, optimized);
 
@@ -172,11 +195,17 @@ export class RouteSolver {
     };
   }
 
-  private buildWindows(nodes: OptimizationStop[]): (NodeWindow | null)[] {
-    const starts = nodes
-      .map((n) => n.timeWindow?.start.getTime())
-      .filter((t): t is number => t !== undefined);
-    const departure = starts.length > 0 ? Math.min(...starts) : Date.now();
+  /**
+   * Janelas em minutos relativos à **partida informada** (ADR-0105).
+   *
+   * Antes a partida era inventada aqui — a abertura de janela mais cedo da
+   * rota, ou `Date.now()`. Isso dava um minuto zero que ninguém mais conhecia:
+   * quem consumia ETA somava esses minutos ao `createdAt` do plano, e as duas
+   * âncoras discordavam sempre que a rota não começava exatamente na abertura
+   * da primeira janela.
+   */
+  private buildWindows(nodes: OptimizationStop[], departureAt: Date): (NodeWindow | null)[] {
+    const departure = departureAt.getTime();
     return nodes.map((n) =>
       n.timeWindow
         ? {

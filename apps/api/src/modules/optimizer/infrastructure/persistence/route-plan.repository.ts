@@ -28,6 +28,7 @@ export class RoutePlanRepository implements RoutePlanRepositoryPort {
     row.driverId = s.driverId;
     row.operationalDay = s.operationalDay;
     row.requestedAt = s.requestedAt;
+    row.departureAt = s.departureAt;
     row.driverScoped = s.driverScoped;
     row.strategy = s.strategy;
     row.status = s.status;
@@ -141,6 +142,7 @@ export class RoutePlanRepository implements RoutePlanRepositoryPort {
       driverId: row.driverId,
       operationalDay: row.operationalDay,
       requestedAt: row.requestedAt,
+      departureAt: row.departureAt,
       driverScoped: row.driverScoped,
       strategy: row.strategy,
       status: row.status,

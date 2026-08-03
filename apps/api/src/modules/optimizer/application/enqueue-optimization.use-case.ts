@@ -2,6 +2,10 @@ import { Inject, Injectable } from '@nestjs/common';
 import type { OptimizationJobAccepted } from '@navix/contracts';
 
 import { ForbiddenError, NotFoundError } from '../../../shared/kernel/domain-error';
+import {
+  TENANT_TIME_ZONE_READER,
+  type TenantTimeZoneReaderPort,
+} from '../../../shared/tenancy/tenant-time-zone.port';
 import { newId } from '../../../shared/kernel/id';
 import { checkOwnership, isFullyOwned } from '../domain/delivery-ownership';
 import {
@@ -41,6 +45,7 @@ export class EnqueueOptimizationUseCase {
     @Inject(OPTIMIZATION_JOB_REPOSITORY) private readonly jobs: OptimizationJobRepositoryPort,
     @Inject(OPTIMIZATION_JOB_QUEUE) private readonly queue: OptimizationJobQueuePort,
     @Inject(DELIVERY_GATEWAY) private readonly deliveries: DeliveryGatewayPort,
+    @Inject(TENANT_TIME_ZONE_READER) private readonly zones: TenantTimeZoneReaderPort,
   ) {}
 
   async execute(command: EnqueueOptimizationCommand): Promise<OptimizationJobAccepted> {
@@ -50,12 +55,17 @@ export class EnqueueOptimizationUseCase {
     // e um job que falha depois, em vez de uma recusa que ele entende.
     if (ownership) await this.assertOwnership(tenantId, request.deliveryIds, ownership.driverId);
 
+    // Resolvido aqui, no pedido, e não no worker: o fuso do tenant pode mudar
+    // entre enfileirar e processar, e o dia operacional tem de ser o de quando
+    // a pessoa pediu (ADR-0105).
+    const timeZone = await this.zones.findTimeZone(tenantId);
+
     const jobId = newId();
     await this.jobs.create({
       id: jobId,
       tenantId,
       status: 'queued',
-      request,
+      request: { ...request, timeZone },
       routePlanId: null,
       error: null,
     });

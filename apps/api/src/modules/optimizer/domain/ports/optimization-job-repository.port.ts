@@ -18,6 +18,10 @@ export interface OptimizationJobRequest {
    * persistido: quem decide é o worker, muito depois da requisição.
    */
   driverScoped?: boolean;
+  /** Quando a rota começa (ADR-0105), em ISO — o job é serializado em jsonb. */
+  startAt?: string;
+  /** Fuso do tenant no momento do pedido, para derivar o dia operacional. */
+  timeZone?: string;
   origin?: OriginInput | null;
   deliveryIds?: string[];
   stops?: OptimizationStopInput[];

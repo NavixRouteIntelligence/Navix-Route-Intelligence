@@ -135,7 +135,10 @@ export class OptimizerService implements OptimizerServicePort {
     // outro formato de `stops` não deve derrubar o rastreio público.
     if (!stop) return null;
 
-    const heuristica = new Date(snapshot.createdAt.getTime() + stop.etaMinutes * 60_000);
+    // `departureAt` e não `createdAt` (ADR-0105): `etaMinutes` é medido a
+    // partir da **partida**, e planejar às 17h uma rota que só pode começar às
+    // 20h fazia o rastreio anunciar a entrega três horas antes do possível.
+    const heuristica = new Date(snapshot.departureAt.getTime() + stop.etaMinutes * 60_000);
     // Único ponto onde heurística e modelo se encontram (ADR-0090). Sem modelo
     // treinado a correção é zero e o resultado é idêntico ao anterior — quem
     // consome ETA (rastreio público, avisos, medição) não muda em nada.

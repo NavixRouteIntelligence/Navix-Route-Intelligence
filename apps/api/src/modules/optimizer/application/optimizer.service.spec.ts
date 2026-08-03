@@ -85,9 +85,9 @@ describe('OptimizerService.optimizeDeliveries', () => {
   });
 });
 
-
 describe('OptimizerService.etaPredictionForDelivery', () => {
-  const CRIADO_EM = new Date('2026-08-03T08:00:00.000Z');
+  /** Partida da rota — o minuto zero de `etaMinutes` (ADR-0105). */
+  const PARTIDA = new Date('2026-08-03T08:00:00.000Z');
 
   /** Plano com uma parada por entrega, cada uma com o seu ETA. */
   function plano(paradas: { deliveryId: string; etaMinutes: number }[]): RoutePlan {
@@ -114,11 +114,9 @@ describe('OptimizerService.etaPredictionForDelivery', () => {
       savings: { distanceKm: 0, timeMinutes: 0, distancePct: 0, timePct: 0 },
       score: 80,
       explanation: 'ok',
+      departureAt: PARTIDA,
     };
-    const p = RoutePlan.create(base);
-    // `createdAt` é a âncora do ETA; fixa para o cálculo ser determinístico.
-    Object.assign(p.snapshot(), { createdAt: CRIADO_EM });
-    return p;
+    return RoutePlan.create(base);
   }
 
   function servico(contendo: RoutePlan | null) {

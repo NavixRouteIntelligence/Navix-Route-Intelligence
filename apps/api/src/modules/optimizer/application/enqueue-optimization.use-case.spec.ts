@@ -4,6 +4,9 @@ import type { OptimizationJobQueuePort } from '../domain/ports/optimization-job-
 import type { OptimizationJobRepositoryPort } from '../domain/ports/optimization-job-repository.port';
 import { EnqueueOptimizationUseCase } from './enqueue-optimization.use-case';
 
+/** Fuso do tenant no teste. `UTC` mantém o dia igual ao instante. */
+const zones = { findTimeZone: async () => 'UTC' };
+
 /** Gateway de entregas do teste: `ownership` fixo, sem tocar no Delivery. */
 function gateway(donos: { id: string; driverId: string | null }[] = []): DeliveryGatewayPort {
   return {
@@ -26,7 +29,7 @@ describe('EnqueueOptimizationUseCase', () => {
     };
     const queue: OptimizationJobQueuePort = { enqueue };
 
-    const uc = new EnqueueOptimizationUseCase(jobs, queue, gateway());
+    const uc = new EnqueueOptimizationUseCase(jobs, queue, gateway(), zones);
     const res = await uc.execute({ tenantId: 't1', actorId: 'a1', deliveryIds: ['d1', 'd2'] });
 
     expect(res.status).toBe('queued');
@@ -59,7 +62,7 @@ describe('EnqueueOptimizationUseCase', () => {
     };
     const queue: OptimizationJobQueuePort = { enqueue };
 
-    const uc = new EnqueueOptimizationUseCase(jobs, queue, gateway());
+    const uc = new EnqueueOptimizationUseCase(jobs, queue, gateway(), zones);
 
     await expect(
       uc.execute({ tenantId: 't1', actorId: 'a1', deliveryIds: ['d1', 'd2'] }),
@@ -83,7 +86,7 @@ describe('EnqueueOptimizationUseCase', () => {
         claim: jest.fn(),
         resetForRetry: jest.fn(),
       };
-      const uc = new EnqueueOptimizationUseCase(jobs, { enqueue }, gateway(donos));
+      const uc = new EnqueueOptimizationUseCase(jobs, { enqueue }, gateway(donos), zones);
       return { uc, create, enqueue };
     }
 
@@ -180,7 +183,7 @@ describe('EnqueueOptimizationUseCase', () => {
         resetForRetry: jest.fn(),
       };
 
-      await new EnqueueOptimizationUseCase(jobs, { enqueue: jest.fn() }, donos).execute({
+      await new EnqueueOptimizationUseCase(jobs, { enqueue: jest.fn() }, donos, zones).execute({
         tenantId: 't1',
         actorId: 'a1',
         stops: [
