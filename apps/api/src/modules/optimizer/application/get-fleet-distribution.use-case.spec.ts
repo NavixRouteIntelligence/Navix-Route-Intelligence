@@ -12,6 +12,7 @@ function plano(driverId: string, paradas: number, km: number): RoutePlan {
   const base: NewRoutePlan = {
     tenantId: TENANT,
     driverId,
+    driverScoped: true,
 
     strategy: 'nearest-neighbor-2opt',
     status: 'completed',

@@ -162,6 +162,33 @@ void main() {
     expect(rota, isNot(contains('?')));
   });
 
+  // NAV-4.4 / ADR-0103: recarregar a tela tem de mostrar a ordem que o
+  // motorista deixou — não a ordem natural das entregas. É o recarregamento que
+  // desfazia a reordenação antes de a ordem ser preservada de ponta a ponta.
+  test('ao recarregar, a rota vem na ordem manual persistida', () async {
+    final route = await repo(
+      plans: [
+        {
+          'id': 'p1',
+          'strategy': 'manual',
+          'metrics': {'totalDistanceKm': 10, 'totalTimeMinutes': 60},
+          'savings': {'distanceKm': 0, 'distancePct': 0},
+          // O backend devolve a sequência persistida: d2 antes de d1.
+          'stops': [
+            {'sequence': 1, 'deliveryId': 'd2', 'etaMinutes': 20},
+            {'sequence': 2, 'deliveryId': 'd1', 'etaMinutes': 45},
+          ],
+        },
+      ],
+      deliveries: [delivery('d1', 'Rua A'), delivery('d2', 'Rua B')],
+    ).load();
+
+    expect(route.status, MyRouteStatus.ready);
+    expect(route.stops.map((s) => s.deliveryId).toList(), ['d2', 'd1']);
+    // O app não reordena por conta própria: a posição vem do plano.
+    expect(route.stops.map((s) => s.sequence).toList(), [1, 2]);
+  });
+
   test('sem plano e sem entregas suficientes: rota vazia', () async {
     final route = await repo(deliveries: [delivery('d1', 'Rua A')]).load();
 

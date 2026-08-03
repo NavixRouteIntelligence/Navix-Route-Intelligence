@@ -13,6 +13,7 @@ function plan(driverId: string | null): RoutePlan {
   const base: NewRoutePlan = {
     tenantId: TENANT,
     driverId,
+    driverScoped: true,
     strategy: 'nearest-neighbor-2opt',
     status: 'completed',
     params: { averageSpeedKmh: 30, serviceTimeMinutes: 5, hasOrigin: false },
@@ -38,6 +39,7 @@ function build(ficha: string | null, found: RoutePlan | null) {
     },
     findActiveForDrivers: async () => new Map(),
     findLatestContainingDelivery: async () => null,
+    findLatestRequestedForDriver: async () => null,
   };
   const roster: DriverRosterLinkPort = {
     driverIdForUser: async () => ficha,

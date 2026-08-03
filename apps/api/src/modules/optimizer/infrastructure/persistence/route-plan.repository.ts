@@ -27,6 +27,8 @@ export class RoutePlanRepository implements RoutePlanRepositoryPort {
     row.tenantId = s.tenantId;
     row.driverId = s.driverId;
     row.operationalDay = s.operationalDay;
+    row.requestedAt = s.requestedAt;
+    row.driverScoped = s.driverScoped;
     row.strategy = s.strategy;
     row.status = s.status;
     row.params = s.params;
@@ -115,12 +117,31 @@ export class RoutePlanRepository implements RoutePlanRepositoryPort {
     return row ? this.toDomain(row) : null;
   }
 
+  async findLatestRequestedForDriver(
+    tenantId: string,
+    driverId: string | null,
+    operationalDay: string,
+  ): Promise<RoutePlan | null> {
+    const row = await this.repo.findOne({
+      where: {
+        tenantId,
+        driverId: driverId ?? IsNull(),
+        operationalDay,
+        driverScoped: true,
+      },
+      order: { requestedAt: 'DESC' },
+    });
+    return row ? this.toDomain(row) : null;
+  }
+
   private toDomain(row: RoutePlanOrmEntity): RoutePlan {
     return RoutePlan.restore({
       id: row.id,
       tenantId: row.tenantId,
       driverId: row.driverId,
       operationalDay: row.operationalDay,
+      requestedAt: row.requestedAt,
+      driverScoped: row.driverScoped,
       strategy: row.strategy,
       status: row.status,
       params: row.params,

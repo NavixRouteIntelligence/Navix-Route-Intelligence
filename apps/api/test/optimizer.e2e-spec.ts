@@ -39,6 +39,7 @@ import { ReoptimizeActiveUseCase } from '../src/modules/optimizer/application/re
 import { RouteSolver } from '../src/modules/optimizer/application/route-solver';
 import { HaversineDistanceProvider } from '../src/modules/optimizer/infrastructure/distance/haversine-distance.provider';
 import { OptimizerMetrics } from '../src/modules/optimizer/infrastructure/observability/optimizer-metrics';
+import { ManualStrategy } from '../src/modules/optimizer/infrastructure/strategies/manual.strategy';
 import { NearestNeighbor2OptStrategy } from '../src/modules/optimizer/infrastructure/strategies/nearest-neighbor-2opt.strategy';
 import { OrOpt2OptStrategy } from '../src/modules/optimizer/infrastructure/strategies/or-opt-2opt.strategy';
 import { GetActiveRoutePlanUseCase } from '../src/modules/optimizer/application/get-active-route-plan.use-case';
@@ -88,6 +89,25 @@ class InMemoryRoutePlanRepository implements RoutePlanRepositoryPort {
       if (plano) porFicha.set(driverId, plano);
     }
     return porFicha;
+  }
+
+  /** Rota do motorista no dia com o **pedido** mais recente (ADR-0103). */
+  async findLatestRequestedForDriver(
+    tenantId: string,
+    driverId: string | null,
+    operationalDay: string,
+  ): Promise<RoutePlan | null> {
+    const matches = [...this.store.values()]
+      .map((p) => p.snapshot())
+      .filter(
+        (s) =>
+          s.tenantId === tenantId &&
+          s.driverId === driverId &&
+          s.operationalDay === operationalDay &&
+          s.driverScoped,
+      )
+      .sort((a, b) => b.requestedAt.getTime() - a.requestedAt.getTime());
+    return matches.length > 0 ? (this.store.get(matches[0].id) ?? null) : null;
   }
 
   /** Espelha o containment em jsonb do repositório real (ADR-0102). */
@@ -211,10 +231,15 @@ describe('Optimizer (e2e, assíncrono)', () => {
         RouteSolver,
         NearestNeighbor2OptStrategy,
         OrOpt2OptStrategy,
+        ManualStrategy,
         {
           provide: OPTIMIZATION_STRATEGIES,
-          useFactory: (nn: NearestNeighbor2OptStrategy, orOpt: OrOpt2OptStrategy) => [nn, orOpt],
-          inject: [NearestNeighbor2OptStrategy, OrOpt2OptStrategy],
+          useFactory: (
+            nn: NearestNeighbor2OptStrategy,
+            orOpt: OrOpt2OptStrategy,
+            manual: ManualStrategy,
+          ) => [nn, orOpt, manual],
+          inject: [NearestNeighbor2OptStrategy, OrOpt2OptStrategy, ManualStrategy],
         },
         { provide: DISTANCE_PROVIDER, useClass: HaversineDistanceProvider },
         { provide: ROUTING_PROVIDER, useClass: HaversineRoutingProvider },
@@ -527,6 +552,50 @@ describe('Optimizer (e2e, assíncrono)', () => {
 
       expect(ativa.body.data.id).toBe(meuJob.routePlanId);
       expect(ativa.body.data.id).not.toBe(jobDespacho.routePlanId);
+    });
+  });
+
+  // NAV-4.4 / ADR-0103: a ordem que o motorista arrastou tem de chegar ao plano
+  // exatamente como ele a deixou.
+  describe('ordem manual (ADR-0103)', () => {
+    it('a sequência enviada é a persistida, com posição por parada', async () => {
+      // Ordem deliberadamente diferente da natural: se algo pelo caminho
+      // reordenar (a busca por id devolve na ordem do banco), o teste acusa.
+      const escolhida = [MINHAS[1], MINHAS[0]];
+
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/route-plans/mine')
+        .send({ deliveryIds: escolhida, strategy: 'manual' })
+        .expect(202);
+      const job = await pollJob(app, res.body.data.jobId);
+
+      const plano = await request(app.getHttpServer())
+        .get(`/api/v1/route-plans/${job.routePlanId}`)
+        .expect(200);
+
+      expect(plano.body.data.strategy).toBe('manual');
+      expect(plano.body.data.stops.map((s: { deliveryId: string }) => s.deliveryId)).toEqual(
+        escolhida,
+      );
+      expect(plano.body.data.stops.map((s: { sequence: number }) => s.sequence)).toEqual([1, 2]);
+    });
+
+    it('a rota recarregada devolve a ordem manual, não a natural', async () => {
+      const escolhida = [MINHAS[1], MINHAS[0]];
+
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/route-plans/mine')
+        .send({ deliveryIds: escolhida, strategy: 'manual' })
+        .expect(202);
+      await pollJob(app, res.body.data.jobId);
+
+      const ativa = await request(app.getHttpServer())
+        .get('/api/v1/route-plans/mine/active')
+        .expect(200);
+
+      expect(ativa.body.data.stops.map((s: { deliveryId: string }) => s.deliveryId)).toEqual(
+        escolhida,
+      );
     });
   });
 });

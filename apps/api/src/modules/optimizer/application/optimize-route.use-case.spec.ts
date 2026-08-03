@@ -2,6 +2,7 @@ import type { AuditLogPort } from '../../../shared/audit/audit-log.port';
 import type { PagedResult } from '../../../shared/kernel/pagination';
 import { HaversineRoutingProvider } from '../infrastructure/routing/haversine-routing.provider';
 import type { OptimizerMetrics } from '../infrastructure/observability/optimizer-metrics';
+import { ManualStrategy } from '../infrastructure/strategies/manual.strategy';
 import { NearestNeighbor2OptStrategy } from '../infrastructure/strategies/nearest-neighbor-2opt.strategy';
 import type { RoutePlan } from '../domain/route-plan';
 import type { DeliveryGatewayPort } from './ports/delivery-gateway.port';
@@ -11,7 +12,7 @@ import { DomainEventBus } from '../../../shared/events/domain-event-bus';
 import { RouteSolver } from './route-solver';
 import { StrategyRegistry } from './strategy-registry';
 
-function build() {
+function build(vigente: RoutePlan | null = null) {
   const saved: RoutePlan[] = [];
   const plans: RoutePlanRepositoryPort = {
     save: async (p) => void saved.push(p),
@@ -20,16 +21,26 @@ function build() {
     findActiveForDriver: async () => null,
     findActiveForDrivers: async () => new Map(),
     findLatestContainingDelivery: async () => null,
+    findLatestRequestedForDriver: async () => vigente,
   };
   const gateway: DeliveryGatewayPort = {
-    getStops: async () => [],
+    // Devolve as entregas em ordem **invertida** de propósito: é o que a busca
+    // por id faz na prática, já que `IN (...)` não preserva a ordem do pedido.
+    getStops: async (_t, ids) =>
+      [...ids].reverse().map((id, i) => ({
+        id,
+        latitude: 0,
+        longitude: i,
+        priority: 'normal' as const,
+        timeWindow: null,
+      })),
     getOwnership: async () => [],
     listActiveStops: async () => [],
   };
   const audit: AuditLogPort = { record: async () => undefined };
   // Sem histórico de tempo de serviço por padrão (todos os pontos = null).
   const history = { typicalServiceMinutes: async (_t: string, pts: unknown[]) => pts.map(() => null) };
-  const registry = new StrategyRegistry([new NearestNeighbor2OptStrategy()]);
+  const registry = new StrategyRegistry([new NearestNeighbor2OptStrategy(), new ManualStrategy()]);
   const metrics = {
     observeSolve: jest.fn(),
     markInfeasible: jest.fn(),
@@ -180,5 +191,110 @@ describe('OptimizeRouteUseCase — multi-veículo (ADR-0022 Fase 2)', () => {
         ],
       }),
     ).rejects.toThrow(/vehicle.*OU.*vehicles|não ambos/i);
+  });
+});
+
+// NAV-4.4 / ADR-0103: a ordem que o motorista arrastou não pode ser desfeita
+// por um job que ficou para trás na fila.
+describe('OptimizeRouteUseCase — preservação da ordem manual', () => {
+  const FICHA = 'ficha-maria';
+  const PEDIDO_ANTIGO = new Date('2026-08-03T09:00:00.000Z');
+  const PEDIDO_NOVO = new Date('2026-08-03T09:05:00.000Z');
+
+  /** Três paradas em linha, para que "otimizar" tenha o que reordenar. */
+  const paradas = [
+    { id: S1, latitude: 0, longitude: 0 },
+    { id: S2, latitude: 0, longitude: 2 },
+    { id: S3, latitude: 0, longitude: 1 },
+  ];
+
+  function comando(over: Record<string, unknown> = {}) {
+    return {
+      tenantId: 't1',
+      actorId: 'u1',
+      driverId: FICHA,
+      driverScoped: true,
+      stops: paradas,
+      ...over,
+    };
+  }
+
+  it('a ordem manual é gravada com posição explícita por parada', async () => {
+    const { uc, saved } = build();
+
+    const view = await uc.execute(comando({ strategy: 'manual', requestedAt: PEDIDO_NOVO }));
+
+    // Identidade: a sequência sai exatamente na ordem enviada, numerada.
+    expect(view.stops.map((s) => s.deliveryId)).toEqual([S1, S2, S3]);
+    expect(view.stops.map((s) => s.sequence)).toEqual([1, 2, 3]);
+    expect(saved).toHaveLength(1);
+    expect(saved[0].snapshot().strategy).toBe('manual');
+  });
+
+  /** Executa uma otimização e devolve o plano de domínio realmente gravado. */
+  async function planoGravado(over: Record<string, unknown>): Promise<RoutePlan> {
+    const { uc, saved } = build();
+    await uc.execute(comando(over));
+    return saved[0];
+  }
+
+  it('job pedido antes não desfaz a ordem pedida depois', async () => {
+    const manual = await planoGravado({ strategy: 'manual', requestedAt: PEDIDO_NOVO });
+
+    // O job antigo termina agora, depois da reordenação manual.
+    const { uc, saved } = build(manual);
+    const view = await uc.execute(comando({ requestedAt: PEDIDO_ANTIGO }));
+
+    // Nada gravado, e quem chamou recebe a rota que vale — não a dele.
+    expect(saved).toHaveLength(0);
+    expect(view.id).toBe(manual.id);
+    expect(view.stops.map((s) => s.deliveryId)).toEqual([S1, S2, S3]);
+  });
+
+  it('um pedido mais recente substitui normalmente', async () => {
+    const antigo = await planoGravado({ requestedAt: PEDIDO_ANTIGO });
+
+    const { uc, saved } = build(antigo);
+    const view = await uc.execute(comando({ strategy: 'manual', requestedAt: PEDIDO_NOVO }));
+
+    expect(saved).toHaveLength(1);
+    expect(view.id).not.toBe(antigo.id);
+  });
+
+  // O plano do despacho roteiriza recortes diferentes da frota: vários por dia
+  // são legítimos, e a regra de substituição não se aplica a eles.
+  it('plano do despacho não é descartado por um plano de motorista', async () => {
+    const doMotorista = await planoGravado({ requestedAt: PEDIDO_NOVO });
+
+    const { uc, saved } = build(doMotorista);
+    await uc.execute(comando({ driverScoped: false, requestedAt: PEDIDO_ANTIGO }));
+
+    expect(saved).toHaveLength(1);
+  });
+
+  // O dia é o do pedido: um job pedido às 23h55 e concluído às 00h05 pertence
+  // ao dia em que o motorista o pediu.
+  it('o dia operacional segue o pedido, não a conclusão', async () => {
+    const { uc, saved } = build();
+
+    await uc.execute(
+      comando({ strategy: 'manual', requestedAt: new Date('2026-08-03T23:55:00.000Z') }),
+    );
+
+    expect(saved[0].snapshot().operationalDay).toBe('2026-08-03');
+  });
+
+  // A armadilha que fazia a ordem manual não sobreviver: a busca por id devolve
+  // as linhas na ordem do banco, e a estratégia `manual` é a identidade — sem
+  // reordenar pelo pedido, ela preservava a ordem do Postgres.
+  it('a ordem pedida em deliveryIds é a que a estratégia manual preserva', async () => {
+    const { uc } = build();
+
+    const view = await uc.execute(
+      comando({ stops: undefined, deliveryIds: [S3, S1, S2], strategy: 'manual' }),
+    );
+
+    expect(view.stops.map((s) => s.deliveryId)).toEqual([S3, S1, S2]);
+    expect(view.stops.map((s) => s.sequence)).toEqual([1, 2, 3]);
   });
 });

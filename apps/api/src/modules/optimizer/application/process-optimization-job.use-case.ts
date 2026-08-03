@@ -35,7 +35,14 @@ export class ProcessOptimizationJobUseCase {
     this.events.optimizationJobUpdated(tenantId, this.toView(job, { status: 'running' }));
 
     try {
-      const plan = await this.optimize.execute({ ...job.request, tenantId });
+      // `requestedAt` é o nascimento do **job**, não o momento em que o worker
+      // o pegou: é o que faz um job antigo perder para uma ordem manual pedida
+      // depois, mesmo tendo terminado por último (ADR-0103).
+      const plan = await this.optimize.execute({
+        ...job.request,
+        tenantId,
+        requestedAt: job.createdAt,
+      });
       await this.transition(tenantId, job, { status: 'succeeded', routePlanId: plan.id });
     } catch (err) {
       const error = err instanceof Error ? err.message : 'Falha na otimização.';

@@ -32,6 +32,14 @@ export class RoutePlanOrmEntity {
   @Column('date', { name: 'operational_day' })
   operationalDay!: string;
 
+  /** Quando a otimização foi **pedida** (ADR-0103). Decide quem substitui quem. */
+  @Column('timestamptz', { name: 'requested_at' })
+  requestedAt!: Date;
+
+  /** É a rota de um motorista no dia — uma só. `false` no plano do despacho. */
+  @Column('boolean', { name: 'driver_scoped', default: false })
+  driverScoped!: boolean;
+
   @Column('text')
   strategy!: OptimizationStrategyName;
 

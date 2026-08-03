@@ -46,6 +46,20 @@ export interface RoutePlanRepositoryPort {
    * esta entrega.
    */
   findLatestContainingDelivery(tenantId: string, deliveryId: string): Promise<RoutePlan | null>;
+
+  /**
+   * Rota do motorista no dia com o **pedido** mais recente (ADR-0103).
+   *
+   * Só olha planos `driverScoped`: é a pergunta "já existe rota deste motorista
+   * hoje, e de quando é o pedido dela?", usada para não deixar um job antigo
+   * desfazer uma ordem pedida depois. Difere de `findActiveForDriver`, que
+   * responde "o que mostrar na tela" e ordena por conclusão.
+   */
+  findLatestRequestedForDriver(
+    tenantId: string,
+    driverId: string | null,
+    operationalDay: string,
+  ): Promise<RoutePlan | null>;
 }
 
 export const ROUTE_PLAN_REPOSITORY = Symbol('ROUTE_PLAN_REPOSITORY');
