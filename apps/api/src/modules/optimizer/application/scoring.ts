@@ -9,6 +9,7 @@ import type {
 
 import type { NodeWindow } from '../domain/ports/route-optimization-strategy.port';
 import { priorityWeight, type Demand } from '../domain/optimization-stop';
+import { arriveAt } from '../domain/time-window-clock';
 
 export interface ScoringNode {
   id: string;
@@ -56,13 +57,29 @@ export function computeMetrics(
     travelTime += time[order[i - 1]][order[i]];
   }
 
+  // Segundo passo pelo trajeto: a espera depende do relógio acumulado, então
+  // não dá para somá-la junto com o deslocamento no laço acima.
   let serviceTotal = 0;
+  let waitTotal = 0;
+  let lateStops = 0;
   let totalWeight = 0;
   let totalVolume = 0;
   let hasDemand = false;
-  for (let i = hasOrigin ? 1 : 0; i < order.length; i++) {
+  let clock = 0;
+  for (let i = 0; i < order.length; i++) {
+    if (i > 0) clock += time[order[i - 1]][order[i]];
+    if (hasOrigin && i === 0) continue;
+
     const node = nodes?.[order[i]];
-    serviceTotal += serviceOf(node, serviceMinutes);
+    const arrival = arriveAt(clock, node?.window ?? null);
+    clock = arrival.serviceStartMinutes;
+    waitTotal += arrival.waitMinutes;
+    if (arrival.late) lateStops += 1;
+
+    const service = serviceOf(node, serviceMinutes);
+    serviceTotal += service;
+    clock += service;
+
     if (node?.demand) {
       hasDemand = true;
       totalWeight += node.demand.weightKg;
@@ -73,9 +90,13 @@ export function computeMetrics(
   const deliveryStops = hasOrigin ? order.length - 1 : order.length;
   const metrics: RouteMetrics = {
     totalDistanceKm: round(totalDistance),
-    totalTimeMinutes: round(travelTime + serviceTotal),
+    // A espera é tempo em que o veículo está comprometido com a rota: fica no
+    // total, ou o ETA da última parada não fecharia com ele.
+    totalTimeMinutes: round(travelTime + serviceTotal + waitTotal),
     stops: deliveryStops,
   };
+  if (waitTotal > 0) metrics.totalWaitMinutes = round(waitTotal);
+  if (nodes) metrics.lateStops = lateStops;
   if (hasDemand) {
     metrics.totalWeightKg = round(totalWeight);
     metrics.totalVolumeM3 = round(totalVolume);
@@ -107,7 +128,10 @@ export function buildStops(
     const isOrigin = hasOrigin && i === 0;
     if (!isOrigin) {
       const n = nodes[node];
-      const respected = n.window === null ? null : clock <= n.window.endMinutes + 1e-6;
+      const arrival = arriveAt(clock, n.window);
+      // `etaMinutes` é a **chegada**; o atendimento começa depois da espera, e
+      // é dele que a próxima parada parte.
+      const respected = n.window === null ? null : !arrival.late;
       sequence += 1;
       const view: RouteStopView = {
         sequence,
@@ -120,6 +144,7 @@ export function buildStops(
         etaMinutes: round(clock, 1),
         timeWindowRespected: respected,
       };
+      if (arrival.waitMinutes > 0) view.waitMinutes = round(arrival.waitMinutes, 1);
       if (n.demand) {
         view.weightKg = round(n.demand.weightKg);
         view.volumeM3 = round(n.demand.volumeM3);
@@ -127,7 +152,8 @@ export function buildStops(
       if (n.locked) view.locked = true;
       if (n.destinationType) view.destinationType = n.destinationType;
       views.push(view);
-      clock += serviceOf(n, serviceMinutes); // tempo de serviço na parada (por nó)
+      // Espera + serviço: as duas empurram as paradas seguintes.
+      clock = arrival.serviceStartMinutes + serviceOf(n, serviceMinutes);
     }
   }
   return views;
@@ -190,6 +216,12 @@ export function computeScore(
   ];
   if (windowStops.length > 0) {
     parts.push(`${respected}/${windowStops.length} janelas respeitadas`);
+  }
+  // A espera é a parte do plano que ninguém pede e todo mundo paga: sem
+  // aparecer aqui, o motorista descobre na porta (ADR-0104).
+  const waiting = Math.round(stops.reduce((total, s) => total + (s.waitMinutes ?? 0), 0));
+  if (waiting > 0) {
+    parts.push(`${waiting} min de espera até abrir janela`);
   }
   parts.push('prioridades mais altas atendidas primeiro');
   if (capacity) {

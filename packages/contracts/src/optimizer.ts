@@ -108,8 +108,26 @@ export interface RouteStopView {
   priority: DeliveryPriority;
   legDistanceKm: number;
   cumulativeDistanceKm: number;
+  /**
+   * Chegada à parada, em minutos desde a partida. **Não** inclui a espera nesta
+   * parada: é quando o veículo encosta, e é o número que o motorista compara
+   * com o relógio dele. A espera aparece em [waitMinutes] (ADR-0104).
+   */
   etaMinutes: number;
-  /** null quando a parada não tem janela informada. */
+  /**
+   * Espera na porta até a janela abrir (ADR-0104). Presente e maior que zero
+   * apenas quando se chega antes da abertura — o atendimento começa em
+   * `etaMinutes + waitMinutes`, e é desse instante que as paradas seguintes
+   * partem.
+   */
+  waitMinutes?: number;
+  /**
+   * A parada é atendida dentro da janela. `null` quando não há janela.
+   *
+   * Chegar antes **não** é desrespeito: o veículo espera, e a entrega acontece
+   * dentro do combinado. `false` significa atraso de verdade — o atendimento
+   * começa depois do fim da janela.
+   */
   timeWindowRespected: boolean | null;
   /** Demanda de peso (kg) da parada. Presente quando informada (ADR-0022). */
   weightKg?: number;
@@ -147,8 +165,20 @@ export interface RouteGroupView {
 
 export interface RouteMetrics {
   totalDistanceKm: number;
+  /** Deslocamento + serviço + **espera** na porta (ADR-0104). */
   totalTimeMinutes: number;
   stops: number;
+  /**
+   * Minutos parado esperando janela abrir (ADR-0104). Já incluídos em
+   * `totalTimeMinutes`; vêm separados porque espera não é trabalho, e uma rota
+   * com muita espera é um problema de planeamento, não de produtividade.
+   */
+  totalWaitMinutes?: number;
+  /**
+   * Paradas cujo atendimento começa depois do fim da janela. `0` quando todas
+   * cabem. Sinalização, nunca ajuste silencioso: a parada continua na rota.
+   */
+  lateStops?: number;
   /** Peso total transportado (kg). Presente quando há demanda informada (ADR-0022). */
   totalWeightKg?: number;
   /** Volume total transportado (m³). Presente quando há demanda informada (ADR-0022). */

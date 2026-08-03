@@ -1,4 +1,5 @@
 import type { StrategyContext } from './ports/route-optimization-strategy.port';
+import { arriveAt } from './time-window-clock';
 
 /**
  * Função de custo composta do motor (ADR-0007/0022), extraída para ser
@@ -8,6 +9,11 @@ import type { StrategyContext } from './ports/route-optimization-strategy.port';
  * Custo = distância + penalidade de atraso (janelas) + penalidade de inversão de
  * prioridade + sobretaxas (pedágio/risco). Campos opcionais do contexto ausentes
  * ⇒ resultado idêntico ao legado (retrocompatível).
+ *
+ * O relógio **espera** a janela abrir (ADR-0104). Não há penalidade direta por
+ * esperar: a espera custa através do que ela empurra para a frente, que é como
+ * ela custa na rua. Uma penalidade própria por ociosidade seria outro trade-off,
+ * e mudaria o comportamento de rotas que hoje são boas.
  *
  * A rota é um caminho aberto; o nó 0 é a origem quando `hasOrigin`.
  */
@@ -34,7 +40,11 @@ export function compositeCost(ctx: StrategyContext, order: number[]): number {
     if (isOrigin) continue;
 
     const window = ctx.windows[node];
-    if (window && clock > window.endMinutes) lateness += clock - window.endMinutes;
+    const arrival = arriveAt(clock, window);
+    // O relógio salta para a abertura: chegar cedo não adianta a entrega, e o
+    // que se espera aqui atrasa todas as paradas seguintes.
+    clock = arrival.serviceStartMinutes;
+    if (window && arrival.late) lateness += clock - window.endMinutes;
 
     priorityPenalty += ctx.priorities[node] * position;
     position += 1;
