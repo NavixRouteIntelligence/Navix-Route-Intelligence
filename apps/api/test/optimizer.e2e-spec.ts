@@ -33,6 +33,7 @@ import { HaversineRoutingProvider } from '../src/modules/optimizer/infrastructur
 import { ROUTE_PLAN_REPOSITORY } from '../src/modules/optimizer/domain/ports/route-plan-repository.port';
 import type { RoutePlanRepositoryPort } from '../src/modules/optimizer/domain/ports/route-plan-repository.port';
 import type { RoutePlan } from '../src/modules/optimizer/domain/route-plan';
+import { DistributeDeliveriesUseCase } from '../src/modules/optimizer/application/distribute-deliveries.use-case';
 import { ReoptimizeActiveUseCase } from '../src/modules/optimizer/application/reoptimize-active.use-case';
 import { RouteSolver } from '../src/modules/optimizer/application/route-solver';
 import { HaversineDistanceProvider } from '../src/modules/optimizer/infrastructure/distance/haversine-distance.provider';
@@ -156,7 +157,16 @@ describe('Optimizer (e2e, assíncrono)', () => {
         GetActiveRoutePlanUseCase,
         // Ficha do motorista (ADR-0098). Fixa: o e2e do otimizador não exercita
         // o Fleet, só precisa que a tradução exista e seja determinística.
-        { provide: DRIVER_ROSTER_LINK, useValue: { driverIdForUser: async () => 'driver-e2e' } },
+        {
+          provide: DRIVER_ROSTER_LINK,
+          useValue: { driverIdForUser: async () => 'driver-e2e', activeDriverIds: async () => [] },
+        },
+        // A distribuição (ADR-0101) é exercitada em unidade e ao vivo; aqui só
+        // precisa existir para o controller resolver, sem arrastar o Delivery.
+        {
+          provide: DistributeDeliveriesUseCase,
+          useValue: { execute: async () => ({ assigned: 0, unassigned: 0, shares: [] }) },
+        },
         DomainEventBus,
         {
           provide: FeatureAccessService,

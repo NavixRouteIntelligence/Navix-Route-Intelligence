@@ -16,6 +16,7 @@ describe('CreateDriverUseCase', () => {
       findUserIdById: jest.fn().mockResolvedValue(null),
       findIdsByUserIds: jest.fn().mockResolvedValue(new Map()),
       delete: jest.fn(),
+      findActiveIds: jest.fn().mockResolvedValue([]),
       ...overrides,
     };
   }

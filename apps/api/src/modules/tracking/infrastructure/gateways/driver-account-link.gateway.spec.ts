@@ -13,6 +13,7 @@ function build(vinculos: Record<string, string> = {}) {
     driverExists: jest.fn(),
     userIdForDriver: jest.fn(),
     driverIdsForUsers,
+    activeDriverIds: jest.fn().mockResolvedValue([]),
   };
   return { gateway: new DriverAccountLinkGateway(fleet), driverIdsForUsers };
 }

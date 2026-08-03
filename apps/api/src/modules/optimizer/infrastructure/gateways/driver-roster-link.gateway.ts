@@ -22,4 +22,8 @@ export class DriverRosterLinkGateway implements DriverRosterLinkPort {
     const fichas = await this.fleet.driverIdsForUsers(tenantId, [userId]);
     return fichas.get(userId) ?? null;
   }
+
+  activeDriverIds(tenantId: string): Promise<string[]> {
+    return this.fleet.activeDriverIds(tenantId);
+  }
 }

@@ -268,3 +268,30 @@ export interface OptimizationJobAccepted {
   jobId: string;
   status: OptimizationJobStatus;
 }
+
+/** O que coube a uma ficha na distribuição (ADR-0101). */
+export interface DriverDistributionShare {
+  /** Ficha do motorista (`drivers.id`), nunca o login — ADR-0086. */
+  driverId: string;
+  /** Entregas atribuídas a esta ficha **nesta** distribuição. */
+  deliveries: number;
+  /**
+   * Job da rota preparada para ela, ou `null` quando não havia o que otimizar
+   * (uma parada só não forma rota). `null` aqui não é falha.
+   */
+  jobId: string | null;
+}
+
+/** Resultado de `POST /route-plans/distribute` (ADR-0101). */
+export interface DeliveryDistribution {
+  /** Entregas que ganharam motorista agora. */
+  assigned: number;
+  /**
+   * Entregas sem motorista que continuaram sem. Hoje só acontece quando o
+   * tenant não tem ficha ativa nenhuma — sem ninguém para receber, nada é
+   * atribuído e nada se perde.
+   */
+  unassigned: number;
+  /** Uma entrada por ficha que recebeu ao menos uma entrega. */
+  shares: DriverDistributionShare[];
+}
