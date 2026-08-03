@@ -1,4 +1,9 @@
-import type { CollectionResponse, ResourceResponse, RoutePlan } from '@navix/contracts';
+import type {
+  CollectionResponse,
+  DeliveryDistribution,
+  ResourceResponse,
+  RoutePlan,
+} from '@navix/contracts';
 
 import { apiRequest, toQuery } from './client';
 
@@ -20,4 +25,14 @@ export const optimizerApi = {
    */
   myActivePlan: () =>
     apiRequest<ResourceResponse<RoutePlan | null>>('/route-plans/mine/active'),
+
+  /**
+   * Distribui as entregas sem motorista entre a frota e prepara a rota de cada
+   * um (ADR-0101). Idempotente: só toca no que está sem dono, então repetir a
+   * chamada não redistribui nem desfaz ajuste manual.
+   */
+  distribute: () =>
+    apiRequest<ResourceResponse<DeliveryDistribution>>('/route-plans/distribute', {
+      method: 'POST',
+    }),
 };

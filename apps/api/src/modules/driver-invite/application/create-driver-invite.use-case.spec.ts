@@ -20,6 +20,7 @@ function build(opts: { driverExists?: boolean; emailTaken?: boolean } = {}) {
     driverExists: jest.fn().mockResolvedValue(opts.driverExists ?? true),
     userIdForDriver: jest.fn().mockResolvedValue(null),
     driverIdsForUsers: jest.fn().mockResolvedValue(new Map()),
+    activeDriverIds: jest.fn().mockResolvedValue([]),
   };
   const users: TenantUserProvisioningPort = {
     emailTaken: jest.fn().mockResolvedValue(opts.emailTaken ?? false),

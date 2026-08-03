@@ -8,7 +8,7 @@ import {
   type DeliveryStatus,
 } from '@navix/contracts';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { FileCheck, Package, Pencil, Plus, Share2, Trash2 } from 'lucide-react';
+import { FileCheck, Package, Pencil, Plus, Share2, Trash2, Users } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 
@@ -25,6 +25,7 @@ import { PriorityBadge } from '@/components/ui/status-badge';
 import { TD, TH, THead, TR, Table } from '@/components/ui/table';
 import { useToast } from '@/components/ui/toast';
 import { deliveriesApi } from '@/lib/api/deliveries';
+import { optimizerApi } from '@/lib/api/optimizer';
 import { formatDateTime } from '@/lib/utils';
 
 const PAGE_SIZE = 10;
@@ -50,6 +51,7 @@ export default function DeliveriesPage() {
   const [priority, setPriority] = useState<DeliveryPriority | ''>('');
   const [deleting, setDeleting] = useState<Delivery | null>(null);
   const [podFor, setPodFor] = useState<string | null>(null);
+  const [confirmingDistribute, setConfirmingDistribute] = useState(false);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['deliveries', { page, status, priority }],
@@ -95,6 +97,43 @@ export default function DeliveriesPage() {
       toast({ tone: 'error', title: 'Erro ao gerar link', description: e.message }),
   });
 
+  /**
+   * Distribui as entregas sem motorista entre a frota (ADR-0101).
+   *
+   * O desfecho não é binário, e o aviso reflete isso: distribuiu, não havia o
+   * que distribuir, ou não havia a quem distribuir. Os dois últimos são
+   * estados normais da operação — dizer "erro" para uma frota vazia mandaria o
+   * despachante procurar defeito onde só falta cadastrar motorista.
+   */
+  const distribute = useMutation({
+    mutationFn: () => optimizerApi.distribute(),
+    onSuccess: ({ data }) => {
+      invalidate();
+      setConfirmingDistribute(false);
+      if (data.assigned > 0) {
+        toast({
+          tone: 'success',
+          title: `${data.assigned} ${data.assigned === 1 ? 'entrega distribuída' : 'entregas distribuídas'}`,
+          description: `Entre ${data.shares.length} ${data.shares.length === 1 ? 'motorista' : 'motoristas'}. A rota de cada um está sendo preparada.`,
+        });
+      } else if (data.unassigned > 0) {
+        toast({
+          tone: 'info',
+          title: 'Nenhum motorista ativo na frota',
+          description: `${data.unassigned} ${data.unassigned === 1 ? 'entrega continua' : 'entregas continuam'} sem motorista. Cadastre ou ative um motorista e tente de novo.`,
+        });
+      } else {
+        toast({
+          tone: 'info',
+          title: 'Nada a distribuir',
+          description: 'Todas as entregas ativas já têm motorista.',
+        });
+      }
+    },
+    onError: (e: Error) =>
+      toast({ tone: 'error', title: 'Erro ao distribuir', description: e.message }),
+  });
+
   const remove = useMutation({
     mutationFn: (id: string) => deliveriesApi.remove(id),
     onSuccess: () => {
@@ -115,12 +154,22 @@ export default function DeliveriesPage() {
         title="Entregas"
         description="Cadastre e acompanhe as entregas."
         action={
-          <Button asChild>
-            <Link href="/deliveries/new">
-              <Plus className="h-4 w-4" />
-              Nova entrega
-            </Link>
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setConfirmingDistribute(true)}
+              disabled={distribute.isPending}
+            >
+              <Users className="h-4 w-4" />
+              {distribute.isPending ? 'Distribuindo…' : 'Distribuir'}
+            </Button>
+            <Button asChild>
+              <Link href="/deliveries/new">
+                <Plus className="h-4 w-4" />
+                Nova entrega
+              </Link>
+            </Button>
+          </div>
         }
       />
 
@@ -271,6 +320,15 @@ export default function DeliveriesPage() {
         description="A entrega será removida (exclusão lógica)."
         loading={remove.isPending}
         onConfirm={() => deleting && remove.mutate(deleting.id)}
+      />
+
+      <ConfirmDialog
+        open={confirmingDistribute}
+        onOpenChange={(o) => !o && setConfirmingDistribute(false)}
+        title="Distribuir entregas"
+        description="As entregas sem motorista serão repartidas entre os motoristas ativos, por proximidade e janela, e a rota de cada um será preparada. Quem você já atribuiu à mão não muda de dono."
+        loading={distribute.isPending}
+        onConfirm={() => distribute.mutate()}
       />
 
       <PodViewerDialog deliveryId={podFor} open={podFor !== null} onOpenChange={(o) => !o && setPodFor(null)} />

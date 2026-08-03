@@ -10,6 +10,12 @@
 export interface DriverRosterLinkPort {
   /** Ficha do login. `null` para o motorista autônomo, que não tem ficha. */
   driverIdForUser(tenantId: string, userId: string): Promise<string | null>;
+  /**
+   * Fichas **ativas** do tenant — a quem a distribuição pode entregar trabalho
+   * (ADR-0101). Lista vazia é resposta legítima, e significa "não há a quem
+   * distribuir", nunca erro.
+   */
+  activeDriverIds(tenantId: string): Promise<string[]>;
 }
 
 export const DRIVER_ROSTER_LINK = Symbol('DRIVER_ROSTER_LINK');

@@ -15,6 +15,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type {
   AuthenticatedUser,
   CollectionResponse,
+  DeliveryDistribution,
   OptimizationJob,
   OptimizationJobAccepted,
   ResourceResponse,
@@ -27,6 +28,7 @@ import { JwtAuthGuard } from '../../../shared/security/jwt-auth.guard';
 import { Idempotent } from '../../../shared/idempotency/idempotency.decorator';
 import { Roles } from '../../../shared/security/roles.decorator';
 import { RolesGuard } from '../../../shared/security/roles.guard';
+import { DistributeDeliveriesUseCase } from '../application/distribute-deliveries.use-case';
 import { EnqueueOptimizationUseCase } from '../application/enqueue-optimization.use-case';
 import { GetActiveRoutePlanUseCase } from '../application/get-active-route-plan.use-case';
 import { GetOptimizationJobUseCase } from '../application/get-optimization-job.use-case';
@@ -55,6 +57,7 @@ export class OptimizerController {
     private readonly getPlan: GetRoutePlanUseCase,
     private readonly listPlans: ListRoutePlansUseCase,
     private readonly reoptimizeActive: ReoptimizeActiveUseCase,
+    private readonly distributeDeliveries: DistributeDeliveriesUseCase,
   ) {}
 
   @Post()
@@ -118,6 +121,28 @@ export class OptimizerController {
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<ResourceResponse<RoutePlanView | null>> {
     const data = await this.activePlan.execute(user.tenantId, user.id);
+    return { data };
+  }
+
+  /**
+   * Distribui as entregas sem dono entre os motoristas ativos e prepara a rota
+   * de cada um (ADR-0101).
+   *
+   * Sem `@Idempotent()`: a operação já é idempotente por construção — só toca
+   * no que está sem motorista, então repetir a chamada não redistribui nada.
+   */
+  @Post('distribute')
+  @Roles('admin', 'dispatcher')
+  @ApiOperation({
+    summary: 'Distribui as entregas sem motorista entre a frota e prepara a rota de cada um',
+  })
+  async distribute(
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<ResourceResponse<DeliveryDistribution>> {
+    const data = await this.distributeDeliveries.execute({
+      tenantId: user.tenantId,
+      actorId: user.id,
+    });
     return { data };
   }
 

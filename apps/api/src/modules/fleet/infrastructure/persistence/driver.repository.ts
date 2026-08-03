@@ -74,6 +74,17 @@ export class DriverRepository implements DriverRepositoryPort {
     return new Map(rows.filter((r) => r.userId).map((r) => [r.userId as string, r.id]));
   }
 
+  async findActiveIds(tenantId: string): Promise<string[]> {
+    // Ordem por `id` para a distribuição ser determinística: a mesma frota e as
+    // mesmas entregas produzem sempre o mesmo recorte (ADR-0101).
+    const rows = await this.repo.find({
+      where: { tenantId, status: 'active' },
+      select: ['id'],
+      order: { id: 'ASC' },
+    });
+    return rows.map((r) => r.id);
+  }
+
   async delete(tenantId: string, id: string): Promise<void> {
     await this.repo.delete({ tenantId, id });
   }

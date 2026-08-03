@@ -37,7 +37,10 @@ function build(ficha: string | null, found: RoutePlan | null) {
       return found;
     },
   };
-  const roster: DriverRosterLinkPort = { driverIdForUser: async () => ficha };
+  const roster: DriverRosterLinkPort = {
+    driverIdForUser: async () => ficha,
+    activeDriverIds: async () => [],
+  };
   return { uc: new GetActiveRoutePlanUseCase(plans, roster), chamadas };
 }
 
