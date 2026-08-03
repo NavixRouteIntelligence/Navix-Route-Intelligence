@@ -36,6 +36,16 @@ export interface RoutePlanRepositoryPort {
     driverIds: string[],
     operationalDay: string,
   ): Promise<Map<string, RoutePlan>>;
+
+  /**
+   * Plano mais recente que **contém** a entrega (ADR-0102).
+   *
+   * É a pergunta certa para o ETA de uma parada: a entrega pertence ao plano
+   * que a roteirizou, não ao último plano que o tenant produziu. Numa frota,
+   * "o mais recente do tenant" é a rota de alguém — e quase nunca de quem leva
+   * esta entrega.
+   */
+  findLatestContainingDelivery(tenantId: string, deliveryId: string): Promise<RoutePlan | null>;
 }
 
 export const ROUTE_PLAN_REPOSITORY = Symbol('ROUTE_PLAN_REPOSITORY');

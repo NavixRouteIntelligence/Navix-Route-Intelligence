@@ -121,14 +121,18 @@ export class OptimizerService implements OptimizerServicePort {
     tenantId: string,
     deliveryId: string,
   ): Promise<{ routePlanId: string; arrivalAt: Date; correctionMinutes: number } | null> {
-    // O plano mais recente é a rota vigente (mesma leitura que o app do
-    // motorista faz). A busca respeita a RLS: só enxerga planos deste tenant.
-    const page = await this.plans.findAll(tenantId, { page: 1, pageSize: 1 });
-    const plan = page.items[0];
+    // O plano que **contém** esta entrega (ADR-0102) — não o mais recente do
+    // tenant. Numa frota, o mais recente é a rota de algum motorista, e quase
+    // nunca a de quem leva esta entrega: o `find` abaixo não achava a parada e
+    // o ETA saía nulo, em silêncio, para todo mundo menos quem otimizou por
+    // último. A busca respeita a RLS: só enxerga planos deste tenant.
+    const plan = await this.plans.findLatestContainingDelivery(tenantId, deliveryId);
     if (!plan) return null;
 
     const snapshot = plan.snapshot();
     const stop = snapshot.stops.find((s) => s.deliveryId === deliveryId);
+    // Defensivo: o containment já garante a presença, mas um plano gravado com
+    // outro formato de `stops` não deve derrubar o rastreio público.
     if (!stop) return null;
 
     const heuristica = new Date(snapshot.createdAt.getTime() + stop.etaMinutes * 60_000);

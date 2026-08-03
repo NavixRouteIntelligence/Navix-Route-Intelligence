@@ -94,6 +94,27 @@ export class RoutePlanRepository implements RoutePlanRepositoryPort {
     return porFicha;
   }
 
+  async findLatestContainingDelivery(
+    tenantId: string,
+    deliveryId: string,
+  ): Promise<RoutePlan | null> {
+    // Containment em jsonb (`@>`), servido pelo índice GIN `jsonb_path_ops`: o
+    // array `stops` contém um elemento com este `deliveryId`. Num plano
+    // multi-veículo, `stops` já é a concatenação das rotas, então a busca cobre
+    // os dois formatos sem tratar cada um.
+    const row = await this.repo
+      .createQueryBuilder('plan')
+      .where('plan.tenant_id = :tenantId', { tenantId })
+      .andWhere('plan.stops @> :needle::jsonb', {
+        needle: JSON.stringify([{ deliveryId }]),
+      })
+      .orderBy('plan.created_at', 'DESC')
+      .limit(1)
+      .getOne();
+
+    return row ? this.toDomain(row) : null;
+  }
+
   private toDomain(row: RoutePlanOrmEntity): RoutePlan {
     return RoutePlan.restore({
       id: row.id,

@@ -6,7 +6,15 @@ import 'package:navix_mobile/features/route/domain/my_route.dart';
 
 /// Interceptor que responde às duas chamadas do repositório sem rede.
 class _FakeApi extends Interceptor {
-  _FakeApi({required this.plans, required this.deliveries, this.paths});
+  _FakeApi({
+    required this.plans,
+    required this.deliveries,
+    this.paths,
+    this.comoLista = false,
+  });
+
+  /// Responde `/route-plans` com o formato **antigo** (lista de planos).
+  final bool comoLista;
 
   /// Caminhos chamados, quando o teste quiser inspecioná-los.
   final List<String>? paths;
@@ -20,7 +28,7 @@ class _FakeApi extends Interceptor {
     // `/route-plans/mine/active` devolve **um** plano (ou null), não uma lista
     // — a rota vigente já vem resolvida para o motorista (ADR-0098).
     final body = options.path.contains('route-plans')
-        ? {'data': plans.isEmpty ? null : plans.first}
+        ? {'data': comoLista ? plans : (plans.isEmpty ? null : plans.first)}
         : {'data': deliveries};
     handler.resolve(
       Response(requestOptions: options, statusCode: 200, data: body),
@@ -71,11 +79,17 @@ MyRouteRepository repo({
   List<Map<String, dynamic>> plans = const [],
   List<Map<String, dynamic>> deliveries = const [],
   List<String>? paths,
+  bool comoLista = false,
 }) {
   final dio = Dio(BaseOptions(baseUrl: 'http://localhost'))
     ..httpClientAdapter = IOHttpClientAdapter()
     ..interceptors.add(
-      _FakeApi(plans: plans, deliveries: deliveries, paths: paths),
+      _FakeApi(
+        plans: plans,
+        deliveries: deliveries,
+        paths: paths,
+        comoLista: comoLista,
+      ),
     );
   return MyRouteRepository(dio);
 }
@@ -107,6 +121,45 @@ void main() {
 
     expect(paths, contains('/route-plans/mine/active'));
     expect(paths.any((p) => p.startsWith('/route-plans?')), isFalse);
+  });
+
+  // NAV-4.3 / ADR-0102: o app não pode voltar a aceitar o formato global. Uma
+  // lista de planos do tenant é exatamente o que ele lia antes, e o mais
+  // recente ali é a rota de algum motorista — quase nunca a de quem abriu a
+  // tela. Aceitar o formato antigo em silêncio é o que faria a regressão passar
+  // despercebida.
+  test('resposta em lista (contrato antigo) não vira rota', () async {
+    final route = await repo(
+      plans: [
+        {
+          'id': 'p-de-outro',
+          'metrics': {'totalDistanceKm': 10, 'totalTimeMinutes': 60},
+          'savings': {'distanceKm': 2, 'distancePct': 17},
+          'stops': [
+            {'sequence': 1, 'deliveryId': 'd1', 'etaMinutes': 20},
+            {'sequence': 2, 'deliveryId': 'd2', 'etaMinutes': 45},
+          ],
+        },
+      ],
+      deliveries: [delivery('d1', 'Rua A'), delivery('d2', 'Rua B')],
+      comoLista: true,
+    ).load();
+
+    expect(route.status, isNot(MyRouteStatus.ready));
+    expect(route.totalStops, 0);
+  });
+
+  // Quem pergunta é quem recebe: o app não manda id de motorista nenhum, então
+  // não existe cliente capaz de pedir a rota de outra pessoa.
+  test('a rota é pedida sem qualquer parâmetro de motorista', () async {
+    final paths = <String>[];
+
+    await repo(deliveries: [delivery('d1', 'Rua A')], paths: paths).load();
+
+    final rota = paths.firstWhere((p) => p.contains('route-plans'));
+    expect(rota, '/route-plans/mine/active');
+    expect(rota, isNot(contains('driver')));
+    expect(rota, isNot(contains('?')));
   });
 
   test('sem plano e sem entregas suficientes: rota vazia', () async {

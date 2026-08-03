@@ -37,6 +37,7 @@ function build(ficha: string | null, found: RoutePlan | null) {
       return found;
     },
     findActiveForDrivers: async () => new Map(),
+    findLatestContainingDelivery: async () => null,
   };
   const roster: DriverRosterLinkPort = {
     driverIdForUser: async () => ficha,

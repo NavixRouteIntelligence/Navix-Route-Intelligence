@@ -89,6 +89,20 @@ class InMemoryRoutePlanRepository implements RoutePlanRepositoryPort {
     }
     return porFicha;
   }
+
+  /** Espelha o containment em jsonb do repositório real (ADR-0102). */
+  async findLatestContainingDelivery(
+    tenantId: string,
+    deliveryId: string,
+  ): Promise<RoutePlan | null> {
+    const matches = [...this.store.values()]
+      .map((p) => p.snapshot())
+      .filter(
+        (s) => s.tenantId === tenantId && s.stops.some((stop) => stop.deliveryId === deliveryId),
+      )
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    return matches.length > 0 ? (this.store.get(matches[0].id) ?? null) : null;
+  }
 }
 
 class InMemoryJobRepository implements OptimizationJobRepositoryPort {
@@ -469,6 +483,50 @@ describe('Optimizer (e2e, assíncrono)', () => {
 
       const job = await pollJob(app, res.body.data.jobId);
       expect(job.status).toBe('succeeded');
+    });
+  });
+
+  // NAV-4.3 / ADR-0102: a rota vigente é a do motorista, e o ETA sai do plano
+  // que contém a entrega — não do plano mais recente do tenant.
+  describe('rota ativa do motorista e ETA do plano certo (ADR-0102)', () => {
+    it('rota antiga não aparece como atual: só o plano do dia responde', async () => {
+      const plano = await request(app.getHttpServer())
+        .post('/api/v1/route-plans/mine')
+        .send({ deliveryIds: MINHAS })
+        .expect(202);
+      const job = await pollJob(app, plano.body.data.jobId);
+
+      const ativa = await request(app.getHttpServer())
+        .get('/api/v1/route-plans/mine/active')
+        .expect(200);
+
+      expect(ativa.body.data.id).toBe(job.routePlanId);
+      // O dia do plano é o de hoje — e é por ele que a consulta filtra, então
+      // um plano de ontem nunca é devolvido como rota atual.
+      expect(ativa.body.data.operationalDay).toBe(new Date().toISOString().slice(0, 10));
+    });
+
+    it('o plano do despacho, mais recente, não vira a rota do motorista', async () => {
+      const meu = await request(app.getHttpServer())
+        .post('/api/v1/route-plans/mine')
+        .send({ deliveryIds: MINHAS })
+        .expect(202);
+      const meuJob = await pollJob(app, meu.body.data.jobId);
+
+      // Criado DEPOIS e sem motorista: sob a regra antiga, seria este que o app
+      // mostraria para o motorista.
+      const doDespacho = await request(app.getHttpServer())
+        .post('/api/v1/route-plans')
+        .send({ deliveryIds: DO_COLEGA })
+        .expect(202);
+      const jobDespacho = await pollJob(app, doDespacho.body.data.jobId);
+
+      const ativa = await request(app.getHttpServer())
+        .get('/api/v1/route-plans/mine/active')
+        .expect(200);
+
+      expect(ativa.body.data.id).toBe(meuJob.routePlanId);
+      expect(ativa.body.data.id).not.toBe(jobDespacho.routePlanId);
     });
   });
 });
