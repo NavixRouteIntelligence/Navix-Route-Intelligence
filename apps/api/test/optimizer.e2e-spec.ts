@@ -112,6 +112,22 @@ const stops = [
   { id: '019f3364-0004-7665-bcb4-2cc75f065d04', latitude: 0, longitude: 10 },
 ];
 
+/**
+ * Dois motoristas na **mesma** frota (NAV-4.2 / ADR-0099). `driver-e2e` é a
+ * ficha que o `DRIVER_ROSTER_LINK` do teste devolve para quem está autenticado.
+ */
+const DONOS: Record<string, string | null> = {
+  '019f3364-0001-7665-bcb4-2cc75f065d01': 'driver-e2e',
+  '019f3364-0002-7665-bcb4-2cc75f065d02': 'driver-e2e',
+  '019f3364-0003-7665-bcb4-2cc75f065d03': 'ficha-do-colega',
+  '019f3364-0004-7665-bcb4-2cc75f065d04': 'ficha-do-colega',
+};
+
+const MINHAS = stops.slice(0, 2).map((s) => s.id);
+const DO_COLEGA = stops.slice(2).map((s) => s.id);
+/** Id que o tenant não enxerga — é o que a RLS faz com dado de outro tenant. */
+const DE_OUTRO_TENANT = '019f3364-9999-7665-bcb4-2cc75f065d99';
+
 async function pollJob(app: INestApplication, jobId: string) {
   for (let i = 0; i < 30; i++) {
     const r = await request(app.getHttpServer())
@@ -191,6 +207,9 @@ describe('Optimizer (e2e, assíncrono)', () => {
             // Reotimização: devolve as 4 paradas ativas do tenant.
             listActiveStops: async () =>
               stops.map((s) => ({ ...s, priority: 'normal', timeWindow: null })),
+            // Só o que o tenant enxerga: id de fora simplesmente não volta.
+            getOwnership: async (_tenantId: string, ids: string[]) =>
+              ids.filter((id) => id in DONOS).map((id) => ({ id, driverId: DONOS[id] })),
           },
         },
         { provide: AUDIT_LOG, useValue: { record: async () => undefined } },
@@ -372,5 +391,56 @@ describe('Optimizer (e2e, assíncrono)', () => {
       .expect(200);
     expect(ativa.body.data.id).toBe(job.routePlanId);
     expect(ativa.body.data.driverId).toBe('driver-e2e');
+  });
+
+  // NAV-4.2 / ADR-0099: o motorista só otimiza o que é dele, e a recusa chega
+  // como status HTTP — não como 202 seguido de um job que falha.
+  describe('restrição do /route-plans/mine ao motorista (ADR-0099)', () => {
+    it('otimiza as próprias entregas (202)', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/route-plans/mine')
+        .send({ deliveryIds: MINHAS })
+        .expect(202);
+
+      const job = await pollJob(app, res.body.data.jobId);
+      expect(job.status).toBe('succeeded');
+    });
+
+    it('entrega de outro motorista do mesmo tenant: 403', async () => {
+      await request(app.getHttpServer())
+        .post('/api/v1/route-plans/mine')
+        .send({ deliveryIds: DO_COLEGA })
+        .expect(403);
+    });
+
+    it('uma entrega alheia no meio das próprias já recusa o pedido inteiro', async () => {
+      await request(app.getHttpServer())
+        .post('/api/v1/route-plans/mine')
+        .send({ deliveryIds: [MINHAS[0], DO_COLEGA[0]] })
+        .expect(403);
+    });
+
+    // Id de outro tenant não é distinguível de inexistente, e não deve ser: a
+    // resposta não confirma que existe dado em outra organização.
+    it('id de outro tenant: 404, sem confirmar existência', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/route-plans/mine')
+        .send({ deliveryIds: [MINHAS[0], DE_OUTRO_TENANT] })
+        .expect(404);
+
+      expect(JSON.stringify(res.body)).not.toContain('outro');
+    });
+
+    // O despacho roteiriza a frota por definição do papel — a restrição é do
+    // caminho `/mine`, não do otimizador.
+    it('o despacho segue otimizando as entregas de qualquer motorista', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/route-plans')
+        .send({ deliveryIds: [...MINHAS, ...DO_COLEGA] })
+        .expect(202);
+
+      const job = await pollJob(app, res.body.data.jobId);
+      expect(job.status).toBe('succeeded');
+    });
   });
 });

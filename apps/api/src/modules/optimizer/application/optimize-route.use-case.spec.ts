@@ -21,6 +21,7 @@ function build() {
   };
   const gateway: DeliveryGatewayPort = {
     getStops: async () => [],
+    getOwnership: async () => [],
     listActiveStops: async () => [],
   };
   const audit: AuditLogPort = { record: async () => undefined };
