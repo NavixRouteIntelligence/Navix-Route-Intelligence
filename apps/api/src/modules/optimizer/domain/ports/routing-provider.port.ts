@@ -1,6 +1,13 @@
 import type { LatLng } from '../../../../shared/kernel/geo';
 
-/** Matriz de distância (km) e duração (min) entre todos os pares de pontos. */
+/**
+ * Matriz de distância (km) e duração (min) entre todos os pares de pontos.
+ *
+ * Um par **sem rota** vale `UNREACHABLE` (infinito) nas duas matrizes — nunca
+ * zero, nunca uma estimativa geométrica (ADR-0106). Zero seria a aresta mais
+ * barata do grafo, e o otimizador escolheria justamente as impossíveis; uma
+ * estimativa em linha reta fingiria que existe estrada onde não há.
+ */
 export interface RouteMatrix {
   distanceKm: number[][];
   durationMin: number[][];

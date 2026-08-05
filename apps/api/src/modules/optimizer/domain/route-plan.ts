@@ -5,6 +5,7 @@ import type {
   RoutePlanParams,
   RouteSavings,
   RouteStopView,
+  UnreachableStopView,
   VehicleRouteView,
 } from '@navix/contracts';
 
@@ -65,6 +66,8 @@ export interface RoutePlanProps {
   routes?: VehicleRouteView[];
   /** Paradas não atribuídas por falta de capacidade (ADR-0022, Fase 2). */
   unassignedStops?: string[];
+  /** Paradas sem trecho viável até elas (ADR-0106). Ausente no caso normal. */
+  unreachableStops?: UnreachableStopView[];
   createdAt: Date;
 }
 

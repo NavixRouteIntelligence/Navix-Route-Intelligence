@@ -7,9 +7,11 @@ import type {
   RouteStopView,
 } from '@navix/contracts';
 
+import { ValidationError } from '../../../shared/kernel/domain-error';
 import { assessCapacity, totalDemand } from '../domain/capacity';
 import { serviceMinutesForDestination } from '../domain/destination-type';
 import { type Demand, type OptimizationStop } from '../domain/optimization-stop';
+import { analyzeReachability, hasUnreachableLeg } from '../domain/reachability';
 import { slaPriorityWeight } from '../domain/sla-priority';
 import {
   COST_AUGMENTATION,
@@ -55,6 +57,12 @@ export interface SolveInput {
   departureAt: Date;
 }
 
+/** Parada deixada de fora por não haver rota até ela (ADR-0106). */
+export interface UnreachableStop {
+  id: string;
+  reason: 'isolated' | 'disconnected';
+}
+
 export interface SolvedRoute {
   strategyName: OptimizationStrategyName;
   stops: RouteStopView[];
@@ -64,6 +72,8 @@ export interface SolvedRoute {
   score: number;
   explanation: string;
   capacity?: CapacityUsage;
+  /** Paradas fora da rota por falta de trecho viável. Vazio no caso normal. */
+  unreachable: UnreachableStop[];
   solveSeconds: number;
 }
 
@@ -82,10 +92,17 @@ export class RouteSolver {
   ) {}
 
   async solve(input: SolveInput): Promise<SolvedRoute> {
-    const { nodes, hasOrigin, speed, service, profile } = input;
-    const { distanceKm: distanceMatrix, durationMin: timeMatrix } = await this.routing.matrix(
-      nodes.map((n) => n.point),
+    const { hasOrigin, speed, service, profile } = input;
+    const matriz = await this.routing.matrix(
+      input.nodes.map((n) => n.point),
       speed,
+    );
+
+    // Trechos sem rota viram exclusão explícita, não custo zero (ADR-0106).
+    const { nodes, distanceMatrix, timeMatrix, unreachable } = this.dropUnreachable(
+      input.nodes,
+      matriz,
+      hasOrigin,
     );
     const windows = this.buildWindows(nodes, input.departureAt);
     // Priorização dinâmica por SLA: o peso cresce conforme o fim da janela se
@@ -180,10 +197,12 @@ export class RouteSolver {
       savings,
       input.strategyLabel ?? 'Nearest Neighbor + 2-opt',
       capacity,
+      unreachable.length,
     );
 
     return {
       strategyName: strategy.name,
+      unreachable,
       stops,
       metrics: optimized,
       baseline,
@@ -192,6 +211,55 @@ export class RouteSolver {
       explanation,
       capacity,
       solveSeconds,
+    };
+  }
+
+  /**
+   * Remove do grafo o que não tem rota, devolvendo submatrizes reindexadas.
+   *
+   * A política é **plano parcial com motivo**: a rota cobre o que dá para
+   * cobrir e declara o que ficou de fora. Falhar por inteiro puniria a
+   * operação por causa de uma coordenada errada numa parada; ajustar em
+   * silêncio — que é o que o custo zero fazia — é pior ainda.
+   *
+   * Só quando o que sobra não forma rota (menos de duas paradas) é que a
+   * otimização falha, e falha dizendo por quê.
+   */
+  private dropUnreachable(
+    nodes: OptimizationStop[],
+    matriz: { distanceKm: number[][]; durationMin: number[][] },
+    hasOrigin: boolean,
+  ): {
+    nodes: OptimizationStop[];
+    distanceMatrix: number[][];
+    timeMatrix: number[][];
+    unreachable: UnreachableStop[];
+  } {
+    if (!hasUnreachableLeg(matriz.distanceKm)) {
+      return {
+        nodes,
+        distanceMatrix: matriz.distanceKm,
+        timeMatrix: matriz.durationMin,
+        unreachable: [],
+      };
+    }
+
+    const { routable, unreachable } = analyzeReachability(matriz.distanceKm, hasOrigin);
+    const paradasRestantes = hasOrigin ? routable.length - 1 : routable.length;
+    if (paradasRestantes < 2) {
+      throw new ValidationError(
+        'Não há rota viável entre as paradas informadas: verifique as coordenadas.',
+      );
+    }
+
+    const recorte = (m: number[][]): number[][] =>
+      routable.map((i) => routable.map((j) => m[i][j]));
+
+    return {
+      nodes: routable.map((i) => nodes[i]),
+      distanceMatrix: recorte(matriz.distanceKm),
+      timeMatrix: recorte(matriz.durationMin),
+      unreachable: unreachable.map((u) => ({ id: nodes[u.index].id, reason: u.reason })),
     };
   }
 

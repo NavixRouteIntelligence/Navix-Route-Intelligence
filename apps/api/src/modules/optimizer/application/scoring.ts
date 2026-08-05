@@ -199,6 +199,8 @@ export function computeScore(
   savings: RouteSavings,
   strategyLabel: string,
   capacity?: CapacityUsage,
+  /** Paradas excluídas por falta de trecho viável (ADR-0106). */
+  unreachableCount = 0,
 ): ScoreResult {
   const windowStops = stops.filter((s) => s.timeWindowRespected !== null);
   const respected = windowStops.filter((s) => s.timeWindowRespected === true).length;
@@ -222,6 +224,12 @@ export function computeScore(
   const waiting = Math.round(stops.reduce((total, s) => total + (s.waitMinutes ?? 0), 0));
   if (waiting > 0) {
     parts.push(`${waiting} min de espera até abrir janela`);
+  }
+  // A exclusão por falta de rota entra na explicação porque é o único lugar
+  // que web e app já mostram: sem ela, a parada some da rota em silêncio para
+  // quem olha a tela (ADR-0106).
+  if (unreachableCount > 0) {
+    parts.push(`${unreachableCount} parada(s) sem rota viável, fora do plano`);
   }
   parts.push('prioridades mais altas atendidas primeiro');
   if (capacity) {
