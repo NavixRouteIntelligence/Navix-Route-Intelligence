@@ -203,6 +203,8 @@ export function computeScore(
   unreachableCount = 0,
   /** Origem das distâncias (ADR-0107). Só aparece na explicação se for estimada. */
   routingSource: 'provider' | 'geometric' = 'provider',
+  /** Ressalva do perfil aproximado (ADR-0108). Ausente quando o perfil é exato. */
+  profileCaveat?: string,
 ): ScoreResult {
   const windowStops = stops.filter((s) => s.timeWindowRespected !== null);
   const respected = windowStops.filter((s) => s.timeWindowRespected === true).length;
@@ -238,6 +240,11 @@ export function computeScore(
   if (routingSource === 'geometric') {
     parts.push('distâncias estimadas em linha reta (sem roteamento real)');
   }
+  // O provedor não tem perfil para este veículo: o traçado é o mais próximo, e
+  // quem despacha precisa saber o que ficou de fora antes de mandar o motorista
+  // (ADR-0108). Só o caso aproximado aparece — declarar "exato" em toda rota
+  // seria ruído, e a ausência passa a significar fidelidade.
+  if (profileCaveat) parts.push(profileCaveat);
   parts.push('prioridades mais altas atendidas primeiro');
   if (capacity) {
     parts.push(

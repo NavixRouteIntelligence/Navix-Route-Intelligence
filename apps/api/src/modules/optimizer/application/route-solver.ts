@@ -20,6 +20,7 @@ import {
 import {
   ROUTING_PROVIDER,
   type RoutingProviderPort,
+  type RoutingProfileMapping,
   type RoutingSource,
 } from '../domain/ports/routing-provider.port';
 import type {
@@ -77,6 +78,8 @@ export interface SolvedRoute {
   unreachable: UnreachableStop[];
   /** De onde vieram distância e duração (ADR-0107). */
   routingSource: RoutingSource;
+  /** Perfil de deslocamento usado, e sua fidelidade ao veículo (ADR-0108). */
+  routingProfile?: RoutingProfileMapping;
   solveSeconds: number;
 }
 
@@ -99,6 +102,9 @@ export class RouteSolver {
     const matriz = await this.routing.matrix(
       input.nodes.map((n) => n.point),
       speed,
+      // O perfil do provedor sai do tipo do veículo (ADR-0108): sem isto, uma
+      // bicicleta recebia distâncias de carro, por vias onde não circula.
+      profile.type,
     );
 
     // Trechos sem rota viram exclusão explícita, não custo zero (ADR-0106).
@@ -202,11 +208,13 @@ export class RouteSolver {
       capacity,
       unreachable.length,
       matriz.source,
+      matriz.profile?.caveat,
     );
 
     return {
       strategyName: strategy.name,
       routingSource: matriz.source,
+      ...(matriz.profile ? { routingProfile: matriz.profile } : {}),
       unreachable,
       stops,
       metrics: optimized,
