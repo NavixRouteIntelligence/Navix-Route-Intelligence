@@ -201,6 +201,8 @@ export function computeScore(
   capacity?: CapacityUsage,
   /** Paradas excluídas por falta de trecho viável (ADR-0106). */
   unreachableCount = 0,
+  /** Origem das distâncias (ADR-0107). Só aparece na explicação se for estimada. */
+  routingSource: 'provider' | 'geometric' = 'provider',
 ): ScoreResult {
   const windowStops = stops.filter((s) => s.timeWindowRespected !== null);
   const respected = windowStops.filter((s) => s.timeWindowRespected === true).length;
@@ -230,6 +232,11 @@ export function computeScore(
   // quem olha a tela (ADR-0106).
   if (unreachableCount > 0) {
     parts.push(`${unreachableCount} parada(s) sem rota viável, fora do plano`);
+  }
+  // Só o caso estimado é declarado: dizer "medido" em toda rota seria ruído,
+  // e a ausência do aviso passa a significar que houve medição (ADR-0107).
+  if (routingSource === 'geometric') {
+    parts.push('distâncias estimadas em linha reta (sem roteamento real)');
   }
   parts.push('prioridades mais altas atendidas primeiro');
   if (capacity) {

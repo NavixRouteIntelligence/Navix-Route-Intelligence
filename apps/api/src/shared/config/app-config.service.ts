@@ -211,6 +211,12 @@ export class AppConfigService {
     return {
       provider: this.get('MAPS_PROVIDER'),
       mapboxToken: this.get('MAPBOX_TOKEN') || undefined,
+      /**
+       * Recusar rota em vez de entregar geometria (ADR-0107). Desligado por
+       * padrão: ligá-lo troca disponibilidade por exatidão, e essa é uma
+       * decisão de quem opera — não um default que a gente escolhe por ele.
+       */
+      requireProvider: this.get('MAPS_REQUIRE_PROVIDER') === 'true',
     };
   }
 }

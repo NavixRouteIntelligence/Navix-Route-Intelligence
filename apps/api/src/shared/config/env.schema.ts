@@ -174,6 +174,10 @@ export const envSchema = z.object({
   // `mapbox` usa a Matrix API (requer MAPBOX_TOKEN, já definido acima); qualquer
   // falha cai em Haversine.
   MAPS_PROVIDER: z.enum(['haversine', 'mapbox']).default('haversine'),
+  // Recusar a rota em vez de entregar geometria quando o roteamento real não
+  // estiver disponível (ADR-0107). Desligado por padrão: ligá-lo troca
+  // disponibilidade por exatidão, e isso é decisão de quem opera.
+  MAPS_REQUIRE_PROVIDER: z.enum(['true', 'false']).default('false'),
 });
 
 export type Env = z.infer<typeof envSchema>;

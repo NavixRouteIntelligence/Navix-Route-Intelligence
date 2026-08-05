@@ -8,7 +8,9 @@ const points = [
 ];
 
 function configWith(mapboxToken?: string): AppConfigService {
-  return { maps: { provider: 'mapbox', mapboxToken } } as AppConfigService;
+  return {
+    maps: { provider: 'mapbox', mapboxToken, requireProvider: false },
+  } as AppConfigService;
 }
 
 describe('MapboxRoutingProvider', () => {
@@ -121,5 +123,131 @@ describe('MapboxRoutingProvider', () => {
     const m = await new MapboxRoutingProvider(configWith('tok')).matrix(points, 60);
 
     expect(Number.isFinite(m.distanceKm[0][1])).toBe(true);
+  });
+});
+
+// NAV-4.8 / ADR-0107: acima de 25 pontos a matriz é montada em ladrilhos, em
+// vez de cair em Haversine sem avisar ninguém.
+describe('MapboxRoutingProvider — acima do limite de 25 coordenadas', () => {
+  const originalFetch = global.fetch;
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  /** N pontos distintos numa linha, para os geohashes não colidirem. */
+  const pontos = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({ latitude: 38.7 + i * 0.01, longitude: -9.1 }));
+
+  /**
+   * Responde qualquer requisição com uma matriz coerente com `sources` e
+   * `destinations`, e registra as chamadas feitas.
+   */
+  function mapboxFake() {
+    const chamadas: { coords: number; sources?: string; destinations?: string }[] = [];
+    global.fetch = jest.fn(async (url: string) => {
+      const u = new URL(url);
+      const coords = u.pathname.split('/').pop()!.split(';');
+      const sources = u.searchParams.get('sources') ?? undefined;
+      const destinations = u.searchParams.get('destinations') ?? undefined;
+      chamadas.push({ coords: coords.length, sources, destinations });
+
+      const nS = sources ? sources.split(';').length : coords.length;
+      const nD = destinations ? destinations.split(';').length : coords.length;
+      // Valores distintos e finitos: 1000 m e 60 s por par.
+      const grade = (v: number) =>
+        Array.from({ length: nS }, () => Array.from({ length: nD }, () => v));
+      return {
+        ok: true,
+        json: async () => ({ code: 'Ok', distances: grade(1000), durations: grade(60) }),
+      };
+    }) as unknown as typeof fetch;
+    return chamadas;
+  }
+
+  it('25 pontos cabem numa requisição só, sem ladrilhar', async () => {
+    const chamadas = mapboxFake();
+
+    const m = await new MapboxRoutingProvider(configWith('tok')).matrix(pontos(25), 60);
+
+    expect(chamadas).toHaveLength(1);
+    expect(chamadas[0].sources).toBeUndefined();
+    expect(m.source).toBe('provider');
+    expect(m.distanceKm).toHaveLength(25);
+  });
+
+  // O caso que a tarefa nomeia: 26 é o primeiro que não cabe.
+  it('26 pontos são ladrilhados, e nenhuma requisição passa de 25 coordenadas', async () => {
+    const chamadas = mapboxFake();
+
+    const m = await new MapboxRoutingProvider(configWith('tok')).matrix(pontos(26), 60);
+
+    // 26 pontos → 3 blocos (12/12/2) → 9 ladrilhos.
+    expect(chamadas).toHaveLength(9);
+    for (const c of chamadas) expect(c.coords).toBeLessThanOrEqual(25);
+    expect(m.source).toBe('provider');
+    // A matriz é completa e sem buraco: nada ficou por preencher.
+    expect(m.distanceKm).toHaveLength(26);
+    expect(m.distanceKm.every((row) => row.length === 26)).toBe(true);
+    expect(m.distanceKm.flat().every((v) => Number.isFinite(v))).toBe(true);
+    expect(m.durationMin.flat().every((v) => Number.isFinite(v))).toBe(true);
+  });
+
+  it('múltiplos blocos: cada célula recebe o valor do ladrilho certo', async () => {
+    mapboxFake();
+
+    const m = await new MapboxRoutingProvider(configWith('tok')).matrix(pontos(40), 60);
+
+    // 1000 m e 60 s em todo par, inclusive nos cantos — o remapeamento de
+    // índices global↔bloco é o que erra silenciosamente se estiver torto.
+    expect(m.distanceKm[0][39]).toBe(1);
+    expect(m.distanceKm[39][0]).toBe(1);
+    expect(m.distanceKm[25][13]).toBe(1);
+    expect(m.durationMin[39][39]).toBe(1);
+  });
+
+  // Misturar trecho medido com trecho estimado produz exatamente os custos
+  // fictícios que ninguém audita depois: é tudo-ou-nada.
+  it('falha em um ladrilho derruba a matriz inteira para geometria', async () => {
+    let n = 0;
+    global.fetch = jest.fn(async () => {
+      n += 1;
+      if (n === 3) throw new Error('timeout');
+      return {
+        ok: true,
+        json: async () => ({
+          code: 'Ok',
+          distances: [[1000]],
+          durations: [[60]],
+        }),
+      };
+    }) as unknown as typeof fetch;
+
+    const m = await new MapboxRoutingProvider(configWith('tok')).matrix(pontos(26), 60);
+
+    expect(m.source).toBe('geometric');
+    // Nenhum resquício do provedor: tudo veio da mesma fonte.
+    expect(m.distanceKm.flat().every((v) => Number.isFinite(v))).toBe(true);
+  });
+
+  it('acima do teto de ladrilhamento, degrada — mas declarado', async () => {
+    const chamadas = mapboxFake();
+
+    const m = await new MapboxRoutingProvider(configWith('tok')).matrix(pontos(101), 60);
+
+    expect(chamadas).toHaveLength(0); // nem tenta
+    expect(m.source).toBe('geometric');
+  });
+
+  // Quem contratou ETA medido prefere não receber rota a receber uma rota que
+  // parece medida e não é.
+  it('com MAPS_REQUIRE_PROVIDER, a degradação vira erro claro', async () => {
+    mapboxFake();
+    const estrito = {
+      maps: { provider: 'mapbox', mapboxToken: 'tok', requireProvider: true },
+    } as AppConfigService;
+
+    await expect(new MapboxRoutingProvider(estrito).matrix(pontos(101), 60)).rejects.toThrow(
+      /MAPS_REQUIRE_PROVIDER/,
+    );
   });
 });

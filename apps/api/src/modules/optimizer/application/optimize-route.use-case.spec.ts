@@ -401,7 +401,7 @@ describe('OptimizeRouteUseCase — trechos sem rota', () => {
           distanceKm[a][b] = distanceKm[b][a] = UNREACHABLE;
           durationMin[a][b] = durationMin[b][a] = UNREACHABLE;
         }
-        return { distanceKm, durationMin };
+        return { distanceKm, durationMin, source: 'provider' as const };
       },
     };
   }
@@ -481,5 +481,51 @@ describe('OptimizeRouteUseCase — trechos sem rota', () => {
     expect(view.stops).toHaveLength(3);
     expect(view.unreachableStops).toBeUndefined();
     expect(view.explanation).not.toContain('sem rota viável');
+  });
+});
+
+// NAV-4.8 / ADR-0107: a degradação deixa de ser silenciosa — o plano declara
+// de onde vieram os números.
+describe('OptimizeRouteUseCase — origem das distâncias no plano', () => {
+  const duasParadas = [
+    { id: S1, latitude: 38.72, longitude: -9.14 },
+    { id: S2, latitude: 38.73, longitude: -9.15 },
+  ];
+  const comando = { tenantId: 't1', actorId: 'u1', stops: duasParadas };
+
+  function comFonte(source: 'provider' | 'geometric'): RoutingProviderPort {
+    return {
+      matrix: async () => ({
+        distanceKm: [
+          [0, 5],
+          [5, 0],
+        ],
+        durationMin: [
+          [0, 10],
+          [10, 0],
+        ],
+        source,
+      }),
+    };
+  }
+
+  it('rota medida registra a origem e não polui a explicação', async () => {
+    const { uc } = build(null, comFonte('provider'));
+
+    const view = await uc.execute(comando);
+
+    expect(view.params.routingSource).toBe('provider');
+    // Dizer "medido" em toda rota seria ruído; a ausência do aviso é que passa
+    // a significar medição.
+    expect(view.explanation).not.toContain('linha reta');
+  });
+
+  it('rota geométrica declara a estimativa no plano e na explicação', async () => {
+    const { uc } = build(null, comFonte('geometric'));
+
+    const view = await uc.execute(comando);
+
+    expect(view.params.routingSource).toBe('geometric');
+    expect(view.explanation).toContain('distâncias estimadas em linha reta');
   });
 });

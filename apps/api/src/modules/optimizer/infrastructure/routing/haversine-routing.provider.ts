@@ -21,7 +21,7 @@ export function haversineMatrix(points: LatLng[], speedKmh: number): RouteMatrix
       durationMin[i][j] = durationMin[j][i] = min;
     }
   }
-  return { distanceKm, durationMin };
+  return { distanceKm, durationMin, source: 'geometric' };
 }
 
 @Injectable()

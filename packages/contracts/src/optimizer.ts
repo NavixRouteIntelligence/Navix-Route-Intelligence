@@ -214,7 +214,18 @@ export interface RouteSavings {
   timePct: number;
 }
 
+/**
+ * De onde saíram as distâncias e durações do plano (ADR-0107).
+ *
+ * `geometric` é linha reta com duração derivada da velocidade — rede de
+ * proteção legítima, mas não é distância de estrada. Vem no plano porque uma
+ * rota de 26 paradas caía em geometria sem nenhum indício para quem a lia.
+ */
+export type RoutingSourceView = 'provider' | 'geometric';
+
 export interface RoutePlanParams {
+  /** Origem das distâncias/durações (ADR-0107). Ausente em planos antigos. */
+  routingSource?: RoutingSourceView;
   averageSpeedKmh: number;
   serviceTimeMinutes: number;
   hasOrigin: boolean;

@@ -20,6 +20,7 @@ import {
 import {
   ROUTING_PROVIDER,
   type RoutingProviderPort,
+  type RoutingSource,
 } from '../domain/ports/routing-provider.port';
 import type {
   NodeWindow,
@@ -74,6 +75,8 @@ export interface SolvedRoute {
   capacity?: CapacityUsage;
   /** Paradas fora da rota por falta de trecho viável. Vazio no caso normal. */
   unreachable: UnreachableStop[];
+  /** De onde vieram distância e duração (ADR-0107). */
+  routingSource: RoutingSource;
   solveSeconds: number;
 }
 
@@ -198,10 +201,12 @@ export class RouteSolver {
       input.strategyLabel ?? 'Nearest Neighbor + 2-opt',
       capacity,
       unreachable.length,
+      matriz.source,
     );
 
     return {
       strategyName: strategy.name,
+      routingSource: matriz.source,
       unreachable,
       stops,
       metrics: optimized,
