@@ -1,6 +1,8 @@
 import type { AuditLogPort } from '../../../shared/audit/audit-log.port';
 import type { PagedResult } from '../../../shared/kernel/pagination';
 import { HaversineRoutingProvider } from '../infrastructure/routing/haversine-routing.provider';
+import type { RoutingProviderPort } from '../domain/ports/routing-provider.port';
+import { UNREACHABLE } from '../domain/reachability';
 import type { OptimizerMetrics } from '../infrastructure/observability/optimizer-metrics';
 import { ManualStrategy } from '../infrastructure/strategies/manual.strategy';
 import { NearestNeighbor2OptStrategy } from '../infrastructure/strategies/nearest-neighbor-2opt.strategy';
@@ -12,7 +14,7 @@ import { DomainEventBus } from '../../../shared/events/domain-event-bus';
 import { RouteSolver } from './route-solver';
 import { StrategyRegistry } from './strategy-registry';
 
-function build(vigente: RoutePlan | null = null) {
+function build(vigente: RoutePlan | null = null, routing?: RoutingProviderPort) {
   const saved: RoutePlan[] = [];
   const plans: RoutePlanRepositoryPort = {
     save: async (p) => void saved.push(p),
@@ -45,7 +47,11 @@ function build(vigente: RoutePlan | null = null) {
     observeSolve: jest.fn(),
     markInfeasible: jest.fn(),
   } as unknown as OptimizerMetrics;
-  const solver = new RouteSolver(new HaversineRoutingProvider(), { augment: () => ({}) }, registry);
+  const solver = new RouteSolver(
+    routing ?? new HaversineRoutingProvider(),
+    { augment: () => ({}) },
+    registry,
+  );
   const bus = new DomainEventBus();
   const uc = new OptimizeRouteUseCase(plans, gateway, audit, history, solver, metrics, bus);
   return { uc, saved, metrics, bus };
@@ -375,5 +381,105 @@ describe('OptimizeRouteUseCase — horário real de início', () => {
     await uc.execute(comando({ requestedAt: pedido, timeZone: 'America/Sao_Paulo' }));
 
     expect(saved[0].snapshot().operationalDay).toBe('2026-08-03');
+  });
+});
+
+// NAV-4.7 / ADR-0106: trecho sem rota é proibição, e a rota parcial diz o que
+// ficou de fora e por quê.
+describe('OptimizeRouteUseCase — trechos sem rota', () => {
+  /** Provedor com um conjunto de pares proibidos (índices na ordem enviada). */
+  function comProibidos(n: number, proibidos: [number, number][]): RoutingProviderPort {
+    return {
+      matrix: async () => {
+        const m = (): number[][] =>
+          Array.from({ length: n }, (_, i) =>
+            Array.from({ length: n }, (_, j): number => (i === j ? 0 : 10)),
+          );
+        const distanceKm = m();
+        const durationMin = m();
+        for (const [a, b] of proibidos) {
+          distanceKm[a][b] = distanceKm[b][a] = UNREACHABLE;
+          durationMin[a][b] = durationMin[b][a] = UNREACHABLE;
+        }
+        return { distanceKm, durationMin };
+      },
+    };
+  }
+
+  const tresParadas = [
+    { id: S1, latitude: 38.72, longitude: -9.14 },
+    { id: S2, latitude: 38.73, longitude: -9.15 },
+    { id: S3, latitude: 38.74, longitude: -9.16 },
+  ];
+
+  const comando = (over: Record<string, unknown> = {}) => ({
+    tenantId: 't1',
+    actorId: 'u1',
+    stops: tresParadas,
+    ...over,
+  });
+
+  it('parada isolada sai da rota, com motivo rastreável', async () => {
+    // S3 sem rota para ninguém.
+    const { uc, saved } = build(
+      null,
+      comProibidos(3, [
+        [2, 0],
+        [2, 1],
+      ]),
+    );
+
+    const view = await uc.execute(comando());
+
+    expect(view.stops.map((s) => s.deliveryId)).toEqual([S1, S2]);
+    expect(view.unreachableStops).toEqual([{ deliveryId: S3, reason: 'isolated' }]);
+    // O sinal chega a quem lê a tela: a explicação é o que web e app mostram.
+    expect(view.explanation).toContain('1 parada(s) sem rota viável, fora do plano');
+    // Nenhum trecho da rota resultante ficou com custo zero forjado.
+    expect(saved[0].snapshot().metrics.totalDistanceKm).toBeGreaterThan(0);
+  });
+
+  it('nenhum trecho inválido entra no tempo total', async () => {
+    const { uc, saved } = build(
+      null,
+      comProibidos(3, [
+        [2, 0],
+        [2, 1],
+      ]),
+    );
+
+    await uc.execute(comando());
+
+    const m = saved[0].snapshot().metrics;
+    expect(Number.isFinite(m.totalTimeMinutes)).toBe(true);
+    expect(Number.isFinite(m.totalDistanceKm)).toBe(true);
+    // Duas paradas de fato roteirizadas — a excluída não conta.
+    expect(m.stops).toBe(2);
+  });
+
+  // Sem rota viável entre o que sobrou, falhar é a resposta honesta: entregar
+  // uma "rota" de uma parada só seria ajuste silencioso.
+  it('sem paradas conectadas suficientes, falha explicitamente', async () => {
+    const { uc, saved } = build(
+      null,
+      comProibidos(3, [
+        [0, 1],
+        [0, 2],
+        [1, 2],
+      ]),
+    );
+
+    await expect(uc.execute(comando())).rejects.toThrow(/não há rota viável/i);
+    expect(saved).toHaveLength(0);
+  });
+
+  it('matriz sem trecho proibido não muda nada (retrocompatível)', async () => {
+    const { uc } = build(null, comProibidos(3, []));
+
+    const view = await uc.execute(comando());
+
+    expect(view.stops).toHaveLength(3);
+    expect(view.unreachableStops).toBeUndefined();
+    expect(view.explanation).not.toContain('sem rota viável');
   });
 });

@@ -14,6 +14,7 @@ import type {
   RouteMetrics,
   RoutePlan as RoutePlanView,
   RouteStopView,
+  UnreachableStopView,
   VehicleRouteView,
   VehicleType,
 } from '@navix/contracts';
@@ -270,6 +271,16 @@ export class OptimizeRouteUseCase {
       score: solved.score,
       explanation: solved.explanation,
       ...(solved.capacity ? { capacity: solved.capacity } : {}),
+      // Paradas sem trecho viável ficam registradas no plano (ADR-0106): a
+      // rota é parcial e diz por quê, em vez de a entrega sumir em silêncio.
+      ...(solved.unreachable.length > 0
+        ? {
+            unreachableStops: solved.unreachable.map((u) => ({
+              deliveryId: u.id,
+              reason: u.reason,
+            })),
+          }
+        : {}),
     });
   }
 
@@ -348,6 +359,18 @@ export class OptimizeRouteUseCase {
     const unassignedStops = partition.unassigned.map((i) => rawStops[i].id);
     if (unassignedStops.length > 0) this.metrics.markInfeasible();
 
+    // Cada veículo resolve o seu recorte, então a exclusão por falta de rota é
+    // agregada aqui (ADR-0106). `Map` por id: a mesma parada não pode aparecer
+    // duas vezes se dois recortes a descartarem.
+    const unreachableStops = [
+      ...new Map(
+        solvedRoutes.flatMap((r) =>
+          r.unreachable.map((u) => [u.id, { deliveryId: u.id, reason: u.reason }] as const),
+        ),
+      ).values(),
+    ];
+    if (unreachableStops.length > 0) this.metrics.markInfeasible();
+
     return this.aggregatePlan(
       command,
       service,
@@ -357,6 +380,7 @@ export class OptimizeRouteUseCase {
       unassignedStops,
       strategyName,
       departureAt,
+      unreachableStops,
     );
   }
 
@@ -370,6 +394,7 @@ export class OptimizeRouteUseCase {
     unassignedStops: string[],
     strategyName: OptimizationStrategyName,
     departureAt: Date,
+    unreachableStops: UnreachableStopView[],
   ): RoutePlan {
     let seq = 0;
     const stops: RouteStopView[] = routes.flatMap((r) =>
@@ -391,10 +416,16 @@ export class OptimizeRouteUseCase {
       ...(unassignedStops.length > 0
         ? [`${unassignedStops.length} parada(s) não atribuída(s) por capacidade`]
         : []),
+      // A explicação agregada da frota declara o total; cada rota já declara o
+      // seu (ADR-0106), mas quem lê o plano vê só esta.
+      ...(unreachableStops.length > 0
+        ? [`${unreachableStops.length} parada(s) sem rota viável, fora do plano`]
+        : []),
     ];
 
     return RoutePlan.create({
       tenantId: command.tenantId,
+      ...(unreachableStops.length > 0 ? { unreachableStops } : {}),
       // Plano de frota cobre vários veículos e não pertence a uma pessoa só.
       driverId: null,
       ...(command.requestedAt ? { requestedAt: command.requestedAt } : {}),
@@ -408,6 +439,7 @@ export class OptimizeRouteUseCase {
         serviceTimeMinutes: service,
         hasOrigin,
         vehicleCount: routes.length,
+        ...(unreachableStops.length > 0 ? { unreachableStops } : {}),
         ...(unassignedStops.length > 0 ? { unassignedCount: unassignedStops.length } : {}),
         ...(command.economyMode ? { economyMode: command.economyMode } : {}),
         ...(command.smart ? { smart: true } : {}),
@@ -419,6 +451,7 @@ export class OptimizeRouteUseCase {
       score,
       explanation: parts.join('; ') + '.',
       routes,
+      ...(unreachableStops.length > 0 ? { unreachableStops } : {}),
       ...(unassignedStops.length > 0 ? { unassignedStops } : {}),
     });
   }

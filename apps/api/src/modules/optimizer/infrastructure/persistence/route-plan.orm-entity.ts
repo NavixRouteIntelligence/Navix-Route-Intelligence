@@ -5,6 +5,7 @@ import type {
   RoutePlanParams,
   RouteSavings,
   RouteStopView,
+  UnreachableStopView,
   VehicleRouteView,
 } from '@navix/contracts';
 import { Column, Entity, Index, PrimaryColumn } from 'typeorm';
@@ -82,6 +83,10 @@ export class RoutePlanOrmEntity {
   /** Paradas não atribuídas por capacidade (ADR-0022, Fase 2). */
   @Column('jsonb', { name: 'unassigned_stops', nullable: true })
   unassignedStops!: string[] | null;
+
+  /** Paradas sem trecho viável (ADR-0106). Null quando a rota cobriu todas. */
+  @Column('jsonb', { name: 'unreachable_stops', nullable: true })
+  unreachableStops!: UnreachableStopView[] | null;
 
   @Column('timestamptz', { name: 'created_at' })
   createdAt!: Date;

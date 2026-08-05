@@ -242,6 +242,18 @@ export interface VehicleRouteView {
   capacity?: CapacityUsage;
 }
 
+/** Por que uma parada ficou fora da rota (ADR-0106). */
+export type UnreachableStopReason =
+  /** Sem rota até ela a partir de qualquer outra parada — costuma ser endereço errado. */
+  | 'isolated'
+  /** Alcançável entre si, mas separada do grupo que a rota atende (ilha, rio, ferry). */
+  | 'disconnected';
+
+export interface UnreachableStopView {
+  deliveryId: string;
+  reason: UnreachableStopReason;
+}
+
 export interface RoutePlan {
   id: string;
   tenantId: string;
@@ -286,6 +298,15 @@ export interface RoutePlan {
   routes?: VehicleRouteView[];
   /** IDs de paradas que não couberam em nenhum veículo (frota insuficiente). */
   unassignedStops?: string[];
+  /**
+   * Paradas fora da rota porque **não existe trecho viável** até elas
+   * (ADR-0106). Presente só quando houve alguma — a rota é parcial, e o motivo
+   * fica registrado no plano em vez de a parada sumir em silêncio.
+   *
+   * Distinto de [unassignedStops]: lá o problema é capacidade da frota, aqui é
+   * o provedor de rotas dizendo que não há caminho.
+   */
+  unreachableStops?: UnreachableStopView[];
   createdAt: string;
 }
 
