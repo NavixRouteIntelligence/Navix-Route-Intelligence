@@ -256,6 +256,9 @@ export class OptimizeRouteUseCase {
       strategy: solved.strategyName,
       status: 'completed',
       params: {
+        // Declarado no plano: uma rota calculada em linha reta não pode passar
+        // por medida (ADR-0107).
+        routingSource: solved.routingSource,
         averageSpeedKmh: speed,
         serviceTimeMinutes: service,
         hasOrigin,
@@ -435,6 +438,8 @@ export class OptimizeRouteUseCase {
       strategy: strategyName,
       status: 'completed',
       params: {
+        // Todos os veículos usam a mesma matriz, então a origem é uma só.
+        routingSource: solvedRoutes[0]?.routingSource ?? 'geometric',
         averageSpeedKmh: command.averageSpeedKmh ?? DEFAULT_SPEED_KMH,
         serviceTimeMinutes: service,
         hasOrigin,

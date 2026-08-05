@@ -11,7 +11,18 @@ import type { LatLng } from '../../../../shared/kernel/geo';
 export interface RouteMatrix {
   distanceKm: number[][];
   durationMin: number[][];
+  /**
+   * De onde os números vieram (ADR-0107).
+   *
+   * `geometric` é linha reta com duração derivada da velocidade — útil como
+   * rede de proteção, mas não é distância de estrada. Antes o motor não tinha
+   * como saber qual dos dois recebeu, e uma rota de 26 paradas caía em
+   * geometria sem nenhum indício para quem a lia.
+   */
+  source: RoutingSource;
 }
+
+export type RoutingSource = 'provider' | 'geometric';
 
 /**
  * Provedor de roteamento (ADR-0027): fornece a **matriz de distância e duração**
