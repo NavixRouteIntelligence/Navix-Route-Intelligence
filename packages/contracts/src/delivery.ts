@@ -75,6 +75,16 @@ export interface Delivery {
   status: DeliveryStatus;
   driverId: string | null;
   vehicleId: string | null;
+  /**
+   * Peso da carga (kg) e volume ocupado (m³) — ADR-0109.
+   *
+   * `null` é legítimo e frequente: nenhuma entrega criada antes desta versão os
+   * tem, e a importação ainda não os traz. O otimizador conta ausência como
+   * **zero** e declara no plano quantas paradas entraram assim, para que a
+   * capacidade não pareça verificada quando não foi.
+   */
+  weightKg: number | null;
+  volumeM3: number | null;
   routeId: string | null;
   notes: string | null;
   /** Quem recebe (ADR-0076). */
@@ -113,6 +123,10 @@ export interface TimeWindowInput {
 }
 
 export interface CreateDeliveryRequest {
+  /** Peso da carga (kg). Positivo quando informado (ADR-0109). */
+  weightKg?: number | null;
+  /** Volume ocupado (m³). Positivo quando informado (ADR-0109). */
+  volumeM3?: number | null;
   address: AddressInput;
   priority?: DeliveryPriority;
   timeWindow: TimeWindowInput;
@@ -126,6 +140,10 @@ export interface CreateDeliveryRequest {
 }
 
 export interface UpdateDeliveryRequest {
+  /** Peso da carga (kg). Positivo quando informado (ADR-0109). */
+  weightKg?: number | null;
+  /** Volume ocupado (m³). Positivo quando informado (ADR-0109). */
+  volumeM3?: number | null;
   address?: AddressInput;
   priority?: DeliveryPriority;
   timeWindow?: TimeWindowInput;

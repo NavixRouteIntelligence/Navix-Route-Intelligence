@@ -43,6 +43,9 @@ function toStop(s: DeliveryStopDto): OptimizerDeliveryStop {
     longitude: s.longitude,
     priority: s.priority,
     timeWindow: s.timeWindow,
+    weightKg: s.weightKg,
+    volumeM3: s.volumeM3,
+    vehicleId: s.vehicleId,
     ...(destinationType ? { destinationType } : {}),
   };
 }

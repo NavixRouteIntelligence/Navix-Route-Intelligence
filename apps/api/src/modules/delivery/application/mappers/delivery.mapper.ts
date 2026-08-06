@@ -17,6 +17,8 @@ export function toDeliveryView(delivery: Delivery): DeliveryView {
     status: s.status,
     driverId: s.driverId,
     vehicleId: s.vehicleId,
+    weightKg: s.weightKg,
+    volumeM3: s.volumeM3,
     routeId: s.routeId,
     notes: s.notes,
     recipient: s.recipient,

@@ -20,6 +20,14 @@ export class VehicleOrmEntity {
   @Column('integer')
   capacity!: number;
 
+  /** Capacidade de peso (kg) — ADR-0109. */
+  @Column('double precision', { name: 'capacity_kg', nullable: true })
+  capacityKg!: number | null;
+
+  /** Capacidade de volume (m³) — ADR-0109. */
+  @Column('double precision', { name: 'capacity_volume_m3', nullable: true })
+  capacityVolumeM3!: number | null;
+
   @Column('text', { default: 'active' })
   status!: VehicleStatus;
 

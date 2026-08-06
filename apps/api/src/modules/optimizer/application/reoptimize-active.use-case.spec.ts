@@ -10,6 +10,9 @@ const stop = (id: string): OptimizerDeliveryStop => ({
   longitude: 0,
   priority: 'normal',
   timeWindow: null,
+  weightKg: null,
+  volumeM3: null,
+  vehicleId: null,
 });
 
 function build(active: OptimizerDeliveryStop[], allowed = true) {

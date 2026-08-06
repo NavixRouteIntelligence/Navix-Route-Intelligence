@@ -27,6 +27,15 @@ export interface DeliveryStopDto {
    * não revela (ADR-0076). Ausente quando a origem não informou.
    */
   recipient?: string;
+  /**
+   * Demanda da entrega (ADR-0109). `null` quando não informada — e é o caso da
+   * maioria hoje, porque a importação ainda não a traz. Quem consome decide o
+   * que fazer com a ausência; este módulo só reporta o que sabe.
+   */
+  weightKg: number | null;
+  volumeM3: number | null;
+  /** Veículo atribuído à entrega. É dele que sai a capacidade da rota (ADR-0109). */
+  vehicleId: string | null;
 }
 
 /**
@@ -118,9 +127,7 @@ export const DELIVERY_LOOKUP = Symbol('DELIVERY_LOOKUP');
 
 @Injectable()
 export class DeliveryLookupService implements DeliveryLookupPort {
-  constructor(
-    @Inject(DELIVERY_REPOSITORY) private readonly deliveries: DeliveryRepositoryPort,
-  ) {}
+  constructor(@Inject(DELIVERY_REPOSITORY) private readonly deliveries: DeliveryRepositoryPort) {}
 
   async getStops(tenantId: string, ids: string[]): Promise<DeliveryStopDto[]> {
     const found = await this.deliveries.findByIds(tenantId, ids);
@@ -216,7 +223,10 @@ export class DeliveryLookupService implements DeliveryLookupPort {
     return delivery ? this.toNotifiable(delivery) : null;
   }
 
-  async listNotifiableActive(tenantId: string, driverId?: string): Promise<NotifiableDeliveryDto[]> {
+  async listNotifiableActive(
+    tenantId: string,
+    driverId?: string,
+  ): Promise<NotifiableDeliveryDto[]> {
     const active = await this.deliveries.findAll(tenantId, {
       page: { page: 1, pageSize: 100 },
       filters: { driverId },
@@ -260,6 +270,9 @@ export class DeliveryLookupService implements DeliveryLookupPort {
         start: s.timeWindow.start.toISOString(),
         end: s.timeWindow.end.toISOString(),
       },
+      weightKg: s.weightKg,
+      volumeM3: s.volumeM3,
+      vehicleId: s.vehicleId,
       ...(addressText ? { addressText } : {}),
       ...(s.recipient ? { recipient: s.recipient } : {}),
     };

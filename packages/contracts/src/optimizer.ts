@@ -248,6 +248,12 @@ export interface RoutePlanParams {
    * matriz é geométrica — geometria não tem perfil — e em planos antigos.
    */
   routingProfile?: RoutingProfileUsed;
+  /**
+   * Paradas que entraram **sem** peso/volume informados (ADR-0109). Presente só
+   * quando houve alguma: a capacidade foi verificada contra carga parcialmente
+   * desconhecida, e quem lê o plano precisa saber disso.
+   */
+  stopsWithoutDemand?: number;
   averageSpeedKmh: number;
   serviceTimeMinutes: number;
   hasOrigin: boolean;

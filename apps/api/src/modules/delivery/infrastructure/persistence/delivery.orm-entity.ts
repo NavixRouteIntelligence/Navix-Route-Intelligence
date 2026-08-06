@@ -63,6 +63,14 @@ export class DeliveryOrmEntity {
   @Column('uuid', { name: 'vehicle_id', nullable: true })
   vehicleId!: string | null;
 
+  /** Peso da carga (kg). Null quando não informado (ADR-0109). */
+  @Column('double precision', { name: 'weight_kg', nullable: true })
+  weightKg!: number | null;
+
+  /** Volume ocupado (m³). Null quando não informado (ADR-0109). */
+  @Column('double precision', { name: 'volume_m3', nullable: true })
+  volumeM3!: number | null;
+
   @Column('uuid', { name: 'route_id', nullable: true })
   routeId!: string | null;
 

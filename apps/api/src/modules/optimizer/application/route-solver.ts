@@ -57,6 +57,10 @@ export interface SolveInput {
    * informa; o solver não inventa mais uma âncora que só ele conhece.
    */
   departureAt: Date;
+  /** Paradas sem peso/volume informados, para a explicação (ADR-0109). */
+  stopsWithoutDemand?: number;
+  /** Paradas cortadas por capacidade, para a explicação (ADR-0109). */
+  unassignedByCapacity?: number;
 }
 
 /** Parada deixada de fora por não haver rota até ela (ADR-0106). */
@@ -209,6 +213,8 @@ export class RouteSolver {
       unreachable.length,
       matriz.source,
       matriz.profile?.caveat,
+      input.stopsWithoutDemand,
+      input.unassignedByCapacity,
     );
 
     return {

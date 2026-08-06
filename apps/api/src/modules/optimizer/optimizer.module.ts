@@ -24,6 +24,7 @@ import {
 import { StrategyRegistry } from './application/strategy-registry';
 import { DELIVERY_GATEWAY } from './application/ports/delivery-gateway.port';
 import { DRIVER_ROSTER_LINK } from './application/ports/driver-roster-link.port';
+import { VEHICLE_CAPACITY } from './application/ports/vehicle-capacity.port';
 import { SERVICE_TIME_HISTORY } from './application/ports/service-time-history.port';
 import { COST_AUGMENTATION } from './domain/ports/cost-augmentation.port';
 import { DISTANCE_PROVIDER } from './domain/ports/distance-provider.port';
@@ -48,6 +49,7 @@ import { CachedRoutingProvider } from './infrastructure/routing/cached-routing.p
 import { RealtimeJobEvents } from './infrastructure/events/realtime-job-events';
 import { DeliveryGateway } from './infrastructure/gateways/delivery.gateway';
 import { DriverRosterLinkGateway } from './infrastructure/gateways/driver-roster-link.gateway';
+import { VehicleCapacityGateway } from './infrastructure/gateways/vehicle-capacity.gateway';
 import { IntelligenceServiceTimeHistory } from './infrastructure/history/intelligence-service-time-history';
 import { OptimizationJobOrmEntity } from './infrastructure/persistence/optimization-job.orm-entity';
 import { OptimizationJobRepository } from './infrastructure/persistence/optimization-job.repository';
@@ -146,6 +148,7 @@ import { OptimizerController } from './interface/optimizer.controller';
     OptimizationJobWorker,
     { provide: JOB_EVENTS, useClass: RealtimeJobEvents },
     { provide: DRIVER_ROSTER_LINK, useClass: DriverRosterLinkGateway },
+    { provide: VEHICLE_CAPACITY, useClass: VehicleCapacityGateway },
     { provide: DELIVERY_GATEWAY, useClass: DeliveryGateway },
     { provide: SERVICE_TIME_HISTORY, useClass: IntelligenceServiceTimeHistory },
     { provide: OPTIMIZER_SERVICE, useClass: OptimizerService },

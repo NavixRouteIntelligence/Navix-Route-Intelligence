@@ -11,6 +11,8 @@ export function toVehicleView(vehicle: Vehicle): VehicleView {
     plate: s.plate,
     type: s.type,
     capacity: s.capacity,
+    capacityKg: s.capacityKg,
+    capacityVolumeM3: s.capacityVolumeM3,
     status: s.status,
     odometerKm: s.odometerKm,
     createdAt: s.createdAt.toISOString(),

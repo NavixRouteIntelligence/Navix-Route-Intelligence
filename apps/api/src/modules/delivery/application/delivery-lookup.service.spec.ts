@@ -3,7 +3,10 @@ import type { DeliveryStatus } from '@navix/contracts';
 import type { DeliveryRepositoryPort } from '../domain/ports/delivery-repository.port';
 import { DeliveryLookupService } from './delivery-lookup.service';
 
-function makeDelivery(overrides: Partial<CreateDeliveryInput> = {}, status?: DeliveryStatus): Delivery {
+function makeDelivery(
+  overrides: Partial<CreateDeliveryInput> = {},
+  status?: DeliveryStatus,
+): Delivery {
   const d = Delivery.create({
     tenantId: 'tenant-1',
     address: {
@@ -20,7 +23,8 @@ function makeDelivery(overrides: Partial<CreateDeliveryInput> = {}, status?: Del
     ...overrides,
   });
   // Caminha a máquina de estados até o status pedido.
-  if (status === 'in_route' || status === 'delivered' || status === 'failed') d.changeStatus('in_route');
+  if (status === 'in_route' || status === 'delivered' || status === 'failed')
+    d.changeStatus('in_route');
   if (status === 'delivered' || status === 'failed') d.changeStatus(status);
   return d;
 }
@@ -51,6 +55,11 @@ describe('DeliveryLookupService.getStops', () => {
       longitude: -46.6,
       priority: 'normal',
       timeWindow: { start: '2026-07-06T09:00:00.000Z', end: '2026-07-06T12:00:00.000Z' },
+      // Demanda e veículo atribuído viajam com a parada (ADR-0109); `null` é o
+      // estado normal enquanto a importação não os traz.
+      weightKg: null,
+      volumeM3: null,
+      vehicleId: null,
       addressText: 'Rua A São Paulo',
     });
   });

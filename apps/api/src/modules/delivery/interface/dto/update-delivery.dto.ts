@@ -8,7 +8,9 @@ import { Type } from 'class-transformer';
 import {
   IsEmail,
   IsIn,
+  IsNumber,
   IsOptional,
+  IsPositive,
   IsString,
   IsUUID,
   MaxLength,
@@ -46,6 +48,18 @@ export class UpdateDeliveryDto implements UpdateDeliveryRequest {
   @IsUUID()
   vehicleId?: string | null;
 
+  @ApiPropertyOptional({ example: 12.5, description: 'Peso da carga em kg (ADR-0109).' })
+  @IsOptional()
+  @IsNumber()
+  @IsPositive()
+  weightKg?: number | null;
+
+  @ApiPropertyOptional({ example: 0.08, description: 'Volume ocupado em m³ (ADR-0109).' })
+  @IsOptional()
+  @IsNumber()
+  @IsPositive()
+  volumeM3?: number | null;
+
   @ApiPropertyOptional({ format: 'uuid', nullable: true })
   @IsOptional()
   @IsUUID()
@@ -73,5 +87,4 @@ export class UpdateDeliveryDto implements UpdateDeliveryRequest {
   @IsString()
   @MaxLength(320)
   recipientPhone?: string | null;
-
 }

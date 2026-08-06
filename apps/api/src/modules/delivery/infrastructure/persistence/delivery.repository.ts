@@ -57,6 +57,8 @@ export class DeliveryRepository implements DeliveryRepositoryPort {
         status: s.status,
         driverId: s.driverId,
         vehicleId: s.vehicleId,
+        weightKg: s.weightKg,
+        volumeM3: s.volumeM3,
         routeId: s.routeId,
         notes: s.notes,
         recipient: s.recipient,
@@ -156,7 +158,10 @@ export class DeliveryRepository implements DeliveryRepositoryPort {
     }));
   }
 
-  private applyFilters(qb: SelectQueryBuilder<DeliveryOrmEntity>, query: ListDeliveriesQuery): void {
+  private applyFilters(
+    qb: SelectQueryBuilder<DeliveryOrmEntity>,
+    query: ListDeliveriesQuery,
+  ): void {
     const f = query.filters;
     if (f.status) qb.andWhere('delivery.status = :status', { status: f.status });
     if (f.priority) qb.andWhere('delivery.priority = :priority', { priority: f.priority });
@@ -170,7 +175,8 @@ export class DeliveryRepository implements DeliveryRepositoryPort {
     }
     if (f.vehicleId) qb.andWhere('delivery.vehicle_id = :vehicleId', { vehicleId: f.vehicleId });
     if (f.routeId) qb.andWhere('delivery.route_id = :routeId', { routeId: f.routeId });
-    if (f.windowFrom) qb.andWhere('delivery.window_start >= :windowFrom', { windowFrom: f.windowFrom });
+    if (f.windowFrom)
+      qb.andWhere('delivery.window_start >= :windowFrom', { windowFrom: f.windowFrom });
     if (f.windowTo) qb.andWhere('delivery.window_start <= :windowTo', { windowTo: f.windowTo });
   }
 
@@ -206,6 +212,8 @@ export class DeliveryRepository implements DeliveryRepositoryPort {
       status: row.status,
       driverId: row.driverId,
       vehicleId: row.vehicleId,
+      weightKg: row.weightKg,
+      volumeM3: row.volumeM3,
       routeId: row.routeId,
       notes: row.notes,
       recipient: row.recipient,
