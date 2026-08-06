@@ -64,6 +64,8 @@ export class VehicleRepository implements VehicleRepositoryPort {
       plate: row.plate,
       type: row.type,
       capacity: row.capacity,
+      capacityKg: row.capacityKg,
+      capacityVolumeM3: row.capacityVolumeM3,
       status: row.status,
       odometerKm: row.odometerKm ?? null,
       createdAt: row.createdAt,

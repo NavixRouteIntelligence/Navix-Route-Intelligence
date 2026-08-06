@@ -22,6 +22,7 @@ import type {
 import { AUDIT_LOG, type AuditLogPort } from '../../../shared/audit/audit-log.port';
 import { NotFoundError, ValidationError } from '../../../shared/kernel/domain-error';
 import { estimateCo2Kg, smartWeights, weightsFor } from '../domain/economy';
+import { fitWithinCapacity } from '../domain/capacity-fitting';
 import { partitionByCapacity } from '../domain/fleet-partitioner';
 import { GeoPoint } from '../domain/geo-point';
 import { ZERO_DEMAND, type OptimizationStop } from '../domain/optimization-stop';
@@ -38,6 +39,7 @@ import { RoutePlan } from '../domain/route-plan';
 import { VehicleProfile } from '../domain/vehicle-profile';
 import { OptimizerMetrics } from '../infrastructure/observability/optimizer-metrics';
 import { DELIVERY_GATEWAY, type DeliveryGatewayPort } from './ports/delivery-gateway.port';
+import { VEHICLE_CAPACITY, type VehicleCapacityPort } from './ports/vehicle-capacity.port';
 import { RouteSolver, type SolvedRoute } from './route-solver';
 import { computeSavings } from './scoring';
 import { toRoutePlanView } from './route-plan.mapper';
@@ -75,6 +77,12 @@ export interface OptimizeRouteCommand {
   /** Fuso do tenant, para derivar o dia operacional (ADR-0105). */
   timeZone?: string;
   /**
+   * Quantas paradas entraram **sem** peso e volume informados (ADR-0109).
+   * Preenchido internamente; declarado no plano para que a capacidade não
+   * pareça verificada quando parte da carga é desconhecida.
+   */
+  stopsWithoutDemand?: number;
+  /**
    * O resultado é a rota **deste motorista** no dia — uma coisa só, sujeita à
    * regra de substituição. `false`/ausente no plano do despacho.
    */
@@ -96,6 +104,7 @@ export class OptimizeRouteUseCase {
   constructor(
     @Inject(ROUTE_PLAN_REPOSITORY) private readonly plans: RoutePlanRepositoryPort,
     @Inject(DELIVERY_GATEWAY) private readonly delivery: DeliveryGatewayPort,
+    @Inject(VEHICLE_CAPACITY) private readonly vehicles: VehicleCapacityPort,
     @Inject(AUDIT_LOG) private readonly audit: AuditLogPort,
     @Inject(SERVICE_TIME_HISTORY) private readonly history: ServiceTimeHistoryPort,
     private readonly solver: RouteSolver,
@@ -124,10 +133,23 @@ export class OptimizeRouteUseCase {
     }
 
     await this.enrichWithHistory(command.tenantId, rawStops);
+    // A capacidade sai do veículo **atribuído** às entregas (ADR-0109), a menos
+    // que quem pediu tenha informado um explicitamente — aí manda quem pediu,
+    // que é o caso de simulação do despacho.
+    // Política explícita de ausência (ADR-0109): entrega sem peso/volume conta
+    // como zero, e o plano declara quantas — para a capacidade não parecer
+    // verificada quando metade da carga é desconhecida.
+    const stopsWithoutDemand = rawStops.filter(
+      (s) => s.demand.weightKg === 0 && s.demand.volumeM3 === 0,
+    ).length;
+    const vehicle = command.vehicle ?? (await this.assignedVehicle(command, rawStops));
+    const efetivo: OptimizeRouteCommand = vehicle
+      ? { ...command, vehicle, stopsWithoutDemand }
+      : { ...command, stopsWithoutDemand };
 
     const plan = command.vehicles?.length
-      ? await this.planFleet(command, rawStops, service, departureAt)
-      : await this.planSingle(command, rawStops, service, departureAt);
+      ? await this.planFleet(efetivo, rawStops, service, departureAt)
+      : await this.planSingle(efetivo, rawStops, service, departureAt);
 
     // Um pedido mais recente já definiu a rota deste motorista hoje: este
     // resultado chegou tarde e não pode desfazer o que veio depois (ADR-0103).
@@ -194,6 +216,32 @@ export class OptimizeRouteUseCase {
     return vigente.requestedAt > s.requestedAt ? vigente : null;
   }
 
+  /**
+   * Veículo atribuído às entregas da rota, quando há **um só** (ADR-0109).
+   *
+   * Entregas de veículos diferentes na mesma rota são ambíguas: não existe "a
+   * capacidade" de uma rota assim, e escolher uma delas seria adivinhar. Nesse
+   * caso não se informa veículo, e o comportamento é o anterior — sem
+   * verificação de capacidade, que é honesto para uma rota que ninguém sabe
+   * quem vai levar.
+   */
+  private async assignedVehicle(
+    command: OptimizeRouteCommand,
+    stops: OptimizationStop[],
+  ): Promise<OptimizationVehicleInput | null> {
+    if (command.vehicles?.length) return null; // frota explícita manda
+    const ids = new Set(stops.map((s) => s.vehicleId).filter((v): v is string => !!v));
+    if (ids.size !== 1) return null;
+
+    const capacidade = await this.vehicles.capacityOf(command.tenantId, [...ids][0]);
+    if (!capacidade) return null;
+    return {
+      type: capacidade.type,
+      ...(capacidade.weightKg !== null ? { capacityKg: capacidade.weightKg } : {}),
+      ...(capacidade.volumeM3 !== null ? { capacityVolumeM3: capacidade.volumeM3 } : {}),
+    };
+  }
+
   /** Pesos da função de custo: modo inteligente (contexto) vence Modo Economia. */
   private resolveWeights(
     command: OptimizeRouteCommand,
@@ -231,7 +279,20 @@ export class OptimizeRouteUseCase {
     if (speed <= 0) throw new ValidationError('Velocidade média deve ser positiva.');
 
     const hasOrigin = command.origin != null;
-    const nodes = this.withOrigin(command.origin, rawStops);
+    // O excesso vira parada **não atribuída** (ADR-0109), em vez de a rota
+    // carregar o que não cabe e apenas marcar `feasible: false`.
+    //
+    // Com uma ressalva importante: se o corte não deixar rota (menos de duas
+    // paradas), mantém-se o comportamento da ADR-0022 — leva tudo e sinaliza
+    // inviável. Escolher **qual** entrega não acontece hoje é decisão de quem
+    // despacha; o motor só a toma quando ainda sobra uma rota para entregar, e
+    // nunca ao ponto de transformar "não cabe" em "não há rota".
+    const ajuste = fitWithinCapacity(rawStops, profile.capacity);
+    const cortou = ajuste.dropped.length > 0 && ajuste.kept.length >= 2;
+    const kept = cortou ? ajuste.kept : rawStops;
+    const dropped = cortou ? ajuste.dropped : [];
+    if (dropped.length > 0) this.metrics.markInfeasible();
+    const nodes = this.withOrigin(command.origin, kept);
     const solved = await this.solver.solve({
       nodes,
       hasOrigin,
@@ -242,12 +303,15 @@ export class OptimizeRouteUseCase {
       ...(this.strategyLabel(command) ? { strategyLabel: this.strategyLabel(command)! } : {}),
       weights: this.resolveWeights(command, rawStops),
       departureAt,
+      ...(command.stopsWithoutDemand ? { stopsWithoutDemand: command.stopsWithoutDemand } : {}),
+      ...(dropped.length > 0 ? { unassignedByCapacity: dropped.length } : {}),
     });
     this.metrics.observeSolve(solved.strategyName, solved.solveSeconds, solved.stops.length);
     if (solved.capacity && !solved.capacity.feasible) this.metrics.markInfeasible();
 
     return RoutePlan.create({
       tenantId: command.tenantId,
+      ...(dropped.length > 0 ? { unassignedStops: dropped.map((d) => d.id) } : {}),
       driverId: command.driverId ?? null,
       ...(command.requestedAt ? { requestedAt: command.requestedAt } : {}),
       ...(command.timeZone ? { timeZone: command.timeZone } : {}),
@@ -259,6 +323,7 @@ export class OptimizeRouteUseCase {
         // Declarado no plano: uma rota calculada em linha reta não pode passar
         // por medida (ADR-0107).
         routingSource: solved.routingSource,
+        ...(command.stopsWithoutDemand ? { stopsWithoutDemand: command.stopsWithoutDemand } : {}),
         ...(solved.routingProfile ? { routingProfile: solved.routingProfile } : {}),
         averageSpeedKmh: speed,
         serviceTimeMinutes: service,
@@ -441,6 +506,7 @@ export class OptimizeRouteUseCase {
       params: {
         // Todos os veículos usam a mesma matriz, então a origem é uma só.
         routingSource: solvedRoutes[0]?.routingSource ?? 'geometric',
+        ...(command.stopsWithoutDemand ? { stopsWithoutDemand: command.stopsWithoutDemand } : {}),
         ...(solvedRoutes[0]?.routingProfile
           ? { routingProfile: solvedRoutes[0].routingProfile }
           : {}),
@@ -557,8 +623,10 @@ export class OptimizeRouteUseCase {
       // qual a economia é medida.
       const porId = new Map(found.map((f) => [f.id, f]));
       const naOrdem = ids.map((id) => porId.get(id)!);
-      // Demanda por entrega ainda não existe no agregado Delivery (evolução do
-      // contexto Delivery) — trata-se como zero até lá. Ver ADR-0022.
+      // Demanda **real** da entrega (ADR-0109). Até aqui era sempre zero, o que
+      // fazia a máquina de capacidade da ADR-0022 nunca acusar excesso numa
+      // rota de verdade. Ausência segue contando como zero — é a política
+      // explícita —, mas agora o plano declara quantas paradas entraram assim.
       return naOrdem.map((f) => ({
         id: f.id,
         point: GeoPoint.create(f.latitude, f.longitude),
@@ -566,7 +634,8 @@ export class OptimizeRouteUseCase {
         timeWindow: f.timeWindow
           ? { start: new Date(f.timeWindow.start), end: new Date(f.timeWindow.end) }
           : null,
-        demand: ZERO_DEMAND,
+        demand: { weightKg: f.weightKg ?? 0, volumeM3: f.volumeM3 ?? 0 },
+        vehicleId: f.vehicleId,
         serviceTimeMinutes: null,
         ...(f.destinationType ? { destinationType: f.destinationType } : {}),
       }));

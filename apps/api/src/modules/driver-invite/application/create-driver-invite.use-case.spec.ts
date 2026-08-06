@@ -17,6 +17,7 @@ function build(opts: { driverExists?: boolean; emailTaken?: boolean } = {}) {
   };
   const fleet: FleetLookupPort = {
     vehicleExists: jest.fn(),
+    vehicleCapacity: jest.fn(),
     driverExists: jest.fn().mockResolvedValue(opts.driverExists ?? true),
     userIdForDriver: jest.fn().mockResolvedValue(null),
     driverIdsForUsers: jest.fn().mockResolvedValue(new Map()),

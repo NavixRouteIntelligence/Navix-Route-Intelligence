@@ -205,6 +205,10 @@ export function computeScore(
   routingSource: 'provider' | 'geometric' = 'provider',
   /** Ressalva do perfil aproximado (ADR-0108). Ausente quando o perfil é exato. */
   profileCaveat?: string,
+  /** Paradas sem peso/volume informados (ADR-0109). */
+  stopsWithoutDemand = 0,
+  /** Paradas cortadas por não caberem no veículo (ADR-0109). */
+  unassignedByCapacity = 0,
 ): ScoreResult {
   const windowStops = stops.filter((s) => s.timeWindowRespected !== null);
   const respected = windowStops.filter((s) => s.timeWindowRespected === true).length;
@@ -245,6 +249,16 @@ export function computeScore(
   // (ADR-0108). Só o caso aproximado aparece — declarar "exato" em toda rota
   // seria ruído, e a ausência passa a significar fidelidade.
   if (profileCaveat) parts.push(profileCaveat);
+  // Sem isto, uma rota com metade da carga desconhecida sai dizendo
+  // "capacidade do veículo respeitada" — verdade formal e afirmação falsa.
+  if (stopsWithoutDemand > 0) {
+    parts.push(`${stopsWithoutDemand} parada(s) sem peso/volume informados`);
+  }
+  // Mesma frase do caminho de frota: o motivo do corte tem de ser o mesmo texto
+  // nos dois, ou quem lê o plano precisa aprender dois vocabulários (ADR-0109).
+  if (unassignedByCapacity > 0) {
+    parts.push(`${unassignedByCapacity} parada(s) não atribuída(s) por capacidade`);
+  }
   parts.push('prioridades mais altas atendidas primeiro');
   if (capacity) {
     parts.push(

@@ -5,6 +5,8 @@ import {
   type VehicleType,
 } from '@navix/contracts';
 
+import { VEHICLE_CAPACITY_DEFAULTS } from '@navix/contracts';
+
 import { ValidationError } from '../../../shared/kernel/domain-error';
 import { newId } from '../../../shared/kernel/id';
 
@@ -14,6 +16,10 @@ export interface VehicleProps {
   plate: string;
   type: VehicleType;
   capacity: number;
+  /** Capacidade de peso (kg) — ADR-0109. Null herda o default do tipo. */
+  capacityKg: number | null;
+  /** Capacidade de volume (m³) — ADR-0109. */
+  capacityVolumeM3: number | null;
   status: VehicleStatus;
   odometerKm: number | null;
   createdAt: Date;
@@ -25,6 +31,10 @@ export interface CreateVehicleInput {
   plate: string;
   type: VehicleType;
   capacity: number;
+  /** Capacidade de peso (kg). Ausente herda o default do tipo (ADR-0109). */
+  capacityKg?: number | null;
+  /** Capacidade de volume (m³). Ausente herda o default do tipo. */
+  capacityVolumeM3?: number | null;
   status?: VehicleStatus;
   odometerKm?: number | null;
 }
@@ -33,6 +43,8 @@ export interface UpdateVehicleInput {
   plate?: string;
   type?: VehicleType;
   capacity?: number;
+  capacityKg?: number | null;
+  capacityVolumeM3?: number | null;
   status?: VehicleStatus;
   odometerKm?: number | null;
 }
@@ -52,6 +64,16 @@ export class Vehicle {
       plate: Vehicle.normalizePlate(input.plate),
       type: Vehicle.validateType(input.type),
       capacity: Vehicle.validateCapacity(input.capacity),
+      // Sem valor explícito, o default do tipo (ADR-0109): é a melhor
+      // informação disponível, e é a mesma que o otimizador já usava.
+      capacityKg: Vehicle.validateDimension(
+        input.capacityKg ?? VEHICLE_CAPACITY_DEFAULTS[input.type].weightKg,
+        'peso',
+      ),
+      capacityVolumeM3: Vehicle.validateDimension(
+        input.capacityVolumeM3 ?? VEHICLE_CAPACITY_DEFAULTS[input.type].volumeM3,
+        'volume',
+      ),
       status: input.status ? Vehicle.validateStatus(input.status) : 'active',
       odometerKm: Vehicle.validateOdometer(input.odometerKm ?? null),
       createdAt: now,
@@ -69,6 +91,12 @@ export class Vehicle {
     if (input.type !== undefined) this.props.type = Vehicle.validateType(input.type);
     if (input.capacity !== undefined)
       this.props.capacity = Vehicle.validateCapacity(input.capacity);
+    if (input.capacityKg !== undefined) {
+      this.props.capacityKg = Vehicle.validateDimension(input.capacityKg, 'peso');
+    }
+    if (input.capacityVolumeM3 !== undefined) {
+      this.props.capacityVolumeM3 = Vehicle.validateDimension(input.capacityVolumeM3, 'volume');
+    }
     if (input.status !== undefined) this.props.status = Vehicle.validateStatus(input.status);
     if (input.odometerKm !== undefined)
       this.props.odometerKm = Vehicle.validateOdometer(input.odometerKm);
@@ -102,6 +130,21 @@ export class Vehicle {
       throw new ValidationError(`Tipo de veículo inválido: ${type}.`);
     }
     return type;
+  }
+
+  /**
+   * Capacidade por dimensão (ADR-0109): positiva quando informada.
+   *
+   * Aceita fracionário, ao contrário de [validateCapacity] — 0,8 m³ é uma
+   * capacidade legítima, e exigir inteiro ali foi o que empurrou o campo antigo
+   * para uma unidade que ninguém conseguia nomear.
+   */
+  private static validateDimension(value: number | null, campo: string): number | null {
+    if (value === null) return null;
+    if (!Number.isFinite(value) || value <= 0) {
+      throw new ValidationError(`A capacidade de ${campo} do veículo deve ser positiva.`);
+    }
+    return value;
   }
 
   private static validateCapacity(capacity: number): number {

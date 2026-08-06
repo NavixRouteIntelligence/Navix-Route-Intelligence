@@ -17,6 +17,7 @@ import { ProcessOptimizationJobUseCase } from '../src/modules/optimizer/applicat
 import { StrategyRegistry } from '../src/modules/optimizer/application/strategy-registry';
 import { TENANT_TIME_ZONE_READER } from '../src/shared/tenancy/tenant-time-zone.port';
 import { DELIVERY_GATEWAY } from '../src/modules/optimizer/application/ports/delivery-gateway.port';
+import { VEHICLE_CAPACITY } from '../src/modules/optimizer/application/ports/vehicle-capacity.port';
 import { SERVICE_TIME_HISTORY } from '../src/modules/optimizer/application/ports/service-time-history.port';
 import { DISTANCE_PROVIDER } from '../src/modules/optimizer/domain/ports/distance-provider.port';
 import { JOB_EVENTS } from '../src/modules/optimizer/domain/ports/job-events.port';
@@ -268,16 +269,34 @@ describe('Optimizer (e2e, assíncrono)', () => {
         // Fuso do tenant (ADR-0105). `UTC` mantém o dia igual ao instante, que é
         // o que os demais casos deste arquivo assumem.
         { provide: TENANT_TIME_ZONE_READER, useValue: { findTimeZone: async () => 'UTC' } },
+        // Capacidade do veículo atribuído (ADR-0109). Este arquivo exercita a
+        // capacidade pelo `vehicle` do request, então nenhuma entrega resolve
+        // veículo aqui.
+        { provide: VEHICLE_CAPACITY, useValue: { capacityOf: async () => null } },
         {
           provide: DELIVERY_GATEWAY,
           useValue: {
             getStops: async (_tenantId: string, ids: string[]) =>
               stops
                 .filter((s) => ids.includes(s.id))
-                .map((s) => ({ ...s, priority: 'normal', timeWindow: null })),
+                .map((s) => ({
+                  ...s,
+                  priority: 'normal',
+                  timeWindow: null,
+                  weightKg: null,
+                  volumeM3: null,
+                  vehicleId: null,
+                })),
             // Reotimização: devolve as 4 paradas ativas do tenant.
             listActiveStops: async () =>
-              stops.map((s) => ({ ...s, priority: 'normal', timeWindow: null })),
+              stops.map((s) => ({
+                ...s,
+                priority: 'normal',
+                timeWindow: null,
+                weightKg: null,
+                volumeM3: null,
+                vehicleId: null,
+              })),
             // Só o que o tenant enxerga: id de fora simplesmente não volta.
             getOwnership: async (_tenantId: string, ids: string[]) =>
               ids.filter((id) => id in DONOS).map((id) => ({ id, driverId: DONOS[id] })),

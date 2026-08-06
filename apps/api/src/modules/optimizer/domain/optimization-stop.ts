@@ -28,6 +28,8 @@ export interface OptimizationStop {
   timeWindow: StopTimeWindow | null;
   /** Demanda de carga da parada (ADR-0022). Default: {0,0}. */
   demand: Demand;
+  /** Veículo atribuído à entrega (ADR-0109). Origem da capacidade da rota. */
+  vehicleId?: string | null;
   /** Tempo de parada específico (min); null usa o service time global. */
   serviceTimeMinutes: number | null;
   /** Trava de posição da ordem manual (ADR-0063). Ausente/false = livre. */

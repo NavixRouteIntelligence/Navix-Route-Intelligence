@@ -10,6 +10,7 @@ function build(vinculos: Record<string, string> = {}) {
   );
   const fleet: FleetLookupPort = {
     vehicleExists: jest.fn(),
+    vehicleCapacity: jest.fn(),
     driverExists: jest.fn(),
     userIdForDriver: jest.fn(),
     driverIdsForUsers,

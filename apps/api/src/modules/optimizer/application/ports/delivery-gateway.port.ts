@@ -10,6 +10,14 @@ export interface OptimizerDeliveryStop {
   timeWindow: TimeWindow | null;
   /** Tipo do destino classificado a partir do endereço (ADR-0064). */
   destinationType?: DestinationType;
+  /**
+   * Demanda real da entrega (ADR-0109). `null` quando não informada; o caso de
+   * uso conta a ausência como zero e declara no plano quantas foram assim.
+   */
+  weightKg: number | null;
+  volumeM3: number | null;
+  /** Veículo atribuído — a origem da capacidade da rota (ADR-0109). */
+  vehicleId: string | null;
 }
 
 /**

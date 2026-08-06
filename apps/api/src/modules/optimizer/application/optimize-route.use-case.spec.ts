@@ -9,13 +9,19 @@ import { ManualStrategy } from '../infrastructure/strategies/manual.strategy';
 import { NearestNeighbor2OptStrategy } from '../infrastructure/strategies/nearest-neighbor-2opt.strategy';
 import type { RoutePlan } from '../domain/route-plan';
 import type { DeliveryGatewayPort } from './ports/delivery-gateway.port';
+import type { VehicleCapacityPort } from './ports/vehicle-capacity.port';
 import type { RoutePlanRepositoryPort } from '../domain/ports/route-plan-repository.port';
 import { OptimizeRouteUseCase } from './optimize-route.use-case';
 import { DomainEventBus } from '../../../shared/events/domain-event-bus';
 import { RouteSolver } from './route-solver';
 import { StrategyRegistry } from './strategy-registry';
 
-function build(vigente: RoutePlan | null = null, routing?: RoutingProviderPort) {
+function build(
+  vigente: RoutePlan | null = null,
+  routing?: RoutingProviderPort,
+  vehicles?: VehicleCapacityPort,
+  entregasGateway?: DeliveryGatewayPort,
+) {
   const saved: RoutePlan[] = [];
   const plans: RoutePlanRepositoryPort = {
     save: async (p) => void saved.push(p),
@@ -36,13 +42,18 @@ function build(vigente: RoutePlan | null = null, routing?: RoutingProviderPort) 
         longitude: i,
         priority: 'normal' as const,
         timeWindow: null,
+        weightKg: null,
+        volumeM3: null,
+        vehicleId: null,
       })),
     getOwnership: async () => [],
     listActiveStops: async () => [],
   };
   const audit: AuditLogPort = { record: async () => undefined };
   // Sem histórico de tempo de serviço por padrão (todos os pontos = null).
-  const history = { typicalServiceMinutes: async (_t: string, pts: unknown[]) => pts.map(() => null) };
+  const history = {
+    typicalServiceMinutes: async (_t: string, pts: unknown[]) => pts.map(() => null),
+  };
   const registry = new StrategyRegistry([new NearestNeighbor2OptStrategy(), new ManualStrategy()]);
   const metrics = {
     observeSolve: jest.fn(),
@@ -54,7 +65,16 @@ function build(vigente: RoutePlan | null = null, routing?: RoutingProviderPort) 
     registry,
   );
   const bus = new DomainEventBus();
-  const uc = new OptimizeRouteUseCase(plans, gateway, audit, history, solver, metrics, bus);
+  const uc = new OptimizeRouteUseCase(
+    plans,
+    entregasGateway ?? gateway,
+    vehicles ?? { capacityOf: async () => null },
+    audit,
+    history,
+    solver,
+    metrics,
+    bus,
+  );
   return { uc, saved, metrics, bus };
 }
 
@@ -619,5 +639,141 @@ describe('OptimizeRouteUseCase — perfil do veículo no plano', () => {
     });
 
     expect(saved[0].snapshot().params.averageSpeedKmh).toBe(15);
+  });
+});
+
+// NAV-4.10 / ADR-0109: peso e volume reais da entrega, e capacidade do veículo
+// **atribuído**. Até aqui a demanda de toda entrega real era zero, então a
+// máquina de capacidade da ADR-0022 nunca acusava excesso no caminho que
+// importa.
+describe('OptimizeRouteUseCase — demanda real das entregas', () => {
+  const D1 = S1;
+  const D2 = S2;
+  const D3 = S3;
+
+  /** Gateway que devolve entregas com demanda e veículo atribuído. */
+  function entregas(
+    itens: { id: string; weightKg: number | null; volumeM3: number | null; vehicleId?: string }[],
+  ): DeliveryGatewayPort {
+    return {
+      getOwnership: async () => [],
+      listActiveStops: async () => [],
+      getStops: async (_t, ids) =>
+        ids.map((id, i) => {
+          const item = itens.find((x) => x.id === id)!;
+          return {
+            id,
+            latitude: 38.7 + i * 0.01,
+            longitude: -9.1,
+            priority: 'normal' as const,
+            timeWindow: null,
+            weightKg: item.weightKg,
+            volumeM3: item.volumeM3,
+            vehicleId: item.vehicleId ?? null,
+          };
+        }),
+    };
+  }
+
+  /** Executa com o gateway de entregas, montando o caso de uso à mão. */
+  async function rodar(
+    itens: Parameters<typeof entregas>[0],
+    capacidade?: { weightKg: number | null; volumeM3: number | null },
+  ) {
+    const vehicles: VehicleCapacityPort = {
+      capacityOf: async () => (capacidade ? { type: 'van' as const, ...capacidade } : null),
+    };
+    const { uc } = build(null, undefined, vehicles, entregas(itens));
+    return uc.execute({
+      tenantId: 't1',
+      actorId: 'u1',
+      deliveryIds: itens.map((i) => i.id),
+    });
+  }
+
+  it('a demanda real da entrega chega ao plano', async () => {
+    const view = await rodar([
+      { id: D1, weightKg: 30, volumeM3: 0.5, vehicleId: 'v1' },
+      { id: D2, weightKg: 20, volumeM3: 0.3, vehicleId: 'v1' },
+    ]);
+
+    expect(view.metrics.totalWeightKg).toBe(50);
+    expect(view.metrics.totalVolumeM3).toBe(0.8);
+  });
+
+  // A capacidade vem do veículo **atribuído**, não do default do tipo.
+  it('a capacidade sai do veículo atribuído às entregas', async () => {
+    const view = await rodar(
+      [
+        { id: D1, weightKg: 60, volumeM3: 1, vehicleId: 'v1' },
+        { id: D2, weightKg: 40, volumeM3: 1, vehicleId: 'v1' },
+      ],
+      { weightKg: 100, volumeM3: 10 },
+    );
+
+    // Limite exato: 100 de 100 cabe, e a rota é viável.
+    expect(view.capacity?.feasible).toBe(true);
+    expect(view.unassignedStops).toBeUndefined();
+  });
+
+  it('excesso vira parada não atribuída, com motivo na explicação', async () => {
+    const view = await rodar(
+      [
+        { id: D1, weightKg: 40, volumeM3: 1, vehicleId: 'v1' },
+        { id: D2, weightKg: 40, volumeM3: 1, vehicleId: 'v1' },
+        { id: D3, weightKg: 900, volumeM3: 1, vehicleId: 'v1' },
+      ],
+      { weightKg: 100, volumeM3: 10 },
+    );
+
+    expect(view.unassignedStops).toEqual([D3]);
+    expect(view.stops.map((s) => s.deliveryId)).toEqual([D1, D2]);
+    expect(view.explanation).toContain('não atribuída(s) por capacidade');
+  });
+
+  // Política explícita de ausência: conta como zero, mas o plano declara.
+  it('entrega sem peso/volume conta como zero e é declarada no plano', async () => {
+    const view = await rodar(
+      [
+        { id: D1, weightKg: null, volumeM3: null, vehicleId: 'v1' },
+        { id: D2, weightKg: 10, volumeM3: 0.1, vehicleId: 'v1' },
+      ],
+      { weightKg: 100, volumeM3: 10 },
+    );
+
+    expect(view.params.stopsWithoutDemand).toBe(1);
+    expect(view.metrics.totalWeightKg).toBe(10);
+    expect(view.explanation).toContain('1 parada(s) sem peso/volume informados');
+  });
+
+  it('sem paradas desconhecidas, a explicação não menciona ausência', async () => {
+    const view = await rodar(
+      [
+        { id: D1, weightKg: 10, volumeM3: 0.1, vehicleId: 'v1' },
+        { id: D2, weightKg: 10, volumeM3: 0.1, vehicleId: 'v1' },
+      ],
+      { weightKg: 100, volumeM3: 10 },
+    );
+
+    expect(view.params.stopsWithoutDemand).toBeUndefined();
+    expect(view.explanation).not.toContain('sem peso/volume');
+  });
+
+  // Entregas de veículos diferentes: não existe "a capacidade" dessa rota, e
+  // escolher uma delas seria adivinhar.
+  it('veículos diferentes na mesma rota não definem capacidade', async () => {
+    const view = await rodar(
+      [
+        { id: D1, weightKg: 900, volumeM3: 1, vehicleId: 'v1' },
+        { id: D2, weightKg: 900, volumeM3: 1, vehicleId: 'v2' },
+      ],
+      { weightKg: 100, volumeM3: 10 },
+    );
+
+    expect(view.unassignedStops).toBeUndefined();
+    // A carga é reportada, mas nenhum limite é aplicado — que é o honesto para
+    // uma rota que ninguém sabe quem vai levar.
+    expect(view.capacity?.capacityKg).toBeNull();
+    expect(view.capacity?.feasible).toBe(true);
   });
 });

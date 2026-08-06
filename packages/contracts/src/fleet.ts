@@ -41,8 +41,16 @@ export interface Vehicle {
   tenantId: string;
   plate: string;
   type: VehicleType;
-  /** Capacidade de carga em unidades definidas pelo tenant (ex.: kg ou volumes). */
+  /**
+   * @deprecated Unidade ambígua (ADR-0109) — não dá para saber se 400 é quilo
+   * ou metro cúbico, e sem unidade não há comparação possível com a carga.
+   * Use [capacityKg] e [capacityVolumeM3]. Mantido para não quebrar clientes.
+   */
   capacity: number;
+  /** Capacidade de peso (kg). Preenchida pelo default do tipo (ADR-0109). */
+  capacityKg: number | null;
+  /** Capacidade de volume (m³). Preenchida pelo default do tipo (ADR-0109). */
+  capacityVolumeM3: number | null;
   status: VehicleStatus;
   /** Hodômetro atual (km). Base dos lembretes por quilometragem (FASE 3). */
   odometerKm: number | null;

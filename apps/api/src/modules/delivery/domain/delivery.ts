@@ -32,6 +32,10 @@ export interface DeliveryProps {
   status: DeliveryStatus;
   driverId: string | null;
   vehicleId: string | null;
+  /** Peso da carga (kg). `null` quando não informado (ADR-0109). */
+  weightKg: number | null;
+  /** Volume ocupado (m³). `null` quando não informado (ADR-0109). */
+  volumeM3: number | null;
   routeId: string | null;
   notes: string | null;
   /** Quem recebe. Nulo quando a origem não informou (ADR-0076). */
@@ -55,6 +59,8 @@ export interface CreateDeliveryInput {
   timeWindow: TimeWindowInput;
   driverId?: string | null;
   vehicleId?: string | null;
+  weightKg?: number | null;
+  volumeM3?: number | null;
   routeId?: string | null;
   notes?: string | null;
   recipient?: string | null;
@@ -68,6 +74,8 @@ export interface UpdateDeliveryInput {
   timeWindow?: TimeWindowInput;
   driverId?: string | null;
   vehicleId?: string | null;
+  weightKg?: number | null;
+  volumeM3?: number | null;
   routeId?: string | null;
   notes?: string | null;
   recipient?: string | null;
@@ -94,6 +102,8 @@ export class Delivery {
       status: 'pending',
       driverId: input.driverId ?? null,
       vehicleId: input.vehicleId ?? null,
+      weightKg: Delivery.validateDemand(input.weightKg ?? null, 'peso', 'kg'),
+      volumeM3: Delivery.validateDemand(input.volumeM3 ?? null, 'volume', 'm³'),
       routeId: input.routeId ?? null,
       notes: Delivery.normalizeNotes(input.notes ?? null),
       recipient: Delivery.normalizeRecipient(input.recipient ?? null),
@@ -124,6 +134,12 @@ export class Delivery {
     }
     if (input.driverId !== undefined) this.props.driverId = input.driverId;
     if (input.vehicleId !== undefined) this.props.vehicleId = input.vehicleId;
+    if (input.weightKg !== undefined) {
+      this.props.weightKg = Delivery.validateDemand(input.weightKg, 'peso', 'kg');
+    }
+    if (input.volumeM3 !== undefined) {
+      this.props.volumeM3 = Delivery.validateDemand(input.volumeM3, 'volume', 'm³');
+    }
     if (input.routeId !== undefined) this.props.routeId = input.routeId;
     this.touch();
   }
@@ -201,6 +217,26 @@ export class Delivery {
     if (value === null) return null;
     const lower = value.toLowerCase();
     return EMAIL_RE.test(lower) ? lower : null;
+  }
+
+  /**
+   * Peso e volume, quando informados, têm de ser positivos e finitos (ADR-0109).
+   *
+   * `null` passa: ausência é estado legítimo, e a política de ausência é do
+   * otimizador, não do agregado. Zero **não** passa — uma entrega de zero quilo
+   * seria indistinguível de "não sei", e é justamente essa confusão que faz a
+   * capacidade parecer verificada sem ter sido.
+   */
+  private static validateDemand(
+    value: number | null,
+    campo: string,
+    unidade: string,
+  ): number | null {
+    if (value === null) return null;
+    if (!Number.isFinite(value) || value <= 0) {
+      throw new ValidationError(`O ${campo} da entrega deve ser positivo (${unidade}).`);
+    }
+    return value;
   }
 
   private static normalizeNotes(notes: string | null): string | null {
