@@ -223,9 +223,31 @@ export interface RouteSavings {
  */
 export type RoutingSourceView = 'provider' | 'geometric';
 
+/** Perfis de deslocamento do provedor de rotas (ADR-0108). */
+export type RoutingProfileView = 'driving' | 'cycling' | 'walking';
+
+/**
+ * Perfil usado e o quanto ele representa o veículo (ADR-0108).
+ *
+ * `approximate` significa que o provedor **não tem** perfil para aquele tipo —
+ * o caso do camião, cujas restrições de altura, peso e centro urbano não
+ * entram no traçado. A ressalva vem junto porque uma rota aceita aqui pode ser
+ * impraticável na rua, e quem despacha precisa saber disso antes.
+ */
+export interface RoutingProfileUsed {
+  profile: RoutingProfileView;
+  fidelity: 'exact' | 'approximate';
+  caveat?: string;
+}
+
 export interface RoutePlanParams {
   /** Origem das distâncias/durações (ADR-0107). Ausente em planos antigos. */
   routingSource?: RoutingSourceView;
+  /**
+   * Perfil de deslocamento pedido ao provedor (ADR-0108). Ausente quando a
+   * matriz é geométrica — geometria não tem perfil — e em planos antigos.
+   */
+  routingProfile?: RoutingProfileUsed;
   averageSpeedKmh: number;
   serviceTimeMinutes: number;
   hasOrigin: boolean;

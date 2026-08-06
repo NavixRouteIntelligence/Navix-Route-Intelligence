@@ -91,3 +91,75 @@ describe('CachedRoutingProvider — trechos proibidos sobrevivem ao JSON', () =>
     expect(segunda.distanceKm[0][0]).toBe(0);
   });
 });
+
+// NAV-4.9 / ADR-0108: sem o perfil na chave, uma rota de bicicleta
+// reaproveitaria a matriz de carro dos mesmos pontos — silenciosamente, e só
+// com o cache quente, que é o pior momento para descobrir.
+describe('CachedRoutingProvider — o perfil separa as matrizes', () => {
+  function cacheEmMemoria() {
+    const values = new Map<string, unknown>();
+    const cache: CachePort = {
+      get: async (key) => (values.get(key) as never) ?? null,
+      set: async (key, value) => void values.set(key, value),
+      del: async (key) => void values.delete(key),
+      getOrSet: async <T>(key: string, _ttl: number, factory: () => Promise<T>) => {
+        if (values.has(key)) return values.get(key) as T;
+        const value = await factory();
+        values.set(key, value);
+        return value;
+      },
+    };
+    return cache;
+  }
+
+  const pontos = [
+    { latitude: 38.7223, longitude: -9.1393 },
+    { latitude: 38.7323, longitude: -9.1493 },
+  ];
+
+  it('carro e bicicleta nos mesmos pontos não compartilham matriz', async () => {
+    const matrix = {
+      distanceKm: [
+        [0, 1],
+        [1, 0],
+      ],
+      durationMin: [
+        [0, 2],
+        [2, 0],
+      ],
+      source: 'provider' as const,
+    };
+    const delegate: RoutingProviderPort = { matrix: jest.fn().mockResolvedValue(matrix) };
+    const provider = new CachedRoutingProvider(cacheEmMemoria(), delegate, 'mapbox');
+
+    await provider.matrix(pontos, 40, 'car');
+    await provider.matrix(pontos, 15, 'bicycle');
+
+    expect(delegate.matrix).toHaveBeenCalledTimes(2);
+    // E o tipo chega ao provedor, não fica só na chave.
+    expect((delegate.matrix as jest.Mock).mock.calls[1][2]).toBe('bicycle');
+  });
+
+  it('tipos que mapeiam para o mesmo perfil compartilham a matriz', async () => {
+    const matrix = {
+      distanceKm: [
+        [0, 1],
+        [1, 0],
+      ],
+      durationMin: [
+        [0, 2],
+        [2, 0],
+      ],
+      source: 'provider' as const,
+    };
+    const delegate: RoutingProviderPort = { matrix: jest.fn().mockResolvedValue(matrix) };
+    const provider = new CachedRoutingProvider(cacheEmMemoria(), delegate, 'mapbox');
+
+    // `van` e `car` pedem `driving`: a matriz é literalmente a mesma, e separar
+    // gastaria requisição à toa.
+    await provider.matrix(pontos, 40, 'car');
+    await provider.matrix(pontos, 40, 'van');
+
+    expect(delegate.matrix).toHaveBeenCalledTimes(1);
+  });
+});

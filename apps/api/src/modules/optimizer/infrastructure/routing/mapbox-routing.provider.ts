@@ -1,8 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 
 import { AppConfigService } from '../../../../shared/config/app-config.service';
+import type { VehicleType } from '@navix/contracts';
+
 import type { LatLng } from '../../../../shared/kernel/geo';
 import { UNREACHABLE } from '../../domain/reachability';
+import { resolveRoutingProfile, type RoutingProfileMapping } from '../../domain/routing-profile';
 import type { RouteMatrix, RoutingProviderPort } from '../../domain/ports/routing-provider.port';
 import { haversineMatrix } from './haversine-routing.provider';
 
@@ -99,7 +102,14 @@ export class MapboxRoutingProvider implements RoutingProviderPort {
     this.requireProvider = config.maps.requireProvider;
   }
 
-  async matrix(points: LatLng[], speedKmh: number): Promise<RouteMatrix> {
+  async matrix(
+    points: LatLng[],
+    speedKmh: number,
+    vehicleType?: VehicleType | null,
+  ): Promise<RouteMatrix> {
+    // Mapeamento explícito, resolvido uma vez e usado em toda requisição desta
+    // matriz — inclusive nos ladrilhos (ADR-0108).
+    const perfil = resolveRoutingProfile(vehicleType);
     if (!this.token || points.length < 2) {
       return this.geometric(points, speedKmh, 'sem token do provedor');
     }
@@ -113,21 +123,25 @@ export class MapboxRoutingProvider implements RoutingProviderPort {
 
     try {
       return points.length <= MAX_COORDS
-        ? await this.singleRequest(points)
-        : await this.tiled(points);
+        ? await this.singleRequest(points, perfil)
+        : await this.tiled(points, perfil);
     } catch (err) {
       return this.geometric(points, speedKmh, err instanceof Error ? err.message : String(err));
     }
   }
 
   /** Caminho de sempre: cabe numa requisição só. */
-  private async singleRequest(points: LatLng[]): Promise<RouteMatrix> {
-    const body = await this.fetchMatrix(points);
-    if (body === 'no-route') return allUnreachable(points.length);
+  private async singleRequest(
+    points: LatLng[],
+    perfil: RoutingProfileMapping,
+  ): Promise<RouteMatrix> {
+    const body = await this.fetchMatrix(points, perfil);
+    if (body === 'no-route') return { ...allUnreachable(points.length), profile: perfil };
     return {
       distanceKm: body.distances.map((row) => row.map(toKm)),
       durationMin: body.durations.map((row) => row.map(toMin)),
       source: 'provider',
+      profile: perfil,
     };
   }
 
@@ -139,7 +153,7 @@ export class MapboxRoutingProvider implements RoutingProviderPort {
    * contra si mesmo manda as coordenadas uma vez só — repeti-las gastaria o
    * dobro do orçamento de 25 por nada.
    */
-  private async tiled(points: LatLng[]): Promise<RouteMatrix> {
+  private async tiled(points: LatLng[], perfil: RoutingProfileMapping): Promise<RouteMatrix> {
     const n = points.length;
     const blocks = blocksOf(n);
     const distanceKm = emptyMatrix(n);
@@ -156,7 +170,11 @@ export class MapboxRoutingProvider implements RoutingProviderPort {
 
         const body = await this.fetchMatrix(
           coords.map((i) => points[i]),
-          { sources, destinations },
+          perfil,
+          {
+            sources,
+            destinations,
+          },
         );
         // `NoRoute` num ladrilho é afirmação sobre aquele retângulo: nenhum par
         // dali tem rota (ADR-0106). Não invalida os outros ladrilhos.
@@ -177,12 +195,13 @@ export class MapboxRoutingProvider implements RoutingProviderPort {
     // Uma exceção aqui sobe e o `catch` do chamador devolve a matriz inteira
     // geométrica: nada de meia medida, meia estimativa.
     await inBatches(tarefas);
-    return { distanceKm, durationMin, source: 'provider' };
+    return { distanceKm, durationMin, source: 'provider', profile: perfil };
   }
 
   /** `'no-route'` quando o provedor afirma que não há rota entre os pontos. */
   private async fetchMatrix(
     points: LatLng[],
+    perfil: RoutingProfileMapping,
     scope?: { sources: number[]; destinations: number[] },
   ): Promise<'no-route' | { distances: (number | null)[][]; durations: (number | null)[][] }> {
     const coords = points.map((p) => `${p.longitude},${p.latitude}`).join(';');
@@ -196,7 +215,7 @@ export class MapboxRoutingProvider implements RoutingProviderPort {
     }
 
     const res = await fetch(
-      `https://api.mapbox.com/directions-matrix/v1/mapbox/driving/${coords}?${params}`,
+      `https://api.mapbox.com/directions-matrix/v1/mapbox/${perfil.profile}/${coords}?${params}`,
       { signal: AbortSignal.timeout(TIMEOUT_MS) },
     );
     if (!res.ok) throw new Error(`HTTP ${res.status}`);

@@ -251,3 +251,102 @@ describe('MapboxRoutingProvider — acima do limite de 25 coordenadas', () => {
     );
   });
 });
+
+// NAV-4.9 / ADR-0108: o perfil do provedor sai do tipo do veículo. Antes era
+// sempre `driving` — bicicleta recebia rotas de carro, por autoestrada.
+describe('MapboxRoutingProvider — perfil por tipo de veículo', () => {
+  const originalFetch = global.fetch;
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  const dois = [
+    { latitude: 38.72, longitude: -9.14 },
+    { latitude: 38.73, longitude: -9.15 },
+  ];
+
+  /** Captura o perfil presente na URL de cada requisição. */
+  function capturaPerfil(): string[] {
+    const perfis: string[] = [];
+    global.fetch = jest.fn(async (url: string) => {
+      perfis.push(new URL(url).pathname.split('/')[4]);
+      return {
+        ok: true,
+        json: async () => ({
+          code: 'Ok',
+          distances: [
+            [0, 1000],
+            [1000, 0],
+          ],
+          durations: [
+            [0, 60],
+            [60, 0],
+          ],
+        }),
+      };
+    }) as unknown as typeof fetch;
+    return perfis;
+  }
+
+  it('bicicleta pede o perfil de ciclismo', async () => {
+    const perfis = capturaPerfil();
+
+    const m = await new MapboxRoutingProvider(configWith('tok')).matrix(dois, 15, 'bicycle');
+
+    expect(perfis).toEqual(['cycling']);
+    expect(m.profile).toEqual({ profile: 'cycling', fidelity: 'exact' });
+  });
+
+  it('carro pede o perfil de carro', async () => {
+    const perfis = capturaPerfil();
+
+    await new MapboxRoutingProvider(configWith('tok')).matrix(dois, 40, 'car');
+
+    expect(perfis).toEqual(['driving']);
+  });
+
+  // O provedor não tem perfil de camião: usa-se o mais próximo, e a ressalva
+  // viaja com a matriz — não some num fallback silencioso.
+  it('camião usa carro, mas declara o que fica de fora', async () => {
+    capturaPerfil();
+
+    const m = await new MapboxRoutingProvider(configWith('tok')).matrix(dois, 28, 'truck');
+
+    expect(m.profile?.profile).toBe('driving');
+    expect(m.profile?.fidelity).toBe('approximate');
+    expect(m.profile?.caveat).toMatch(/altura|peso|centro urbano/);
+  });
+
+  it('sem veículo informado, mantém o comportamento legado', async () => {
+    const perfis = capturaPerfil();
+
+    await new MapboxRoutingProvider(configWith('tok')).matrix(dois, 40);
+
+    expect(perfis).toEqual(['driving']);
+  });
+
+  // Ladrilhamento (ADR-0107) não pode trocar de perfil no meio do caminho.
+  it('todos os ladrilhos usam o mesmo perfil', async () => {
+    const perfis = capturaPerfil();
+    const muitos = Array.from({ length: 26 }, (_, i) => ({
+      latitude: 38.7 + i * 0.01,
+      longitude: -9.1,
+    }));
+
+    await new MapboxRoutingProvider(configWith('tok')).matrix(muitos, 15, 'bicycle');
+
+    expect(perfis).toHaveLength(9);
+    expect(new Set(perfis)).toEqual(new Set(['cycling']));
+  });
+
+  // A matriz geométrica não tem perfil: a distância great-circle é a mesma para
+  // carro e bicicleta, e dizer "cycling" ali seria inventar precisão.
+  it('a degradação geométrica não declara perfil', async () => {
+    global.fetch = jest.fn().mockRejectedValue(new Error('network')) as unknown as typeof fetch;
+
+    const m = await new MapboxRoutingProvider(configWith('tok')).matrix(dois, 15, 'bicycle');
+
+    expect(m.source).toBe('geometric');
+    expect(m.profile).toBeUndefined();
+  });
+});

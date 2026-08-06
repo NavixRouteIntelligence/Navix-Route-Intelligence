@@ -3,6 +3,7 @@ import type { PagedResult } from '../../../shared/kernel/pagination';
 import { HaversineRoutingProvider } from '../infrastructure/routing/haversine-routing.provider';
 import type { RoutingProviderPort } from '../domain/ports/routing-provider.port';
 import { UNREACHABLE } from '../domain/reachability';
+import { resolveRoutingProfile } from '../domain/routing-profile';
 import type { OptimizerMetrics } from '../infrastructure/observability/optimizer-metrics';
 import { ManualStrategy } from '../infrastructure/strategies/manual.strategy';
 import { NearestNeighbor2OptStrategy } from '../infrastructure/strategies/nearest-neighbor-2opt.strategy';
@@ -527,5 +528,96 @@ describe('OptimizeRouteUseCase — origem das distâncias no plano', () => {
 
     expect(view.params.routingSource).toBe('geometric');
     expect(view.explanation).toContain('distâncias estimadas em linha reta');
+  });
+});
+
+// NAV-4.9 / ADR-0108: o perfil usado fica no plano, e a ressalva chega a quem
+// lê a rota.
+describe('OptimizeRouteUseCase — perfil do veículo no plano', () => {
+  const duasParadas = [
+    { id: S1, latitude: 38.72, longitude: -9.14 },
+    { id: S2, latitude: 38.73, longitude: -9.15 },
+  ];
+
+  /** Provedor que devolve o perfil pedido, como o Mapbox faria. */
+  function provedorQueDeclara(): RoutingProviderPort & { tipos: (string | null | undefined)[] } {
+    const tipos: (string | null | undefined)[] = [];
+    return {
+      tipos,
+      matrix: async (_p, _s, vehicleType) => {
+        tipos.push(vehicleType);
+        return {
+          distanceKm: [
+            [0, 5],
+            [5, 0],
+          ],
+          durationMin: [
+            [0, 10],
+            [10, 0],
+          ],
+          source: 'provider' as const,
+          profile: resolveRoutingProfile(vehicleType),
+        };
+      },
+    };
+  }
+
+  it('o tipo do veículo chega ao provedor e o perfil fica no plano', async () => {
+    const routing = provedorQueDeclara();
+    const { uc } = build(null, routing);
+
+    const view = await uc.execute({
+      tenantId: 't1',
+      actorId: 'u1',
+      stops: duasParadas,
+      vehicle: { type: 'bicycle' },
+    });
+
+    expect(routing.tipos).toEqual(['bicycle']);
+    expect(view.params.routingProfile).toEqual({ profile: 'cycling', fidelity: 'exact' });
+    expect(view.params.vehicleType).toBe('bicycle');
+  });
+
+  it('perfil aproximado declara a ressalva na explicação', async () => {
+    const { uc } = build(null, provedorQueDeclara());
+
+    const view = await uc.execute({
+      tenantId: 't1',
+      actorId: 'u1',
+      stops: duasParadas,
+      vehicle: { type: 'truck' },
+    });
+
+    expect(view.params.routingProfile?.fidelity).toBe('approximate');
+    expect(view.explanation).toMatch(/altura, peso e restrição de centro urbano/);
+  });
+
+  it('perfil exato não polui a explicação', async () => {
+    const { uc } = build(null, provedorQueDeclara());
+
+    const view = await uc.execute({
+      tenantId: 't1',
+      actorId: 'u1',
+      stops: duasParadas,
+      vehicle: { type: 'car' },
+    });
+
+    expect(view.params.routingProfile?.fidelity).toBe('exact');
+    expect(view.explanation).not.toMatch(/não entram no traçado/);
+  });
+
+  // A velocidade do perfil do veículo continua valendo onde ela importa: no
+  // caminho geométrico, que deriva duração da velocidade (ADR-0022).
+  it('a velocidade do tipo é a do perfil operacional', async () => {
+    const { uc, saved } = build();
+
+    await uc.execute({
+      tenantId: 't1',
+      actorId: 'u1',
+      stops: duasParadas,
+      vehicle: { type: 'bicycle' },
+    });
+
+    expect(saved[0].snapshot().params.averageSpeedKmh).toBe(15);
   });
 });

@@ -1,4 +1,7 @@
+import type { VehicleType } from '@navix/contracts';
+
 import type { LatLng } from '../../../../shared/kernel/geo';
+import type { RoutingProfileMapping } from '../routing-profile';
 
 /**
  * Matriz de distância (km) e duração (min) entre todos os pares de pontos.
@@ -20,9 +23,17 @@ export interface RouteMatrix {
    * geometria sem nenhum indício para quem a lia.
    */
   source: RoutingSource;
+  /**
+   * Perfil de deslocamento efetivamente pedido ao provedor (ADR-0108), e o
+   * quanto ele representa o veículo. Ausente na matriz geométrica, que não tem
+   * perfil nenhum — é geometria pura, igual para carro e bicicleta.
+   */
+  profile?: RoutingProfileMapping;
 }
 
 export type RoutingSource = 'provider' | 'geometric';
+
+export type { RoutingProfileMapping, RoutingProfile } from '../routing-profile';
 
 /**
  * Provedor de roteamento (ADR-0027): fornece a **matriz de distância e duração**
@@ -36,8 +47,16 @@ export interface RoutingProviderPort {
    * `speedKmh` é usado pelo fallback para derivar a duração; provedores reais o
    * ignoram (retornam duração medida). Deve ser resiliente: qualquer falha externa
    * cai no cálculo geométrico (Haversine), nunca derruba a otimização.
+   *
+   * `vehicleType` escolhe o **perfil de deslocamento** do provedor (ADR-0108):
+   * sem ele, uma bicicleta recebia distâncias de carro, por autoestradas onde
+   * não pode circular. Ausente mantém o comportamento legado (`driving`).
    */
-  matrix(points: LatLng[], speedKmh: number): Promise<RouteMatrix>;
+  matrix(
+    points: LatLng[],
+    speedKmh: number,
+    vehicleType?: VehicleType | null,
+  ): Promise<RouteMatrix>;
 }
 
 export const ROUTING_PROVIDER = Symbol('ROUTING_PROVIDER');

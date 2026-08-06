@@ -26,6 +26,10 @@ export function haversineMatrix(points: LatLng[], speedKmh: number): RouteMatrix
 
 @Injectable()
 export class HaversineRoutingProvider implements RoutingProviderPort {
+  /**
+   * Geometria não tem perfil: a distância great-circle é a mesma para carro e
+   * bicicleta, e a duração já vem da velocidade do veículo (ADR-0108).
+   */
   async matrix(points: LatLng[], speedKmh: number): Promise<RouteMatrix> {
     return haversineMatrix(points, speedKmh);
   }
