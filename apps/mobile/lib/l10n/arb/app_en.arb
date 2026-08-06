@@ -477,5 +477,18 @@
       }
     }
   },
-  "perfRestHint": "Worth a break. Nothing here improves if you drive tired."
+  "perfRestHint": "Worth a break. Nothing here improves if you drive tired.",
+  "routePartialTitle": "{count, plural, =1{1 delivery is not in this route} other{{count} deliveries are not in this route}}",
+  "@routePartialTitle": {
+    "description": "Aviso de rota parcial (ADR-0110).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "routePartialHint": "Check with dispatch before you leave — they were left out on purpose, not by mistake.",
+  "routePartialCapacity": "does not fit in the vehicle",
+  "routePartialIsolated": "no route reaches the address",
+  "routePartialDisconnected": "separated from the rest of the route"
 }

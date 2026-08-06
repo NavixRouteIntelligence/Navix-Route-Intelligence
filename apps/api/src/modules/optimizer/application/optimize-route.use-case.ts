@@ -1,4 +1,4 @@
-import { Inject, Injectable, Optional } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 
 import { DomainEventBus } from '../../../shared/events/domain-event-bus';
 import {
@@ -14,7 +14,7 @@ import type {
   RouteMetrics,
   RoutePlan as RoutePlanView,
   RouteStopView,
-  UnreachableStopView,
+  UnassignedStopView,
   VehicleRouteView,
   VehicleType,
 } from '@navix/contracts';
@@ -101,6 +101,8 @@ export interface OptimizeRouteCommand {
 
 @Injectable()
 export class OptimizeRouteUseCase {
+  private readonly logger = new Logger('OptimizeRoute');
+
   constructor(
     @Inject(ROUTE_PLAN_REPOSITORY) private readonly plans: RoutePlanRepositoryPort,
     @Inject(DELIVERY_GATEWAY) private readonly delivery: DeliveryGatewayPort,
@@ -158,6 +160,15 @@ export class OptimizeRouteUseCase {
 
     await this.plans.save(plan);
     const planSnapshot = plan.snapshot();
+    this.metrics.observePlanOutcome(planSnapshot.status);
+    if (planSnapshot.status === 'partial') {
+      // Log distinto do sucesso completo (ADR-0110): quem opera precisa achar
+      // as rotas parciais sem varrer plano a plano.
+      this.logger.warn(
+        `Plano ${planSnapshot.id} parcial: ${planSnapshot.unassignedStops?.length ?? 0} entrega(s) fora da rota ` +
+          `(${[...new Set(planSnapshot.unassignedStops?.map((u) => u.reason))].join(', ')}).`,
+      );
+    }
     // Avisa o read model de KPIs (ADR-0092) que há economia nova a contabilizar.
     this.bus.publish(command.tenantId, {
       type: 'route.plan-created',
@@ -309,16 +320,22 @@ export class OptimizeRouteUseCase {
     this.metrics.observeSolve(solved.strategyName, solved.solveSeconds, solved.stops.length);
     if (solved.capacity && !solved.capacity.feasible) this.metrics.markInfeasible();
 
+    // Capacidade e alcance na **mesma** lista, cada uma com o seu motivo
+    // (ADR-0110): quem pergunta "o que ficou de fora?" pergunta uma vez.
+    const foraDaRota: UnassignedStopView[] = [
+      ...dropped.map((d) => ({ deliveryId: d.id, reason: 'capacity' as const })),
+      ...solved.unreachable.map((u) => ({ deliveryId: u.id, reason: u.reason })),
+    ];
+
     return RoutePlan.create({
       tenantId: command.tenantId,
-      ...(dropped.length > 0 ? { unassignedStops: dropped.map((d) => d.id) } : {}),
+      ...(foraDaRota.length > 0 ? { unassignedStops: foraDaRota } : {}),
       driverId: command.driverId ?? null,
       ...(command.requestedAt ? { requestedAt: command.requestedAt } : {}),
       ...(command.timeZone ? { timeZone: command.timeZone } : {}),
       departureAt,
       driverScoped: command.driverScoped ?? false,
       strategy: solved.strategyName,
-      status: 'completed',
       params: {
         // Declarado no plano: uma rota calculada em linha reta não pode passar
         // por medida (ADR-0107).
@@ -340,16 +357,6 @@ export class OptimizeRouteUseCase {
       score: solved.score,
       explanation: solved.explanation,
       ...(solved.capacity ? { capacity: solved.capacity } : {}),
-      // Paradas sem trecho viável ficam registradas no plano (ADR-0106): a
-      // rota é parcial e diz por quê, em vez de a entrega sumir em silêncio.
-      ...(solved.unreachable.length > 0
-        ? {
-            unreachableStops: solved.unreachable.map((u) => ({
-              deliveryId: u.id,
-              reason: u.reason,
-            })),
-          }
-        : {}),
     });
   }
 
@@ -425,20 +432,26 @@ export class OptimizeRouteUseCase {
       });
     }
 
-    const unassignedStops = partition.unassigned.map((i) => rawStops[i].id);
-    if (unassignedStops.length > 0) this.metrics.markInfeasible();
+    const porCapacidade: UnassignedStopView[] = partition.unassigned.map((i) => ({
+      deliveryId: rawStops[i].id,
+      reason: 'capacity' as const,
+    }));
+    if (porCapacidade.length > 0) this.metrics.markInfeasible();
 
     // Cada veículo resolve o seu recorte, então a exclusão por falta de rota é
     // agregada aqui (ADR-0106). `Map` por id: a mesma parada não pode aparecer
     // duas vezes se dois recortes a descartarem.
-    const unreachableStops = [
+    // `Map` por id: a mesma parada não pode aparecer duas vezes se dois
+    // recortes a descartarem.
+    const semRota = [
       ...new Map(
         solvedRoutes.flatMap((r) =>
           r.unreachable.map((u) => [u.id, { deliveryId: u.id, reason: u.reason }] as const),
         ),
       ).values(),
     ];
-    if (unreachableStops.length > 0) this.metrics.markInfeasible();
+    if (semRota.length > 0) this.metrics.markInfeasible();
+    const unassignedStops: UnassignedStopView[] = [...porCapacidade, ...semRota];
 
     return this.aggregatePlan(
       command,
@@ -449,7 +462,6 @@ export class OptimizeRouteUseCase {
       unassignedStops,
       strategyName,
       departureAt,
-      unreachableStops,
     );
   }
 
@@ -460,10 +472,9 @@ export class OptimizeRouteUseCase {
     hasOrigin: boolean,
     routes: VehicleRouteView[],
     solvedRoutes: SolvedRoute[],
-    unassignedStops: string[],
+    unassignedStops: UnassignedStopView[],
     strategyName: OptimizationStrategyName,
     departureAt: Date,
-    unreachableStops: UnreachableStopView[],
   ): RoutePlan {
     let seq = 0;
     const stops: RouteStopView[] = routes.flatMap((r) =>
@@ -482,19 +493,23 @@ export class OptimizeRouteUseCase {
     const parts = [
       `Frota: ${routes.length} veículo(s), ${stops.length} paradas`,
       `${savings.distancePct >= 0 ? '−' : '+'}${Math.abs(savings.distancePct)}% de distância vs. ordem original`,
-      ...(unassignedStops.length > 0
-        ? [`${unassignedStops.length} parada(s) não atribuída(s) por capacidade`]
+      ...(unassignedStops.some((u) => u.reason === 'capacity')
+        ? [
+            `${unassignedStops.filter((u) => u.reason === 'capacity').length} parada(s) não atribuída(s) por capacidade`,
+          ]
         : []),
       // A explicação agregada da frota declara o total; cada rota já declara o
       // seu (ADR-0106), mas quem lê o plano vê só esta.
-      ...(unreachableStops.length > 0
-        ? [`${unreachableStops.length} parada(s) sem rota viável, fora do plano`]
+      ...(unassignedStops.some((u) => u.reason !== 'capacity')
+        ? [
+            `${unassignedStops.filter((u) => u.reason !== 'capacity').length} parada(s) sem rota viável, fora do plano`,
+          ]
         : []),
     ];
 
     return RoutePlan.create({
       tenantId: command.tenantId,
-      ...(unreachableStops.length > 0 ? { unreachableStops } : {}),
+
       // Plano de frota cobre vários veículos e não pertence a uma pessoa só.
       driverId: null,
       ...(command.requestedAt ? { requestedAt: command.requestedAt } : {}),
@@ -502,7 +517,6 @@ export class OptimizeRouteUseCase {
       departureAt,
       driverScoped: false,
       strategy: strategyName,
-      status: 'completed',
       params: {
         // Todos os veículos usam a mesma matriz, então a origem é uma só.
         routingSource: solvedRoutes[0]?.routingSource ?? 'geometric',
@@ -514,7 +528,7 @@ export class OptimizeRouteUseCase {
         serviceTimeMinutes: service,
         hasOrigin,
         vehicleCount: routes.length,
-        ...(unreachableStops.length > 0 ? { unreachableStops } : {}),
+
         ...(unassignedStops.length > 0 ? { unassignedCount: unassignedStops.length } : {}),
         ...(command.economyMode ? { economyMode: command.economyMode } : {}),
         ...(command.smart ? { smart: true } : {}),
@@ -526,7 +540,7 @@ export class OptimizeRouteUseCase {
       score,
       explanation: parts.join('; ') + '.',
       routes,
-      ...(unreachableStops.length > 0 ? { unreachableStops } : {}),
+
       ...(unassignedStops.length > 0 ? { unassignedStops } : {}),
     });
   }

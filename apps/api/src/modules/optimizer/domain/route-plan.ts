@@ -4,8 +4,9 @@ import type {
   RouteMetrics,
   RoutePlanParams,
   RouteSavings,
+  RoutePlanStatus,
   RouteStopView,
-  UnreachableStopView,
+  UnassignedStopView,
   VehicleRouteView,
 } from '@navix/contracts';
 
@@ -52,7 +53,8 @@ export interface RoutePlanProps {
    */
   driverScoped: boolean;
   strategy: OptimizationStrategyName;
-  status: 'completed';
+  /** Completo ou parcial (ADR-0110). `failed` é estado do job, não do plano. */
+  status: RoutePlanStatus;
   params: RoutePlanParams;
   stops: RouteStopView[];
   metrics: RouteMetrics;
@@ -64,10 +66,11 @@ export interface RoutePlanProps {
   capacity?: CapacityUsage;
   /** Rotas por veículo (ADR-0022, Fase 2). Ausente no plano de veículo único. */
   routes?: VehicleRouteView[];
-  /** Paradas não atribuídas por falta de capacidade (ADR-0022, Fase 2). */
-  unassignedStops?: string[];
-  /** Paradas sem trecho viável até elas (ADR-0106). Ausente no caso normal. */
-  unreachableStops?: UnreachableStopView[];
+  /**
+   * Tudo que ficou fora da rota, com motivo (ADR-0110). Ausente quando o plano
+   * é completo — e é a presença disto que **define** `status: 'partial'`.
+   */
+  unassignedStops?: UnassignedStopView[];
   createdAt: Date;
 }
 
@@ -78,8 +81,19 @@ export interface RoutePlanProps {
  */
 export type NewRoutePlan = Omit<
   RoutePlanProps,
-  'id' | 'createdAt' | 'operationalDay' | 'requestedAt' | 'departureAt'
+  'id' | 'createdAt' | 'operationalDay' | 'requestedAt' | 'departureAt' | 'status'
 > & { requestedAt?: Date; departureAt?: Date; timeZone?: string };
+
+/**
+ * O estado é **derivado**, nunca informado (ADR-0110).
+ *
+ * Deixá-lo como entrada permitiria a um chamador declarar `completed` uma rota
+ * que deixou entregas para trás — e é exatamente o que acontecia antes, quando
+ * o único valor possível era `completed`.
+ */
+export function statusFor(unassigned: readonly UnassignedStopView[] | undefined): RoutePlanStatus {
+  return unassigned && unassigned.length > 0 ? 'partial' : 'completed';
+}
 
 /**
  * Dia operacional de um instante (`YYYY-MM-DD`) **no fuso de quem opera**
@@ -123,6 +137,7 @@ export class RoutePlan {
       id: newId(),
       createdAt,
       requestedAt,
+      status: statusFor(props.unassignedStops),
       // Sem partida explícita, a rota começa quando foi pedida — que para o
       // motorista tocando "reorganizar" é agora, e para uma reotimização é o
       // instante do gatilho.

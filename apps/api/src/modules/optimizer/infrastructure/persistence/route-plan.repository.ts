@@ -42,7 +42,6 @@ export class RoutePlanRepository implements RoutePlanRepositoryPort {
     row.capacity = s.capacity ?? null;
     row.routes = s.routes ?? null;
     row.unassignedStops = s.unassignedStops ?? null;
-    row.unreachableStops = s.unreachableStops ?? null;
     row.createdAt = s.createdAt;
     await this.repo.save(row);
   }
@@ -157,7 +156,6 @@ export class RoutePlanRepository implements RoutePlanRepositoryPort {
       capacity: row.capacity ?? undefined,
       routes: row.routes ?? undefined,
       unassignedStops: row.unassignedStops ?? undefined,
-      unreachableStops: row.unreachableStops ?? undefined,
       createdAt: row.createdAt,
     });
   }

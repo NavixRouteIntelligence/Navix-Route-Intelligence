@@ -13,6 +13,7 @@ export class OptimizerMetrics {
   private readonly solveDuration: Histogram<'strategy'>;
   private readonly stops: Histogram<'strategy'>;
   private readonly infeasible: Counter<string>;
+  private readonly planOutcome: Counter<'status'>;
   private readonly reoptimizeTrigger: Histogram<string>;
   private readonly reoptimizeSkipped: Counter<'reason'>;
 
@@ -37,6 +38,15 @@ export class OptimizerMetrics {
       help: 'Rotas cuja demanda excede a capacidade do veículo.',
       registers,
     });
+    // Sucesso completo × sucesso parcial (ADR-0110). Antes, ambos apareciam
+    // como "job succeeded": uma rota que deixou três entregas para trás era
+    // indistinguível, na observabilidade, de uma que atendeu tudo.
+    this.planOutcome = new Counter({
+      name: 'optimizer_plan_outcome_total',
+      help: 'Planos produzidos, por estado (completed | partial).',
+      labelNames: ['status'] as const,
+      registers,
+    });
     // SLA da reotimização dinâmica (ADR-0083): do evento de domínio até o job
     // enfileirado — inclui o debounce, que é o maior componente controlável.
     this.reoptimizeTrigger = new Histogram({
@@ -56,6 +66,11 @@ export class OptimizerMetrics {
   observeSolve(strategy: string, seconds: number, stops: number): void {
     this.solveDuration.observe({ strategy }, seconds);
     this.stops.observe({ strategy }, stops);
+  }
+
+  /** Registra o desfecho do plano (ADR-0110). Falha não chega aqui: não há plano. */
+  observePlanOutcome(status: 'completed' | 'partial'): void {
+    this.planOutcome.inc({ status });
   }
 
   markInfeasible(): void {

@@ -58,6 +58,7 @@ function build(
   const metrics = {
     observeSolve: jest.fn(),
     markInfeasible: jest.fn(),
+    observePlanOutcome: jest.fn(),
   } as unknown as OptimizerMetrics;
   const solver = new RouteSolver(
     routing ?? new HaversineRoutingProvider(),
@@ -453,7 +454,9 @@ describe('OptimizeRouteUseCase — trechos sem rota', () => {
     const view = await uc.execute(comando());
 
     expect(view.stops.map((s) => s.deliveryId)).toEqual([S1, S2]);
-    expect(view.unreachableStops).toEqual([{ deliveryId: S3, reason: 'isolated' }]);
+    expect(view.unassignedStops).toEqual([{ deliveryId: S3, reason: 'isolated' }]);
+    // O plano deixa de se dizer completo quando deixou entrega para trás.
+    expect(view.status).toBe('partial');
     // O sinal chega a quem lê a tela: a explicação é o que web e app mostram.
     expect(view.explanation).toContain('1 parada(s) sem rota viável, fora do plano');
     // Nenhum trecho da rota resultante ficou com custo zero forjado.
@@ -500,7 +503,8 @@ describe('OptimizeRouteUseCase — trechos sem rota', () => {
     const view = await uc.execute(comando());
 
     expect(view.stops).toHaveLength(3);
-    expect(view.unreachableStops).toBeUndefined();
+    expect(view.unassignedStops).toBeUndefined();
+    expect(view.status).toBe('completed');
     expect(view.explanation).not.toContain('sem rota viável');
   });
 });
@@ -726,7 +730,9 @@ describe('OptimizeRouteUseCase — demanda real das entregas', () => {
       { weightKg: 100, volumeM3: 10 },
     );
 
-    expect(view.unassignedStops).toEqual([D3]);
+    // Motivo junto do id (ADR-0110): uma lista só responde "o que ficou de fora".
+    expect(view.unassignedStops).toEqual([{ deliveryId: D3, reason: 'capacity' }]);
+    expect(view.status).toBe('partial');
     expect(view.stops.map((s) => s.deliveryId)).toEqual([D1, D2]);
     expect(view.explanation).toContain('não atribuída(s) por capacidade');
   });
