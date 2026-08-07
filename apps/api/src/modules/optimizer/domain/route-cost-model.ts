@@ -6,8 +6,8 @@ import { arriveAt } from './time-window-clock';
  * **reutilizada por qualquer estratégia** (NN+2-opt hoje; OR-Tools/metaheurística
  * no futuro) — garantindo semântica idêntica de custo entre algoritmos.
  *
- * Custo = distância + penalidade de atraso (janelas) + penalidade de inversão de
- * prioridade + sobretaxas (pedágio/risco). Campos opcionais do contexto ausentes
+ * Custo = distância + **duração real** + **portagem** + penalidade de atraso
+ * (janelas) + penalidade de inversão de prioridade + sobretaxas (risco). Campos opcionais do contexto ausentes
  * ⇒ resultado idêntico ao legado (retrocompatível).
  *
  * O relógio **espera** a janela abrir (ADR-0104). Não há penalidade direta por
@@ -21,11 +21,17 @@ export function compositeCost(ctx: StrategyContext, order: number[]): number {
   const surchargeWeight = ctx.weights.surcharge ?? 1;
 
   let distance = 0;
+  let duration = 0;
+  let toll = 0;
   let surcharge = 0;
   for (let i = 1; i < order.length; i++) {
     const from = order[i - 1];
     const to = order[i];
     distance += ctx.distanceMatrix[from][to];
+    // A duração medida vira **objetivo**, não só relógio (ADR-0111): sem este
+    // termo, "menor tempo" era um nome para "menos distância, mais janela".
+    duration += ctx.timeMatrix[from][to];
+    if (ctx.tollMatrix) toll += ctx.tollMatrix[from][to];
     if (ctx.edgeSurcharge) surcharge += ctx.edgeSurcharge[from][to];
   }
 
@@ -55,6 +61,10 @@ export function compositeCost(ctx: StrategyContext, order: number[]): number {
 
   return (
     ctx.weights.distance * distance +
+    // Pesos ausentes valem zero: um contexto sem `duration`/`toll` produz
+    // exatamente o custo anterior (retrocompatível).
+    (ctx.weights.duration ?? 0) * duration +
+    (ctx.weights.toll ?? 0) * toll +
     ctx.weights.timeWindow * lateness +
     ctx.weights.priority * priorityPenalty +
     surchargeWeight * surcharge

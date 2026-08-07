@@ -15,6 +15,7 @@ import { ListRoutePlansUseCase } from '../src/modules/optimizer/application/list
 import { OptimizeRouteUseCase } from '../src/modules/optimizer/application/optimize-route.use-case';
 import { ProcessOptimizationJobUseCase } from '../src/modules/optimizer/application/process-optimization-job.use-case';
 import { StrategyRegistry } from '../src/modules/optimizer/application/strategy-registry';
+import { AppConfigService } from '../src/shared/config/app-config.service';
 import { TENANT_TIME_ZONE_READER } from '../src/shared/tenancy/tenant-time-zone.port';
 import { DELIVERY_GATEWAY } from '../src/modules/optimizer/application/ports/delivery-gateway.port';
 import { VEHICLE_CAPACITY } from '../src/modules/optimizer/application/ports/vehicle-capacity.port';
@@ -269,6 +270,13 @@ describe('Optimizer (e2e, assíncrono)', () => {
         // Fuso do tenant (ADR-0105). `UTC` mantém o dia igual ao instante, que é
         // o que os demais casos deste arquivo assumem.
         { provide: TENANT_TIME_ZONE_READER, useValue: { findTimeZone: async () => 'UTC' } },
+        // Objetivos sem override nem pórticos (ADR-0111): os presets valem, e o
+        // componente de portagem não entra — que é o padrão de quem não os
+        // declarou.
+        {
+          provide: AppConfigService,
+          useValue: { optimizer: { riskZones: [], tollGates: [], weightOverrides: {} } },
+        },
         // Capacidade do veículo atribuído (ADR-0109). Este arquivo exercita a
         // capacidade pelo `vehicle` do request, então nenhuma entrega resolve
         // veículo aqui.

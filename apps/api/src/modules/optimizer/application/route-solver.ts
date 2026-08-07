@@ -11,6 +11,9 @@ import { ValidationError } from '../../../shared/kernel/domain-error';
 import { assessCapacity, totalDemand } from '../domain/capacity';
 import { serviceMinutesForDestination } from '../domain/destination-type';
 import { type Demand, type OptimizationStop } from '../domain/optimization-stop';
+import type { ObjectiveBreakdown } from '@navix/contracts';
+
+import { describeObjective } from '../domain/objective-breakdown';
 import { analyzeReachability, hasUnreachableLeg } from '../domain/reachability';
 import { slaPriorityWeight } from '../domain/sla-priority';
 import {
@@ -84,6 +87,8 @@ export interface SolvedRoute {
   routingSource: RoutingSource;
   /** Perfil de deslocamento usado, e sua fidelidade ao veículo (ADR-0108). */
   routingProfile?: RoutingProfileMapping;
+  /** Componentes e pesos que produziram o score (ADR-0111). */
+  objective: ObjectiveBreakdown;
   solveSeconds: number;
 }
 
@@ -134,7 +139,7 @@ export class RouteSolver {
     const perNodeServiceMinutes = nodes.map(effectiveService);
 
     // Sobretaxas de pedágio/zona de risco (ADR-0024). No-op por padrão.
-    const { edgeSurcharge, nodeSurcharge } = this.augmentation.augment({
+    const { edgeSurcharge, nodeSurcharge, tollMatrix } = this.augmentation.augment({
       points: nodes.map((n) => ({ latitude: n.point.latitude, longitude: n.point.longitude })),
       avoidTolls: profile.avoidTolls,
     });
@@ -155,6 +160,7 @@ export class RouteSolver {
       weights: input.weights ?? WEIGHTS,
       perNodeServiceMinutes,
       ...(edgeSurcharge ? { edgeSurcharge } : {}),
+      ...(tollMatrix ? { tollMatrix } : {}),
       ...(nodeSurcharge ? { nodeSurcharge } : {}),
       ...(hasLocks ? { locked } : {}),
     };
@@ -220,6 +226,7 @@ export class RouteSolver {
     return {
       strategyName: strategy.name,
       routingSource: matriz.source,
+      objective: describeObjective(ctx.weights, tollMatrix != null),
       ...(matriz.profile ? { routingProfile: matriz.profile } : {}),
       unreachable,
       stops,

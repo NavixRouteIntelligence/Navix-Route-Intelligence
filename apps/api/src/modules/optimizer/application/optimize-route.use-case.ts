@@ -19,6 +19,7 @@ import type {
   VehicleType,
 } from '@navix/contracts';
 
+import { AppConfigService } from '../../../shared/config/app-config.service';
 import { AUDIT_LOG, type AuditLogPort } from '../../../shared/audit/audit-log.port';
 import { NotFoundError, ValidationError } from '../../../shared/kernel/domain-error';
 import { estimateCo2Kg, smartWeights, weightsFor } from '../domain/economy';
@@ -112,6 +113,9 @@ export class OptimizeRouteUseCase {
     private readonly solver: RouteSolver,
     private readonly metrics: OptimizerMetrics,
     private readonly bus: DomainEventBus,
+    // O override dos pesos é decisão do operador (ADR-0111), e é aqui que os
+    // pesos são escolhidos — pô-lo noutro lugar separaria a regra do dado.
+    private readonly config: AppConfigService,
     @Optional()
     @Inject(EXTERNAL_EVENT_OUTBOX)
     private readonly externalEvents?: ExternalEventOutboxPort,
@@ -263,7 +267,7 @@ export class OptimizeRouteUseCase {
         stops.map((s) => ({ priority: s.priority, hasTimeWindow: s.timeWindow != null })),
       );
     }
-    return weightsFor(command.economyMode);
+    return weightsFor(command.economyMode, this.config.optimizer.weightOverrides);
   }
 
   /** Estratégia: a explícita vence; senão o modo inteligente usa a mais forte. */
@@ -340,6 +344,7 @@ export class OptimizeRouteUseCase {
         // Declarado no plano: uma rota calculada em linha reta não pode passar
         // por medida (ADR-0107).
         routingSource: solved.routingSource,
+        objective: solved.objective,
         ...(command.stopsWithoutDemand ? { stopsWithoutDemand: command.stopsWithoutDemand } : {}),
         ...(solved.routingProfile ? { routingProfile: solved.routingProfile } : {}),
         averageSpeedKmh: speed,
@@ -520,6 +525,7 @@ export class OptimizeRouteUseCase {
       params: {
         // Todos os veículos usam a mesma matriz, então a origem é uma só.
         routingSource: solvedRoutes[0]?.routingSource ?? 'geometric',
+        ...(solvedRoutes[0]?.objective ? { objective: solvedRoutes[0].objective } : {}),
         ...(command.stopsWithoutDemand ? { stopsWithoutDemand: command.stopsWithoutDemand } : {}),
         ...(solvedRoutes[0]?.routingProfile
           ? { routingProfile: solvedRoutes[0].routingProfile }

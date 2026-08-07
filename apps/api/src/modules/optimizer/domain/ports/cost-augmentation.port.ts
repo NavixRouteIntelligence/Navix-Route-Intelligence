@@ -20,6 +20,11 @@ export interface CostAugmentationInput {
 }
 
 export interface CostAugmentation {
+  /**
+   * Custo de portagem por trecho (ADR-0111). Ausente quando não há pórticos
+   * declarados — diferente de uma matriz de zeros, que afirmaria "não paga".
+   */
+  tollMatrix?: number[][];
   /** Sobretaxa por aresta (ex.: pedágio ao percorrer o trecho). */
   edgeSurcharge?: number[][];
   /** Sobretaxa por nó visitado (ex.: parada em zona de risco). */

@@ -8,6 +8,14 @@ function normalizePem(value: string | undefined): string | undefined {
   return value ? value.replace(/\\n/g, '\n') : undefined;
 }
 
+/** Pórtico de portagem declarado pelo operador (ADR-0111). */
+export interface TollGate {
+  latitude: number;
+  longitude: number;
+  radiusKm: number;
+  cost: number;
+}
+
 export interface RiskZoneConfig {
   latitude: number;
   longitude: number;
@@ -16,6 +24,38 @@ export interface RiskZoneConfig {
 }
 
 /** Parseia com segurança o JSON de zonas de risco (ADR-0024); inválido → []. */
+/** Pórticos de portagem (ADR-0111). JSON inválido degrada para lista vazia. */
+function parseTollGates(raw: string): TollGate[] {
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((g): g is TollGate => {
+      if (!g || typeof g !== 'object') return false;
+      const r = g as Record<string, unknown>;
+      return (
+        typeof r.latitude === 'number' &&
+        typeof r.longitude === 'number' &&
+        typeof r.radiusKm === 'number' &&
+        typeof r.cost === 'number' &&
+        r.cost > 0
+      );
+    });
+  } catch {
+    return [];
+  }
+}
+
+/** Override dos pesos por objetivo (ADR-0111). JSON inválido é ignorado. */
+function parseWeightOverrides(raw: string): Record<string, Record<string, number>> {
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+    return parsed as Record<string, Record<string, number>>;
+  } catch {
+    return {};
+  }
+}
+
 function parseRiskZones(raw: string): RiskZoneConfig[] {
   try {
     const parsed: unknown = JSON.parse(raw);
@@ -187,6 +227,8 @@ export class AppConfigService {
       autoReoptimize: this.get('OPTIMIZER_AUTO_REOPTIMIZE'),
       reoptimizeDebounceMs: this.get('OPTIMIZER_REOPTIMIZE_DEBOUNCE_MS'),
       riskZones: parseRiskZones(this.get('OPTIMIZER_RISK_ZONES')),
+      tollGates: parseTollGates(this.get('OPTIMIZER_TOLL_GATES')),
+      weightOverrides: parseWeightOverrides(this.get('OPTIMIZER_WEIGHTS')),
       queueDriver: this.get('OPTIMIZER_QUEUE_DRIVER'),
       workerEnabled: this.get('OPTIMIZER_WORKER_ENABLED'),
       delayCheckIntervalMs: this.get('OPTIMIZER_DELAY_CHECK_INTERVAL_MS'),
