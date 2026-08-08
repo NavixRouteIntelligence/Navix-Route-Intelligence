@@ -4,6 +4,8 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
 import { FeatureAccessService } from './feature-access.service';
 import { TENANT_PLAN_READER } from './tenant-plan.port';
 import { TenantPlanRepository } from './tenant-plan.repository';
+import { TENANT_ACCOUNT_TYPE_READER } from './tenant-account-type.port';
+import { TenantAccountTypeRepository } from './tenant-account-type.repository';
 import { TENANT_TIME_ZONE_READER } from './tenant-time-zone.port';
 import { TenantTimeZoneRepository } from './tenant-time-zone.repository';
 import { TenantTransactionInterceptor } from './tenant-transaction.interceptor';
@@ -18,8 +20,9 @@ import { TenantTransactionInterceptor } from './tenant-transaction.interceptor';
     { provide: APP_INTERCEPTOR, useClass: TenantTransactionInterceptor },
     { provide: TENANT_PLAN_READER, useClass: TenantPlanRepository },
     { provide: TENANT_TIME_ZONE_READER, useClass: TenantTimeZoneRepository },
+    { provide: TENANT_ACCOUNT_TYPE_READER, useClass: TenantAccountTypeRepository },
     FeatureAccessService,
   ],
-  exports: [FeatureAccessService, TENANT_TIME_ZONE_READER],
+  exports: [FeatureAccessService, TENANT_TIME_ZONE_READER, TENANT_ACCOUNT_TYPE_READER],
 })
 export class TenancyModule {}
