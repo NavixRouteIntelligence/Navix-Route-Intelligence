@@ -388,4 +388,76 @@ void main() {
     expect(route.isReady, isTrue);
     expect(route.groups, isEmpty);
   });
+
+  // NAV-4.11 / ADR-0110: o app precisa distinguir rota completa de parcial, e
+  // o motorista precisa saber antes de sair.
+  test('rota completa não tem entregas fora', () async {
+    final route = await repo(
+      plans: [
+        {
+          'id': 'p1',
+          'status': 'completed',
+          'metrics': {'totalDistanceKm': 10, 'totalTimeMinutes': 60},
+          'savings': {'distanceKm': 0, 'distancePct': 0},
+          'stops': [
+            {'sequence': 1, 'deliveryId': 'd1', 'etaMinutes': 20},
+            {'sequence': 2, 'deliveryId': 'd2', 'etaMinutes': 45},
+          ],
+        },
+      ],
+      deliveries: [delivery('d1', 'Rua A'), delivery('d2', 'Rua B')],
+    ).load();
+
+    expect(route.isPartial, isFalse);
+    expect(route.unassigned, isEmpty);
+  });
+
+  test('rota parcial traz as entregas de fora com o motivo', () async {
+    final route = await repo(
+      plans: [
+        {
+          'id': 'p1',
+          'status': 'partial',
+          'metrics': {'totalDistanceKm': 10, 'totalTimeMinutes': 60},
+          'savings': {'distanceKm': 0, 'distancePct': 0},
+          'stops': [
+            {'sequence': 1, 'deliveryId': 'd1', 'etaMinutes': 20},
+            {'sequence': 2, 'deliveryId': 'd2', 'etaMinutes': 45},
+          ],
+          'unassignedStops': [
+            {'deliveryId': 'd9', 'reason': 'capacity'},
+            {'deliveryId': 'd8', 'reason': 'isolated'},
+          ],
+        },
+      ],
+      deliveries: [delivery('d1', 'Rua A'), delivery('d2', 'Rua B')],
+    ).load();
+
+    expect(route.isPartial, isTrue);
+    expect(route.unassigned.map((u) => u.deliveryId).toList(), ['d9', 'd8']);
+    expect(route.unassigned.map((u) => u.reason).toList(),
+        ['capacity', 'isolated']);
+    // A rota em si continua utilizável: parcial não é falha.
+    expect(route.status, MyRouteStatus.ready);
+  });
+
+  // Contrato antigo (sem o campo) não pode virar rota "parcial" por engano.
+  test('plano sem o campo é tratado como completo', () async {
+    final route = await repo(
+      plans: [
+        {
+          'id': 'p1',
+          'metrics': {'totalDistanceKm': 10, 'totalTimeMinutes': 60},
+          'savings': {'distanceKm': 0, 'distancePct': 0},
+          'stops': [
+            {'sequence': 1, 'deliveryId': 'd1', 'etaMinutes': 20},
+            {'sequence': 2, 'deliveryId': 'd2', 'etaMinutes': 45},
+          ],
+        },
+      ],
+      deliveries: [delivery('d1', 'Rua A'), delivery('d2', 'Rua B')],
+    ).load();
+
+    expect(route.isPartial, isFalse);
+  });
 }

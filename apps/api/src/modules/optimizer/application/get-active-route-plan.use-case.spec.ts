@@ -15,7 +15,6 @@ function plan(driverId: string | null): RoutePlan {
     driverId,
     driverScoped: true,
     strategy: 'nearest-neighbor-2opt',
-    status: 'completed',
     params: { averageSpeedKmh: 30, serviceTimeMinutes: 5, hasOrigin: false },
     stops: [],
     metrics: { totalDistanceKm: 10, totalTimeMinutes: 60, stops: 2 },

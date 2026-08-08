@@ -306,7 +306,11 @@ describe('Optimizer (e2e, assíncrono)', () => {
         DomainEventBus,
         {
           provide: OptimizerMetrics,
-          useValue: { observeSolve: () => undefined, markInfeasible: () => undefined },
+          useValue: {
+            observeSolve: () => undefined,
+            markInfeasible: () => undefined,
+            observePlanOutcome: () => undefined,
+          },
         },
       ],
     })
@@ -619,6 +623,64 @@ describe('Optimizer (e2e, assíncrono)', () => {
       expect(ativa.body.data.stops.map((s: { deliveryId: string }) => s.deliveryId)).toEqual(
         escolhida,
       );
+    });
+  });
+
+  // NAV-4.11 / ADR-0110: o contrato da API distingue completo de parcial, e
+  // devolve tudo o que ficou de fora com o motivo.
+  describe('estado do plano (ADR-0110)', () => {
+    it('rota que atende tudo sai como completa, sem lista de exclusões', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/route-plans')
+        .send({ deliveryIds: MINHAS })
+        .expect(202);
+      const job = await pollJob(app, res.body.data.jobId);
+
+      const plano = await request(app.getHttpServer())
+        .get(`/api/v1/route-plans/${job.routePlanId}`)
+        .expect(200);
+
+      expect(plano.body.data.status).toBe('completed');
+      expect(plano.body.data.unassignedStops).toBeUndefined();
+    });
+
+    // Uma entrega desproporcional num veículo pequeno: as duas leves entram, a
+    // pesada fica de fora — e o plano diz isso.
+    it('rota que deixa entrega para trás sai parcial, com o motivo', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/route-plans')
+        .send({
+          stops: [
+            { ...stops[0], weightKg: 5 },
+            { ...stops[1], weightKg: 5 },
+            { ...stops[2], weightKg: 900 },
+          ],
+          vehicle: { type: 'motorcycle' },
+        })
+        .expect(202);
+      const job = await pollJob(app, res.body.data.jobId);
+
+      const plano = await request(app.getHttpServer())
+        .get(`/api/v1/route-plans/${job.routePlanId}`)
+        .expect(200);
+
+      expect(plano.body.data.status).toBe('partial');
+      expect(plano.body.data.unassignedStops).toEqual([
+        { deliveryId: stops[2].id, reason: 'capacity' },
+      ]);
+      // A rota entregue segue utilizável: parcial não é falha.
+      expect(plano.body.data.stops).toHaveLength(2);
+    });
+
+    // Otimização que não produz rota nenhuma falha no **job** — não existe
+    // plano "falhado" para persistir, porque não há rota.
+    it('falha vive no job, não num plano', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/route-plans')
+        .send({ stops: [stops[0]] })
+        .expect(400);
+
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
     });
   });
 });

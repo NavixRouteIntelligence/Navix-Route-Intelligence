@@ -281,17 +281,38 @@ export interface VehicleRouteView {
   capacity?: CapacityUsage;
 }
 
-/** Por que uma parada ficou fora da rota (ADR-0106). */
-export type UnreachableStopReason =
+/**
+ * Por que uma parada ficou **fora** da rota (ADR-0110).
+ *
+ * Uma lista só, com motivo sempre explícito. Antes eram duas — capacidade sem
+ * motivo declarado e alcance com motivo —, e quem perguntasse "o que ficou de
+ * fora?" precisava consultar as duas e saber que a primeira significa carga.
+ */
+export type UnassignedStopReason =
+  /** Não coube no veículo (ADR-0109). */
+  | 'capacity'
   /** Sem rota até ela a partir de qualquer outra parada — costuma ser endereço errado. */
   | 'isolated'
   /** Alcançável entre si, mas separada do grupo que a rota atende (ilha, rio, ferry). */
   | 'disconnected';
 
-export interface UnreachableStopView {
+export interface UnassignedStopView {
   deliveryId: string;
-  reason: UnreachableStopReason;
+  reason: UnassignedStopReason;
 }
+
+/**
+ * Estado do plano (ADR-0110).
+ *
+ * `failed` **não** existe aqui de propósito: uma otimização que falha não
+ * produz plano nenhum, e o estado dela vive no job (`OptimizationJobStatus`).
+ * Persistir um plano "falhado" seria guardar uma rota que não existe.
+ */
+export type RoutePlanStatus =
+  /** Toda entrega pedida entrou na rota. */
+  | 'completed'
+  /** A rota é utilizável, mas deixou entregas de fora — ver [unassignedStops]. */
+  | 'partial';
 
 export interface RoutePlan {
   id: string;
@@ -315,7 +336,7 @@ export interface RoutePlan {
    */
   departureAt: string;
   strategy: OptimizationStrategyName;
-  status: 'completed';
+  status: RoutePlanStatus;
   params: RoutePlanParams;
   /** Paradas na ordem final. Em plano multi-veículo, é a concatenação de `routes`. */
   stops: RouteStopView[];
@@ -335,17 +356,11 @@ export interface RoutePlan {
   capacity?: CapacityUsage;
   /** Rotas por veículo (ADR-0022, Fase 2). Presente quando `vehicles` foi informado. */
   routes?: VehicleRouteView[];
-  /** IDs de paradas que não couberam em nenhum veículo (frota insuficiente). */
-  unassignedStops?: string[];
   /**
-   * Paradas fora da rota porque **não existe trecho viável** até elas
-   * (ADR-0106). Presente só quando houve alguma — a rota é parcial, e o motivo
-   * fica registrado no plano em vez de a parada sumir em silêncio.
-   *
-   * Distinto de [unassignedStops]: lá o problema é capacidade da frota, aqui é
-   * o provedor de rotas dizendo que não há caminho.
+   * **Tudo** que ficou fora da rota, com o motivo de cada uma (ADR-0110).
+   * Ausente quando o plano é `completed`.
    */
-  unreachableStops?: UnreachableStopView[];
+  unassignedStops?: UnassignedStopView[];
   createdAt: string;
 }
 

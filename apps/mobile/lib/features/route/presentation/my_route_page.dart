@@ -416,6 +416,11 @@ class _Content extends StatelessWidget {
         children: [
           _RouteHero(route: route),
           const SizedBox(height: 12),
+          // Rota parcial (ADR-0110): acima de tudo, antes de o motorista sair.
+          if (route.isPartial) ...[
+            _PartialRouteWarning(unassigned: route.unassigned),
+            const SizedBox(height: 12),
+          ],
           _Summary(route: route),
           const SizedBox(height: 12),
           // Desempenho consolidado, meta e sequência (ADR-0097).
@@ -435,6 +440,76 @@ class _Content extends StatelessWidget {
           const SizedBox(height: 8),
           _DeliveryOrder(route: route),
         ],
+      ),
+    );
+  }
+}
+
+/// Aviso de rota parcial (ADR-0110).
+///
+/// Fica **acima** do resumo e da sequência, porque a pergunta que ele responde
+/// — "estou levando tudo?" — precisa ser respondida antes de o motorista sair,
+/// não depois de ele descobrir na doca.
+///
+/// `liveRegion` para que quem usa leitor de tela ouça sem procurar; `status` e
+/// não `alert`, porque é informação a considerar, não emergência a interromper.
+class _PartialRouteWarning extends StatelessWidget {
+  const _PartialRouteWarning({required this.unassigned});
+
+  final List<UnassignedStop> unassigned;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    final l10n = AppLocalizations.of(context);
+    final titulo = l10n.routePartialTitle(unassigned.length);
+
+    String motivo(String reason) => switch (reason) {
+          'isolated' => l10n.routePartialIsolated,
+          'disconnected' => l10n.routePartialDisconnected,
+          _ => l10n.routePartialCapacity,
+        };
+    // Motivos distintos, sem repetir: três entregas que não cabem são um
+    // motivo, não três linhas iguais.
+    final motivos = {for (final u in unassigned) motivo(u.reason)}.join('; ');
+
+    return Semantics(
+      liveRegion: true,
+      label: '\$titulo. \$motivos. \${l10n.routePartialHint}',
+      excludeSemantics: true,
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: t.warning.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: t.warning.withValues(alpha: 0.35)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.warning_amber_rounded, size: 20, color: t.warning),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    titulo,
+                    style: const TextStyle(
+                        fontSize: 13, fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(motivos, style: TextStyle(fontSize: 12, color: t.muted)),
+                  const SizedBox(height: 3),
+                  Text(
+                    l10n.routePartialHint,
+                    style: TextStyle(fontSize: 11.5, color: t.muted),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

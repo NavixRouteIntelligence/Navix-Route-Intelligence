@@ -115,8 +115,16 @@ class MyRouteRepository {
           ? params['vehicleType'] as String?
           : null;
 
+      // Entregas fora da rota (ADR-0110): o motorista vê o aviso antes de sair.
+      final unassigned = (plan['unassignedStops'] as List?)
+              ?.whereType<Map<String, dynamic>>()
+              .map(UnassignedStop.fromJson)
+              .toList() ??
+          const <UnassignedStop>[];
+
       return MyRoute(
         status: MyRouteStatus.ready,
+        unassigned: unassigned,
         totalStops: planStops.length,
         completedStops: stops.where((stop) {
           final status = byId[stop.deliveryId]?['status'] as String?;

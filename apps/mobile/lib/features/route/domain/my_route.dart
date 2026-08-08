@@ -114,6 +114,24 @@ class NextDelivery extends Equatable {
   List<Object?> get props => [id, label];
 }
 
+/// Entrega deixada de fora da rota, e por quê (ADR-0110).
+class UnassignedStop extends Equatable {
+  const UnassignedStop({required this.deliveryId, required this.reason});
+
+  final String deliveryId;
+
+  /// `capacity`, `isolated` ou `disconnected` — o vocabulário do backend.
+  final String reason;
+
+  factory UnassignedStop.fromJson(Map<String, dynamic> json) => UnassignedStop(
+        deliveryId: json['deliveryId'] as String? ?? '',
+        reason: json['reason'] as String? ?? 'capacity',
+      );
+
+  @override
+  List<Object?> get props => [deliveryId, reason];
+}
+
 /// A rota preparada pela IA, como o motorista a vê.
 class MyRoute extends Equatable {
   const MyRoute({
@@ -133,12 +151,24 @@ class MyRoute extends Equatable {
     this.groups = const [],
     this.stops = const [],
     this.next,
+    this.unassigned = const [],
   });
 
   const MyRoute.empty() : this(status: MyRouteStatus.empty);
   const MyRoute.preparing() : this(status: MyRouteStatus.preparing);
 
   final MyRouteStatus status;
+
+  /// Entregas que **não** entraram nesta rota, com o motivo (ADR-0110).
+  ///
+  /// Vazio na rota completa. Quando há alguma, o motorista precisa saber antes
+  /// de sair: descobrir na doca que uma entrega ficou para trás é o pior
+  /// momento possível.
+  final List<UnassignedStop> unassigned;
+
+  /// A rota deixou entregas para trás.
+  bool get isPartial => unassigned.isNotEmpty;
+
   final int totalStops;
   final int completedStops;
   final double distanceKm;
@@ -211,5 +241,6 @@ class MyRoute extends Equatable {
         groups,
         stops,
         next,
+        unassigned,
       ];
 }

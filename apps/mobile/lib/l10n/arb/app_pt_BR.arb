@@ -310,5 +310,10 @@
   "perfGoalHint": "A meta é a sua própria média — ninguém mais entra na conta.",
   "perfGoalMet": "Meta cumprida. Agora é manter, não superar.",
   "perfRestTitle": "Você já está na estrada há {hours}h hoje",
-  "perfRestHint": "Vale uma pausa. Nada aqui melhora se você dirigir cansado."
+  "perfRestHint": "Vale uma pausa. Nada aqui melhora se você dirigir cansado.",
+  "routePartialTitle": "{count, plural, =1{1 entrega não está nesta rota} other{{count} entregas não estão nesta rota}}",
+  "routePartialHint": "Confirme com a central antes de sair — elas ficaram de fora de propósito, não por engano.",
+  "routePartialCapacity": "não cabe no veículo",
+  "routePartialIsolated": "nenhuma rota chega ao endereço",
+  "routePartialDisconnected": "separada do resto da rota"
 }

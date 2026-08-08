@@ -15,7 +15,6 @@ function plano(driverId: string, paradas: number, km: number): RoutePlan {
     driverScoped: true,
 
     strategy: 'nearest-neighbor-2opt',
-    status: 'completed',
     params: { averageSpeedKmh: 30, serviceTimeMinutes: 5, hasOrigin: false },
     stops: Array.from({ length: paradas }, (_, i) => ({
       sequence: i + 1,
