@@ -2,6 +2,22 @@ import type { OptimizationStrategyName } from '@navix/contracts';
 
 export interface OptimizationWeights {
   distance: number;
+  /**
+   * Peso da **duração real de viagem** (ADR-0111).
+   *
+   * Até aqui não existia: o objetivo "menor tempo" apenas reduzia o peso da
+   * distância e aumentava o do cumprimento de janela — nunca minimizava tempo.
+   * A matriz de duração já vinha do provedor e era usada só para o relógio.
+   *
+   * Ausente vale zero, o que preserva exatamente o comportamento anterior.
+   */
+  duration?: number;
+  /**
+   * Peso do **custo de portagem** por trecho (ADR-0111). Só tem efeito quando
+   * há pórticos declarados: sem dados, não há o que pesar, e inventar um valor
+   * a partir da distância seria pior que não ter.
+   */
+  toll?: number;
   timeWindow: number;
   priority: number;
   /**
@@ -11,6 +27,9 @@ export interface OptimizationWeights {
    */
   surcharge?: number;
 }
+
+/** Custo de portagem por trecho (ADR-0111). `null` quando não há dados. */
+export type TollMatrix = number[][] | null;
 
 /** Janela por nó, já em minutos relativos ao horário de partida. */
 export interface NodeWindow {
@@ -33,6 +52,12 @@ export interface StrategyContext {
   size: number;
   distanceMatrix: number[][]; // km
   timeMatrix: number[][]; // minutos (deslocamento)
+  /**
+   * Custo de portagem por trecho (ADR-0111). `undefined` quando não há pórticos
+   * declarados — e é diferente de uma matriz de zeros, que afirmaria que a rota
+   * não paga portagem nenhuma.
+   */
+  tollMatrix?: number[][];
   priorities: number[]; // peso por nó
   windows: (NodeWindow | null)[];
   serviceTimeMinutes: number;

@@ -7,23 +7,36 @@ import type {
   CostAugmentationPort,
 } from '../../domain/ports/cost-augmentation.port';
 import { riskSurchargeAt } from '../../domain/risk-zone';
+import { tollMatrix } from '../../domain/toll-cost';
 
 /**
- * Provedor de sobretaxas configurável (ADR-0024): aplica **zonas de risco** (do
- * config) como sobretaxa de nó. Sem zonas configuradas, é **no-op** (default
- * retrocompatível). Pedágio depende de dados de grafo de um provedor de mapas —
- * fica como port aberta (aqui, sem efeito); a preferência `avoidTolls` do veículo
- * já viaja no input para quando esse provedor existir.
+ * Provedor de sobretaxas configurável (ADR-0024, ampliado na ADR-0111).
+ *
+ * Aplica **zonas de risco** como sobretaxa de nó e **custo de portagem** por
+ * trecho, a partir dos pórticos declarados pelo operador. Antes o pedágio era
+ * `no-op` — e o preset "evitar portagens" amplificava uma sobretaxa que nunca
+ * existia, o que fazia o modo não ter efeito nenhum.
+ *
+ * Sem zonas nem pórticos, segue sendo no-op e retrocompatível.
  */
 @Injectable()
 export class ConfigurableCostAugmentation implements CostAugmentationPort {
   constructor(private readonly config: AppConfigService) {}
 
   augment(input: CostAugmentationInput): CostAugmentation {
-    const zones = this.config.optimizer.riskZones;
-    if (zones.length === 0) return {};
+    const { riskZones, tollGates } = this.config.optimizer;
+    const out: CostAugmentation = {};
 
-    const nodeSurcharge = input.points.map((p) => riskSurchargeAt(p, zones));
-    return nodeSurcharge.some((s) => s > 0) ? { nodeSurcharge } : {};
+    if (riskZones.length > 0) {
+      const nodeSurcharge = input.points.map((p) => riskSurchargeAt(p, riskZones));
+      if (nodeSurcharge.some((s) => s > 0)) out.nodeSurcharge = nodeSurcharge;
+    }
+
+    // `avoidTolls` do perfil do veículo não zera o custo: ele diz a preferência,
+    // e é o **peso** do objetivo que decide o quanto ela vale (ADR-0111).
+    const tolls = tollMatrix(input.points, tollGates);
+    if (tolls) out.tollMatrix = tolls;
+
+    return out;
   }
 }

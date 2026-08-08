@@ -178,6 +178,13 @@ export const envSchema = z.object({
   // estiver disponível (ADR-0107). Desligado por padrão: ligá-lo troca
   // disponibilidade por exatidão, e isso é decisão de quem opera.
   MAPS_REQUIRE_PROVIDER: z.enum(['true', 'false']).default('false'),
+  // Pórticos de portagem declarados pelo operador (ADR-0111), em JSON:
+  // [{"latitude":38.69,"longitude":-9.18,"radiusKm":1.5,"cost":2.15}]
+  // Vazio: o componente de portagem não entra no custo, e o plano declara.
+  OPTIMIZER_TOLL_GATES: z.string().default('[]'),
+  // Override dos pesos por objetivo (ADR-0111), em JSON:
+  // {"time":{"duration":0.8},"tolls":{"toll":10}}
+  OPTIMIZER_WEIGHTS: z.string().default('{}'),
 });
 
 export type Env = z.infer<typeof envSchema>;

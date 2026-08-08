@@ -240,9 +240,34 @@ export interface RoutingProfileUsed {
   caveat?: string;
 }
 
+/**
+ * O que entrou na pontuação, e com que peso (ADR-0111).
+ *
+ * Existe porque o plano trazia um `score` e uma frase, e nada dizia **quais**
+ * componentes o produziram. Sem isto, "menor tempo" e "menor consumo" saem com
+ * números diferentes e nenhuma forma de saber por quê.
+ */
+export interface ObjectiveBreakdown {
+  /** Componentes que efetivamente entraram no custo, com peso maior que zero. */
+  components: ObjectiveComponent[];
+  /** Pesos usados, já com os overrides do operador aplicados. */
+  weights: Record<string, number>;
+  /**
+   * De onde veio o custo de portagem. `absent` significa **sem dados** — não
+   * "sem portagem": o componente não entrou no objetivo, e nenhum valor foi
+   * inferido da distância.
+   */
+  tollData: 'configured' | 'absent';
+}
+
+export type ObjectiveComponent =
+  'distance' | 'duration' | 'toll' | 'timeWindow' | 'priority' | 'surcharge';
+
 export interface RoutePlanParams {
   /** Origem das distâncias/durações (ADR-0107). Ausente em planos antigos. */
   routingSource?: RoutingSourceView;
+  /** Componentes e pesos que produziram o score (ADR-0111). */
+  objective?: ObjectiveBreakdown;
   /**
    * Perfil de deslocamento pedido ao provedor (ADR-0108). Ausente quando a
    * matriz é geométrica — geometria não tem perfil — e em planos antigos.

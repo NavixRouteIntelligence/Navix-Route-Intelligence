@@ -8,6 +8,7 @@ import type { OptimizerMetrics } from '../infrastructure/observability/optimizer
 import { ManualStrategy } from '../infrastructure/strategies/manual.strategy';
 import { NearestNeighbor2OptStrategy } from '../infrastructure/strategies/nearest-neighbor-2opt.strategy';
 import type { RoutePlan } from '../domain/route-plan';
+import type { AppConfigService } from '../../../shared/config/app-config.service';
 import type { DeliveryGatewayPort } from './ports/delivery-gateway.port';
 import type { VehicleCapacityPort } from './ports/vehicle-capacity.port';
 import type { RoutePlanRepositoryPort } from '../domain/ports/route-plan-repository.port';
@@ -75,6 +76,7 @@ function build(
     solver,
     metrics,
     bus,
+    { optimizer: { weightOverrides: {} } } as unknown as AppConfigService,
   );
   return { uc, saved, metrics, bus };
 }
