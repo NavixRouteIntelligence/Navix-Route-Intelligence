@@ -56,6 +56,7 @@ import { OptimizationJobRepository } from './infrastructure/persistence/optimiza
 import { RoutePlanOrmEntity } from './infrastructure/persistence/route-plan.orm-entity';
 import { RoutePlanRepository } from './infrastructure/persistence/route-plan.repository';
 import { OptimizerMetrics } from './infrastructure/observability/optimizer-metrics';
+import { QUEUE_HEALTH, WORKER_STATUS } from './domain/ports/queue-health.port';
 import { InProcessOptimizationJobQueue } from './infrastructure/queue/in-process-optimization-job.queue';
 import { BullOptimizationJobQueue } from './infrastructure/queue/bull-optimization-job.queue';
 import { OptimizationJobWorker } from './infrastructure/queue/optimization-job.worker';
@@ -146,6 +147,10 @@ import { OptimizerController } from './interface/optimizer.controller';
     // Worker BullMQ: instanciado sempre, mas só ativa (abre conexão/consome)
     // quando driver=bullmq e worker habilitado — via guarda no onModuleInit.
     OptimizationJobWorker,
+    // Saúde da fila (ADR-0114): os dois adaptadores de fila implementam
+    // `QueueHealthPort`, então o token acompanha a escolha do driver.
+    { provide: QUEUE_HEALTH, useExisting: OPTIMIZATION_JOB_QUEUE },
+    { provide: WORKER_STATUS, useExisting: OptimizationJobWorker },
     { provide: JOB_EVENTS, useClass: RealtimeJobEvents },
     { provide: DRIVER_ROSTER_LINK, useClass: DriverRosterLinkGateway },
     { provide: VEHICLE_CAPACITY, useClass: VehicleCapacityGateway },
@@ -153,6 +158,6 @@ import { OptimizerController } from './interface/optimizer.controller';
     { provide: SERVICE_TIME_HISTORY, useClass: IntelligenceServiceTimeHistory },
     { provide: OPTIMIZER_SERVICE, useClass: OptimizerService },
   ],
-  exports: [OPTIMIZER_SERVICE],
+  exports: [OPTIMIZER_SERVICE, QUEUE_HEALTH, WORKER_STATUS],
 })
 export class OptimizerModule {}

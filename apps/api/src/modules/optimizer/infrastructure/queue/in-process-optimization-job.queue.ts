@@ -4,6 +4,7 @@ import { DataSource } from 'typeorm';
 
 import { transactionContext } from '../../../../shared/database/transaction-context';
 import type { OptimizationJobQueuePort } from '../../domain/ports/optimization-job-queue.port';
+import type { QueueHealth, QueueHealthPort } from '../../domain/ports/queue-health.port';
 import { ProcessOptimizationJobUseCase } from '../../application/process-optimization-job.use-case';
 
 const FIRST_DELAY_MS = 50;
@@ -23,13 +24,30 @@ const MAX_ATTEMPTS = 10;
  * não enxergá-lo — daí o pequeno atraso inicial + retry quando não encontrado.
  */
 @Injectable()
-export class InProcessOptimizationJobQueue implements OptimizationJobQueuePort {
+export class InProcessOptimizationJobQueue implements OptimizationJobQueuePort, QueueHealthPort {
   private readonly logger = new Logger('OptimizationJobQueue');
 
   constructor(
     @InjectDataSource() private readonly dataSource: DataSource,
     private readonly processor: ProcessOptimizationJobUseCase,
   ) {}
+
+  /**
+   * Sempre de pé, porque não há nada fora do processo que possa cair — e é
+   * exatamente por isso que não serve para produção (ADR-0114). O `driver`
+   * aparece no `/ready` para que "está tudo verde" não esconda **qual** fila
+   * está verde: um ambiente que deveria rodar `bullmq` e responde `inprocess`
+   * está saudável e errado ao mesmo tempo.
+   */
+  async health(): Promise<QueueHealth> {
+    return {
+      driver: 'inprocess',
+      queue: 'in-process',
+      connection: 'up',
+      producer: 'up',
+      worker: 'disabled',
+    };
+  }
 
   // Assíncrona só para satisfazer o contrato do port (que o driver BullMQ usa
   // de verdade): agendar um `setTimeout` local não tem como falhar, então

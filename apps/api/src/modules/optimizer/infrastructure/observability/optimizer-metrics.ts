@@ -15,6 +15,8 @@ export class OptimizerMetrics {
   private readonly infeasible: Counter<string>;
   private readonly planOutcome: Counter<'status'>;
   private readonly planWrite: Counter<'outcome'>;
+  private readonly queueJobFailure: Counter<'queue' | 'outcome'>;
+  private readonly queueError: Counter<'queue' | 'kind'>;
   private readonly reoptimizeTrigger: Histogram<string>;
   private readonly reoptimizeSkipped: Counter<'reason'>;
 
@@ -57,6 +59,24 @@ export class OptimizerMetrics {
       labelNames: ['outcome'] as const,
       registers,
     });
+    // Falhas de job na fila, separando a tentativa que ainda vai voltar da que
+    // esgotou (ADR-0114). O log nomeia o job; a métrica é o que dispara alerta
+    // quando a taxa de `exhausted` sai do zero — cada uma é uma rota que
+    // ninguém vai receber.
+    this.queueJobFailure = new Counter({
+      name: 'optimizer_queue_job_failures_total',
+      help: 'Jobs falhos na fila, por desfecho (retrying | exhausted).',
+      labelNames: ['queue', 'outcome'] as const,
+      registers,
+    });
+    // Erros da própria fila (conexão), distintos de um job que falhou: aqui o
+    // problema é a infraestrutura, não o trabalho.
+    this.queueError = new Counter({
+      name: 'optimizer_queue_errors_total',
+      help: 'Erros de infraestrutura da fila, por tipo.',
+      labelNames: ['queue', 'kind'] as const,
+      registers,
+    });
     // SLA da reotimização dinâmica (ADR-0083): do evento de domínio até o job
     // enfileirado — inclui o debounce, que é o maior componente controlável.
     this.reoptimizeTrigger = new Histogram({
@@ -90,6 +110,16 @@ export class OptimizerMetrics {
    */
   observePlanWrite(outcome: 'saved' | 'discarded'): void {
     this.planWrite.inc({ outcome });
+  }
+
+  /** Falha de job na fila (ADR-0114). `exhausted`: acabaram as tentativas. */
+  observeQueueJobFailure(queue: string, outcome: 'retrying' | 'exhausted'): void {
+    this.queueJobFailure.inc({ queue, outcome });
+  }
+
+  /** Erro de infraestrutura da fila — conexão, não trabalho (ADR-0114). */
+  observeQueueError(queue: string, kind: 'connection'): void {
+    this.queueError.inc({ queue, kind });
   }
 
   markInfeasible(): void {
