@@ -1,17 +1,18 @@
-import type { DriverDayRow } from '../driver-performance';
+import type { DailyRawRow, DailySubject } from '../daily-subject';
 
-/** Read model diário por motorista (ADR-0097). Escopado por tenant (RLS). */
+/** Read model diário por **sujeito** (ADR-0097/0117). Escopado por tenant (RLS). */
 export interface DriverKpiRepositoryPort {
   /**
-   * Recalcula o dia de **todos** os motoristas do tenant a partir do OLTP.
+   * Recalcula o dia de **todos** os sujeitos do tenant a partir do OLTP.
    *
    * Recomputação, e não incremento, pela mesma razão da ADR-0092: um evento
-   * reprocessado duplicaria a contagem sem ninguém perceber.
+   * reprocessado duplicaria a contagem sem ninguém perceber. Apaga e reescreve
+   * o dia, para que uma linha que deixou de ter origem também desapareça.
    */
   rebuildDay(tenantId: string, day: string): Promise<void>;
 
-  /** Linhas de um motorista no período, em ordem cronológica. */
-  range(tenantId: string, driverId: string, from: string, to: string): Promise<DriverDayRow[]>;
+  /** Linhas cruas de um sujeito no período, em ordem cronológica. */
+  range(tenantId: string, subject: DailySubject, from: string, to: string): Promise<DailyRawRow[]>;
 
   /**
    * Ficha do login autenticado (ADR-0086). `null` para o motorista autônomo,
