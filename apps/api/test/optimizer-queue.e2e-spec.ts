@@ -10,6 +10,7 @@ import {
   OPTIMIZATION_QUEUE_NAME,
   bullConnection,
 } from '../src/modules/optimizer/infrastructure/queue/bull-connection';
+import { OptimizerMetrics } from '../src/modules/optimizer/infrastructure/observability/optimizer-metrics';
 import { OptimizationJobWorker } from '../src/modules/optimizer/infrastructure/queue/optimization-job.worker';
 
 /**
@@ -111,7 +112,17 @@ describe('Fila de otimização — integração com Redis real', () => {
   });
 
   function startWorker(processor: ProcessOptimizationJobUseCase, jobs = jobRepository()) {
-    const worker = new OptimizationJobWorker(config(), dataSource(), processor, jobs);
+    const worker = new OptimizationJobWorker(
+      config(),
+      dataSource(),
+      processor,
+      jobs,
+      // Métricas da fila (ADR-0114): efeito colateral, não o que se verifica aqui.
+      {
+        observeQueueJobFailure: () => undefined,
+        observeQueueError: () => undefined,
+      } as unknown as OptimizerMetrics,
+    );
     worker.onModuleInit();
     started.push({ close: () => worker.onModuleDestroy() });
     return { worker, jobs };
@@ -217,6 +228,10 @@ describe('Fila de otimização — integração com Redis real', () => {
       dataSource(),
       processor,
       jobRepository(),
+      {
+        observeQueueJobFailure: () => undefined,
+        observeQueueError: () => undefined,
+      } as unknown as OptimizerMetrics,
     );
     worker.onModuleInit();
     started.push({ close: () => worker.onModuleDestroy() });

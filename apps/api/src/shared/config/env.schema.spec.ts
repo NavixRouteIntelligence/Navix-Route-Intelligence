@@ -20,6 +20,10 @@ const prodEnv = {
   JWT_PUBLIC_KEY: '-----BEGIN PUBLIC KEY-----fake-----END PUBLIC KEY-----',
   JWT_KEY_ID: 'kid-1',
   MEDIA_URL_SECRET: 'segredo-de-midia-estavel',
+  // Fila durável (ADR-0114). Estava ausente deste fixture, e o fixture chamava
+  // a si mesmo de "produção corretamente configurada" — que é exatamente o
+  // ponto cego que a regra fecha.
+  OPTIMIZER_QUEUE_DRIVER: 'bullmq',
 };
 
 describe('validateEnv — guarda de produção (ADR-0052)', () => {
@@ -83,5 +87,44 @@ describe('validateEnv — guarda de produção (ADR-0052)', () => {
     expect(() => validateEnv({ ...baseEnv, TRACKING_GEOFENCE_CHECK_INTERVAL_MS: '1000' })).toThrow(
       /Configuração de ambiente inválida/,
     );
+  });
+
+  // NAV-4.14 / ADR-0114: o fallback local é legítimo em desenvolvimento e teste,
+  // e inaceitável em produção — onde ele não falha nem avisa.
+  it('recusa produção com a fila in-process (o default silencioso)', () => {
+    expect(() => validateEnv({ ...prodEnv, OPTIMIZER_QUEUE_DRIVER: 'inprocess' })).toThrow(
+      /OPTIMIZER_QUEUE_DRIVER/,
+    );
+  });
+
+  it('recusa produção quando a variável é simplesmente esquecida', () => {
+    const { OPTIMIZER_QUEUE_DRIVER: _omitida, ...semFila } = prodEnv;
+
+    // É este o caso real: ninguém escreve `inprocess`, apenas não escreve nada.
+    expect(() => validateEnv(semFila)).toThrow(/OPTIMIZER_QUEUE_DRIVER.*bullmq/s);
+  });
+
+  it('a mensagem diz o que se perde, não só o que está errado', () => {
+    let mensagem = '';
+    try {
+      validateEnv({ ...prodEnv, OPTIMIZER_QUEUE_DRIVER: 'inprocess' });
+    } catch (err) {
+      mensagem = err instanceof Error ? err.message : String(err);
+    }
+
+    expect(mensagem).toMatch(/durabilidade|reinício/);
+  });
+
+  it('fora de produção, a fila in-process continua sendo o default', () => {
+    const env = validateEnv(baseEnv);
+
+    expect(env.NODE_ENV).toBe('development');
+    expect(env.OPTIMIZER_QUEUE_DRIVER).toBe('inprocess');
+  });
+
+  it('teste também roda com a fila in-process, sem exigir Redis', () => {
+    const env = validateEnv({ ...baseEnv, NODE_ENV: 'test' });
+
+    expect(env.OPTIMIZER_QUEUE_DRIVER).toBe('inprocess');
   });
 });

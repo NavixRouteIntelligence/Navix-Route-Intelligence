@@ -242,6 +242,20 @@ export function assertProductionConfig(env: Env): string[] {
     problems.push('DB_SSL: deve ser "true" em produção (conexão de banco sem TLS).');
   }
 
+  // Fila durável em produção (ADR-0114). O default é `inprocess`, e ele não
+  // falha nem avisa: a otimização passa a rodar dentro do processo da API,
+  // perde-se em qualquer reinício e o worker dedicado fica consumindo uma fila
+  // vazia. Os manifestos de deploy já definem `bullmq` — e o comentário do
+  // `render.yaml` existe justamente porque esquecer a variável era um no-op
+  // silencioso. Isto troca o comentário por uma recusa.
+  if (env.OPTIMIZER_QUEUE_DRIVER !== 'bullmq') {
+    problems.push(
+      'OPTIMIZER_QUEUE_DRIVER: deve ser "bullmq" em produção. O default ' +
+        '"inprocess" processa a otimização no próprio processo da API, sem ' +
+        'durabilidade: jobs somem em cada reinício e nenhum worker dedicado os vê.',
+    );
+  }
+
   return problems;
 }
 

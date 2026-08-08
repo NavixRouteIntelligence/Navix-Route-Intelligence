@@ -1,5 +1,9 @@
 import type { AppConfigService } from '../../../../shared/config/app-config.service';
-import { BullOptimizationJobQueue, ENQUEUE_TIMEOUT_MS } from './bull-optimization-job.queue';
+import {
+  BullOptimizationJobQueue,
+  ENQUEUE_TIMEOUT_MS,
+  READY_TIMEOUT_MS,
+} from './bull-optimization-job.queue';
 import { BULL_PREFIX, OPTIMIZATION_QUEUE_NAME } from './bull-connection';
 
 // Mock do BullMQ: o teste verifica o CONTRATO que passamos à fila (durabilidade,
@@ -7,6 +11,9 @@ import { BULL_PREFIX, OPTIMIZATION_QUEUE_NAME } from './bull-connection';
 const add = jest.fn();
 const close = jest.fn();
 const queueCtor = jest.fn();
+const waitUntilReady = jest.fn();
+const getJobCounts = jest.fn();
+const getWorkers = jest.fn();
 
 jest.mock('bullmq', () => ({
   Queue: class {
@@ -15,10 +22,15 @@ jest.mock('bullmq', () => ({
     }
     add = add;
     close = close;
+    waitUntilReady = waitUntilReady;
+    getJobCounts = getJobCounts;
+    getWorkers = getWorkers;
   },
 }));
 
-function config(overrides: Partial<{ jobAttempts: number; jobBackoffMs: number }> = {}): AppConfigService {
+function config(
+  overrides: Partial<{ jobAttempts: number; jobBackoffMs: number }> = {},
+): AppConfigService {
   return {
     optimizer: { jobAttempts: 3, jobBackoffMs: 1000, ...overrides },
     redis: { host: 'localhost', port: 6379, password: '' },
@@ -30,6 +42,9 @@ describe('BullOptimizationJobQueue', () => {
     add.mockReset().mockResolvedValue({ id: 'job-1' });
     close.mockReset().mockResolvedValue(undefined);
     queueCtor.mockReset();
+    waitUntilReady.mockReset().mockResolvedValue(undefined);
+    getJobCounts.mockReset().mockResolvedValue({ waiting: 0, active: 0 });
+    getWorkers.mockReset().mockResolvedValue([{ id: 'w1' }]);
   });
 
   it('configura a fila para sobreviver a restart: retry com backoff exponencial', () => {
@@ -108,5 +123,81 @@ describe('BullOptimizationJobQueue', () => {
     await queue.onModuleDestroy();
 
     expect(close).toHaveBeenCalled();
+  });
+
+  // NAV-4.14 / ADR-0114: escolher `bullmq` é declarar a fila obrigatória.
+  describe('indisponibilidade e recuperação (ADR-0114)', () => {
+    it('sobe quando a fila responde', async () => {
+      const q = new BullOptimizationJobQueue(config());
+
+      await expect(q.onApplicationBootstrap()).resolves.toBeUndefined();
+    });
+
+    it('recusa a subida quando a fila não responde', async () => {
+      waitUntilReady.mockRejectedValue(new Error('ECONNREFUSED'));
+      const q = new BullOptimizationJobQueue(config());
+
+      await expect(q.onApplicationBootstrap()).rejects.toThrow(/indisponível/);
+    });
+
+    // O modo de falha que motiva o teto: o ioredis **bufferiza** o comando em
+    // vez de rejeitar, então esperar sem limite é esperar para sempre.
+    it('a espera pela fila tem teto — Redis fora não pendura a subida', async () => {
+      waitUntilReady.mockReturnValue(new Promise(() => undefined));
+      const q = new BullOptimizationJobQueue(config());
+
+      jest.useFakeTimers();
+      const subida = q.onApplicationBootstrap();
+      const esperado = expect(subida).rejects.toThrow(/Timeout/);
+      await jest.advanceTimersByTimeAsync(READY_TIMEOUT_MS + 10);
+      await esperado;
+      jest.useRealTimers();
+    });
+
+    it('a mensagem diz o que verificar, não só que falhou', async () => {
+      waitUntilReady.mockRejectedValue(new Error('ECONNREFUSED'));
+      const q = new BullOptimizationJobQueue(config());
+
+      await expect(q.onApplicationBootstrap()).rejects.toThrow(/REDIS_HOST/);
+    });
+
+    it('saúde reporta conexão, produtor e quantos workers consomem', async () => {
+      const q = new BullOptimizationJobQueue(config());
+
+      await expect(q.health()).resolves.toEqual({
+        driver: 'bullmq',
+        queue: OPTIMIZATION_QUEUE_NAME,
+        connection: 'up',
+        producer: 'up',
+        worker: 'remote',
+        workers: 1,
+      });
+    });
+
+    // Fila legível e gravável, e ninguém consumindo: os jobs entram e ficam.
+    it('sem worker algum, a saúde diz `absent` em vez de `up` genérico', async () => {
+      getWorkers.mockResolvedValue([]);
+      const q = new BullOptimizationJobQueue(config());
+
+      await expect(q.health()).resolves.toMatchObject({ worker: 'absent', workers: 0 });
+    });
+
+    it('fila fora derruba conexão e produtor juntos', async () => {
+      getJobCounts.mockRejectedValue(new Error('ECONNREFUSED'));
+      const q = new BullOptimizationJobQueue(config());
+
+      await expect(q.health()).resolves.toMatchObject({
+        connection: 'down',
+        producer: 'down',
+      });
+    });
+
+    it('recupera sem reiniciar: a saúde volta a `up` quando a fila volta', async () => {
+      getJobCounts.mockRejectedValueOnce(new Error('ECONNREFUSED'));
+      const q = new BullOptimizationJobQueue(config());
+
+      await expect(q.health()).resolves.toMatchObject({ connection: 'down' });
+      await expect(q.health()).resolves.toMatchObject({ connection: 'up' });
+    });
   });
 });
