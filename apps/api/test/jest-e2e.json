@@ -8,5 +8,7 @@
   },
   "moduleNameMapper": {
     "^@navix/contracts$": "<rootDir>/../../packages/contracts/src/index.ts"
-  }
+  },
+  "setupFilesAfterEach": [],
+  "setupFilesAfterEnv": ["<rootDir>/test/setup-no-network.ts"]
 }
