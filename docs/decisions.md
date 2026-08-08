@@ -117,6 +117,7 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 | ADR-0113 | Versão da rota, com unicidade no banco e descarte rastreável | Aceito | ✅ A rota do motorista ganha `version` única por (tenant, motorista, dia); a gravação vira comparar-e-gravar com o índice arbitrando; resultados que chegam tarde são descartados com log nomeando vencedor e perdedor | 2026-08-08 |
 | ADR-0114 | Fila BullMQ obrigatória em produção, com saúde e descarte rastreáveis | Aceito | ✅ O default `inprocess` deixava produção cair para uma fila não durável sem avisar; agora a subida recusa, a fila é dependência dura no `/ready` (conexão, produtor e worker) e o job que esgota tentativas é fechado em vez de ficar `running` para sempre | 2026-08-08 |
 | ADR-0115 | Suíte de regressão do otimizador, com matriz declarada | Aceito | ✅ Fixtures determinísticas independentes do provedor (matriz escrita à mão, sem geometria nem rede), 28 cenários nomeados pelo defeito que já aconteceu, rede bloqueada nos testes e `main` protegida com os 6 checks obrigatórios | 2026-08-08 |
+| ADR-0116 | Kaizen: fontes, contrato de linguagem e o que o resumo diário pode afirmar | Proposto | 🔎 Investigação (T7.1), sem implementação. `driver_kpi_daily` não serve o autónomo — a projeção filtra `driver_id IS NOT NULL` e a tabela tem 0 linhas; o fuso do motorista existe mas nenhum dos 9 utilizadores tem perfil; e a poupança é contrafactual, não medição | 2026-08-08 |
 
 ---
 
@@ -745,6 +746,71 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 
 ---
 
+## ADR-0116 — Kaizen: fontes, contrato de linguagem e o que o resumo diário pode afirmar
+
+- **Status:** Proposto · **Data:** 2026-08-08
+- **Status da implementação:** 🔎 **Investigação (T7.1), sem código.** O que esta ADR entrega é o mapa das fontes, as fórmulas, a regra de fuso, os limiares e o contrato de linguagem em [modules/kaizen-contrato-linguagem.md](modules/kaizen-contrato-linguagem.md) — a aguardar aprovação. Tudo o que se segue foi verificado contra o esquema e contra a base de desenvolvimento, e os números de estado são de 2026-08-08.
+
+### Correção ao enunciado
+
+A tarefa pede para mapear "desempenho ADR-0094". A ADR-0094 é a **API pública com API keys e webhooks**; o desempenho do motorista é a **ADR-0097**. É esta que foi mapeada.
+
+### Fontes, e a quem pertencem
+
+| Fonte | Chave | O que guarda | Serve o autónomo? |
+|---|---|---|---|
+| `driver_kpi_daily` | **ficha** | `delivered`, `failed`, `on_time`, `active_minutes` | **Não.** A projeção filtra `driver_id IS NOT NULL`, e o autónomo não tem ficha (ADR-0085). Hoje: **0 linhas** na tabela. |
+| `kpi_daily` | tenant | `plans`, `saved_km`, `optimized_km`, `score_sum`, `delivered`, `failed`, `canceled`, `on_time`, `expense` | **Sim, se `tenants.account_type = 'driver'`** — aí o tenant tem uma pessoa só (verificado: os 7 tenants `driver` têm 1 utilizador cada). |
+| `deliveries` | ficha (`NULL` = autónomo, ADR-0100) | `status`, `window_start/end`, `updated_at` | Sim. **Não há `delivered_at`**: a hora da entrega é aproximada por `updated_at`, que se move a cada edição posterior. |
+| `route_plans` | ficha (`NULL` = autónomo ou frota; `driver_scoped` separa) | `metrics`, `baseline`, `savings`, `version` | Sim, mas é **planeado**, não realizado. |
+| `driver_positions` | **login** (exceção da ADR-0086) | `latitude`, `longitude`, `speed`, `recorded_at` | Sim — é a única fonte que o autónomo alimenta sem ficha. Hoje: **1 linha** em toda a base. |
+| `proof_of_delivery` | `delivery_id` | comprovativo | Sim, como prova de que a entrega ocorreu. |
+
+### O vazamento que a investigação encontrou
+
+`GetDriverPerformanceUseCase` cai no rollup do **tenant** quando o login não tem ficha, e o comentário justifica-o com "a organização tem uma pessoa só". A condição e a justificação não são a mesma coisa: a condição é *não ter ficha*, a justificação vale para *tenant de tipo `driver`*. Um motorista de frota cuja ficha nunca foi ligada satisfaz a condição sem satisfazer a justificação — e vê os números da empresa como se fossem seus. Verificado: `driver@navix.test` está num tenant `company` com 2 utilizadores, não tem ficha, e esse tenant tem **10 dias com entregas** em `kpi_daily`. **O Kaizen tem de exigir `account_type = 'driver'`, não "sem ficha"** — e a ADR-0097 merece a mesma correção.
+
+### Fórmulas
+
+Fonte única: entregas do dia anterior com `driver_id IS NULL` (ADR-0100), no tenant do motorista, `deleted_at IS NULL`.
+
+- `concluidas` = `count(status = 'delivered')`
+- `porConcluir` = `count(status = 'failed')`
+- `dentroDaJanela` = `count(status = 'delivered' AND updated_at <= window_end)` — denominador é `concluidas`, nunca o total (uma entrega por concluir não está "fora do prazo", é outra coisa)
+- `referencia` = **mediana** de `concluidas` nas últimas 4 ocorrências do **mesmo dia da semana** com atividade. Mediana e não média: um dia atípico não desloca a referência. Mesmo dia da semana porque o volume tem sazonalidade semanal, e comparar uma terça com um sábado fabrica uma variação que não existe.
+- `periodoDeAtividade` = `max(updated_at) − min(updated_at)` — **só** alimenta a sugestão de descanso, nunca é apresentado como jornada nem entra em taxa nenhuma.
+
+Nada de distância percorrida: `driver_positions` tem 1 linha, e derivar quilómetros de GPS esparso produziria um número plausível e falso.
+
+### Fuso horário: existe, e está vazio
+
+O "dia anterior" tem de ser o dia do motorista. A cadeia é `user_profiles.time_zone` → `tenants.time_zone` → `UTC`. Estado hoje: **0 dos 9 utilizadores têm perfil**, e os **8 tenants estão em `UTC`** (o default). Ou seja, a cadeia existe e resolve sempre no último degrau.
+
+Consequências, e são duas: enquanto o fuso for desconhecido, o resumo **nomeia o dia que está a resumir** ("terça-feira, 12 de agosto") em vez de dizer só "ontem" — dizer "ontem" com o dia errado é o defeito silencioso desta frente inteira; e a projeção de KPI usa `updated_at::date`, que é o dia da **sessão do banco**, não do motorista: recalcular por fuso é pré-requisito do Kaizen, não detalhe de apresentação.
+
+### Limiares
+
+| Limiar | Valor | Porquê |
+|---|---|---|
+| Histórico mínimo | 3 dias com atividade nas últimas 4 semanas | Abaixo disto a "comparação consigo próprio" compara com ruído. |
+| Ocorrências para a referência | até 4 do mesmo dia da semana | Uma janela mais longa arrasta sazonalidade (férias, época alta). |
+| Variação digna de nota | ±25% face à mediana | Abaixo disto, a diferença é indistinguível de um dia normal, e apontá-la ensina o motorista a ignorar o resumo. |
+| Sugestão de descanso | `periodoDeAtividade` > 10 h | Herdado da ADR-0097. |
+| Confiança mínima para explicar | motivo registado na entrega | Sem motivo, o campo "porquê" diz "não sabemos". |
+
+### Restrições, e uma delas é uma escolha
+
+Sem ranking, sem velocidade, sem entregas/hora, sem meta de volume, sem culpa, sem sequência que puna descanso, sem incentivo a correr. Vale sublinhar que **`driver_positions.speed` existe e é gravado**: a ausência de velocidade no resumo é uma decisão, não uma limitação — e por isso precisa de estar escrita, ou alguém a "corrige" mais tarde por ver o dado disponível.
+
+### Nenhuma economia estimada como resultado real
+
+`route_plans.savings` compara a rota sugerida com **a ordem em que as paragens foram enviadas** ao otimizador (o baseline é `nodes.map((_, i) => i)`, a ordem de submissão). É um contrafactual: ninguém conduziu a alternativa. E combustível/CO₂ saem de constantes por tipo de veículo aplicadas à distância planeada — nada foi medido em veículo nenhum. Portanto: nunca "poupou 12 km", sempre "a rota sugerida era 12 km mais curta do que a ordem de origem"; e nada de euros, porque não há preço de combustível no sistema.
+
+- **Alternativas consideradas:** Alimentar o Kaizen com `driver_kpi_daily` para todos (não funciona para quem a tarefa nomeia — a tabela exclui o autónomo por construção); dar ficha ao autónomo para uniformizar (reabre a ADR-0085, que decidiu que quem trabalha sozinho não tem ficha porque não há quem o admita, e criaria fichas fantasma em todos os tenants `driver`); usar o rollup do tenant sem verificar `account_type` (é o vazamento descrito acima); derivar distância real do GPS (1 ponto em base — produziria número plausível e falso); comparar com a média em vez da mediana (um dia atípico desloca a referência e o resumo passa a cobrar um recorde); usar UTC e assumir que o desvio é pequeno (Portugal continental está a UTC+1 no verão — um resumo às 00h30 fala do dia errado).
+- **Consequências:** O Kaizen para o autónomo é construível **hoje** com `deliveries` (entregas, por concluir, dentro da janela) e nada mais; período de atividade fica como sinal de descanso e não como número exibido. Três pré-requisitos ficam explícitos antes de qualquer implementação: recalcular o dia por fuso do motorista, exigir `account_type = 'driver'` na origem dos números, e capturar o fuso no perfil (hoje inexistente para todos). **Fica aberto:** não há `delivered_at` — enquanto a hora da entrega for `updated_at`, uma edição no dia seguinte muda o dia a que a entrega pertence, e nenhum limiar corrige isso; e a identificação do autónomo por `driver_id IS NULL` é convenção (ADR-0100), exata apenas enquanto ninguém mais deixar entregas por atribuir no mesmo tenant.
+
+---
+
 ---
 
 ## Template
@@ -875,3 +941,4 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 | 2026-08-08 | 6.44 | Arquitetura | ADR-0113 (NAV-4.13): a garantia de "uma rota por motorista por dia" era uma verificação em memória, e entre ler e gravar cabiam dois processos — reproduzido com duas instâncias, seis rodadas, seis pares de planos gravados, e a rota do motorista vindo do pedido mais antigo numa delas. Agora `route_plans.version` com índice único parcial (`NULLS NOT DISTINCT`, sem o qual o autônomo ficaria de fora da própria restrição), gravação por comparar-e-gravar com releitura ao perder a corrida, empate tratado como duplicata, leitura da rota vigente por versão e não por conclusão, e descarte com log nomeando vencedor e perdedor. Junto: `findActiveForDriver` passa a filtrar `driver_scoped` — o plano do despacho virava a rota ativa do motorista autônomo |
 | 2026-08-08 | 6.45 | Arquitetura | ADR-0114 (NAV-4.14): o default `inprocess` deixava produção cair para uma fila não durável **sem falhar nem avisar** — a garantia era um comentário no `render.yaml`. E escolher `bullmq` não tornava a fila obrigatória: com o Redis fora a aplicação subia, o `/ready` respondia 200 (`redis: degraded`) e cada otimização devolvia 500. Agora produção recusa `inprocess`, a subida espera fila e worker com teto e falha dizendo o que verificar, o `/ready` separa conexão, produtor e worker e é fatal quando a fila é obrigatória, e o job que esgota tentativas é fechado como `failed` em vez de ficar `running` para sempre |
 | 2026-08-08 | 6.46 | Arquitetura | ADR-0115 (NAV-4.15): os treze ADRs desta frente tinham teste, cada um com a sua geografia inventada — e mais de uma vez o que falhou foi a fixture, não o código. Agora uma suíte de regressão com **matriz declarada** (a posição de cada ponto vem da coordenada, não do índice do array — a primeira versão indexava por posição e concordava com qualquer resposta), 28 cenários nomeados pelo defeito que protegem, `fetch` não dublado falhando na hora para tornar a independência do provedor uma regra e não um acidente, e `main` protegida com os 6 checks da CI obrigatórios e `enforce_admins` |
+| 2026-08-08 | 6.47 | Produto/Arquitetura | ADR-0116 (T7.1): investigação do Kaizen, sem código. `driver_kpi_daily` **não serve o motorista autónomo** — a projeção filtra `driver_id IS NOT NULL` e a tabela tem 0 linhas; o rollup do tenant serve, mas só quando `account_type = 'driver'`, e o código atual cai nele por "não ter ficha", pelo que um motorista de frota sem ficha ligada vê os números da empresa como seus; o fuso do motorista existe em `user_profiles` e **nenhum** dos 9 utilizadores tem perfil, com os 8 tenants em UTC; e a poupança do plano é contrafactual contra a ordem de submissão, nunca medição. Contrato de linguagem pt-PT proposto em `docs/modules/kaizen-contrato-linguagem.md` |
