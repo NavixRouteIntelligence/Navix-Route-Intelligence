@@ -80,3 +80,41 @@ export interface RestAdviceView {
   activeMinutes: number;
   longDay: boolean;
 }
+
+/**
+ * Estado de um dia no read model (ADR-0117).
+ *
+ * `pending` e `no-work` são coisas diferentes e pareciam-se: sem estado, um dia
+ * ainda não projetado e um dia de folga chegavam à tela como o mesmo zero.
+ */
+export type DriverDayState = 'ok' | 'incomplete' | 'no-work' | 'pending';
+
+/** Poupança do dia — **estimativa contrafactual**, nunca resultado medido. */
+export interface DriverDaySavings {
+  /** Diferença face à ordem em que as paragens foram enviadas (ADR-0116). */
+  distanceKm: number | null;
+  timeMinutes: number | null;
+  /** `null` quando o dia misturou veículos ou o tipo é desconhecido. */
+  fuelLiters: number | null;
+  /** Sempre `true`: nada aqui foi medido no veículo de ninguém. */
+  estimated: true;
+}
+
+/** Fotografia de um dia do motorista. Taxas derivadas; contagens cruas. */
+export interface DriverDailySnapshot {
+  day: string;
+  state: DriverDayState;
+  delivered: number;
+  failed: number;
+  onTime: number;
+  /** `null` sem finalizadas — nunca 0%. */
+  successRate: number | null;
+  /** `null` sem entregues. */
+  onTimeRate: number | null;
+  /** `null` quando a duração não é conhecida (ADR-0117). */
+  activeMinutes: number | null;
+  /** `null` quando não há plano atribuível no dia. */
+  savings: DriverDaySavings | null;
+  /** `null` em `pending`. */
+  projectedAt: string | null;
+}

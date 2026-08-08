@@ -27,10 +27,18 @@ export class RebuildKpisUseCase {
     @Inject(DRIVER_KPI_REPOSITORY) private readonly driverKpis: DriverKpiRepositoryPort,
   ) {}
 
-  day(tenantId: string, at: Date | string = new Date()): Promise<void> {
+  /**
+   * Reprojeta o dia nos **dois** read models.
+   *
+   * O do motorista faltava aqui: só o `backfill` o reconstruía, de modo que uma
+   * entrega concluída atualizava o rollup do tenant na hora e a tela do
+   * motorista só até seis horas depois, na reconciliação (ADR-0117).
+   */
+  async day(tenantId: string, at: Date | string = new Date()): Promise<void> {
     const day = typeof at === 'string' ? at : isoDay(at);
     if (!ISO_DAY.test(day)) throw new Error(`Dia de projeção inválido: ${day}`);
-    return this.kpis.rebuildDay(tenantId, day);
+    await this.kpis.rebuildDay(tenantId, day);
+    await this.driverKpis.rebuildDay(tenantId, day);
   }
 
   /** Recalcula os últimos `days` dias. Devolve quantos foram reconstruídos. */

@@ -9,7 +9,7 @@ import {
   DRIVER_KPI_REPOSITORY,
   type DriverKpiRepositoryPort,
 } from '../domain/ports/driver-kpi-repository.port';
-import { KPI_REPOSITORY, type KpiRepositoryPort } from '../domain/ports/kpi-repository.port';
+import { activeMinutesOf, type DailySubject } from '../domain/daily-subject';
 import {
   TENANT_ACCOUNT_TYPE_READER,
   type TenantAccountTypeReaderPort,
@@ -34,7 +34,6 @@ const DIA_MS = 24 * 60 * 60 * 1000;
 export class GetDriverPerformanceUseCase {
   constructor(
     @Inject(DRIVER_KPI_REPOSITORY) private readonly kpis: DriverKpiRepositoryPort,
-    @Inject(KPI_REPOSITORY) private readonly tenantKpis: KpiRepositoryPort,
     @Inject(TENANT_ACCOUNT_TYPE_READER) private readonly contas: TenantAccountTypeReaderPort,
   ) {}
 
@@ -50,7 +49,18 @@ export class GetDriverPerformanceUseCase {
     const baseFrom = isoDay(new Date(agora - (windowDays * 2 - 1) * DIA_MS));
     const baseTo = isoDay(new Date(agora - windowDays * DIA_MS));
 
-    const ler = await this.leitor(tenantId, userId);
+    const sujeito = await this.sujeito(tenantId, userId);
+    const ler = async (de: string, ate: string): Promise<DriverDayRow[]> => {
+      if (!sujeito) return [];
+      const linhas = await this.kpis.range(tenantId, sujeito, de, ate);
+      return linhas.map((l) => ({
+        day: l.day,
+        delivered: l.delivered,
+        failed: l.failed,
+        onTime: l.onTime,
+        activeMinutes: activeMinutesOf(l),
+      }));
+    };
 
     const [atual, anterior] = await Promise.all([ler(from, to), ler(baseFrom, baseTo)]);
 
@@ -58,52 +68,23 @@ export class GetDriverPerformanceUseCase {
   }
 
   /**
-   * De onde vêm os números deste login (ADR-0116).
+   * Sujeito destes números (ADR-0117).
    *
-   * Com ficha, do rollup **dele**. Sem ficha, do rollup do tenant — **mas só
-   * quando o tenant é de tipo `driver`**, porque é isso que torna verdadeira a
-   * frase "o tenant é ele".
+   * A ficha quando existe; o **login** quando não existe **e** a conta é de
+   * motorista — é isso que torna verdadeira a frase "o tenant é ele" (ADR-0116).
+   * Sem ficha em conta de empresa, não há sujeito: a resposta é vazia, porque
+   * não há nada atribuível àquela pessoa enquanto a ficha não estiver ligada.
    *
-   * A versão anterior caía no rollup do tenant só por não haver ficha, e
-   * justificava-se com "a organização tem uma pessoa só". A condição e a
-   * justificação não são a mesma coisa: um motorista de frota cuja ficha nunca
-   * foi ligada satisfaz a condição sem satisfazer a justificação — e via os
-   * números da empresa inteira como desempenho pessoal, sem erro nenhum.
-   *
-   * Sem ficha e em tenant de empresa, a resposta é **vazio**. Um consolidado
-   * em branco é honesto: não há nada atribuível a esta pessoa enquanto a ficha
-   * não estiver ligada. Mostrar o da empresa é pior do que não mostrar nada.
+   * O rollup do tenant deixou de ser usado aqui. Ele não guarda atividade, e
+   * por isso o autónomo recebia `activeMinutes: 0` — um zero que dizia "não
+   * trabalhou" quando o que se passava era "não sabemos". Agora o autónomo tem
+   * linha própria no read model, projetada pelo login.
    */
-  private async leitor(
-    tenantId: string,
-    userId: string,
-  ): Promise<(de: string, ate: string) => Promise<DriverDayRow[]>> {
+  private async sujeito(tenantId: string, userId: string): Promise<DailySubject | null> {
     const ficha = await this.kpis.driverIdForUser(tenantId, userId);
-    if (ficha) return (de, ate) => this.kpis.range(tenantId, ficha, de, ate);
+    if (ficha) return { kind: 'driver', driverId: ficha };
 
     const conta = await this.contas.findAccountType(tenantId);
-    if (conta === 'driver') return (de, ate) => this.porTenant(tenantId, de, ate);
-
-    return async () => [];
-  }
-
-  /**
-   * Motorista autônomo: sem ficha (ADR-0085) e em tenant de tipo `driver`, o
-   * tenant é ele, e o rollup do tenant **é** o desempenho dele.
-   *
-   * O que se perde é `activeMinutes`, que o rollup do tenant não guarda: a
-   * sugestão de descanso não aparece para o autônomo. Preferi a ausência a uma
-   * estimativa inventada — sugerir pausa com base em número errado corrói a
-   * confiança justamente na parte que existe para proteger quem dirige.
-   */
-  private async porTenant(tenantId: string, from: string, to: string): Promise<DriverDayRow[]> {
-    const rows = await this.tenantKpis.range(tenantId, from, to);
-    return rows.map((r) => ({
-      day: r.day,
-      delivered: r.delivered,
-      failed: r.failed,
-      onTime: r.onTime,
-      activeMinutes: 0,
-    }));
+    return conta === 'driver' ? { kind: 'user', userId } : null;
   }
 }

@@ -35,7 +35,8 @@ export interface DriverDayRow {
   failed: number;
   onTime: number;
   /** Minutos entre a primeira e a última atividade do dia. */
-  activeMinutes: number;
+  /** `null` quando a duração não é conhecida (ADR-0117) — nunca 0 por omissão. */
+  activeMinutes: number | null;
 }
 
 export interface DriverPerformance {
@@ -169,7 +170,10 @@ export function buildGoal(anteriores: DriverDayRow[], atual: DriverDayRow[]): Dr
 
 /** Sugestão de descanso do dia mais recente. `null` sem atividade registrada. */
 export function restAdviceFor(hoje: DriverDayRow | undefined): RestAdvice | null {
-  if (!hoje || hoje.activeMinutes <= 0) return null;
+  // `null` é ausência de conhecimento, não dia curto: sugerir pausa a partir
+  // de uma duração que não se conhece é o tipo de palpite que corrói justamente
+  // a parte que existe para proteger quem dirige (ADR-0117).
+  if (!hoje || hoje.activeMinutes === null || hoje.activeMinutes <= 0) return null;
   return { activeMinutes: hoje.activeMinutes, longDay: hoje.activeMinutes >= LONG_DAY_MINUTES };
 }
 

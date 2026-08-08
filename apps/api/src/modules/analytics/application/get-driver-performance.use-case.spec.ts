@@ -1,7 +1,5 @@
-import type { DriverDayRow } from '../domain/driver-performance';
-import type { KpiDailyRow } from '../domain/kpi';
+import type { DailyRawRow } from '../domain/daily-subject';
 import type { DriverKpiRepositoryPort } from '../domain/ports/driver-kpi-repository.port';
-import type { KpiRepositoryPort } from '../domain/ports/kpi-repository.port';
 
 import { GetDriverPerformanceUseCase } from './get-driver-performance.use-case';
 
@@ -9,8 +7,21 @@ const TENANT = 'tenant-1';
 const LOGIN = 'user-1';
 const FICHA = 'driver-1';
 
-function linha(over: Partial<DriverDayRow> = {}): DriverDayRow {
-  return { day: '2026-07-30', delivered: 4, failed: 0, onTime: 4, activeMinutes: 200, ...over };
+function linha(over: Partial<DailyRawRow> = {}): DailyRawRow {
+  return {
+    day: '2026-07-30',
+    delivered: 4,
+    failed: 0,
+    onTime: 4,
+    firstActivityAt: new Date('2026-07-30T08:00:00Z'),
+    lastActivityAt: new Date('2026-07-30T11:20:00Z'), // 200 min
+    plans: 0,
+    savedKm: null,
+    savedMinutes: null,
+    vehicleTypes: [],
+    projectedAt: new Date('2026-07-31T02:00:00Z'),
+    ...over,
+  };
 }
 
 function mocks(ficha: string | null, accountType: 'driver' | 'company' = 'driver') {
@@ -19,23 +30,19 @@ function mocks(ficha: string | null, accountType: 'driver' | 'company' = 'driver
     range: jest.fn().mockResolvedValue([linha()]),
     driverIdForUser: jest.fn().mockResolvedValue(ficha),
   };
-  const tenantKpis: jest.Mocked<KpiRepositoryPort> = {
-    rebuildDay: jest.fn(),
-    range: jest.fn().mockResolvedValue([]),
-  };
   const contas = { findAccountType: jest.fn().mockResolvedValue(accountType) };
-  return { driverKpis, tenantKpis, contas };
+  return { driverKpis, contas };
 }
 
 /** Constrói o caso de uso com os dublês na ordem do construtor. */
 function build(m: ReturnType<typeof mocks>) {
-  return new GetDriverPerformanceUseCase(m.driverKpis, m.tenantKpis, m.contas);
+  return new GetDriverPerformanceUseCase(m.driverKpis, m.contas);
 }
 
 describe('GetDriverPerformanceUseCase', () => {
   it('lê o read model da ficha do motorista autenticado', async () => {
     const m = mocks(FICHA);
-    const { driverKpis, tenantKpis } = m;
+    const { driverKpis } = m;
 
     const resumo = await build(m).execute(TENANT, LOGIN, 30);
 
@@ -43,27 +50,34 @@ describe('GetDriverPerformanceUseCase', () => {
     // Só o período atual entra no consolidado; o anterior existe apenas para
     // derivar a meta.
     expect(resumo.delivered).toBe(4);
-    // Toda leitura passa pela ficha de quem pediu — o id nunca vem do cliente.
+    // Toda leitura passa pelo sujeito de quem pediu — o id nunca vem do cliente.
     for (const call of driverKpis.range.mock.calls) {
-      expect(call[1]).toBe(FICHA);
+      expect(call[1]).toEqual({ kind: 'driver', driverId: FICHA });
     }
-    expect(tenantKpis.range).not.toHaveBeenCalled();
   });
 
-  // O autônomo não tem ficha (ADR-0085) **e** o tenant é dele: o rollup do
-  // tenant é o desempenho dele.
-  it('sem ficha, em conta de motorista, cai no rollup do tenant', async () => {
+  // O autônomo não tem ficha (ADR-0085) e o tenant é dele: passa a ter linha
+  // **própria** no read model, projetada pelo login (ADR-0117). Antes lia o
+  // rollup do tenant, que não guarda atividade — e o zero resultante dizia
+  // "não trabalhou" quando o que se passava era "não sabemos".
+  it('sem ficha, em conta de motorista, lê pelo login', async () => {
     const m = mocks(null, 'driver');
-    const { driverKpis, tenantKpis } = m;
-    tenantKpis.range.mockResolvedValue([
-      { day: '2026-07-30', delivered: 6, failed: 0, onTime: 5 } as KpiDailyRow,
-    ]);
+    m.driverKpis.range.mockResolvedValue([linha({ delivered: 6, onTime: 5 })]);
 
     const resumo = await build(m).execute(TENANT, LOGIN, 30);
 
-    expect(driverKpis.range).not.toHaveBeenCalled();
     expect(resumo.delivered).toBe(6);
-    // Sem `activeMinutes` no rollup do tenant, não se inventa sugestão de pausa.
+    for (const call of m.driverKpis.range.mock.calls) {
+      expect(call[1]).toEqual({ kind: 'user', userId: LOGIN });
+    }
+  });
+
+  it('sem limites de atividade, não se inventa sugestão de pausa', async () => {
+    const m = mocks(null, 'driver');
+    m.driverKpis.range.mockResolvedValue([linha({ firstActivityAt: null, lastActivityAt: null })]);
+
+    const resumo = await build(m).execute(TENANT, LOGIN, 30);
+
     expect(resumo.restAdvice).toBeNull();
   });
 
@@ -87,18 +101,14 @@ describe('GetDriverPerformanceUseCase', () => {
 // a pessoa. A versão anterior caía nele por "não ter ficha", e um motorista de
 // frota com a ficha por ligar via os números da empresa inteira como seus.
 describe('GetDriverPerformanceUseCase — a quem pertencem os números', () => {
-  const DIAS_DA_EMPRESA = [
-    { day: '2026-07-30', delivered: 120, failed: 3, onTime: 110 } as KpiDailyRow,
-  ];
-
   it('sem ficha em conta de empresa, não devolve os números da empresa', async () => {
     const m = mocks(null, 'company');
-    m.tenantKpis.range.mockResolvedValue(DIAS_DA_EMPRESA);
 
     const resumo = await build(m).execute(TENANT, LOGIN, 30);
 
     expect(resumo.delivered).toBe(0);
-    expect(m.tenantKpis.range).not.toHaveBeenCalled();
+    // Nem sequer há sujeito a consultar: nada é lido.
+    expect(m.driverKpis.range).not.toHaveBeenCalled();
   });
 
   it('o tipo de conta é consultado antes de usar o rollup do tenant', async () => {

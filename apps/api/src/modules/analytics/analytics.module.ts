@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 
+import { GetDriverDailySnapshotUseCase } from './application/get-driver-daily-snapshot.use-case';
 import { GetDriverPerformanceUseCase } from './application/get-driver-performance.use-case';
 import { GetKpiSummaryUseCase } from './application/get-kpi-summary.use-case';
 import { KpiProjectionListener } from './application/kpi-projection.listener';
@@ -25,6 +26,7 @@ import { KpiController } from './interface/kpi.controller';
   providers: [
     GetKpiSummaryUseCase,
     GetDriverPerformanceUseCase,
+    GetDriverDailySnapshotUseCase,
     RebuildKpisUseCase,
     KpiProjectionListener,
     { provide: KPI_REPOSITORY, useClass: KpiRepository },
