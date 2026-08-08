@@ -52,6 +52,16 @@ export interface RoutePlanProps {
    * recortes diferentes da frota e legitimamente tem vários por dia.
    */
   driverScoped: boolean;
+  /**
+   * Versão da rota daquele motorista naquele dia (ADR-0113). Começa em 1 e
+   * cresce a cada pedido que efetivamente substitui o anterior.
+   *
+   * Existe porque `requested_at` sozinho não dava para gravar com segurança:
+   * comparar instantes em memória e gravar depois deixa uma janela entre a
+   * leitura e a escrita. A versão é o que o banco consegue tornar único — e é
+   * também o que o log precisa nomear para dizer qual venceu.
+   */
+  version: number;
   strategy: OptimizationStrategyName;
   /** Completo ou parcial (ADR-0110). `failed` é estado do job, não do plano. */
   status: RoutePlanStatus;
@@ -81,8 +91,8 @@ export interface RoutePlanProps {
  */
 export type NewRoutePlan = Omit<
   RoutePlanProps,
-  'id' | 'createdAt' | 'operationalDay' | 'requestedAt' | 'departureAt' | 'status'
-> & { requestedAt?: Date; departureAt?: Date; timeZone?: string };
+  'id' | 'createdAt' | 'operationalDay' | 'requestedAt' | 'departureAt' | 'status' | 'version'
+> & { requestedAt?: Date; departureAt?: Date; timeZone?: string; version?: number };
 
 /**
  * O estado é **derivado**, nunca informado (ADR-0110).
@@ -137,6 +147,9 @@ export class RoutePlan {
       id: newId(),
       createdAt,
       requestedAt,
+      // Sem versão informada é a primeira rota daquele motorista no dia — que
+      // é o caso do plano do despacho e do caminho síncrono.
+      version: data.version ?? 1,
       status: statusFor(props.unassignedStops),
       // Sem partida explícita, a rota começa quando foi pedida — que para o
       // motorista tocando "reorganizar" é agora, e para uma reotimização é o
@@ -156,6 +169,15 @@ export class RoutePlan {
     return this.props;
   }
 
+  /**
+   * O mesmo plano na versão indicada (ADR-0113). A versão só se conhece depois
+   * de olhar a rota vigente, e o plano já nasceu antes disso — mas continua
+   * imutável: isto devolve outro.
+   */
+  withVersion(version: number): RoutePlan {
+    return new RoutePlan({ ...this.props, version });
+  }
+
   get id(): string {
     return this.props.id;
   }
@@ -166,6 +188,10 @@ export class RoutePlan {
 
   get requestedAt(): Date {
     return this.props.requestedAt;
+  }
+
+  get version(): number {
+    return this.props.version;
   }
 
   get departureAt(): Date {

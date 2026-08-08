@@ -13,6 +13,7 @@ export function toRoutePlanView(plan: RoutePlan): RoutePlanView {
     departureAt: s.departureAt.toISOString(),
     strategy: s.strategy,
     status: s.status,
+    version: s.version,
     params: s.params,
     stops: s.stops,
     // Derivado na leitura, não persistido: planos antigos também ganham grupos.

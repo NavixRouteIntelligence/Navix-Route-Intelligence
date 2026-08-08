@@ -29,7 +29,7 @@ function plan(driverId: string | null): RoutePlan {
 function build(ficha: string | null, found: RoutePlan | null, timeZone = 'UTC') {
   const chamadas: { driverId: string | null; day: string }[] = [];
   const plans: RoutePlanRepositoryPort = {
-    save: async () => undefined,
+    save: async () => 'saved' as const,
     findById: async () => null,
     findAll: async (): Promise<PagedResult<RoutePlan>> => ({ items: [], total: 0 }),
     findActiveForDriver: async (_t, driverId, day) => {

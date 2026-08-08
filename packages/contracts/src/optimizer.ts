@@ -362,6 +362,15 @@ export interface RoutePlan {
   departureAt: string;
   strategy: OptimizationStrategyName;
   status: RoutePlanStatus;
+  /**
+   * Versão da rota daquele motorista naquele dia (ADR-0113). Começa em 1 e
+   * cresce a cada pedido que substitui o anterior.
+   *
+   * Serve para quem consome saber **qual** rota está vendo: duas respostas com
+   * a mesma versão descrevem a mesma rota; uma versão menor que a já vista é
+   * uma resposta atrasada, e não uma mudança de plano.
+   */
+  version: number;
   params: RoutePlanParams;
   /** Paradas na ordem final. Em plano multi-veículo, é a concatenação de `routes`. */
   stops: RouteStopView[];

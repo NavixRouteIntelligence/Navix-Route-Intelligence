@@ -46,6 +46,15 @@ export class RoutePlanOrmEntity {
   @Column('boolean', { name: 'driver_scoped', default: false })
   driverScoped!: boolean;
 
+  /**
+   * Versão da rota daquele motorista no dia (ADR-0113). Única por
+   * (tenant, motorista, dia) nos planos `driver_scoped`, com `NULLS NOT
+   * DISTINCT` — sem isso o autônomo, que tem `driver_id` nulo, ficaria de fora
+   * da própria restrição.
+   */
+  @Column('integer', { default: 1 })
+  version!: number;
+
   @Column('text')
   strategy!: OptimizationStrategyName;
 

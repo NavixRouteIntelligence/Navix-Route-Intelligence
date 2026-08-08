@@ -4,7 +4,11 @@ import { In, IsNull, Repository } from 'typeorm';
 
 import type { PageParams, PagedResult } from '../../../../shared/kernel/pagination';
 import { scopedRepository } from '../../../../shared/database/transaction-context';
-import type { RoutePlanRepositoryPort } from '../../domain/ports/route-plan-repository.port';
+import { isUniqueViolation } from '../../../../shared/database/unique-violation';
+import type {
+  PlanSaveResult,
+  RoutePlanRepositoryPort,
+} from '../../domain/ports/route-plan-repository.port';
 import { RoutePlan } from '../../domain/route-plan';
 import { RoutePlanOrmEntity } from './route-plan.orm-entity';
 
@@ -20,7 +24,7 @@ export class RoutePlanRepository implements RoutePlanRepositoryPort {
     return scopedRepository(this.base);
   }
 
-  async save(plan: RoutePlan): Promise<void> {
+  async save(plan: RoutePlan): Promise<PlanSaveResult> {
     const s = plan.snapshot();
     const row = new RoutePlanOrmEntity();
     row.id = s.id;
@@ -42,8 +46,18 @@ export class RoutePlanRepository implements RoutePlanRepositoryPort {
     row.capacity = s.capacity ?? null;
     row.routes = s.routes ?? null;
     row.unassignedStops = s.unassignedStops ?? null;
+    row.version = s.version;
     row.createdAt = s.createdAt;
-    await this.repo.save(row);
+    try {
+      await this.repo.save(row);
+      return 'saved';
+    } catch (err) {
+      // 23505 do índice parcial `uq_route_plans_driver_day_version`: outro
+      // processo gravou esta versão primeiro (ADR-0113). É o único caminho em
+      // que o banco recusa por concorrência, e ele é resposta — não falha.
+      if (isUniqueViolation(err, 'uq_route_plans_driver_day_version')) return 'version-taken';
+      throw err;
+    }
   }
 
   async findById(tenantId: string, id: string): Promise<RoutePlan | null> {
@@ -69,8 +83,14 @@ export class RoutePlanRepository implements RoutePlanRepositoryPort {
     const row = await this.repo.findOne({
       // `IsNull()` e não `driverId: null`: o TypeORM traduz `null` literal para
       // `= NULL`, que nunca casa, e a rota do autônomo simplesmente sumiria.
-      where: { tenantId, driverId: driverId ?? IsNull(), operationalDay },
-      order: { createdAt: 'DESC' },
+      //
+      // `driverScoped` é o que separa a rota do motorista do plano do despacho,
+      // que também tem `driver_id` nulo (ADR-0113).
+      where: { tenantId, driverId: driverId ?? IsNull(), operationalDay, driverScoped: true },
+      // Pela **versão**, não pela conclusão: quem substitui quem é decidido no
+      // pedido, e ordenar por `created_at` fazia um job lento pedido antes
+      // aparecer como a rota vigente.
+      order: { version: 'DESC' },
     });
     return row ? this.toDomain(row) : null;
   }
@@ -82,11 +102,11 @@ export class RoutePlanRepository implements RoutePlanRepositoryPort {
   ): Promise<Map<string, RoutePlan>> {
     if (driverIds.length === 0) return new Map();
     const rows = await this.repo.find({
-      where: { tenantId, driverId: In(driverIds), operationalDay },
-      order: { createdAt: 'DESC' },
+      where: { tenantId, driverId: In(driverIds), operationalDay, driverScoped: true },
+      order: { version: 'DESC' },
     });
 
-    // Mesma regra do singular — o mais recente do dia vence —, obtida aqui pela
+    // Mesma regra do singular — a maior versão do dia vence —, obtida aqui pela
     // ordem decrescente: a primeira linha de cada ficha é a que fica.
     const porFicha = new Map<string, RoutePlan>();
     for (const row of rows) {
@@ -130,7 +150,10 @@ export class RoutePlanRepository implements RoutePlanRepositoryPort {
         operationalDay,
         driverScoped: true,
       },
-      order: { requestedAt: 'DESC' },
+      // A maior versão é, por construção, a do pedido mais recente: só grava
+      // versão nova quem tem `requested_at` maior (ADR-0113). Ordenar pela
+      // versão é o que dá o número de que a próxima gravação precisa.
+      order: { version: 'DESC' },
     });
     return row ? this.toDomain(row) : null;
   }
@@ -142,6 +165,7 @@ export class RoutePlanRepository implements RoutePlanRepositoryPort {
       driverId: row.driverId,
       operationalDay: row.operationalDay,
       requestedAt: row.requestedAt,
+      version: row.version,
       departureAt: row.departureAt,
       driverScoped: row.driverScoped,
       strategy: row.strategy,

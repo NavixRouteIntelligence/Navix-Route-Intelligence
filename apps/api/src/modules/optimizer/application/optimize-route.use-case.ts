@@ -26,6 +26,7 @@ import { estimateCo2Kg, smartWeights, weightsFor } from '../domain/economy';
 import { fitWithinCapacity } from '../domain/capacity-fitting';
 import { partitionByCapacity } from '../domain/fleet-partitioner';
 import { GeoPoint } from '../domain/geo-point';
+import { MAX_WRITE_ATTEMPTS, decidePlanWrite, type PlanDiscardReason } from '../domain/plan-write';
 import { ZERO_DEMAND, type OptimizationStop } from '../domain/optimization-stop';
 import {
   ROUTE_PLAN_REPOSITORY,
@@ -158,12 +159,12 @@ export class OptimizeRouteUseCase {
       : await this.planSingle(efetivo, rawStops, service, departureAt);
 
     // Um pedido mais recente já definiu a rota deste motorista hoje: este
-    // resultado chegou tarde e não pode desfazer o que veio depois (ADR-0103).
-    const vigente = await this.currentIfNewer(plan);
-    if (vigente) return toRoutePlanView(vigente);
+    // resultado chegou tarde e não pode desfazer o que veio depois (ADR-0103),
+    // e a gravação disputa a versão com quem estiver correndo junto (ADR-0113).
+    const gravado = await this.persist(plan);
+    if (!gravado) return toRoutePlanView((await this.currentPlan(plan))!);
 
-    await this.plans.save(plan);
-    const planSnapshot = plan.snapshot();
+    const planSnapshot = gravado.snapshot();
     this.metrics.observePlanOutcome(planSnapshot.status);
     if (planSnapshot.status === 'partial') {
       // Log distinto do sucesso completo (ADR-0110): quem opera precisa achar
@@ -195,40 +196,86 @@ export class OptimizeRouteUseCase {
       tenantId: command.tenantId,
       actorId: command.actorId,
       action: 'route.optimized',
-      resource: `route-plan:${plan.id}`,
+      resource: `route-plan:${planSnapshot.id}`,
       metadata: {
-        stops: plan.snapshot().stops.length,
-        score: plan.snapshot().score,
-        strategy: plan.snapshot().strategy,
+        stops: planSnapshot.stops.length,
+        score: planSnapshot.score,
+        strategy: planSnapshot.strategy,
+        version: planSnapshot.version,
         vehicles: command.vehicles?.length ?? 1,
-        unassigned: plan.snapshot().params.unassignedCount ?? 0,
+        unassigned: planSnapshot.params.unassignedCount ?? 0,
       },
     });
-    return toRoutePlanView(plan);
+    return toRoutePlanView(gravado);
   }
 
   /**
-   * Rota vigente do motorista quando ela nasceu de um pedido **mais recente**
-   * que este — caso em que este resultado é descartado.
+   * Grava o plano disputando a versão da rota do motorista (ADR-0113).
    *
-   * Descartar, e não gravar marcado como superado, é deliberado: `route_plans`
-   * alimenta o read model de KPIs (ADR-0092), e dois planos para as mesmas
-   * entregas contariam a economia duas vezes.
+   * Devolve o plano gravado — já **na versão que ficou** —, ou `null` quando
+   * este resultado foi descartado por ter nascido de um pedido anterior ao da
+   * rota vigente.
+   *
+   * O laço existe porque perder a versão para outro processo não decide nada
+   * sozinho: relendo, ou este resultado passa a ser o obsoleto, ou ganha a
+   * versão seguinte. Sem o laço, uma corrida perdida viraria um resultado
+   * descartado sem que ninguém tivesse pedido nada mais recente.
    */
-  private async currentIfNewer(plan: RoutePlan): Promise<RoutePlan | null> {
-    const s = plan.snapshot();
-    if (!s.driverScoped) return null;
+  private async persist(plan: RoutePlan): Promise<RoutePlan | null> {
+    // O plano do despacho não é a rota de ninguém: vários por dia são
+    // legítimos, e não há versão a disputar.
+    if (!plan.snapshot().driverScoped) {
+      await this.plans.save(plan);
+      return plan;
+    }
 
-    const vigente = await this.plans.findLatestRequestedForDriver(
-      s.tenantId,
-      s.driverId,
-      s.operationalDay,
+    for (let tentativa = 1; tentativa <= MAX_WRITE_ATTEMPTS; tentativa++) {
+      const atual = await this.currentPlan(plan);
+      const decisao = decidePlanWrite(plan, atual);
+      if (decisao.action === 'discard') {
+        this.logDiscard(plan, decisao.winner, decisao.reason);
+        return null;
+      }
+
+      const candidato = plan.withVersion(decisao.version);
+      if ((await this.plans.save(candidato)) === 'saved') {
+        this.metrics.observePlanWrite('saved');
+        return candidato;
+      }
+      // Alguém gravou esta versão primeiro. Relê e decide de novo.
+      this.logger.debug(
+        `Plano ${plan.id}: versão ${decisao.version} tomada por outro processo ` +
+          `(tentativa ${tentativa}/${MAX_WRITE_ATTEMPTS}).`,
+      );
+    }
+
+    // Esgotar as tentativas significa disputa contínua pela mesma rota. Manter
+    // o resultado seria gravar por cima de quem chegou depois; descartar é o
+    // mesmo desfecho de qualquer outro resultado que perdeu.
+    const vencedor = await this.currentPlan(plan);
+    if (vencedor) this.logDiscard(plan, vencedor, 'stale');
+    return null;
+  }
+
+  /** Rota vigente do motorista no dia — a de maior versão (ADR-0113). */
+  private async currentPlan(plan: RoutePlan): Promise<RoutePlan | null> {
+    const s = plan.snapshot();
+    return this.plans.findLatestRequestedForDriver(s.tenantId, s.driverId, s.operationalDay);
+  }
+
+  /**
+   * Log do descarte nomeando **as duas** rotas (ADR-0113): sem a vencedora, o
+   * registro diz que algo foi jogado fora e não deixa reconstruir por quê.
+   */
+  private logDiscard(descartado: RoutePlan, vencedor: RoutePlan, motivo: PlanDiscardReason): void {
+    this.metrics.observePlanWrite('discarded');
+    const d = descartado.snapshot();
+    const v = vencedor.snapshot();
+    this.logger.warn(
+      `Plano descartado (${motivo}): ${d.id} pedido em ${d.requestedAt.toISOString()} perde para ` +
+        `${v.id} v${v.version}, pedido em ${v.requestedAt.toISOString()} ` +
+        `(motorista ${d.driverId ?? 'autônomo'}, dia ${d.operationalDay}).`,
     );
-    if (!vigente) return null;
-    // `>` e não `>=`: pedidos no mesmo milissegundo são empate, e o que chega
-    // por último grava — é o comportamento anterior, e não há ordem a preservar
-    // entre dois pedidos simultâneos.
-    return vigente.requestedAt > s.requestedAt ? vigente : null;
   }
 
   /**

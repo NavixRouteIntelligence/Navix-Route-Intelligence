@@ -7,7 +7,7 @@ import { resolveRoutingProfile } from '../domain/routing-profile';
 import type { OptimizerMetrics } from '../infrastructure/observability/optimizer-metrics';
 import { ManualStrategy } from '../infrastructure/strategies/manual.strategy';
 import { NearestNeighbor2OptStrategy } from '../infrastructure/strategies/nearest-neighbor-2opt.strategy';
-import type { RoutePlan } from '../domain/route-plan';
+import { RoutePlan } from '../domain/route-plan';
 import type { AppConfigService } from '../../../shared/config/app-config.service';
 import type { DeliveryGatewayPort } from './ports/delivery-gateway.port';
 import type { VehicleCapacityPort } from './ports/vehicle-capacity.port';
@@ -22,16 +22,23 @@ function build(
   routing?: RoutingProviderPort,
   vehicles?: VehicleCapacityPort,
   entregasGateway?: DeliveryGatewayPort,
+  // Sobrescreve parte do repositório: é o que permite simular outro processo
+  // gravando no meio da corrida (ADR-0113).
+  planosOverride?: Partial<RoutePlanRepositoryPort>,
 ) {
   const saved: RoutePlan[] = [];
   const plans: RoutePlanRepositoryPort = {
-    save: async (p) => void saved.push(p),
+    save: async (p) => {
+      saved.push(p);
+      return 'saved' as const;
+    },
     findById: async () => null,
     findAll: async (): Promise<PagedResult<RoutePlan>> => ({ items: [], total: 0 }),
     findActiveForDriver: async () => null,
     findActiveForDrivers: async () => new Map(),
     findLatestContainingDelivery: async () => null,
     findLatestRequestedForDriver: async () => vigente,
+    ...planosOverride,
   };
   const gateway: DeliveryGatewayPort = {
     // Devolve as entregas em ordem **invertida** de propósito: é o que a busca
@@ -60,6 +67,7 @@ function build(
     observeSolve: jest.fn(),
     markInfeasible: jest.fn(),
     observePlanOutcome: jest.fn(),
+    observePlanWrite: jest.fn(),
   } as unknown as OptimizerMetrics;
   const solver = new RouteSolver(
     routing ?? new HaversineRoutingProvider(),
@@ -783,5 +791,145 @@ describe('OptimizeRouteUseCase — demanda real das entregas', () => {
     // uma rota que ninguém sabe quem vai levar.
     expect(view.capacity?.capacityKg).toBeNull();
     expect(view.capacity?.feasible).toBe(true);
+  });
+});
+
+// NAV-4.13 / ADR-0113: entre ler a rota vigente e gravar havia uma janela, e
+// dois processos cabiam nela. A API escala por processo (`concurrency: 1` em
+// cada worker), então isto não é hipótese: reproduzido com duas instâncias,
+// seis rodadas, seis pares de planos gravados para o mesmo motorista e dia.
+describe('OptimizeRouteUseCase — concorrência entre gravações', () => {
+  const FICHA = 'ficha-maria';
+  const PEDIDO_ANTIGO = new Date('2026-08-03T09:00:00.000Z');
+  const PEDIDO_NOVO = new Date('2026-08-03T09:05:00.000Z');
+  const paradas = [
+    { id: S1, latitude: 0, longitude: 0 },
+    { id: S2, latitude: 0, longitude: 2 },
+    { id: S3, latitude: 0, longitude: 1 },
+  ];
+
+  function comando(over: Record<string, unknown> = {}) {
+    return {
+      tenantId: 't1',
+      actorId: 'u1',
+      driverId: FICHA,
+      driverScoped: true,
+      stops: paradas,
+      ...over,
+    };
+  }
+
+  /** Plano de domínio para servir de "rota vigente" nos testes. */
+  function vigenteCom(requestedAt: Date, version: number): RoutePlan {
+    return RoutePlan.create({
+      tenantId: 't1',
+      driverId: FICHA,
+      driverScoped: true,
+      requestedAt,
+      version,
+      strategy: 'nearest-neighbor-2opt',
+      params: { averageSpeedKmh: 30, serviceTimeMinutes: 5, hasOrigin: false },
+      stops: [],
+      metrics: { totalDistanceKm: 1, totalTimeMinutes: 1, stops: 0 },
+      baseline: { totalDistanceKm: 1, totalTimeMinutes: 1, stops: 0 },
+      savings: { distanceKm: 0, distancePct: 0, timeMinutes: 0, timePct: 0 },
+      score: 1,
+      explanation: 'vigente',
+    });
+  }
+
+  it('a rota do motorista nasce na versão 1 e cresce a cada substituição', async () => {
+    const { uc, saved } = build(vigenteCom(PEDIDO_ANTIGO, 4));
+
+    await uc.execute(comando({ requestedAt: PEDIDO_NOVO }));
+
+    expect(saved[0].snapshot().version).toBe(5);
+  });
+
+  // O banco recusa a versão: outro processo gravou primeiro. Relendo, o pedido
+  // deste resultado ainda é o mais recente, então ele fica — na versão seguinte.
+  it('perder a versão para outro processo não descarta o resultado mais recente', async () => {
+    const gravados: RoutePlan[] = [];
+    let vigente = vigenteCom(PEDIDO_ANTIGO, 1);
+    const { uc } = build(null, undefined, undefined, undefined, {
+      findLatestRequestedForDriver: async () => vigente,
+      save: async (p) => {
+        // A primeira tentativa perde: alguém gravou a versão 2 nesse intervalo.
+        if (gravados.length === 0 && p.snapshot().version === 2) {
+          vigente = vigenteCom(PEDIDO_ANTIGO, 2);
+          return 'version-taken' as const;
+        }
+        gravados.push(p);
+        return 'saved' as const;
+      },
+    });
+
+    await uc.execute(comando({ requestedAt: PEDIDO_NOVO }));
+
+    expect(gravados).toHaveLength(1);
+    expect(gravados[0].snapshot().version).toBe(3);
+  });
+
+  // A mesma corrida, com o outro processo trazendo um pedido MAIS recente:
+  // agora quem perde a versão é quem tem de sair.
+  it('perder a versão para um pedido mais recente descarta este resultado', async () => {
+    const gravados: RoutePlan[] = [];
+    let vigente = vigenteCom(PEDIDO_ANTIGO, 1);
+    const { uc } = build(null, undefined, undefined, undefined, {
+      findLatestRequestedForDriver: async () => vigente,
+      save: async (p) => {
+        if (gravados.length === 0 && p.snapshot().version === 2) {
+          vigente = vigenteCom(new Date(PEDIDO_NOVO.getTime() + 60_000), 2);
+          return 'version-taken' as const;
+        }
+        gravados.push(p);
+        return 'saved' as const;
+      },
+    });
+
+    const view = await uc.execute(comando({ requestedAt: PEDIDO_NOVO }));
+
+    expect(gravados).toHaveLength(0);
+    expect(view.version).toBe(2);
+  });
+
+  // Disputa que não termina: em vez de gravar por cima de quem chegou depois,
+  // o resultado sai como qualquer outro que perdeu.
+  it('disputa contínua termina em descarte, não em gravação forçada', async () => {
+    let versao = 1;
+    const { uc } = build(null, undefined, undefined, undefined, {
+      findLatestRequestedForDriver: async () => vigenteCom(PEDIDO_ANTIGO, versao),
+      save: async () => {
+        versao += 1;
+        return 'version-taken' as const;
+      },
+    });
+
+    const view = await uc.execute(comando({ requestedAt: PEDIDO_NOVO }));
+
+    // Nada gravado, e quem chamou recebe a rota que vale.
+    expect(view.version).toBe(versao);
+  });
+
+  // Repetição: o mesmo pedido processado duas vezes. A segunda não acrescenta
+  // rota — o que é o que torna reprocessar um job seguro.
+  it('o mesmo pedido processado duas vezes grava uma rota só', async () => {
+    const gravados: RoutePlan[] = [];
+    let vigente: RoutePlan | null = null;
+    const repo: Partial<RoutePlanRepositoryPort> = {
+      findLatestRequestedForDriver: async () => vigente,
+      save: async (p) => {
+        gravados.push(p);
+        vigente = p;
+        return 'saved' as const;
+      },
+    };
+
+    const primeira = build(null, undefined, undefined, undefined, repo);
+    await primeira.uc.execute(comando({ requestedAt: PEDIDO_NOVO }));
+    const segunda = build(null, undefined, undefined, undefined, repo);
+    await segunda.uc.execute(comando({ requestedAt: PEDIDO_NOVO }));
+
+    expect(gravados).toHaveLength(1);
   });
 });
