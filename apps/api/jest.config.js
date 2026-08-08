@@ -9,6 +9,9 @@ module.exports = {
   moduleNameMapper: {
     '^@navix/contracts$': '<rootDir>/../../packages/contracts/src/index.ts',
   },
+  // Rede real falha na hora, dizendo qual URL foi pedida (ADR-0115). Quem
+  // precisa de rede num teste dubla `global.fetch`, como já se faz.
+  setupFilesAfterEnv: ['<rootDir>/test/setup-no-network.ts'],
   collectCoverageFrom: [
     'src/**/*.ts',
     '!src/**/*.module.ts',
