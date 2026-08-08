@@ -98,7 +98,8 @@ describe('validateEnv — guarda de produção (ADR-0052)', () => {
   });
 
   it('recusa produção quando a variável é simplesmente esquecida', () => {
-    const { OPTIMIZER_QUEUE_DRIVER: _omitida, ...semFila } = prodEnv;
+    const semFila: Record<string, unknown> = { ...prodEnv };
+    delete semFila.OPTIMIZER_QUEUE_DRIVER;
 
     // É este o caso real: ninguém escreve `inprocess`, apenas não escreve nada.
     expect(() => validateEnv(semFila)).toThrow(/OPTIMIZER_QUEUE_DRIVER.*bullmq/s);
