@@ -1,9 +1,18 @@
 import type { PagedResult, PageParams } from '../../../../shared/kernel/pagination';
 import type { RoutePlan } from '../route-plan';
 
+/**
+ * Desfecho de uma gravação (ADR-0113).
+ *
+ * `version-taken` é o banco recusando: outro processo gravou esta versão da
+ * rota deste motorista entre a leitura e a escrita. Não é erro — é a corrida
+ * sendo perdida, e quem perde relê e decide de novo.
+ */
+export type PlanSaveResult = 'saved' | 'version-taken';
+
 /** Port do repositório de route plans. Escopado por `tenantId`. */
 export interface RoutePlanRepositoryPort {
-  save(plan: RoutePlan): Promise<void>;
+  save(plan: RoutePlan): Promise<PlanSaveResult>;
   findById(tenantId: string, id: string): Promise<RoutePlan | null>;
   findAll(tenantId: string, page: PageParams): Promise<PagedResult<RoutePlan>>;
 
@@ -11,12 +20,17 @@ export interface RoutePlanRepositoryPort {
    * Rota vigente de um motorista no dia operacional (ADR-0098).
    *
    * `driverId` nulo é o motorista **autônomo**, que não tem ficha: nesse caso a
-   * busca é pelos planos sem motorista do tenant, que é o tenant dele — a
-   * organização tem uma pessoa só. Num tenant de frota isso não vaza rota
-   * alheia, porque plano de frota também tem `driver_id` nulo e é justamente o
-   * que o autônomo nunca cria.
+   * busca é pelos planos sem motorista do tenant, que é o tenant dele.
    *
-   * Devolve o mais recente do dia, ou `null` quando não há rota preparada.
+   * Só olha planos `driverScoped` (ADR-0113). O comentário anterior sustentava
+   * que plano de frota não vazava aqui "porque é justamente o que o autônomo
+   * nunca cria" — ele não cria, mas o despacho do mesmo tenant cria, e plano de
+   * frota também tem `driver_id` nulo. Verificado ao vivo: bastava o despacho
+   * roteirizar a frota para a rota do autônomo virar o plano do despacho.
+   *
+   * Devolve a **maior versão** do dia, ou `null` quando não há rota preparada.
+   * Antes ordenava por conclusão, que é o critério errado: um job pedido antes
+   * e concluído depois aparecia como a rota vigente.
    */
   findActiveForDriver(
     tenantId: string,

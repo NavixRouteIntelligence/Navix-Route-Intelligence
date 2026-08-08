@@ -14,6 +14,7 @@ export class OptimizerMetrics {
   private readonly stops: Histogram<'strategy'>;
   private readonly infeasible: Counter<string>;
   private readonly planOutcome: Counter<'status'>;
+  private readonly planWrite: Counter<'outcome'>;
   private readonly reoptimizeTrigger: Histogram<string>;
   private readonly reoptimizeSkipped: Counter<'reason'>;
 
@@ -47,6 +48,15 @@ export class OptimizerMetrics {
       labelNames: ['status'] as const,
       registers,
     });
+    // Quem ficou gravado × quem chegou tarde (ADR-0113). Antes o descarte era
+    // um `return` silencioso: não havia como saber que a rota de um motorista
+    // estava sendo recalculada mais vezes do que o solver conseguia entregar.
+    this.planWrite = new Counter({
+      name: 'optimizer_plan_write_total',
+      help: 'Gravações de plano, por desfecho (saved | discarded).',
+      labelNames: ['outcome'] as const,
+      registers,
+    });
     // SLA da reotimização dinâmica (ADR-0083): do evento de domínio até o job
     // enfileirado — inclui o debounce, que é o maior componente controlável.
     this.reoptimizeTrigger = new Histogram({
@@ -71,6 +81,15 @@ export class OptimizerMetrics {
   /** Registra o desfecho do plano (ADR-0110). Falha não chega aqui: não há plano. */
   observePlanOutcome(status: 'completed' | 'partial'): void {
     this.planOutcome.inc({ status });
+  }
+
+  /**
+   * Gravações que ficaram vs. resultados descartados por chegarem tarde
+   * (ADR-0113). Descarte é desfecho normal, mas uma taxa que sobe diz que a
+   * frota está pedindo reotimização mais rápido do que o solver entrega.
+   */
+  observePlanWrite(outcome: 'saved' | 'discarded'): void {
+    this.planWrite.inc({ outcome });
   }
 
   markInfeasible(): void {

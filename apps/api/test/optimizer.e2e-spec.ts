@@ -48,11 +48,34 @@ import { OrOpt2OptStrategy } from '../src/modules/optimizer/infrastructure/strat
 import { GetActiveRoutePlanUseCase } from '../src/modules/optimizer/application/get-active-route-plan.use-case';
 import { DRIVER_ROSTER_LINK } from '../src/modules/optimizer/application/ports/driver-roster-link.port';
 import { OptimizerController } from '../src/modules/optimizer/interface/optimizer.controller';
+import type { PlanSaveResult } from '../src/modules/optimizer/domain/ports/route-plan-repository.port';
 
 class InMemoryRoutePlanRepository implements RoutePlanRepositoryPort {
   private readonly store = new Map<string, RoutePlan>();
-  async save(plan: RoutePlan): Promise<void> {
+
+  /**
+   * Espelha o índice único parcial `uq_route_plans_driver_day_version`
+   * (ADR-0113): duas rotas com a mesma versão para o mesmo motorista e dia não
+   * cabem. Sem isto o e2e testaria uma regra que o banco tem e o fake não.
+   */
+  async save(plan: RoutePlan): Promise<PlanSaveResult> {
+    const s = plan.snapshot();
+    if (s.driverScoped) {
+      const conflito = [...this.store.values()]
+        .map((p) => p.snapshot())
+        .some(
+          (o) =>
+            o.id !== s.id &&
+            o.driverScoped &&
+            o.tenantId === s.tenantId &&
+            o.driverId === s.driverId &&
+            o.operationalDay === s.operationalDay &&
+            o.version === s.version,
+        );
+      if (conflito) return 'version-taken';
+    }
     this.store.set(plan.id, plan);
+    return 'saved';
   }
   async findById(tenantId: string, id: string): Promise<RoutePlan | null> {
     const p = this.store.get(id);
@@ -65,7 +88,7 @@ class InMemoryRoutePlanRepository implements RoutePlanRepositoryPort {
       total: items.length,
     };
   }
-  /** Espelha o repositório real: mais recente do motorista no dia (ADR-0098). */
+  /** Espelha o repositório real: maior versão do motorista no dia (ADR-0113). */
   async findActiveForDriver(
     tenantId: string,
     driverId: string | null,
@@ -75,9 +98,12 @@ class InMemoryRoutePlanRepository implements RoutePlanRepositoryPort {
       .map((p) => p.snapshot())
       .filter(
         (s) =>
-          s.tenantId === tenantId && s.driverId === driverId && s.operationalDay === operationalDay,
+          s.tenantId === tenantId &&
+          s.driverId === driverId &&
+          s.operationalDay === operationalDay &&
+          s.driverScoped,
       )
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      .sort((a, b) => b.version - a.version);
     return matches.length > 0 ? (this.store.get(matches[0].id) ?? null) : null;
   }
 
@@ -109,7 +135,9 @@ class InMemoryRoutePlanRepository implements RoutePlanRepositoryPort {
           s.operationalDay === operationalDay &&
           s.driverScoped,
       )
-      .sort((a, b) => b.requestedAt.getTime() - a.requestedAt.getTime());
+      // Pela versão, como o repositório real: é dela que a próxima gravação
+      // deriva o número (ADR-0113).
+      .sort((a, b) => b.version - a.version);
     return matches.length > 0 ? (this.store.get(matches[0].id) ?? null) : null;
   }
 
@@ -318,6 +346,7 @@ describe('Optimizer (e2e, assíncrono)', () => {
             observeSolve: () => undefined,
             markInfeasible: () => undefined,
             observePlanOutcome: () => undefined,
+            observePlanWrite: () => undefined,
           },
         },
       ],
@@ -631,6 +660,85 @@ describe('Optimizer (e2e, assíncrono)', () => {
       expect(ativa.body.data.stops.map((s: { deliveryId: string }) => s.deliveryId)).toEqual(
         escolhida,
       );
+    });
+  });
+
+  // NAV-4.13 / ADR-0113: a rota do motorista tem versão, e pedidos concorrentes
+  // ou repetidos não produzem duas rotas vigentes para o mesmo dia.
+  describe('versão da rota e concorrência (ADR-0113)', () => {
+    it('a primeira rota do dia é a versão 1, e cada substituição incrementa', async () => {
+      const primeira = await pollJob(
+        app,
+        (
+          await request(app.getHttpServer())
+            .post('/api/v1/route-plans/mine')
+            .send({ deliveryIds: MINHAS })
+            .expect(202)
+        ).body.data.jobId,
+      );
+      const v1 = await request(app.getHttpServer())
+        .get(`/api/v1/route-plans/${primeira.routePlanId}`)
+        .expect(200);
+
+      const segunda = await pollJob(
+        app,
+        (
+          await request(app.getHttpServer())
+            .post('/api/v1/route-plans/mine')
+            .send({ deliveryIds: MINHAS })
+            .expect(202)
+        ).body.data.jobId,
+      );
+      const v2 = await request(app.getHttpServer())
+        .get(`/api/v1/route-plans/${segunda.routePlanId}`)
+        .expect(200);
+
+      expect(v2.body.data.version).toBe(v1.body.data.version + 1);
+    });
+
+    it('a rota ativa é a de maior versão, não a que terminou por último', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/route-plans/mine')
+        .send({ deliveryIds: MINHAS })
+        .expect(202);
+      const job = await pollJob(app, res.body.data.jobId);
+
+      const ativa = await request(app.getHttpServer())
+        .get('/api/v1/route-plans/mine/active')
+        .expect(200);
+
+      expect(ativa.body.data.id).toBe(job.routePlanId);
+    });
+
+    // O plano do despacho tem `driver_id` nulo, igual ao do motorista autônomo.
+    // Antes, bastava despachar a frota para a "rota ativa" do autônomo virar o
+    // plano do despacho — verificado ao vivo antes da correção.
+    it('plano do despacho não vira a rota ativa do motorista', async () => {
+      const minha = await pollJob(
+        app,
+        (
+          await request(app.getHttpServer())
+            .post('/api/v1/route-plans/mine')
+            .send({ deliveryIds: MINHAS })
+            .expect(202)
+        ).body.data.jobId,
+      );
+      // Depois dela: o despacho roteiriza a frota, sem motorista.
+      await pollJob(
+        app,
+        (
+          await request(app.getHttpServer())
+            .post('/api/v1/route-plans')
+            .send({ deliveryIds: MINHAS })
+            .expect(202)
+        ).body.data.jobId,
+      );
+
+      const ativa = await request(app.getHttpServer())
+        .get('/api/v1/route-plans/mine/active')
+        .expect(200);
+
+      expect(ativa.body.data.id).toBe(minha.routePlanId);
     });
   });
 
