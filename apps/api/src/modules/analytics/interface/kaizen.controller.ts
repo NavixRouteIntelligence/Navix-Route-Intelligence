@@ -1,9 +1,27 @@
 import { createHash } from 'node:crypto';
 
-import { Controller, Get, Header, Inject, Query, Req, Res, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Header,
+  HttpCode,
+  Inject,
+  Post,
+  Put,
+  Query,
+  Req,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
-import type { AuthenticatedUser, KaizenDailyView } from '@navix/contracts';
+import type {
+  AuthenticatedUser,
+  KaizenDailyView,
+  KaizenHistoryEntryView,
+  KaizenPreferencesView,
+} from '@navix/contracts';
 import type { Request, Response } from 'express';
 
 import { AUDIT_LOG, type AuditLogPort } from '../../../shared/audit/audit-log.port';
@@ -12,6 +30,12 @@ import { JwtAuthGuard } from '../../../shared/security/jwt-auth.guard';
 import { Roles } from '../../../shared/security/roles.decorator';
 import { RolesGuard } from '../../../shared/security/roles.guard';
 import { GetKaizenDailyUseCase } from '../application/get-kaizen-daily.use-case';
+import {
+  GetKaizenHistoryUseCase,
+  RecordKaizenFeedbackUseCase,
+  SetKaizenPreferencesUseCase,
+} from '../application/kaizen-feedback.use-cases';
+import { KaizenFeedbackDto, KaizenPreferencesDto } from './dto/kaizen-feedback.dto';
 
 /**
  * Resumo diário do **próprio** motorista (ADR-0120).
@@ -28,6 +52,9 @@ import { GetKaizenDailyUseCase } from '../application/get-kaizen-daily.use-case'
 export class KaizenController {
   constructor(
     private readonly daily: GetKaizenDailyUseCase,
+    private readonly feedback: RecordKaizenFeedbackUseCase,
+    private readonly historico: GetKaizenHistoryUseCase,
+    private readonly preferencias: SetKaizenPreferencesUseCase,
     @Inject(AUDIT_LOG) private readonly audit: AuditLogPort,
   ) {}
 
@@ -72,5 +99,67 @@ export class KaizenController {
     });
 
     return { data: view };
+  }
+
+  /**
+   * Resposta ao Kaizen do dia (ADR-0121). **Opcional**: não responder não tem
+   * consequência nenhuma, e não há nada na API que insista.
+   */
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  @Post('daily/feedback')
+  @Roles('driver')
+  @HttpCode(204)
+  @ApiOperation({ summary: 'Responder à sugestão do dia (opcional)' })
+  async postFeedback(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: KaizenFeedbackDto,
+  ): Promise<void> {
+    await this.feedback.execute({
+      tenantId: user.tenantId,
+      userId: user.id,
+      day: dto.day,
+      code: dto.code,
+      verdict: dto.verdict,
+      reason: dto.reason ?? null,
+    });
+
+    // Auditável, e sem conteúdo: fica o rasto de que houve resposta, nunca uma
+    // cópia da opinião fora da tabela que a guarda com finalidade declarada.
+    await this.audit.record({
+      tenantId: user.tenantId,
+      actorId: user.id,
+      action: 'kaizen.feedback-recorded',
+      resource: `kaizen-daily:${dto.day}`,
+      metadata: { verdict: dto.verdict },
+    });
+  }
+
+  /** Últimos resumos e o que a pessoa respondeu, quando respondeu. */
+  @Get('history')
+  @Roles('driver')
+  @Header('Cache-Control', 'private, no-store')
+  @ApiOperation({ summary: 'Histórico dos últimos resumos do próprio motorista' })
+  async getHistory(
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<{ data: KaizenHistoryEntryView[] }> {
+    const linhas = await this.historico.execute(user.tenantId, user.id);
+    return { data: linhas as KaizenHistoryEntryView[] };
+  }
+
+  /**
+   * Esconder as sugestões, mantendo os resultados.
+   *
+   * `PUT` e não `PATCH`: é um estado com um valor, e o cliente diz qual é —
+   * ligar e desligar têm de custar exatamente o mesmo.
+   */
+  @Put('preferences')
+  @Roles('driver')
+  @ApiOperation({ summary: 'Esconder ou mostrar as sugestões diárias' })
+  async putPreferences(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: KaizenPreferencesDto,
+  ): Promise<{ data: KaizenPreferencesView }> {
+    await this.preferencias.execute(user.tenantId, user.id, dto.hideRecommendations);
+    return { data: { hideRecommendations: dto.hideRecommendations } };
   }
 }

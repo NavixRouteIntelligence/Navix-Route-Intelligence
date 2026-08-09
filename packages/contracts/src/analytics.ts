@@ -258,3 +258,32 @@ export interface KaizenDailyView {
   /** Vazio significa que nada foi omitido nem aproximado. */
   reasons: KaizenConfidenceReasonView[];
 }
+
+/** Resposta ao Kaizen do dia (ADR-0121). Opcional, e sem texto livre. */
+export type KaizenVerdictView = 'useful' | 'not-applicable';
+
+/** Motivos fechados para «não se aplica». */
+export type KaizenReasonView = 'wrong-data' | 'already-done' | 'out-of-context' | 'other';
+
+export interface KaizenFeedbackRequestView {
+  day: string;
+  code: KaizenCodeView;
+  verdict: KaizenVerdictView;
+  /** Só acompanha `not-applicable`. */
+  reason?: KaizenReasonView;
+}
+
+/** Um dia do histórico: o resultado, e a resposta quando houve. */
+export interface KaizenHistoryEntryView {
+  day: string;
+  delivered: number;
+  failed: number;
+  code: KaizenCodeView | null;
+  verdict: KaizenVerdictView | null;
+  reason: KaizenReasonView | null;
+}
+
+export interface KaizenPreferencesView {
+  /** Esconde as sugestões; os resultados continuam a aparecer. */
+  hideRecommendations: boolean;
+}
