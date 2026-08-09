@@ -227,6 +227,72 @@ describe('Isolamento multi-tenant via RLS (integração)', () => {
     });
   });
 
+  // T7.5 / ADR-0120: o resumo diário é sobre uma pessoa. A rota não tem
+  // parâmetro de motorista, e por baixo a RLS impede que a linha de um tenant
+  // sequer exista para outro.
+  describe('driver_kpi_daily (ADR-0117/0120)', () => {
+    const LOGIN_A = randomUUID();
+
+    beforeAll(async () => {
+      await ds.transaction(async (m) => {
+        await setTenant(m, TENANT_A);
+        await m.query(
+          `INSERT INTO driver_kpi_daily (tenant_id, driver_id, user_id, day, delivered, failed, on_time)
+           VALUES ($1, NULL, $2, current_date, 7, 0, 7)`,
+          [TENANT_A, LOGIN_A],
+        );
+      });
+    });
+
+    it('o tenant B não enxerga o resumo diário do tenant A', async () => {
+      const rows = await ds.transaction(async (m) => {
+        await setTenant(m, TENANT_B);
+        return m.query(`SELECT delivered FROM driver_kpi_daily WHERE user_id = $1`, [LOGIN_A]);
+      });
+      expect(rows).toHaveLength(0);
+    });
+
+    it('o tenant A enxerga o próprio', async () => {
+      const rows = await ds.transaction(async (m) => {
+        await setTenant(m, TENANT_A);
+        return m.query(`SELECT delivered FROM driver_kpi_daily WHERE user_id = $1`, [LOGIN_A]);
+      });
+      expect(rows).toHaveLength(1);
+    });
+
+    it('sem contexto de tenant, nada é visível', async () => {
+      const rows = await ds.transaction((m) =>
+        m.query(`SELECT delivered FROM driver_kpi_daily WHERE user_id = $1`, [LOGIN_A]),
+      );
+      expect(rows).toHaveLength(0);
+    });
+
+    // A ADR-0117 pôs o sujeito na chave: exatamente uma das colunas preenchida.
+    it('o banco recusa uma linha sem sujeito, e outra com dois', async () => {
+      await expect(
+        ds.transaction(async (m) => {
+          await setTenant(m, TENANT_A);
+          return m.query(
+            `INSERT INTO driver_kpi_daily (tenant_id, driver_id, user_id, day)
+             VALUES ($1, NULL, NULL, current_date - 1)`,
+            [TENANT_A],
+          );
+        }),
+      ).rejects.toThrow();
+
+      await expect(
+        ds.transaction(async (m) => {
+          await setTenant(m, TENANT_A);
+          return m.query(
+            `INSERT INTO driver_kpi_daily (tenant_id, driver_id, user_id, day)
+             VALUES ($1, $2, $2, current_date - 2)`,
+            [TENANT_A, LOGIN_A],
+          );
+        }),
+      ).rejects.toThrow();
+    });
+  });
+
   describe('audit_log (ADR-0054)', () => {
     it('o tenant A só enxerga a própria auditoria (nem a de B, nem a de sistema)', async () => {
       const rows = await ds.transaction(async (m) => {

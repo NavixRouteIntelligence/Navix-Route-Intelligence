@@ -197,3 +197,64 @@ export interface KaizenRecommendationView {
   evidence: KaizenEvidenceView[];
   action: KaizenActionView | null;
 }
+
+/** Diferença face à própria referência (ADR-0120). */
+export interface KaizenDeltaView {
+  absolute: number | null;
+  /** Fração: 0,25 = +25%. `null` quando a referência é zero ou ausente. */
+  relative: number | null;
+  trend: DriverTrend;
+}
+
+/** Indicador que saiu do habitual. No máximo dois por dia. */
+export interface KaizenHighlightView {
+  metric: 'delivered' | 'successRate' | 'onTimeRate' | 'activeMinutes';
+  trend: DriverTrend;
+  /** `true` quando o indicador só informa e não gera ação. */
+  informative: boolean;
+}
+
+/**
+ * Quanto se pode acreditar no resumo — **qualidade do dado**, nunca juízo
+ * sobre o dia de quem dirige.
+ */
+export type KaizenConfidenceView = 'high' | 'medium' | 'low';
+
+export type KaizenConfidenceReasonView =
+  'projection-pending' | 'activity-unknown' | 'short-history' | 'no-work';
+
+/** Métricas do dia. Contagens cruas; taxas derivadas. */
+export interface KaizenMetricsView {
+  delivered: number;
+  failed: number;
+  onTime: number;
+  successRate: number | null;
+  onTimeRate: number | null;
+  activeMinutes: number | null;
+  savings: DriverDaySavings | null;
+}
+
+/**
+ * Resumo diário do próprio motorista (ADR-0120).
+ *
+ * `GET /api/v1/me/kaizen/daily`. Não existe variante com `driverId`: quem
+ * pergunta é quem recebe.
+ */
+export interface KaizenDailyView {
+  day: string;
+  status: DriverDayState;
+  metrics: KaizenMetricsView;
+  /** Ausente quando o dia pedido não é o último trabalhado. */
+  baseline?: DriverPersonalBaseline;
+  deltas?: {
+    delivered: KaizenDeltaView;
+    successRate: KaizenDeltaView;
+    onTimeRate: KaizenDeltaView;
+    activeMinutes: KaizenDeltaView;
+  };
+  highlights: KaizenHighlightView[];
+  recommendation?: KaizenRecommendationView;
+  confidence: KaizenConfidenceView;
+  /** Vazio significa que nada foi omitido nem aproximado. */
+  reasons: KaizenConfidenceReasonView[];
+}

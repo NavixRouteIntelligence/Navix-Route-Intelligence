@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 
 import { GetDriverDailySnapshotUseCase } from './application/get-driver-daily-snapshot.use-case';
 import { GetDriverPerformanceUseCase } from './application/get-driver-performance.use-case';
+import { GetKaizenDailyUseCase } from './application/get-kaizen-daily.use-case';
 import { GetKpiSummaryUseCase } from './application/get-kpi-summary.use-case';
 import { KpiProjectionListener } from './application/kpi-projection.listener';
 import { RebuildKpisUseCase } from './application/rebuild-kpis.use-case';
@@ -12,6 +13,7 @@ import { RuleBasedKaizenAdvisor } from './infrastructure/advisor/rule-based-kaiz
 import { DriverKpiRepository } from './infrastructure/persistence/driver-kpi.repository';
 import { KpiRepository } from './infrastructure/persistence/kpi.repository';
 import { DriverPerformanceController } from './interface/driver-performance.controller';
+import { KaizenController } from './interface/kaizen.controller';
 import { KpiController } from './interface/kpi.controller';
 
 /**
@@ -24,11 +26,12 @@ import { KpiController } from './interface/kpi.controller';
  * pergunta que a tela faz, e paga por isso com a duplicação controlada do dado.
  */
 @Module({
-  controllers: [KpiController, DriverPerformanceController],
+  controllers: [KpiController, DriverPerformanceController, KaizenController],
   providers: [
     GetKpiSummaryUseCase,
     GetDriverPerformanceUseCase,
     GetDriverDailySnapshotUseCase,
+    GetKaizenDailyUseCase,
     RebuildKpisUseCase,
     KpiProjectionListener,
     { provide: KPI_REPOSITORY, useClass: KpiRepository },
