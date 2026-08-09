@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import type { DriverDailySnapshot, DriverDayState } from '@navix/contracts';
 
 import { BASELINE_DAYS, comparePersonalBaseline } from '../domain/driver-baseline';
+import { KAIZEN_ADVISOR, type KaizenAdvisorPort } from '../domain/ports/kaizen-advisor.port';
 
 /**
  * Calendário lido para trás, para encontrar sete dias **trabalhados**.
@@ -47,6 +48,7 @@ export class GetDriverDailySnapshotUseCase {
     @Inject(DRIVER_KPI_REPOSITORY) private readonly kpis: DriverKpiRepositoryPort,
     @Inject(TENANT_ACCOUNT_TYPE_READER) private readonly contas: TenantAccountTypeReaderPort,
     @Inject(TENANT_TIME_ZONE_READER) private readonly zonas: TenantTimeZoneReaderPort,
+    @Inject(KAIZEN_ADVISOR) private readonly advisor: KaizenAdvisorPort,
   ) {}
 
   /** `day` ausente = **ontem**, no fuso de quem opera (ADR-0105/0116). */
@@ -78,8 +80,21 @@ export class GetDriverDailySnapshotUseCase {
     const baseline = comparePersonalBaseline(janela);
     // A comparação é sempre do último dia **trabalhado**. Se o dia pedido não é
     // esse, ela não se aplica — e devolvê-la assim mesmo faria parecer que os
-    // números ao lado se referem ao dia que está no ecrã.
-    return baseline.day === dia ? { ...foto, baseline } : foto;
+    // números ao lado se referem ao dia que está no ecrã. A recomendação segue
+    // a mesma regra: aconselhar sobre um dia que não é o mais recente seria
+    // aconselhar sobre o passado.
+    if (baseline.day !== dia) return foto;
+
+    const recommendation = this.advisor.recommend({
+      state: foto.state,
+      delivered: linha.delivered,
+      failed: linha.failed,
+      activeMinutes: foto.activeMinutes,
+      savedKm: linha.savedKm,
+      plans: linha.plans,
+      baseline,
+    });
+    return { ...foto, baseline, recommendation };
   }
 
   private async ontem(tenantId: string, agora: Date): Promise<string> {

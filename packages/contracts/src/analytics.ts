@@ -123,6 +123,8 @@ export interface DriverDailySnapshot {
    * trabalho, e prendê-la a um dia arbitrário seria outra pergunta.
    */
   baseline?: DriverPersonalBaseline;
+  /** A melhoria escolhida para hoje (ADR-0119). Uma, ou nenhuma explicada. */
+  recommendation?: KaizenRecommendationView;
 }
 
 /**
@@ -150,4 +152,48 @@ export interface DriverPersonalBaseline {
   successRate: DriverIndicator;
   onTimeRate: DriverIndicator;
   activeMinutes: DriverIndicator;
+}
+
+/** Categoria da recomendação Kaizen, na ordem de prioridade (ADR-0119). */
+export type KaizenCategoryView =
+  | 'rest'
+  | 'delivery-failures'
+  | 'address-preparation'
+  | 'load-organization'
+  | 'fuel-maintenance'
+  | 'sustainability';
+
+/** Chave estável da mensagem. O texto vive no `pt_PT` da app, não aqui. */
+export type KaizenCodeView =
+  | 'rest.long-day'
+  | 'rest.longer-than-usual'
+  | 'failures.repeated'
+  | 'failures.first'
+  | 'load.follow-suggested-order'
+  | 'none.acknowledge'
+  | 'none.building-history'
+  | 'none.no-work';
+
+/** Métrica do payload que sustenta a recomendação. */
+export interface KaizenEvidenceView {
+  metric: string;
+  value: number | null;
+  baseline?: number | null;
+}
+
+/** Ação de **preparação** — nunca de ritmo. */
+export type KaizenActionView =
+  | { kind: 'plan-shorter-day' }
+  | { kind: 'review-failed-deliveries'; count: number }
+  | { kind: 'load-in-route-order' };
+
+/**
+ * Uma melhoria para hoje (ADR-0119). No máximo uma por dia, e sempre com a
+ * evidência que a produziu: dada a recomendação, dá para apontar os números.
+ */
+export interface KaizenRecommendationView {
+  code: KaizenCodeView;
+  category: KaizenCategoryView | null;
+  evidence: KaizenEvidenceView[];
+  action: KaizenActionView | null;
 }

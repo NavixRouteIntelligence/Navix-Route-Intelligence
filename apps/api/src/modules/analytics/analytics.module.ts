@@ -6,7 +6,9 @@ import { GetKpiSummaryUseCase } from './application/get-kpi-summary.use-case';
 import { KpiProjectionListener } from './application/kpi-projection.listener';
 import { RebuildKpisUseCase } from './application/rebuild-kpis.use-case';
 import { DRIVER_KPI_REPOSITORY } from './domain/ports/driver-kpi-repository.port';
+import { KAIZEN_ADVISOR } from './domain/ports/kaizen-advisor.port';
 import { KPI_REPOSITORY } from './domain/ports/kpi-repository.port';
+import { RuleBasedKaizenAdvisor } from './infrastructure/advisor/rule-based-kaizen.advisor';
 import { DriverKpiRepository } from './infrastructure/persistence/driver-kpi.repository';
 import { KpiRepository } from './infrastructure/persistence/kpi.repository';
 import { DriverPerformanceController } from './interface/driver-performance.controller';
@@ -31,6 +33,7 @@ import { KpiController } from './interface/kpi.controller';
     KpiProjectionListener,
     { provide: KPI_REPOSITORY, useClass: KpiRepository },
     { provide: DRIVER_KPI_REPOSITORY, useClass: DriverKpiRepository },
+    { provide: KAIZEN_ADVISOR, useClass: RuleBasedKaizenAdvisor },
   ],
 })
 export class AnalyticsModule {}
