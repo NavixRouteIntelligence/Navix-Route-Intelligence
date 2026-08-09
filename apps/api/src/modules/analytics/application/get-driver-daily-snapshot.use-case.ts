@@ -1,6 +1,17 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { DriverDailySnapshot, DriverDayState } from '@navix/contracts';
 
+import { BASELINE_DAYS, comparePersonalBaseline } from '../domain/driver-baseline';
+
+/**
+ * Calendário lido para trás, para encontrar sete dias **trabalhados**.
+ *
+ * Seis semanas de folga possível por semana trabalhada: quem entrega dois dias
+ * por semana ainda alcança a amostra. Ler mais barato não seria mais correto —
+ * seria uma referência construída com menos dias sem o dizer.
+ */
+const JANELA_DIAS = BASELINE_DAYS * 6;
+
 import {
   TENANT_ACCOUNT_TYPE_READER,
   type TenantAccountTypeReaderPort,
@@ -51,13 +62,24 @@ export class GetDriverDailySnapshotUseCase {
     // promessa de um dado que nunca vai chegar.
     if (!sujeito) return vazio(dia, 'no-work');
 
-    const linhas = await this.kpis.range(tenantId, sujeito, dia, dia);
+    // Uma janela, não duas consultas: a comparação precisa dos dias anteriores
+    // e a fotografia precisa do próprio dia. `JANELA_DIAS` é generoso porque a
+    // referência conta dias **trabalhados**, e folgas não entram — quem trabalha
+    // três dias por semana precisa de mais calendário para sete dias de trabalho.
+    const desde = recuar(dia, JANELA_DIAS);
+    const janela = await this.kpis.range(tenantId, sujeito, desde, dia);
+    const linhas = janela.filter((l) => l.day === dia);
     const linha = linhas[0];
     // Ausência de linha é **projeção pendente**, não dia sem trabalho: a
     // projeção materializa o dia do autónomo mesmo quando não houve nada.
     if (!linha) return vazio(dia, 'pending');
 
-    return toSnapshot(linha);
+    const foto = toSnapshot(linha);
+    const baseline = comparePersonalBaseline(janela);
+    // A comparação é sempre do último dia **trabalhado**. Se o dia pedido não é
+    // esse, ela não se aplica — e devolvê-la assim mesmo faria parecer que os
+    // números ao lado se referem ao dia que está no ecrã.
+    return baseline.day === dia ? { ...foto, baseline } : foto;
   }
 
   private async ontem(tenantId: string, agora: Date): Promise<string> {
@@ -81,6 +103,13 @@ export class GetDriverDailySnapshotUseCase {
     const conta = await this.contas.findAccountType(tenantId);
     return conta === 'driver' ? { kind: 'user', userId } : null;
   }
+}
+
+/** Calendário recuado, em dias. A janela é de calendário; a amostra, de trabalho. */
+function recuar(day: string, dias: number): string {
+  const d = new Date(`${day}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - dias);
+  return d.toISOString().slice(0, 10);
 }
 
 function vazio(day: string, state: DriverDayState): DriverDailySnapshot {

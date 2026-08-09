@@ -53,7 +53,7 @@ describe('GetDriverDailySnapshotUseCase', () => {
     expect(kpis.range).toHaveBeenCalledWith(
       TENANT,
       { kind: 'user', userId: LOGIN },
-      '2026-08-08',
+      expect.any(String),
       '2026-08-08',
     );
     expect(foto.delivered).toBe(5);
@@ -67,7 +67,7 @@ describe('GetDriverDailySnapshotUseCase', () => {
     expect(kpis.range).toHaveBeenCalledWith(
       TENANT,
       { kind: 'driver', driverId: FICHA },
-      '2026-08-08',
+      expect.any(String),
       '2026-08-08',
     );
   });
@@ -204,7 +204,7 @@ describe('GetDriverDailySnapshotUseCase', () => {
       expect(kpis.range).toHaveBeenCalledWith(
         TENANT,
         expect.anything(),
-        '2026-08-07',
+        expect.any(String),
         '2026-08-07',
       );
     });
@@ -217,7 +217,7 @@ describe('GetDriverDailySnapshotUseCase', () => {
       expect(kpis.range).toHaveBeenCalledWith(
         TENANT,
         expect.anything(),
-        '2026-08-08',
+        expect.any(String),
         '2026-08-08',
       );
     });
@@ -227,5 +227,54 @@ describe('GetDriverDailySnapshotUseCase', () => {
 
       expect((await uc.execute(TENANT, LOGIN, '2026-07-01')).day).toBe('2026-07-01');
     });
+  });
+});
+
+// T7.3 / ADR-0118: a comparação viaja junto com a fotografia, e só quando o dia
+// pedido é de facto o último trabalhado.
+describe('GetDriverDailySnapshotUseCase — comparação com o próprio histórico', () => {
+  function dias(n: number, delivered: number): DailyRawRow[] {
+    return Array.from({ length: n }, (_, i) =>
+      linha({
+        day: `2026-08-${String(i + 1).padStart(2, '0')}`,
+        delivered,
+        failed: 0,
+        onTime: delivered,
+      }),
+    );
+  }
+
+  it('o dia mais recente trabalhado traz a comparação', async () => {
+    const janela = [
+      ...dias(5, 10),
+      linha({ day: '2026-08-06', delivered: 20, failed: 0, onTime: 20 }),
+    ];
+    const { uc } = build({ linhas: janela });
+
+    const foto = await uc.execute(TENANT, LOGIN, '2026-08-06');
+
+    expect(foto.baseline?.day).toBe('2026-08-06');
+    expect(foto.baseline?.delivered).toMatchObject({
+      current: 20,
+      baseline: 10,
+      trend: 'improved',
+    });
+  });
+
+  it('um dia anterior não recebe a comparação de outro dia', async () => {
+    const { uc } = build({ linhas: dias(5, 10) });
+
+    const foto = await uc.execute(TENANT, LOGIN, '2026-08-02');
+
+    expect(foto.baseline).toBeUndefined();
+  });
+
+  it('sem histórico suficiente, os indicadores dizem que estão a construir', async () => {
+    const { uc } = build({ linhas: dias(2, 10) });
+
+    const foto = await uc.execute(TENANT, LOGIN, '2026-08-02');
+
+    expect(foto.baseline?.delivered.trend).toBe('building-history');
+    expect(foto.baseline?.delivered.baseline).toBeNull();
   });
 });
