@@ -140,8 +140,9 @@ List<KaizenBlock> composeKaizenSummary(
 }
 
 String _ontem(KaizenDaily d, AppLocalizations l10n) {
-  if (d.failed > 0)
+  if (d.failed > 0) {
     return l10n.kaizenYesterdayWithPending(d.delivered, d.failed);
+  }
   if (d.delivered > 0 && d.onTime == d.delivered) {
     return l10n.kaizenYesterdayAllInWindow(d.delivered);
   }
