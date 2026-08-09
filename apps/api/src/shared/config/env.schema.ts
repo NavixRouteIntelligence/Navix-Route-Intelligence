@@ -151,6 +151,16 @@ export const envSchema = z.object({
   OPTIMIZER_JOB_ATTEMPTS: z.coerce.number().int().positive().default(3),
   // Backoff exponencial inicial entre tentativas (ms).
   OPTIMIZER_JOB_BACKOFF_MS: z.coerce.number().int().positive().default(1000),
+  // --- Kaizen: resumo diário do motorista (ADR-0123) ---
+  // Interruptor da funcionalidade. `off` (default) mantém o resumo invisível:
+  // os endpoints respondem 404 e a projeção deixa de correr. Desligar **não**
+  // toca em rotas, entregas nem login — ver a nota do `KaizenEnabledGuard`.
+  //
+  // `autonomous`: só contas de motorista autónomo (`account_type = 'driver'`),
+  // que é o público desta frente e o recorte do piloto.
+  // `all`: qualquer motorista, incluindo os de frota.
+  KAIZEN_ROLLOUT: z.enum(['off', 'autonomous', 'all']).default('off'),
+
   // Zonas de risco (ADR-0024): JSON de [{latitude,longitude,radiusKm,penalty}].
   // Default vazio → sem efeito (no-op). Parseado/validado em AppConfigService.
   OPTIMIZER_RISK_ZONES: z.string().default('[]'),

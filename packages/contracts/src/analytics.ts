@@ -267,6 +267,13 @@ export interface KaizenDailyView {
   confidence: KaizenConfidenceView;
   /** Vazio significa que nada foi omitido nem aproximado. */
   reasons: KaizenConfidenceReasonView[];
+  /** Quando a projeção correu. `null` quando ainda não correu. */
+  projectedAt: string | null;
+  /** Fuso usado e qual nível da cadeia respondeu (ADR-0122). */
+  timeZone: string;
+  timeZoneSource: 'user' | 'tenant' | 'default';
+  /** `false` = o dia ainda aceita correções. */
+  settled: boolean;
 }
 
 /** Resposta ao Kaizen do dia (ADR-0121). Opcional, e sem texto livre. */
