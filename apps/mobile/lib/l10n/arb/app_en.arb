@@ -614,5 +614,45 @@
       }
     }
   },
-  "kaizenPreparing": "This day's summary is still being prepared."
+  "kaizenPreparing": "This day's summary is still being prepared.",
+  "kaizenGreetingMorning": "Good morning",
+  "kaizenScreenTitle": "Your day yesterday",
+  "kaizenCardNumbers": "Yesterday in numbers",
+  "kaizenCardTrends": "Compared with your recent days",
+  "kaizenCardToday": "Today's Kaizen",
+  "kaizenHowToApply": "How to apply",
+  "kaizenStatDelivered": "Completed",
+  "kaizenStatSuccess": "Completed of finalised",
+  "kaizenStatOnTime": "Within the agreed window",
+  "kaizenStatShorterRoute": "Suggested route shorter by",
+  "kaizenValueUnknown": "not recorded",
+  "kaizenEmptyNoRoute": "There is no working day to summarise yet.",
+  "kaizenEmptyPending": "This day's summary is still being prepared. Check back shortly.",
+  "kaizenOffline": "No connection. The summary appears once you are back online.",
+  "kaizenErrorTitle": "The summary could not be loaded",
+  "kaizenRetry": "Try again",
+  "kaizenSemanticsSummary": "Summary for {day}. {body}",
+  "@kaizenSemanticsSummary": {
+    "placeholders": {
+      "day": {
+        "type": "String"
+      },
+      "body": {
+        "type": "String"
+      }
+    }
+  },
+  "kaizenSemanticsTrend": "{metric}: {trend}.",
+  "@kaizenSemanticsTrend": {
+    "placeholders": {
+      "metric": {
+        "type": "String"
+      },
+      "trend": {
+        "type": "String"
+      }
+    }
+  },
+  "kaizenGreetingAfternoon": "Good afternoon",
+  "kaizenGreetingEvening": "Good evening"
 }
