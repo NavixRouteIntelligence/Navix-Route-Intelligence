@@ -117,6 +117,25 @@ CREATE POLICY tenant_isolation ON deliveries
 
 - Backups automáticos com teste periódico de restauração.
 - Política de retenção por tipo de dado (definir conforme LGPD/GDPR).
+
+### Kaizen — feedback e preferências (ADR-0121)
+
+| Tabela | Finalidade | Retenção | Base |
+| --- | --- | --- | --- |
+| `kaizen_feedback` | Escolher a **próxima sugestão da mesma pessoa**. Não alimenta KPI, não mede aderência e não entra em avaliação de desempenho. | **180 dias** | Interesse legítimo do titular: o dado existe para o serviço que ele próprio recebe. |
+| `kaizen_preferences` | Guardar a escolha de esconder as sugestões. | Enquanto a conta existir | Preferência do titular. |
+
+Notas que fazem parte da política, não são comentário:
+
+- **Sem texto livre.** `reason` é um enum de quatro valores, imposto por `CHECK`
+  no banco. Um campo aberto convidaria a desabafo, e desabafo num campo que a
+  empresa lê é outra promessa — que este produto não faz.
+- **180 dias** cobre com folga a regra de relevância (14 dias) e o histórico
+  visível (30 dias). Guardar mais tempo seria acumular opinião sem finalidade.
+- As duas tabelas ficam **fora** de `driver_kpi_daily` e `kpi_daily` de
+  propósito: a separação física é o que impede que alguém, mais tarde, faça um
+  `JOIN` e comece a medir «aderência às sugestões».
+- Apagar a conta apaga ambas (`ON DELETE CASCADE` a partir de `users`).
 - **RPO/RTO** a definir por ambiente (registrar em ADR).
 - Point-in-time recovery habilitado em produção.
 

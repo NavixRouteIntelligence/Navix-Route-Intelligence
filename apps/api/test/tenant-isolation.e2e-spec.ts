@@ -293,6 +293,68 @@ describe('Isolamento multi-tenant via RLS (integração)', () => {
     });
   });
 
+  // T7.7 / ADR-0121: o feedback é de uma pessoa, e fica fora dos KPIs.
+  describe('kaizen_feedback (ADR-0121)', () => {
+    const LOGIN_FB = randomUUID();
+
+    beforeAll(async () => {
+      await ds.transaction(async (m) => {
+        await setTenant(m, TENANT_A);
+        await m.query(
+          `INSERT INTO users (id, tenant_id, email, password_hash, roles)
+           VALUES ($1, $2, $3, 'x', ARRAY['driver'])
+           ON CONFLICT (id) DO NOTHING`,
+          [LOGIN_FB, TENANT_A, `fb-${LOGIN_FB}@navix.test`],
+        );
+        await m.query(
+          `INSERT INTO kaizen_feedback (tenant_id, user_id, day, code, verdict)
+           VALUES ($1, $2, current_date, 'rest.long-day', 'useful')`,
+          [TENANT_A, LOGIN_FB],
+        );
+      });
+    });
+
+    it('o tenant B não enxerga o feedback do tenant A', async () => {
+      const rows = await ds.transaction(async (m) => {
+        await setTenant(m, TENANT_B);
+        return m.query(`SELECT verdict FROM kaizen_feedback WHERE user_id = $1`, [LOGIN_FB]);
+      });
+      expect(rows).toHaveLength(0);
+    });
+
+    it('sem contexto de tenant, nada é visível', async () => {
+      const rows = await ds.transaction((m) =>
+        m.query(`SELECT verdict FROM kaizen_feedback WHERE user_id = $1`, [LOGIN_FB]),
+      );
+      expect(rows).toHaveLength(0);
+    });
+
+    // Sem texto livre: o banco recusa qualquer motivo fora dos quatro.
+    it('o banco recusa um veredito e um motivo fora do previsto', async () => {
+      await expect(
+        ds.transaction(async (m) => {
+          await setTenant(m, TENANT_A);
+          return m.query(
+            `INSERT INTO kaizen_feedback (tenant_id, user_id, day, code, verdict)
+             VALUES ($1, $2, current_date - 1, 'x', 'ótimo')`,
+            [TENANT_A, LOGIN_FB],
+          );
+        }),
+      ).rejects.toThrow();
+
+      await expect(
+        ds.transaction(async (m) => {
+          await setTenant(m, TENANT_A);
+          return m.query(
+            `INSERT INTO kaizen_feedback (tenant_id, user_id, day, code, verdict, reason)
+             VALUES ($1, $2, current_date - 2, 'x', 'not-applicable', 'o trânsito estava mau')`,
+            [TENANT_A, LOGIN_FB],
+          );
+        }),
+      ).rejects.toThrow();
+    });
+  });
+
   describe('audit_log (ADR-0054)', () => {
     it('o tenant A só enxerga a própria auditoria (nem a de B, nem a de sistema)', async () => {
       const rows = await ds.transaction(async (m) => {

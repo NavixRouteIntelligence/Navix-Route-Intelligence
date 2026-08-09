@@ -46,7 +46,19 @@ function build(opts: {
   // O motor real, não um dublê: a recomendação faz parte do que a fotografia
   // devolve, e testá-la com um stub esconderia justamente o encaixe.
   const advisor = new RuleBasedKaizenAdvisor();
-  return { uc: new GetDriverDailySnapshotUseCase(kpis, contas, zonas, advisor), kpis };
+  // Sem feedback e sem preferência: a relevância não interfere (ADR-0121).
+  const feedback = {
+    record: jest.fn(),
+    recent: jest.fn().mockResolvedValue([]),
+    history: jest.fn().mockResolvedValue([]),
+    hidden: jest.fn().mockResolvedValue(false),
+    setHidden: jest.fn(),
+  };
+  return {
+    uc: new GetDriverDailySnapshotUseCase(kpis, contas, zonas, advisor, feedback),
+    kpis,
+    feedback,
+  };
 }
 
 describe('GetDriverDailySnapshotUseCase', () => {
