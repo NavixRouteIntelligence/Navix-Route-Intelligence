@@ -3,6 +3,8 @@ import type { TenantTimeZoneReaderPort } from '../../../shared/tenancy/tenant-ti
 import type { DailyRawRow } from '../domain/daily-subject';
 import type { DriverKpiRepositoryPort } from '../domain/ports/driver-kpi-repository.port';
 
+import { RuleBasedKaizenAdvisor } from '../infrastructure/advisor/rule-based-kaizen.advisor';
+
 import { GetDriverDailySnapshotUseCase } from './get-driver-daily-snapshot.use-case';
 
 const TENANT = 'tenant-1';
@@ -41,7 +43,10 @@ function build(opts: {
     findAccountType: async () => opts.conta ?? 'driver',
   };
   const zonas: TenantTimeZoneReaderPort = { findTimeZone: async () => opts.zona ?? 'UTC' };
-  return { uc: new GetDriverDailySnapshotUseCase(kpis, contas, zonas), kpis };
+  // O motor real, não um dublê: a recomendação faz parte do que a fotografia
+  // devolve, e testá-la com um stub esconderia justamente o encaixe.
+  const advisor = new RuleBasedKaizenAdvisor();
+  return { uc: new GetDriverDailySnapshotUseCase(kpis, contas, zonas, advisor), kpis };
 }
 
 describe('GetDriverDailySnapshotUseCase', () => {
