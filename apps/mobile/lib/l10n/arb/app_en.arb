@@ -490,5 +490,87 @@
   "routePartialHint": "Check with dispatch before you leave — they were left out on purpose, not by mistake.",
   "routePartialCapacity": "does not fit in the vehicle",
   "routePartialIsolated": "no route reaches the address",
-  "routePartialDisconnected": "separated from the rest of the route"
+  "routePartialDisconnected": "separated from the rest of the route",
+  "kaizenTitleRestLongDay": "Yesterday had a long activity period",
+  "kaizenWhyRestLongDay": "The span between first and last activity was {duration}.",
+  "@kaizenWhyRestLongDay": {
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "kaizenTitleRestLongerThanUsual": "Yesterday ran longer than usual for you",
+  "kaizenWhyRestLongerThanUsual": "Activity period of {duration}, against {baseline} in your recent weeks.",
+  "@kaizenWhyRestLongerThanUsual": {
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      },
+      "baseline": {
+        "type": "String"
+      }
+    }
+  },
+  "kaizenTitleFailuresFirst": "One delivery was left uncompleted",
+  "kaizenWhyFailuresFirst": "One of yesterday's deliveries was not completed.",
+  "kaizenTitleFailuresRepeated": "{count} deliveries were left uncompleted",
+  "@kaizenTitleFailuresRepeated": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "kaizenWhyFailuresRepeated": "Yesterday {count} deliveries were left uncompleted.",
+  "@kaizenWhyFailuresRepeated": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "kaizenTitleLoadOrder": "The suggested route was shorter",
+  "kaizenWhyLoadOrder": "The suggested route was {km} km shorter than the order the stops came in.",
+  "@kaizenWhyLoadOrder": {
+    "placeholders": {
+      "km": {
+        "type": "String"
+      }
+    }
+  },
+  "kaizenTitleAcknowledge": "Yesterday went in line with your usual",
+  "kaizenWhyAcknowledge": "You completed {delivered} deliveries, in line with your recent weeks.",
+  "@kaizenWhyAcknowledge": {
+    "placeholders": {
+      "delivered": {
+        "type": "int"
+      }
+    }
+  },
+  "kaizenTitleBuildingHistory": "Still building history",
+  "kaizenWhyBuildingHistory": "With more recorded working days, this summary starts showing your progress.",
+  "kaizenTitleNoWork": "No deliveries recorded",
+  "kaizenWhyNoWork": "There are no deliveries recorded for this day.",
+  "kaizenActionPlanShorterDay": "If it makes sense, plan a shorter day today.",
+  "kaizenActionReviewFailed": "If it makes sense, review what was left uncompleted before heading out.",
+  "kaizenActionLoadInRouteOrder": "If it makes sense, load in the suggested route order.",
+  "kaizenReasonProjectionPending": "This day's summary is still being prepared.",
+  "kaizenReasonActivityUnknown": "There is not enough record to compute the activity period.",
+  "kaizenReasonShortHistory": "There are still few recorded working days to compare with.",
+  "kaizenReasonNoWork": "There are no deliveries recorded for this day.",
+  "kaizenMetricDelivered": "Completed deliveries",
+  "kaizenMetricSuccessRate": "Completed against finalised",
+  "kaizenMetricOnTimeRate": "Within the agreed window",
+  "kaizenMetricActiveMinutes": "Activity period",
+  "kaizenTrendImproved": "above your usual",
+  "kaizenTrendStable": "in line with your usual",
+  "kaizenTrendAttention": "worth a look",
+  "kaizenTrendBuildingHistory": "building history",
+  "kaizenSectionYesterday": "Yesterday",
+  "kaizenSectionComparison": "Compared with your recent weeks",
+  "kaizenSectionWhy": "Why",
+  "kaizenSectionToday": "For today",
+  "kaizenNothingToSuggest": "Nothing to suggest.",
+  "kaizenWhyUnknown": "We don't know."
 }
