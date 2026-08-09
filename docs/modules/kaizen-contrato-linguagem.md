@@ -1,7 +1,13 @@
 # Contrato de linguagem do Kaizen — resumo diário do motorista (pt-PT)
 
-> **Estado: proposto, a aguardar aprovação.** Nada disto está implementado.
-> A decisão técnica que o sustenta é a ADR-0116 em [decisions.md](../decisions.md).
+> **Estado: secções 2 e 3 aceites (2026-08-09).** As proibições da secção 3
+> deixaram de ser recomendação: estão guardadas por
+> `apps/mobile/test/kaizen_language_contract_test.dart`, que falha a CI quando
+> um termo proibido, uma exclamação, um emoji ou uma ação sem escape entra
+> numa string `kaizen*` de qualquer locale.
+> As secções 1, 4 e 5 continuam como orientação de escrita; a secção 7 lista o
+> que falta decidir. Decisões técnicas: ADR-0116 e ADR-0120 em
+> [decisions.md](../decisions.md).
 
 Este documento fixa **o que o resumo diário pode dizer**, com que palavras, e o
 que nunca pode dizer. Vale para a app do motorista em `pt_PT`
@@ -43,7 +49,16 @@ placeholder, não há "0", não há "sem dados disponíveis" repetido quatro vez
 
 **Tratamento:** segunda pessoa do singular com verbo na terceira («concluiu»,
 «teve»), registo pt-PT. Sem imperativo na descrição dos factos. O imperativo só
-é admitido na ação sugerida, e sempre com escape («se fizer sentido»).
+é admitido na ação sugerida, e sempre com escape («se fizer sentido») — regra
+verificada por teste em todas as chaves `kaizenAction*`.
+
+Ao vocabulário acima acrescentam-se dois termos que a implementação obrigou a
+fixar, e que não existiam quando esta secção foi escrita:
+
+| Conceito | Diz-se | Nunca se diz |
+| --- | --- | --- |
+| Referência do próprio histórico | «o seu costume», «as suas últimas semanas» | «média», «meta», «objetivo» |
+| Qualidade do **dado** do resumo | «o resumo ainda está a ser preparado», «há poucos dias registados» | «confiança baixa», «dados fracos» — o utilizador lê isso como juízo sobre o dia dele |
 
 **Sem exclamação.** Sem emoji de celebração, de alerta ou de fogo. O resumo
 informa; não anima nem repreende.
@@ -52,7 +67,9 @@ informa; não anima nem repreende.
 
 ## 3. Proibições
 
-Nenhuma destas pode aparecer, em nenhum ecrã, mesmo que o dado exista:
+Nenhuma destas pode aparecer, em nenhum ecrã, mesmo que o dado exista. A lista
+está codificada no teste de contrato, com a razão de cada termo — um vermelho de
+CI diz qual chave, qual termo e qual regra o proíbe:
 
 | Proibido                                                        | Porquê                                                                                                                                               |
 | --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -154,11 +171,35 @@ Se a frase não sobrevive à pergunta **«quem mediu isto?»**, não entra no re
 
 ---
 
+## 6-B. As strings
+
+Cada código do motor (ADR-0119) tem texto em `app_pt_PT.arb`, escrito a partir
+da secção 2 e verificado contra a secção 3:
+
+| Código do motor | Chave |
+| --- | --- |
+| `rest.long-day` | `kaizenTitleRestLongDay` / `kaizenWhyRestLongDay` |
+| `rest.longer-than-usual` | `kaizenTitleRestLongerThanUsual` / `kaizenWhy…` |
+| `failures.first` | `kaizenTitleFailuresFirst` / `kaizenWhyFailuresFirst` |
+| `failures.repeated` | `kaizenTitleFailuresRepeated` / `kaizenWhy…` |
+| `load.follow-suggested-order` | `kaizenTitleLoadOrder` / `kaizenWhyLoadOrder` |
+| `none.acknowledge` | `kaizenTitleAcknowledge` / `kaizenWhyAcknowledge` |
+| `none.building-history` | `kaizenTitleBuildingHistory` / `kaizenWhy…` |
+| `none.no-work` | `kaizenTitleNoWork` / `kaizenWhyNoWork` |
+
+Ações: `kaizenActionPlanShorterDay`, `kaizenActionReviewFailed`,
+`kaizenActionLoadInRouteOrder`. Razões de confiança: `kaizenReason*`.
+
+`en` existe porque é o *template* do `gen-l10n`. `pt_BR`, `pt` e `es` ainda não
+têm estas chaves e recorrem ao inglês — a secção 7 mantém-se.
+
 ## 7. O que falta decidir
 
 - **Hora de envio.** Proposta: entre as 07h00 e as 09h00 no fuso do motorista,
   configurável, com desativação num toque. Não decidido.
 - **Canal.** Notificação push, ecrã inicial, ou ambos. Não decidido.
-- **Tradução das restantes locales.** Este contrato é `pt_PT`. `pt_BR`, `en` e
-  `es` seguem depois, e a tradução não pode reintroduzir o que a §3 proíbe —
-  «no prazo» é, em qualquer língua, a porta de entrada da pressão.
+- **Tradução das restantes locales.** Este contrato é `pt_PT`; o `en` existe
+  como *template*. `pt_BR`, `pt` e `es` seguem depois — e a tradução não pode
+  reintroduzir o que a §3 proíbe. O teste de contrato já cobre qualquer locale
+  que passe a ter chaves `kaizen*`, pelo que a rede está montada antes de a
+  tradução existir.
