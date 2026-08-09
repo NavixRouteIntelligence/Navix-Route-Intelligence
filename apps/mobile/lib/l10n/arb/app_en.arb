@@ -572,5 +572,47 @@
   "kaizenSectionWhy": "Why",
   "kaizenSectionToday": "For today",
   "kaizenNothingToSuggest": "Nothing to suggest.",
-  "kaizenWhyUnknown": "We don't know."
+  "kaizenWhyUnknown": "We don't know.",
+  "kaizenYesterdayCompleted": "You completed {delivered} deliveries.",
+  "@kaizenYesterdayCompleted": {
+    "placeholders": {
+      "delivered": {
+        "type": "int"
+      }
+    }
+  },
+  "kaizenYesterdayAllInWindow": "You completed {delivered} deliveries. All within the agreed window.",
+  "@kaizenYesterdayAllInWindow": {
+    "placeholders": {
+      "delivered": {
+        "type": "int"
+      }
+    }
+  },
+  "kaizenYesterdayWithPending": "You completed {delivered} deliveries. {failed} were left uncompleted.",
+  "@kaizenYesterdayWithPending": {
+    "placeholders": {
+      "delivered": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      }
+    }
+  },
+  "kaizenComparisonUsual": "Across your last {days} working days, your usual was {baseline} deliveries. Yesterday came out {trend}.",
+  "@kaizenComparisonUsual": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      },
+      "baseline": {
+        "type": "String"
+      },
+      "trend": {
+        "type": "String"
+      }
+    }
+  },
+  "kaizenPreparing": "This day's summary is still being prepared."
 }
