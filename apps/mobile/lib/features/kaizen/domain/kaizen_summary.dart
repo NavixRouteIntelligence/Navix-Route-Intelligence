@@ -53,10 +53,12 @@ class KaizenDaily {
 
     num? evidenceOf(String metric) => evidence
         .cast<Map<String, dynamic>?>()
-        .firstWhere((e) => e?['metric'] == metric, orElse: () => null)?['value'] as num?;
+        .firstWhere((e) => e?['metric'] == metric,
+            orElse: () => null)?['value'] as num?;
     num? baselineOf(String metric) => evidence
         .cast<Map<String, dynamic>?>()
-        .firstWhere((e) => e?['metric'] == metric, orElse: () => null)?['baseline'] as num?;
+        .firstWhere((e) => e?['metric'] == metric,
+            orElse: () => null)?['baseline'] as num?;
 
     return KaizenDaily(
       day: json['day'] as String,
@@ -91,12 +93,14 @@ class KaizenDaily {
 }
 
 /// Escreve o resumo em blocos, na ordem da secção 1.
-List<KaizenBlock> composeKaizenSummary(KaizenDaily daily, AppLocalizations l10n) {
+List<KaizenBlock> composeKaizenSummary(
+    KaizenDaily daily, AppLocalizations l10n) {
   // Projeção pendente: um bloco só, e honesto. Mostrar zeros aqui seria
   // apresentar ausência de dado como dia vazio.
   if (daily.status == 'pending') {
     return [
-      KaizenBlock(KaizenBlockKind.yesterday, l10n.kaizenSectionYesterday, l10n.kaizenPreparing),
+      KaizenBlock(KaizenBlockKind.yesterday, l10n.kaizenSectionYesterday,
+          l10n.kaizenPreparing),
     ];
   }
 
@@ -104,7 +108,8 @@ List<KaizenBlock> composeKaizenSummary(KaizenDaily daily, AppLocalizations l10n)
   // contagem de dias parados.
   if (daily.status == 'no-work') {
     return [
-      KaizenBlock(KaizenBlockKind.yesterday, l10n.kaizenSectionYesterday, l10n.kaizenTitleNoWork),
+      KaizenBlock(KaizenBlockKind.yesterday, l10n.kaizenSectionYesterday,
+          l10n.kaizenTitleNoWork),
     ];
   }
 
@@ -123,15 +128,20 @@ List<KaizenBlock> composeKaizenSummary(KaizenDaily daily, AppLocalizations l10n)
   }
 
   return [
-    KaizenBlock(KaizenBlockKind.yesterday, l10n.kaizenSectionYesterday, _ontem(daily, l10n)),
-    KaizenBlock(KaizenBlockKind.comparison, l10n.kaizenSectionComparison, _comparacao(daily, l10n)),
-    KaizenBlock(KaizenBlockKind.why, l10n.kaizenSectionWhy, _porque(daily, l10n)),
-    KaizenBlock(KaizenBlockKind.today, l10n.kaizenSectionToday, _hoje(daily, l10n)),
+    KaizenBlock(KaizenBlockKind.yesterday, l10n.kaizenSectionYesterday,
+        _ontem(daily, l10n)),
+    KaizenBlock(KaizenBlockKind.comparison, l10n.kaizenSectionComparison,
+        _comparacao(daily, l10n)),
+    KaizenBlock(
+        KaizenBlockKind.why, l10n.kaizenSectionWhy, _porque(daily, l10n)),
+    KaizenBlock(
+        KaizenBlockKind.today, l10n.kaizenSectionToday, _hoje(daily, l10n)),
   ];
 }
 
 String _ontem(KaizenDaily d, AppLocalizations l10n) {
-  if (d.failed > 0) return l10n.kaizenYesterdayWithPending(d.delivered, d.failed);
+  if (d.failed > 0)
+    return l10n.kaizenYesterdayWithPending(d.delivered, d.failed);
   if (d.delivered > 0 && d.onTime == d.delivered) {
     return l10n.kaizenYesterdayAllInWindow(d.delivered);
   }
@@ -143,7 +153,8 @@ String _comparacao(KaizenDaily d, AppLocalizations l10n) {
   final texto = base == base.roundToDouble()
       ? base.round().toString()
       : base.toStringAsFixed(1).replaceAll('.', ',');
-  return l10n.kaizenComparisonUsual(d.baselineSample, texto, _tendencia(d.baselineTrend!, l10n));
+  return l10n.kaizenComparisonUsual(
+      d.baselineSample, texto, _tendencia(d.baselineTrend!, l10n));
 }
 
 String _tendencia(String trend, AppLocalizations l10n) => switch (trend) {
@@ -155,23 +166,30 @@ String _tendencia(String trend, AppLocalizations l10n) => switch (trend) {
 
 /// O «porquê» só existe quando o motor tem evidência. Sem ela, diz-se que não
 /// se sabe — nunca se constrói uma explicação plausível.
-String _porque(KaizenDaily d, AppLocalizations l10n) => switch (d.recommendationCode) {
-      'rest.long-day' => l10n.kaizenWhyRestLongDay(_duracao(d.recommendationDuration, l10n)),
+String _porque(KaizenDaily d, AppLocalizations l10n) =>
+    switch (d.recommendationCode) {
+      'rest.long-day' =>
+        l10n.kaizenWhyRestLongDay(_duracao(d.recommendationDuration, l10n)),
       'rest.longer-than-usual' => l10n.kaizenWhyRestLongerThanUsual(
           _duracao(d.recommendationDuration, l10n),
           _duracao(d.recommendationBaselineDuration, l10n),
         ),
       'failures.first' => l10n.kaizenWhyFailuresFirst,
-      'failures.repeated' => l10n.kaizenWhyFailuresRepeated(d.recommendationCount ?? d.failed),
-      'load.follow-suggested-order' => l10n.kaizenWhyLoadOrder(_km(d.recommendationKm)),
+      'failures.repeated' =>
+        l10n.kaizenWhyFailuresRepeated(d.recommendationCount ?? d.failed),
+      'load.follow-suggested-order' =>
+        l10n.kaizenWhyLoadOrder(_km(d.recommendationKm)),
       'none.acknowledge' => l10n.kaizenWhyAcknowledge(d.delivered),
       _ => l10n.kaizenWhyUnknown,
     };
 
 /// Uma ação, ou nenhuma. Sugerir algo só para não vir vazio é como se aprende
 /// a fechar o resumo sem ler.
-String _hoje(KaizenDaily d, AppLocalizations l10n) => switch (d.recommendationCode) {
-      'rest.long-day' || 'rest.longer-than-usual' => l10n.kaizenActionPlanShorterDay,
+String _hoje(KaizenDaily d, AppLocalizations l10n) =>
+    switch (d.recommendationCode) {
+      'rest.long-day' ||
+      'rest.longer-than-usual' =>
+        l10n.kaizenActionPlanShorterDay,
       'failures.first' || 'failures.repeated' => l10n.kaizenActionReviewFailed,
       'load.follow-suggested-order' => l10n.kaizenActionLoadInRouteOrder,
       _ => l10n.kaizenNothingToSuggest,
@@ -186,4 +204,5 @@ String _duracao(int? minutos, AppLocalizations l10n) {
 
 /// Distância sempre como **diferença face à ordem de origem**, nunca como
 /// poupança realizada (secção 5): ninguém conduziu a alternativa.
-String _km(double? km) => km == null ? '—' : km.toStringAsFixed(1).replaceAll('.', ',');
+String _km(double? km) =>
+    km == null ? '—' : km.toStringAsFixed(1).replaceAll('.', ',');
