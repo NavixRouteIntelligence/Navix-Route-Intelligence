@@ -352,5 +352,10 @@
   "kaizenSectionWhy": "Porquê",
   "kaizenSectionToday": "Para hoje",
   "kaizenNothingToSuggest": "Nada a sugerir.",
-  "kaizenWhyUnknown": "Não sabemos."
+  "kaizenWhyUnknown": "Não sabemos.",
+  "kaizenYesterdayCompleted": "Concluiu {delivered} entregas.",
+  "kaizenYesterdayAllInWindow": "Concluiu {delivered} entregas. Todas dentro da janela combinada.",
+  "kaizenYesterdayWithPending": "Concluiu {delivered} entregas. Ficaram {failed} por concluir.",
+  "kaizenComparisonUsual": "Nos seus últimos {days} dias de trabalho, o costume foi {baseline} entregas. Ontem ficou {trend}.",
+  "kaizenPreparing": "O resumo deste dia ainda está a ser preparado."
 }

@@ -1,12 +1,15 @@
 # Contrato de linguagem do Kaizen — resumo diário do motorista (pt-PT)
 
-> **Estado: secções 2 e 3 aceites (2026-08-09).** As proibições da secção 3
+> **Estado: secções 1 a 5 aceites (2026-08-09).** As proibições da secção 3
 > deixaram de ser recomendação: estão guardadas por
 > `apps/mobile/test/kaizen_language_contract_test.dart`, que falha a CI quando
 > um termo proibido, uma exclamação, um emoji ou uma ação sem escape entra
 > numa string `kaizen*` de qualquer locale.
-> As secções 1, 4 e 5 continuam como orientação de escrita; a secção 7 lista o
-> que falta decidir. Decisões técnicas: ADR-0116 e ADR-0120 em
+> As secções 1, 4 e 5 também deixaram de ser orientação: a composição dos
+> blocos vive em `apps/mobile/lib/features/kaizen/domain/kaizen_summary.dart`, e
+> `apps/mobile/test/kaizen_summary_test.dart` usa os exemplos da secção 4 como
+> **resultado esperado** — mudar o texto sem mudar o contrato falha a CI. A
+> secção 7 lista o que falta decidir. Decisões técnicas: ADR-0116 e ADR-0120 em
 > [decisions.md](../decisions.md).
 
 Este documento fixa **o que o resumo diário pode dizer**, com que palavras, e o
@@ -32,6 +35,20 @@ Quatro blocos, por esta ordem, uma vez por dia:
 
 Se não houver dados suficientes para um bloco, **o bloco não aparece**. Não há
 placeholder, não há "0", não há "sem dados disponíveis" repetido quatro vezes.
+Um «—» no lugar da comparação é pior do que nada, porque parece um facto.
+
+Na prática há quatro formas possíveis, e `composeKaizenSummary` só produz estas:
+
+| Situação | Blocos |
+| --- | --- |
+| Dia completo, com referência | os quatro, nesta ordem |
+| Sem histórico suficiente | **um**: «a construir histórico» |
+| Dia de folga | **um**: «Não registou entregas» |
+| Projeção pendente | **um**: «ainda está a ser preparado» |
+
+O «porquê» e o «para hoje» **aparecem sempre** que os quatro blocos aparecem —
+com «Não sabemos.» e «Nada a sugerir.» quando é o caso. Omitir esses dois seria
+deixar a pessoa a supor que houve uma explicação que não lhe mostraram.
 
 ---
 
@@ -86,21 +103,29 @@ CI diz qual chave, qual termo e qual regra o proíbe:
 
 ## 4. Exemplos aprovados
 
+> **Nota (2026-08-09):** os exemplos abaixo foram reescritos. Os originais
+> comparavam com «as últimas quatro terças-feiras», que era a proposta da
+> ADR-0116; a T7.3 mudou a referência para a **mediana dos sete dias
+> trabalhados anteriores** (ADR-0118), e uma comparação por dia da semana
+> deixou de existir. Também descreviam um «porquê» sobre janelas horárias que o
+> motor não consegue evidenciar (ADR-0119). Manter exemplos que o sistema não
+> pode produzir seria transformar o contrato em ficção — e eles são agora o
+> resultado esperado de um teste.
+
 ### 4.1 Dia com dados completos
 
 > **Ontem**
 > Concluiu 14 entregas. Todas dentro da janela combinada.
 >
 > **Em relação às suas últimas semanas**
-> Nas últimas quatro terças-feiras concluiu 11, 13, 12 e 14. Ontem ficou em
-> linha com o habitual.
+> Nos seus últimos 7 dias de trabalho, o costume foi 12 entregas. Ontem ficou em
+> linha com o seu costume.
 >
 > **Porquê**
-> Duas paragens tinham janela a abrir depois das 15h, o que concentrou o
-> trabalho na parte final do dia.
+> Concluiu 14 entregas, em linha com as suas últimas semanas.
 >
 > **Para hoje**
-> Se fizer sentido, comece pelas paragens com janela mais cedo — hoje há três.
+> Nada a sugerir.
 
 ### 4.2 Dia com menos entregas do que o habitual
 
@@ -108,13 +133,14 @@ CI diz qual chave, qual termo e qual regra o proíbe:
 > Concluiu 6 entregas. Ficaram 2 por concluir.
 >
 > **Em relação às suas últimas semanas**
-> Nas últimas quatro quartas-feiras concluiu 12, 11, 13 e 10.
+> Nos seus últimos 7 dias de trabalho, o costume foi 12 entregas. Ontem merece
+> um olhar.
 >
 > **Porquê**
-> Não sabemos. As duas por concluir não têm motivo registado.
+> Ontem ficaram 2 entregas por concluir.
 >
 > **Para hoje**
-> Nada a sugerir.
+> Se fizer sentido, reveja antes de sair o que ficou por concluir.
 
 Repare no que **não** está lá: nenhuma pergunta sobre o que correu mal, nenhum
 «vamos recuperar hoje», nenhum total acumulado da semana a insinuar défice.
@@ -122,8 +148,8 @@ Repare no que **não** está lá: nenhuma pergunta sobre o que correu mal, nenhu
 ### 4.3 Dia sem dados suficientes
 
 > **Ontem**
-> Ainda não há histórico suficiente para comparar. A partir da quarta semana,
-> este resumo passa a mostrar a sua evolução.
+> Com mais dias de trabalho registados, este resumo passa a mostrar a sua
+> evolução.
 
 Um bloco, e mais nada. Não se inventa um resumo de um dia isolado.
 
@@ -156,6 +182,10 @@ Por isso:
 | «Evitou 2,1 kg de CO₂»         | «Estimativa, com base no consumo típico deste tipo de veículo» — e só num ecrã que se abre de propósito, nunca no resumo |
 
 Se a frase não sobrevive à pergunta **«quem mediu isto?»**, não entra no resumo.
+
+Isto é verificado: um teste garante que nenhum bloco contém `€`, «euro»,
+«poupou», «poupança» ou «litros», e que a distância sai sempre como *diferença
+face à ordem de origem*.
 
 ---
 
