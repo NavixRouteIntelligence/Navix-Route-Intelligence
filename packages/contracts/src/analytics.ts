@@ -117,4 +117,37 @@ export interface DriverDailySnapshot {
   savings: DriverDaySavings | null;
   /** `null` em `pending`. */
   projectedAt: string | null;
+  /**
+   * Comparação com o próprio histórico (ADR-0118). Ausente quando o dia pedido
+   * não é o último trabalhado — a comparação é sempre do dia mais recente com
+   * trabalho, e prendê-la a um dia arbitrário seria outra pergunta.
+   */
+  baseline?: DriverPersonalBaseline;
+}
+
+/**
+ * Classificação de um indicador face ao próprio histórico (ADR-0118).
+ *
+ * `building-history` não é "estável": estável afirma que nada mudou, e aqui
+ * ainda não se sabe.
+ */
+export type DriverTrend = 'improved' | 'stable' | 'attention' | 'building-history';
+
+export interface DriverIndicator {
+  current: number | null;
+  baseline: number | null;
+  trend: DriverTrend;
+  /** Dias trabalhados que entraram na mediana. */
+  sample: number;
+  /** `true` quando o indicador só informa: não gera ação nem meta. */
+  informative?: true;
+}
+
+/** Comparação com o próprio histórico. Nunca com outra pessoa. */
+export interface DriverPersonalBaseline {
+  day: string | null;
+  delivered: DriverIndicator;
+  successRate: DriverIndicator;
+  onTimeRate: DriverIndicator;
+  activeMinutes: DriverIndicator;
 }
