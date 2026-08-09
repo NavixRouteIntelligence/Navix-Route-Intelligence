@@ -12,6 +12,7 @@ import '../../../core/ui/navix_states.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../../intelligence/presentation/voice_assistant_button.dart';
 import '../../intelligence/presentation/voice_assistant_cubit.dart';
+import '../../kaizen/presentation/kaizen_daily_page.dart';
 import '../../performance/presentation/driver_performance_card.dart';
 import '../../pod/presentation/pod_capture_sheet.dart';
 import '../../pod/presentation/pod_sync_cubit.dart';
@@ -425,6 +426,12 @@ class _Content extends StatelessWidget {
           const SizedBox(height: 12),
           // Desempenho consolidado, meta e sequência (ADR-0097).
           const DriverPerformanceCard(),
+          const SizedBox(height: 12),
+          // Entrada para «O seu dia de ontem» (ADR-0120). Fica aqui, ao lado do
+          // desempenho, e **não** na barra de navegação: o resumo é uma leitura
+          // de manhã, não um destino que se visita ao longo do dia — e um
+          // separador a mais empurraria a rota, que é o que o motorista usa.
+          const _KaizenEntry(),
           const SizedBox(height: 20),
           NavixSectionHeader(
             title: l10n.routeDestinationTypes,
@@ -943,6 +950,32 @@ class _StatusChip extends StatelessWidget {
               fontSize: 11, color: color, fontWeight: FontWeight.w700),
         ),
       );
+}
+
+/// Ligação para o resumo do dia anterior, dentro da Minha Rota.
+class _KaizenEntry extends StatelessWidget {
+  const _KaizenEntry();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return NavixCard(
+      padding: EdgeInsets.zero,
+      // `Material` transparente: o cartão já pinta o fundo, e sem isto o
+      // `ListTile` tenta pintar o seu por cima e perde o efeito do toque.
+      child: Material(
+        color: Colors.transparent,
+        child: ListTile(
+          leading: const Icon(Icons.wb_twilight_outlined),
+          title: Text(l10n.kaizenScreenTitle),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(builder: (_) => const KaizenDailyPage()),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _DestinationOverview extends StatelessWidget {

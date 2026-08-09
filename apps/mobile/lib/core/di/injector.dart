@@ -16,6 +16,8 @@ import '../../features/intelligence/data/intelligence_repository.dart';
 import '../../features/intelligence/presentation/stop_intelligence_cubit.dart';
 import '../../features/intelligence/presentation/voice_assistant_cubit.dart';
 import '../voice/speech_service.dart';
+import '../../features/kaizen/data/kaizen_repository.dart';
+import '../../features/kaizen/presentation/kaizen_cubit.dart';
 import '../../features/performance/data/driver_performance_repository.dart';
 import '../../features/performance/presentation/driver_performance_cubit.dart';
 import '../../features/route/data/my_route_repository.dart';
@@ -157,6 +159,10 @@ Future<void> configureDependencies(AppConfig config) async {
     ..registerFactory<DriverPerformanceCubit>(
       () => DriverPerformanceCubit(getIt<DriverPerformanceRepository>()),
     )
+    ..registerLazySingleton<KaizenRepository>(
+      () => KaizenRepository(getIt<DioClient>().apiDio),
+    )
+    ..registerFactory<KaizenCubit>(() => KaizenCubit(getIt<KaizenRepository>()))
     ..registerLazySingleton<TariffStore>(() => TariffStore())
     ..registerFactory<EarningsCubit>(() => EarningsCubit(getIt<TariffStore>()))
     ..registerLazySingleton<MaintenanceRepository>(
