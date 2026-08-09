@@ -32,6 +32,7 @@ import { RolesGuard } from '../../../shared/security/roles.guard';
 import { GetKaizenDailyUseCase } from '../application/get-kaizen-daily.use-case';
 import {
   GetKaizenHistoryUseCase,
+  GetKaizenPreferencesUseCase,
   RecordKaizenFeedbackUseCase,
   SetKaizenPreferencesUseCase,
 } from '../application/kaizen-feedback.use-cases';
@@ -55,6 +56,7 @@ export class KaizenController {
     private readonly feedback: RecordKaizenFeedbackUseCase,
     private readonly historico: GetKaizenHistoryUseCase,
     private readonly preferencias: SetKaizenPreferencesUseCase,
+    private readonly lerPreferencias: GetKaizenPreferencesUseCase,
     @Inject(AUDIT_LOG) private readonly audit: AuditLogPort,
   ) {}
 
@@ -159,7 +161,21 @@ export class KaizenController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: KaizenPreferencesDto,
   ): Promise<{ data: KaizenPreferencesView }> {
-    await this.preferencias.execute(user.tenantId, user.id, dto.hideRecommendations);
-    return { data: { hideRecommendations: dto.hideRecommendations } };
+    const prefs = {
+      hideRecommendations: dto.hideRecommendations,
+      reminderAt: dto.reminderAt ?? null,
+    };
+    await this.preferencias.execute(user.tenantId, user.id, prefs);
+    return { data: prefs };
+  }
+
+  /** Preferências atuais. Sem nada guardado, devolve o padrão: nada ligado. */
+  @Get('preferences')
+  @Roles('driver')
+  @ApiOperation({ summary: 'Preferências do resumo do próprio motorista' })
+  async getPreferences(
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<{ data: KaizenPreferencesView }> {
+    return { data: await this.lerPreferencias.execute(user.tenantId, user.id) };
   }
 }

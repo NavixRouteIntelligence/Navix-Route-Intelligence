@@ -117,6 +117,16 @@ export interface DriverDailySnapshot {
   savings: DriverDaySavings | null;
   /** `null` em `pending`. */
   projectedAt: string | null;
+  /** Fuso usado para decidir qual é «ontem» (ADR-0122). */
+  timeZone: string;
+  /** Qual nível da cadeia respondeu: perfil, tenant ou o padrão. */
+  timeZoneSource: 'user' | 'tenant' | 'default';
+  /**
+   * `false` significa que o dia ainda aceita correções — não que faltem dados.
+   * A tela usa isto para não afirmar como definitivo um número que a projeção
+   * ainda vai rever.
+   */
+  settled: boolean;
   /**
    * Comparação com o próprio histórico (ADR-0118). Ausente quando o dia pedido
    * não é o último trabalhado — a comparação é sempre do dia mais recente com
@@ -286,4 +296,9 @@ export interface KaizenHistoryEntryView {
 export interface KaizenPreferencesView {
   /** Esconde as sugestões; os resultados continuam a aparecer. */
   hideRecommendations: boolean;
+  /**
+   * Hora local do lembrete (`HH:MM`). `null` = **sem lembrete**, que é o
+   * padrão — e desligar é voltar a `null`, pelo mesmo caminho (ADR-0122).
+   */
+  reminderAt: string | null;
 }

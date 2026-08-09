@@ -5,6 +5,7 @@ import { GetDriverPerformanceUseCase } from './application/get-driver-performanc
 import { GetKaizenDailyUseCase } from './application/get-kaizen-daily.use-case';
 import {
   GetKaizenHistoryUseCase,
+  GetKaizenPreferencesUseCase,
   RecordKaizenFeedbackUseCase,
   SetKaizenPreferencesUseCase,
 } from './application/kaizen-feedback.use-cases';
@@ -42,6 +43,7 @@ import { KpiController } from './interface/kpi.controller';
     RecordKaizenFeedbackUseCase,
     GetKaizenHistoryUseCase,
     SetKaizenPreferencesUseCase,
+    GetKaizenPreferencesUseCase,
     RebuildKpisUseCase,
     KpiProjectionListener,
     { provide: KPI_REPOSITORY, useClass: KpiRepository },

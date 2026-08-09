@@ -75,12 +75,22 @@ export class GetKaizenHistoryUseCase {
   }
 }
 
+/** `HH:MM` em 24 horas. Sem segundos: ninguém escolhe um lembrete às 07:03:12. */
+const HORA = /^([01]\d|2[0-3]):([0-5]\d)$/;
+
+export interface KaizenPreferences {
+  hideRecommendations: boolean;
+  /** `null` = **sem lembrete**. É o padrão, e desligar é voltar a `null`. */
+  reminderAt: string | null;
+}
+
 /**
- * Esconder as **sugestões**, mantendo os resultados (ADR-0121).
+ * Preferências do resumo (ADR-0121/0122).
  *
- * Não é «desativar o Kaizen»: quem esconde continua a ver o que fez. A opção
- * existe porque conselho diário não pedido é ruído, e ruído que não se pode
- * desligar é pressão.
+ * Esconder as **sugestões** mantém os resultados: quem esconde continua a ver o
+ * que fez. E o lembrete é opcional, desligado por omissão, com a mesma chamada
+ * a ligar e a desligar — um caminho de saída mais caro do que o de entrada é a
+ * definição de *dark pattern*.
  */
 @Injectable()
 export class SetKaizenPreferencesUseCase {
@@ -88,7 +98,22 @@ export class SetKaizenPreferencesUseCase {
     @Inject(KAIZEN_FEEDBACK_REPOSITORY) private readonly repo: KaizenFeedbackRepositoryPort,
   ) {}
 
-  async execute(tenantId: string, userId: string, hideRecommendations: boolean): Promise<void> {
-    await this.repo.setHidden(tenantId, userId, hideRecommendations);
+  async execute(tenantId: string, userId: string, prefs: KaizenPreferences): Promise<void> {
+    if (prefs.reminderAt !== null && !HORA.test(prefs.reminderAt)) {
+      throw new ValidationError('Hora do lembrete inválida: use HH:MM.');
+    }
+    await this.repo.setPreferences(tenantId, userId, prefs);
+  }
+}
+
+/** Preferências atuais. Sem linha guardada, devolve o padrão. */
+@Injectable()
+export class GetKaizenPreferencesUseCase {
+  constructor(
+    @Inject(KAIZEN_FEEDBACK_REPOSITORY) private readonly repo: KaizenFeedbackRepositoryPort,
+  ) {}
+
+  execute(tenantId: string, userId: string): Promise<KaizenPreferences> {
+    return this.repo.preferences(tenantId, userId);
   }
 }

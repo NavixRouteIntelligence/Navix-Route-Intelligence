@@ -33,6 +33,17 @@ import {
   type TenantTimeZoneReaderPort,
 } from '../../../shared/tenancy/tenant-time-zone.port';
 import {
+  USER_TIME_ZONE_READER,
+  type UserTimeZoneReaderPort,
+} from '../../../shared/tenancy/user-time-zone.port';
+import {
+  isSettled,
+  lastWorkedDay,
+  resolveTimeZone,
+  summaryDay,
+  type ResolvedTimeZone,
+} from '../domain/kaizen-day';
+import {
   onTimeRateOf,
   savedFuelLitersOf,
   successRateOf,
@@ -59,6 +70,7 @@ export class GetDriverDailySnapshotUseCase {
     @Inject(TENANT_TIME_ZONE_READER) private readonly zonas: TenantTimeZoneReaderPort,
     @Inject(KAIZEN_ADVISOR) private readonly advisor: KaizenAdvisorPort,
     @Inject(KAIZEN_FEEDBACK_REPOSITORY) private readonly feedback: KaizenFeedbackRepositoryPort,
+    @Inject(USER_TIME_ZONE_READER) private readonly fusoDoUtilizador: UserTimeZoneReaderPort,
   ) {}
 
   /** `day` ausente = **ontem**, no fuso de quem opera (ADR-0105/0116). */
@@ -68,11 +80,12 @@ export class GetDriverDailySnapshotUseCase {
     day?: string,
     agora = new Date(),
   ): Promise<DriverDailySnapshot> {
-    const dia = day ?? (await this.ontem(tenantId, agora));
+    const fuso = await this.fuso(tenantId, userId);
+    const dia = day ?? summaryDay(agora, fuso.zone);
     const sujeito = await this.sujeito(tenantId, userId);
     // Sem sujeito não há o que projetar nem o que mostrar: `pending` seria
     // promessa de um dado que nunca vai chegar.
-    if (!sujeito) return vazio(dia, 'no-work');
+    if (!sujeito) return vazio(dia, 'no-work', fuso);
 
     // Uma janela, não duas consultas: a comparação precisa dos dias anteriores
     // e a fotografia precisa do próprio dia. `JANELA_DIAS` é generoso porque a
@@ -81,12 +94,20 @@ export class GetDriverDailySnapshotUseCase {
     const desde = recuar(dia, JANELA_DIAS);
     const janela = await this.kpis.range(tenantId, sujeito, desde, dia);
     const linhas = janela.filter((l) => l.day === dia);
-    const linha = linhas[0];
+    // Ontem foi folga: mostra-se o **último dia trabalhado**, com a sua data.
+    // Folga não é um dia vazio para exibir — é a ausência de um dia —, e nada
+    // disto gera alerta: descansar não produz aviso nenhum (ADR-0122).
+    const linha =
+      linhas[0] && linhas[0].delivered + linhas[0].failed > 0
+        ? linhas[0]
+        : (lastWorkedDay(janela, dia) ?? linhas[0]);
     // Ausência de linha é **projeção pendente**, não dia sem trabalho: a
     // projeção materializa o dia do autónomo mesmo quando não houve nada.
-    if (!linha) return vazio(dia, 'pending');
+    if (!linha) return vazio(dia, 'pending', fuso);
 
-    const foto = toSnapshot(linha);
+    // `settled: false` significa «ainda pode mudar», não «não há dados»: a
+    // projeção ainda aceita eventos atrasados dentro da janela segura.
+    const foto = toSnapshot(linha, fuso, isSettled(linha.day, agora, fuso.zone));
     const baseline = comparePersonalBaseline(janela);
     // A comparação é sempre do último dia **trabalhado**. Se o dia pedido não é
     // esse, ela não se aplica — e devolvê-la assim mesmo faria parecer que os
@@ -118,17 +139,15 @@ export class GetDriverDailySnapshotUseCase {
     return recommendation ? { ...foto, baseline, recommendation } : { ...foto, baseline };
   }
 
-  private async ontem(tenantId: string, agora: Date): Promise<string> {
-    const zona = await this.zonas.findTimeZone(tenantId);
-    const hoje = new Intl.DateTimeFormat('en-CA', {
-      timeZone: zona,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    }).format(agora);
-    const d = new Date(`${hoje}T00:00:00Z`);
-    d.setUTCDate(d.getUTCDate() - 1);
-    return d.toISOString().slice(0, 10);
+  /**
+   * Fuso de quem lê: perfil → tenant → UTC, com a origem declarada (ADR-0122).
+   */
+  private async fuso(tenantId: string, userId: string) {
+    const [doUtilizador, doTenant] = await Promise.all([
+      this.fusoDoUtilizador.findTimeZone(tenantId, userId),
+      this.zonas.findTimeZone(tenantId),
+    ]);
+    return resolveTimeZone(doUtilizador, doTenant);
   }
 
   /**
@@ -187,7 +206,7 @@ function recuar(day: string, dias: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-function vazio(day: string, state: DriverDayState): DriverDailySnapshot {
+function vazio(day: string, state: DriverDayState, fuso: ResolvedTimeZone): DriverDailySnapshot {
   return {
     day,
     state,
@@ -199,6 +218,10 @@ function vazio(day: string, state: DriverDayState): DriverDailySnapshot {
     activeMinutes: null,
     savings: null,
     projectedAt: null,
+    timeZone: fuso.zone,
+    timeZoneSource: fuso.source,
+    // Sem linha não há dia fechado: não se afirma definitivo o que não se leu.
+    settled: false,
   };
 }
 
@@ -209,7 +232,11 @@ function vazio(day: string, state: DriverDayState): DriverDailySnapshot {
  * é um dia completo — e chamar-lhe `ok` esconderia que a duração é desconhecida
  * justamente onde ela seria usada para sugerir descanso.
  */
-function toSnapshot(row: DailyRawRow): DriverDailySnapshot {
+function toSnapshot(
+  row: DailyRawRow,
+  fuso: ResolvedTimeZone,
+  settled: boolean,
+): DriverDailySnapshot {
   const activeMinutes = activeMinutesOf(row);
   const houveTrabalho = row.delivered + row.failed > 0 || row.plans > 0;
   const state: DriverDayState = !houveTrabalho
@@ -238,5 +265,8 @@ function toSnapshot(row: DailyRawRow): DriverDailySnapshot {
           }
         : null,
     projectedAt: row.projectedAt.toISOString(),
+    timeZone: fuso.zone,
+    timeZoneSource: fuso.source,
+    settled,
   };
 }

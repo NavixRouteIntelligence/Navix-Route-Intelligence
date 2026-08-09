@@ -22,6 +22,9 @@ function foto(over: Partial<DriverDailySnapshot> = {}): DriverDailySnapshot {
     activeMinutes: 300,
     savings: null,
     projectedAt: '2026-08-09T02:00:00.000Z',
+    timeZone: 'Europe/Lisbon',
+    timeZoneSource: 'user',
+    settled: true,
     ...over,
   };
 }

@@ -25,4 +25,12 @@ export class KaizenPreferencesDto {
   @ApiProperty({ description: 'Esconde as sugestões; os resultados continuam.' })
   @IsBoolean()
   hideRecommendations!: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Hora local do lembrete (HH:MM). Ausente ou null: sem lembrete.',
+    example: '07:30',
+  })
+  @IsOptional()
+  @Matches(/^([01]\d|2[0-3]):([0-5]\d)$/, { message: 'reminderAt deve ser HH:MM.' })
+  reminderAt?: string | null;
 }

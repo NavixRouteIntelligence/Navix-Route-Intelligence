@@ -40,7 +40,13 @@ class KaizenDaily {
     this.recommendationKm,
     this.recommendationDuration,
     this.recommendationBaselineDuration,
-  });
+    Map<String, dynamic>? raw,
+  }) : _raw = raw;
+
+  final Map<String, dynamic>? _raw;
+
+  /// O payload cru, para o cache offline poder guardá-lo tal como chegou.
+  Map<String, dynamic> get raw => _raw ?? const {};
 
   factory KaizenDaily.fromJson(Map<String, dynamic> json) {
     final metrics = (json['metrics'] as Map<String, dynamic>?) ?? const {};
@@ -51,14 +57,16 @@ class KaizenDaily {
     final evidence = ((rec?['evidence'] as List<dynamic>?) ?? const [])
         .cast<Map<String, dynamic>>();
 
-    num? evidenceOf(String metric) => evidence
-        .cast<Map<String, dynamic>?>()
-        .firstWhere((e) => e?['metric'] == metric,
-            orElse: () => null)?['value'] as num?;
-    num? baselineOf(String metric) => evidence
-        .cast<Map<String, dynamic>?>()
-        .firstWhere((e) => e?['metric'] == metric,
-            orElse: () => null)?['baseline'] as num?;
+    num? evidenceOf(String metric) =>
+        evidence.cast<Map<String, dynamic>?>().firstWhere(
+              (e) => e?['metric'] == metric,
+              orElse: () => null,
+            )?['value'] as num?;
+    num? baselineOf(String metric) =>
+        evidence.cast<Map<String, dynamic>?>().firstWhere(
+              (e) => e?['metric'] == metric,
+              orElse: () => null,
+            )?['baseline'] as num?;
 
     return KaizenDaily(
       day: json['day'] as String,
@@ -74,6 +82,7 @@ class KaizenDaily {
       recommendationKm: evidenceOf('savedKm')?.toDouble(),
       recommendationDuration: evidenceOf('activeMinutes')?.toInt(),
       recommendationBaselineDuration: baselineOf('activeMinutes')?.toInt(),
+      raw: json,
     );
   }
 
@@ -94,13 +103,18 @@ class KaizenDaily {
 
 /// Escreve o resumo em blocos, na ordem da secção 1.
 List<KaizenBlock> composeKaizenSummary(
-    KaizenDaily daily, AppLocalizations l10n) {
+  KaizenDaily daily,
+  AppLocalizations l10n,
+) {
   // Projeção pendente: um bloco só, e honesto. Mostrar zeros aqui seria
   // apresentar ausência de dado como dia vazio.
   if (daily.status == 'pending') {
     return [
-      KaizenBlock(KaizenBlockKind.yesterday, l10n.kaizenSectionYesterday,
-          l10n.kaizenPreparing),
+      KaizenBlock(
+        KaizenBlockKind.yesterday,
+        l10n.kaizenSectionYesterday,
+        l10n.kaizenPreparing,
+      ),
     ];
   }
 
@@ -108,8 +122,11 @@ List<KaizenBlock> composeKaizenSummary(
   // contagem de dias parados.
   if (daily.status == 'no-work') {
     return [
-      KaizenBlock(KaizenBlockKind.yesterday, l10n.kaizenSectionYesterday,
-          l10n.kaizenTitleNoWork),
+      KaizenBlock(
+        KaizenBlockKind.yesterday,
+        l10n.kaizenSectionYesterday,
+        l10n.kaizenTitleNoWork,
+      ),
     ];
   }
 
@@ -128,14 +145,26 @@ List<KaizenBlock> composeKaizenSummary(
   }
 
   return [
-    KaizenBlock(KaizenBlockKind.yesterday, l10n.kaizenSectionYesterday,
-        _ontem(daily, l10n)),
-    KaizenBlock(KaizenBlockKind.comparison, l10n.kaizenSectionComparison,
-        _comparacao(daily, l10n)),
     KaizenBlock(
-        KaizenBlockKind.why, l10n.kaizenSectionWhy, _porque(daily, l10n)),
+      KaizenBlockKind.yesterday,
+      l10n.kaizenSectionYesterday,
+      _ontem(daily, l10n),
+    ),
     KaizenBlock(
-        KaizenBlockKind.today, l10n.kaizenSectionToday, _hoje(daily, l10n)),
+      KaizenBlockKind.comparison,
+      l10n.kaizenSectionComparison,
+      _comparacao(daily, l10n),
+    ),
+    KaizenBlock(
+      KaizenBlockKind.why,
+      l10n.kaizenSectionWhy,
+      _porque(daily, l10n),
+    ),
+    KaizenBlock(
+      KaizenBlockKind.today,
+      l10n.kaizenSectionToday,
+      _hoje(daily, l10n),
+    ),
   ];
 }
 
@@ -155,7 +184,10 @@ String _comparacao(KaizenDaily d, AppLocalizations l10n) {
       ? base.round().toString()
       : base.toStringAsFixed(1).replaceAll('.', ',');
   return l10n.kaizenComparisonUsual(
-      d.baselineSample, texto, _tendencia(d.baselineTrend!, l10n));
+    d.baselineSample,
+    texto,
+    _tendencia(d.baselineTrend!, l10n),
+  );
 }
 
 String _tendencia(String trend, AppLocalizations l10n) => switch (trend) {
@@ -169,17 +201,20 @@ String _tendencia(String trend, AppLocalizations l10n) => switch (trend) {
 /// se sabe — nunca se constrói uma explicação plausível.
 String _porque(KaizenDaily d, AppLocalizations l10n) =>
     switch (d.recommendationCode) {
-      'rest.long-day' =>
-        l10n.kaizenWhyRestLongDay(_duracao(d.recommendationDuration, l10n)),
+      'rest.long-day' => l10n.kaizenWhyRestLongDay(
+          _duracao(d.recommendationDuration, l10n),
+        ),
       'rest.longer-than-usual' => l10n.kaizenWhyRestLongerThanUsual(
           _duracao(d.recommendationDuration, l10n),
           _duracao(d.recommendationBaselineDuration, l10n),
         ),
       'failures.first' => l10n.kaizenWhyFailuresFirst,
-      'failures.repeated' =>
-        l10n.kaizenWhyFailuresRepeated(d.recommendationCount ?? d.failed),
-      'load.follow-suggested-order' =>
-        l10n.kaizenWhyLoadOrder(_km(d.recommendationKm)),
+      'failures.repeated' => l10n.kaizenWhyFailuresRepeated(
+          d.recommendationCount ?? d.failed,
+        ),
+      'load.follow-suggested-order' => l10n.kaizenWhyLoadOrder(
+          _km(d.recommendationKm),
+        ),
       'none.acknowledge' => l10n.kaizenWhyAcknowledge(d.delivered),
       _ => l10n.kaizenWhyUnknown,
     };

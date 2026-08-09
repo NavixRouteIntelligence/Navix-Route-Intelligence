@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
 import 'package:navix_mobile/app/theme/app_theme.dart';
 import 'package:navix_mobile/core/error/failure.dart';
+import 'package:navix_mobile/features/kaizen/data/kaizen_cache.dart';
 import 'package:navix_mobile/features/kaizen/data/kaizen_repository.dart';
 import 'package:navix_mobile/features/kaizen/domain/kaizen_summary.dart';
 import 'package:navix_mobile/features/kaizen/presentation/kaizen_cubit.dart';
@@ -10,6 +11,20 @@ import 'package:navix_mobile/features/kaizen/presentation/kaizen_daily_page.dart
 import 'package:navix_mobile/l10n/gen/app_localizations.dart';
 
 /// Repositório de teste: devolve o resumo sem tocar em rede.
+/// Cache em memória: o real abre armazenamento seguro, que não existe no teste.
+class _FakeCache implements KaizenCache {
+  Map<String, dynamic>? _guardado;
+
+  @override
+  Future<void> save(Map<String, dynamic> payload) async => _guardado = payload;
+
+  @override
+  Future<Map<String, dynamic>?> read() async => _guardado;
+
+  @override
+  Future<void> clear() async => _guardado = null;
+}
+
 class _FakeRepo implements KaizenRepository {
   _FakeRepo({this.daily, this.erro});
 
@@ -65,9 +80,10 @@ Future<void> _pump(WidgetTester tester, {double textScale = 1.0}) async {
 void main() {
   final getIt = GetIt.instance;
 
-  void registar(_FakeRepo repo) {
+  void registar(_FakeRepo repo, [KaizenCache? cache]) {
     if (getIt.isRegistered<KaizenCubit>()) getIt.unregister<KaizenCubit>();
-    getIt.registerFactory<KaizenCubit>(() => KaizenCubit(repo));
+    getIt.registerFactory<KaizenCubit>(
+        () => KaizenCubit(repo, cache ?? _FakeCache()));
   }
 
   tearDown(() => getIt.reset());
@@ -278,6 +294,67 @@ void main() {
 
     test('data inválida devolve o que recebeu, sem rebentar', () {
       expect(kaizenReadableDay('ontem', 'pt_PT'), 'ontem');
+    });
+  });
+
+  // T7.8 / ADR-0122: sem rede, o resumo guardado ainda serve.
+  group('cache offline', () {
+    testWidgets('guarda o resumo pedido por omissão', (tester) async {
+      final cache = _FakeCache();
+      registar(_FakeRepo(daily: _daily()), cache);
+
+      await _pump(tester);
+
+      expect(await cache.read(), isNotNull);
+    });
+
+    testWidgets('sem rede, mostra o guardado em vez do estado offline',
+        (tester) async {
+      final cache = _FakeCache();
+      await cache.save({
+        'day': '2026-08-08',
+        'status': 'ok',
+        'metrics': {'delivered': 9, 'failed': 0, 'onTime': 9},
+        'baseline': {
+          'delivered': {
+            'current': 9,
+            'baseline': 9,
+            'trend': 'stable',
+            'sample': 7
+          },
+        },
+      });
+      registar(_FakeRepo(erro: const NetworkFailure()), cache);
+
+      await _pump(tester);
+
+      expect(find.textContaining('Sem ligação'), findsNothing);
+      expect(find.text('9'), findsOneWidget);
+    });
+
+    testWidgets('sem rede e sem nada guardado, continua o estado offline',
+        (tester) async {
+      registar(_FakeRepo(erro: const NetworkFailure()), _FakeCache());
+
+      await _pump(tester);
+
+      expect(find.textContaining('Sem ligação'), findsOneWidget);
+    });
+
+    // Erro de servidor não serve cache: o pedido chegou, e é a resposta que
+    // está partida — mostrar um resumo velho esconderia isso.
+    testWidgets('erro de servidor não recorre ao cache', (tester) async {
+      final cache = _FakeCache();
+      await cache.save({
+        'day': '2026-08-08',
+        'status': 'ok',
+        'metrics': {'delivered': 9, 'failed': 0, 'onTime': 9},
+      });
+      registar(_FakeRepo(erro: const ServerFailure()), cache);
+
+      await _pump(tester);
+
+      expect(find.text('Não foi possível carregar o resumo'), findsOneWidget);
     });
   });
 }

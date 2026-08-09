@@ -7,6 +7,8 @@ import { TenantPlanRepository } from './tenant-plan.repository';
 import { TENANT_ACCOUNT_TYPE_READER } from './tenant-account-type.port';
 import { TenantAccountTypeRepository } from './tenant-account-type.repository';
 import { TENANT_TIME_ZONE_READER } from './tenant-time-zone.port';
+import { USER_TIME_ZONE_READER } from './user-time-zone.port';
+import { UserTimeZoneRepository } from './user-time-zone.repository';
 import { TenantTimeZoneRepository } from './tenant-time-zone.repository';
 import { TenantTransactionInterceptor } from './tenant-transaction.interceptor';
 
@@ -21,8 +23,14 @@ import { TenantTransactionInterceptor } from './tenant-transaction.interceptor';
     { provide: TENANT_PLAN_READER, useClass: TenantPlanRepository },
     { provide: TENANT_TIME_ZONE_READER, useClass: TenantTimeZoneRepository },
     { provide: TENANT_ACCOUNT_TYPE_READER, useClass: TenantAccountTypeRepository },
+    { provide: USER_TIME_ZONE_READER, useClass: UserTimeZoneRepository },
     FeatureAccessService,
   ],
-  exports: [FeatureAccessService, TENANT_TIME_ZONE_READER, TENANT_ACCOUNT_TYPE_READER],
+  exports: [
+    FeatureAccessService,
+    TENANT_TIME_ZONE_READER,
+    TENANT_ACCOUNT_TYPE_READER,
+    USER_TIME_ZONE_READER,
+  ],
 })
 export class TenancyModule {}
