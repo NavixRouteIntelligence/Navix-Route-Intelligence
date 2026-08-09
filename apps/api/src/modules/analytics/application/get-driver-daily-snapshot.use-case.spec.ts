@@ -33,6 +33,7 @@ function build(opts: {
   conta?: 'driver' | 'company';
   linhas?: DailyRawRow[];
   zona?: string;
+  userZone?: string | null;
 }) {
   const kpis = {
     rebuildDay: jest.fn(),
@@ -52,10 +53,12 @@ function build(opts: {
     recent: jest.fn().mockResolvedValue([]),
     history: jest.fn().mockResolvedValue([]),
     hidden: jest.fn().mockResolvedValue(false),
-    setHidden: jest.fn(),
+    preferences: jest.fn().mockResolvedValue({ hideRecommendations: false, reminderAt: null }),
+    setPreferences: jest.fn(),
   };
+  const fusoDoUtilizador = { findTimeZone: async () => opts.userZone ?? null };
   return {
-    uc: new GetDriverDailySnapshotUseCase(kpis, contas, zonas, advisor, feedback),
+    uc: new GetDriverDailySnapshotUseCase(kpis, contas, zonas, advisor, feedback, fusoDoUtilizador),
     kpis,
     feedback,
   };

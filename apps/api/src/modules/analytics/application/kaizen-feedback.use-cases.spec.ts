@@ -3,6 +3,7 @@ import type { KaizenFeedbackRepositoryPort } from '../domain/ports/kaizen-feedba
 
 import {
   GetKaizenHistoryUseCase,
+  GetKaizenPreferencesUseCase,
   MAX_HISTORY,
   RecordKaizenFeedbackUseCase,
   SetKaizenPreferencesUseCase,
@@ -17,7 +18,8 @@ function repo() {
     recent: jest.fn().mockResolvedValue([]),
     history: jest.fn().mockResolvedValue([]),
     hidden: jest.fn().mockResolvedValue(false),
-    setHidden: jest.fn().mockResolvedValue(undefined),
+    preferences: jest.fn().mockResolvedValue({ hideRecommendations: false, reminderAt: null }),
+    setPreferences: jest.fn().mockResolvedValue(undefined),
   } as unknown as jest.Mocked<KaizenFeedbackRepositoryPort>;
 }
 
@@ -103,14 +105,73 @@ describe('GetKaizenHistoryUseCase', () => {
 });
 
 describe('SetKaizenPreferencesUseCase', () => {
+  // Um caminho de saída mais caro do que o de entrada é a definição de dark
+  // pattern: ligar e desligar são a mesma chamada.
   it('esconde e volta a mostrar com o mesmo custo', async () => {
     const r = repo();
     const uc = new SetKaizenPreferencesUseCase(r);
 
-    await uc.execute(TENANT, LOGIN, true);
-    await uc.execute(TENANT, LOGIN, false);
+    await uc.execute(TENANT, LOGIN, { hideRecommendations: true, reminderAt: null });
+    await uc.execute(TENANT, LOGIN, { hideRecommendations: false, reminderAt: null });
 
-    expect(r.setHidden).toHaveBeenNthCalledWith(1, TENANT, LOGIN, true);
-    expect(r.setHidden).toHaveBeenNthCalledWith(2, TENANT, LOGIN, false);
+    expect(r.setPreferences).toHaveBeenNthCalledWith(1, TENANT, LOGIN, {
+      hideRecommendations: true,
+      reminderAt: null,
+    });
+    expect(r.setPreferences).toHaveBeenNthCalledWith(2, TENANT, LOGIN, {
+      hideRecommendations: false,
+      reminderAt: null,
+    });
+  });
+
+  it('aceita uma hora de lembrete', async () => {
+    const r = repo();
+
+    await new SetKaizenPreferencesUseCase(r).execute(TENANT, LOGIN, {
+      hideRecommendations: false,
+      reminderAt: '07:30',
+    });
+
+    expect(r.setPreferences).toHaveBeenCalledWith(TENANT, LOGIN, {
+      hideRecommendations: false,
+      reminderAt: '07:30',
+    });
+  });
+
+  it('desligar o lembrete é `null`, pelo mesmo caminho', async () => {
+    const r = repo();
+
+    await new SetKaizenPreferencesUseCase(r).execute(TENANT, LOGIN, {
+      hideRecommendations: false,
+      reminderAt: null,
+    });
+
+    expect(r.setPreferences).toHaveBeenCalledWith(TENANT, LOGIN, {
+      hideRecommendations: false,
+      reminderAt: null,
+    });
+  });
+
+  it('recusa uma hora inválida', async () => {
+    for (const hora of ['7:30', '25:00', '07:60', 'manhã']) {
+      await expect(
+        new SetKaizenPreferencesUseCase(repo()).execute(TENANT, LOGIN, {
+          hideRecommendations: false,
+          reminderAt: hora,
+        }),
+      ).rejects.toBeInstanceOf(ValidationError);
+    }
+  });
+});
+
+describe('GetKaizenPreferencesUseCase', () => {
+  // Sem linha guardada, o padrão é: sugestões visíveis e **sem** lembrete.
+  it('o padrão não liga nada', async () => {
+    const r = repo();
+
+    await expect(new GetKaizenPreferencesUseCase(r).execute(TENANT, LOGIN)).resolves.toEqual({
+      hideRecommendations: false,
+      reminderAt: null,
+    });
   });
 });

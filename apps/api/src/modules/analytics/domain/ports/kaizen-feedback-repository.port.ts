@@ -34,8 +34,19 @@ export interface KaizenFeedbackRepositoryPort {
   /** Últimos resumos com a ação sugerida e o que a pessoa respondeu. */
   history(tenantId: string, userId: string, limit: number): Promise<KaizenHistoryRow[]>;
 
+  /** Preferências do resumo. `reminderAt` a `null` = sem lembrete (ADR-0122). */
+  preferences(
+    tenantId: string,
+    userId: string,
+  ): Promise<{ hideRecommendations: boolean; reminderAt: string | null }>;
+
+  setPreferences(
+    tenantId: string,
+    userId: string,
+    prefs: { hideRecommendations: boolean; reminderAt: string | null },
+  ): Promise<void>;
+
   hidden(tenantId: string, userId: string): Promise<boolean>;
-  setHidden(tenantId: string, userId: string, hidden: boolean): Promise<void>;
 }
 
 export const KAIZEN_FEEDBACK_REPOSITORY = Symbol('KAIZEN_FEEDBACK_REPOSITORY');

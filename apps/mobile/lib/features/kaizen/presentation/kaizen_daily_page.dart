@@ -147,18 +147,24 @@ class _Greeting extends StatelessWidget {
     // O leitor de ecrã recebe o resumo inteiro numa leitura: quem usa
     // TalkBack não deve ter de varrer quatro cartões para saber como foi o dia.
     return Semantics(
-      label:
-          l10n.kaizenSemanticsSummary(day, blocos.map((b) => b.body).join(' ')),
+      label: l10n.kaizenSemanticsSummary(
+        day,
+        blocos.map((b) => b.body).join(' '),
+      ),
       excludeSemantics: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(kaizenGreeting(l10n, DateTime.now()),
-              style: texto.headlineSmall),
+          Text(
+            kaizenGreeting(l10n, DateTime.now()),
+            style: texto.headlineSmall,
+          ),
           const SizedBox(height: 4),
           Text(
             kaizenReadableDay(
-                day, Localizations.localeOf(context).toLanguageTag()),
+              day,
+              Localizations.localeOf(context).toLanguageTag(),
+            ),
             style: texto.bodyMedium?.copyWith(color: context.tokens.muted),
           ),
         ],
@@ -180,8 +186,10 @@ class _NumbersCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(l10n.kaizenCardNumbers,
-              style: Theme.of(context).textTheme.titleMedium),
+          Text(
+            l10n.kaizenCardNumbers,
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
           const SizedBox(height: 12),
           // `Wrap` e não `Row`: com Dynamic Type grande, quatro números lado a
           // lado deixam de caber e passariam a truncar.
@@ -190,11 +198,16 @@ class _NumbersCard extends StatelessWidget {
             runSpacing: 12,
             children: [
               _Stat(
-                  label: l10n.kaizenStatDelivered, value: '${daily.delivered}'),
+                label: l10n.kaizenStatDelivered,
+                value: '${daily.delivered}',
+              ),
               _Stat(
                 label: l10n.kaizenStatSuccess,
                 value: _rate(
-                    daily.delivered, daily.delivered + daily.failed, l10n),
+                  daily.delivered,
+                  daily.delivered + daily.failed,
+                  l10n,
+                ),
               ),
               _Stat(
                 label: l10n.kaizenStatOnTime,
@@ -237,8 +250,10 @@ class _Stat extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(value, style: texto.headlineSmall),
-          Text(label,
-              style: texto.bodySmall?.copyWith(color: context.tokens.muted)),
+          Text(
+            label,
+            style: texto.bodySmall?.copyWith(color: context.tokens.muted),
+          ),
         ],
       ),
     );
@@ -261,8 +276,10 @@ class _TrendsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(l10n.kaizenCardTrends,
-              style: Theme.of(context).textTheme.titleMedium),
+          Text(
+            l10n.kaizenCardTrends,
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
           const SizedBox(height: 8),
           Text(comparacao),
         ],
@@ -295,8 +312,10 @@ class _TodayCard extends StatelessWidget {
           const SizedBox(height: 12),
           Text(l10n.kaizenSectionWhy, style: texto.labelMedium),
           const SizedBox(height: 4),
-          Text(porque,
-              style: texto.bodyMedium?.copyWith(color: context.tokens.muted)),
+          Text(
+            porque,
+            style: texto.bodyMedium?.copyWith(color: context.tokens.muted),
+          ),
         ],
       ),
     );

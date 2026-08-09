@@ -107,14 +107,36 @@ export class KaizenFeedbackRepository implements KaizenFeedbackRepositoryPort {
     return rows[0]?.hide_recommendations === true;
   }
 
-  async setHidden(tenantId: string, userId: string, hidden: boolean): Promise<void> {
+  async preferences(
+    tenantId: string,
+    userId: string,
+  ): Promise<{ hideRecommendations: boolean; reminderAt: string | null }> {
+    const rows = (await this.manager.query(
+      `SELECT hide_recommendations, to_char(reminder_at, 'HH24:MI') AS reminder_at
+         FROM kaizen_preferences WHERE tenant_id = $1 AND user_id = $2`,
+      [tenantId, userId],
+    )) as { hide_recommendations: boolean; reminder_at: string | null }[];
+
+    // Sem linha, o padrão: sugestões visíveis e **sem** lembrete.
+    return {
+      hideRecommendations: rows[0]?.hide_recommendations === true,
+      reminderAt: rows[0]?.reminder_at ?? null,
+    };
+  }
+
+  async setPreferences(
+    tenantId: string,
+    userId: string,
+    prefs: { hideRecommendations: boolean; reminderAt: string | null },
+  ): Promise<void> {
     await this.manager.query(
-      `INSERT INTO kaizen_preferences (tenant_id, user_id, hide_recommendations, updated_at)
-       VALUES ($1, $2, $3, now())
+      `INSERT INTO kaizen_preferences (tenant_id, user_id, hide_recommendations, reminder_at, updated_at)
+       VALUES ($1, $2, $3, $4::time, now())
        ON CONFLICT (tenant_id, user_id) DO UPDATE SET
          hide_recommendations = EXCLUDED.hide_recommendations,
+         reminder_at = EXCLUDED.reminder_at,
          updated_at = now()`,
-      [tenantId, userId, hidden],
+      [tenantId, userId, prefs.hideRecommendations, prefs.reminderAt],
     );
   }
 }
