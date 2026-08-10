@@ -17,7 +17,14 @@ import type { VehicleType } from '@navix/contracts';
  */
 
 /** Perfis de deslocamento suportados pelo provedor (Mapbox Matrix API). */
-export type RoutingProfile = 'driving' | 'cycling' | 'walking';
+/**
+ * Perfis do provedor.
+ *
+ * `driving` usa **velocidades típicas da via**, não trânsito em tempo real —
+ * quem lê trânsito é `driving-traffic`, com um limite de coordenadas mais
+ * apertado. Ver `matrix-profile.ts` para quando cada um se justifica (ADR-0126).
+ */
+export type RoutingProfile = 'driving' | 'driving-traffic' | 'cycling' | 'walking';
 
 /** Quão fielmente o perfil representa o veículo. */
 export type ProfileFidelity =

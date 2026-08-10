@@ -5,12 +5,19 @@ import type { VehicleType } from '@navix/contracts';
 
 import type { LatLng } from '../../../../shared/kernel/geo';
 import { UNREACHABLE } from '../../domain/reachability';
+import { assertFiniteCells, assertMatrixShape, normalizeCell } from '../../domain/matrix-integrity';
+import { MAX_COORDS_BY_PROFILE, chooseMatrixProfile } from '../../domain/matrix-profile';
 import { resolveRoutingProfile, type RoutingProfileMapping } from '../../domain/routing-profile';
 import type { RouteMatrix, RoutingProviderPort } from '../../domain/ports/routing-provider.port';
+import { OptimizerMetrics } from '../observability/optimizer-metrics';
 import { haversineMatrix } from './haversine-routing.provider';
 
-/** Limite de coordenadas por requisição do Mapbox Matrix API (perfil `driving`). */
-const MAX_COORDS = 25;
+/**
+ * Limite de coordenadas por requisição, para o perfil escolhido. O
+ * `driving-traffic` é mais apertado (10) — ver `matrix-profile.ts`.
+ */
+const maxCoordsFor = (perfil: RoutingProfileMapping): number =>
+  MAX_COORDS_BY_PROFILE[perfil.profile];
 
 /**
  * Coordenadas por bloco no ladrilhamento (ADR-0107).
@@ -70,7 +77,13 @@ async function inBatches<T>(tasks: (() => Promise<T>)[]): Promise<T[]> {
 
 /**
  * Provedor de roteamento **real** via Mapbox Matrix API (ADR-0027): distância e
- * **duração de trânsito** medidas.
+ * duração medidas na rede viária.
+ *
+ * **Não é trânsito em tempo real.** O perfil `driving` usa velocidades típicas
+ * da via; quem lê trânsito é `driving-traffic`, e ele só é pedido quando se
+ * justifica (ADR-0126). A documentação anterior deste ficheiro afirmava
+ * «duração de trânsito medida», o que era falso e passou a importar quando a
+ * duração virou objetivo (ADR-0111).
  *
  * ## Acima de 25 pontos (ADR-0107)
  *
@@ -97,7 +110,10 @@ export class MapboxRoutingProvider implements RoutingProviderPort {
   private readonly requireProvider: boolean;
   private warned = false;
 
-  constructor(config: AppConfigService) {
+  constructor(
+    config: AppConfigService,
+    private readonly metrics: OptimizerMetrics,
+  ) {
     this.token = config.maps.mapboxToken;
     this.requireProvider = config.maps.requireProvider;
   }
@@ -106,27 +122,42 @@ export class MapboxRoutingProvider implements RoutingProviderPort {
     points: LatLng[],
     speedKmh: number,
     vehicleType?: VehicleType | null,
+    departureAt?: Date | null,
   ): Promise<RouteMatrix> {
     // Mapeamento explícito, resolvido uma vez e usado em toda requisição desta
     // matriz — inclusive nos ladrilhos (ADR-0108).
-    const perfil = resolveRoutingProfile(vehicleType);
+    const base = resolveRoutingProfile(vehicleType);
+    const escolha = chooseMatrixProfile({
+      base: base.profile,
+      points: points.length,
+      departureAt,
+    });
+    const perfil: RoutingProfileMapping = { ...base, profile: escolha.profile };
+
     if (!this.token || points.length < 2) {
-      return this.geometric(points, speedKmh, 'sem token do provedor');
+      return this.geometric(points, speedKmh, 'sem token do provedor', 'no-token');
     }
     if (points.length > MAX_TILED_COORDS) {
+      this.metrics.observeMatrixCoordsExceeded(points.length);
       return this.geometric(
         points,
         speedKmh,
         `${points.length} pontos acima do teto de ${MAX_TILED_COORDS} para ladrilhamento`,
+        'coords-exceeded',
       );
     }
 
+    const inicio = Date.now();
     try {
-      return points.length <= MAX_COORDS
-        ? await this.singleRequest(points, perfil)
-        : await this.tiled(points, perfil);
+      const matriz =
+        points.length <= maxCoordsFor(perfil)
+          ? await this.singleRequest(points, perfil, speedKmh)
+          : await this.tiled(points, perfil, speedKmh);
+      this.metrics.observeMatrix('success', escolha.profile, (Date.now() - inicio) / 1000);
+      return matriz;
     } catch (err) {
-      return this.geometric(points, speedKmh, err instanceof Error ? err.message : String(err));
+      this.metrics.observeMatrix(kindOf(err), escolha.profile, (Date.now() - inicio) / 1000);
+      return this.geometric(points, speedKmh, sanitize(err), kindOf(err));
     }
   }
 
@@ -134,15 +165,28 @@ export class MapboxRoutingProvider implements RoutingProviderPort {
   private async singleRequest(
     points: LatLng[],
     perfil: RoutingProfileMapping,
+    speedKmh: number,
   ): Promise<RouteMatrix> {
-    const body = await this.fetchMatrix(points, perfil);
+    const body = await this.fetchMatrix(points, perfil, points.length, points.length);
     if (body === 'no-route') return { ...allUnreachable(points.length), profile: perfil };
-    return {
-      distanceKm: body.distances.map((row) => row.map(toKm)),
-      durationMin: body.durations.map((row) => row.map(toMin)),
-      source: 'provider',
-      profile: perfil,
-    };
+
+    // Geometria de reserva para as células a que falta um dos dois números.
+    const reserva = haversineMatrix(points, speedKmh);
+    const distanceKm: number[][] = [];
+    const durationMin: number[][] = [];
+    for (let i = 0; i < points.length; i++) {
+      distanceKm.push([]);
+      durationMin.push([]);
+      for (let j = 0; j < points.length; j++) {
+        const celula = normalizeCell(
+          { meters: body.distances[i][j], seconds: body.durations[i][j] },
+          { km: reserva.distanceKm[i][j], minutes: reserva.durationMin[i][j] },
+        );
+        distanceKm[i].push(celula.km);
+        durationMin[i].push(celula.minutes);
+      }
+    }
+    return { distanceKm, durationMin, source: 'provider', profile: perfil };
   }
 
   /**
@@ -153,8 +197,13 @@ export class MapboxRoutingProvider implements RoutingProviderPort {
    * contra si mesmo manda as coordenadas uma vez só — repeti-las gastaria o
    * dobro do orçamento de 25 por nada.
    */
-  private async tiled(points: LatLng[], perfil: RoutingProfileMapping): Promise<RouteMatrix> {
+  private async tiled(
+    points: LatLng[],
+    perfil: RoutingProfileMapping,
+    speedKmh: number,
+  ): Promise<RouteMatrix> {
     const n = points.length;
+    const reserva = haversineMatrix(points, speedKmh);
     const blocks = blocksOf(n);
     const distanceKm = emptyMatrix(n);
     const durationMin = emptyMatrix(n);
@@ -171,10 +220,9 @@ export class MapboxRoutingProvider implements RoutingProviderPort {
         const body = await this.fetchMatrix(
           coords.map((i) => points[i]),
           perfil,
-          {
-            sources,
-            destinations,
-          },
+          origens.length,
+          destinos.length,
+          { sources, destinations },
         );
         // `NoRoute` num ladrilho é afirmação sobre aquele retângulo: nenhum par
         // dali tem rota (ADR-0106). Não invalida os outros ladrilhos.
@@ -184,8 +232,12 @@ export class MapboxRoutingProvider implements RoutingProviderPort {
             if (body === 'no-route') {
               distanceKm[i][j] = durationMin[i][j] = i === j ? 0 : UNREACHABLE;
             } else {
-              distanceKm[i][j] = toKm(body.distances[a]?.[b] ?? null);
-              durationMin[i][j] = toMin(body.durations[a]?.[b] ?? null);
+              const celula = normalizeCell(
+                { meters: body.distances[a][b], seconds: body.durations[a][b] },
+                { km: reserva.distanceKm[i][j], minutes: reserva.durationMin[i][j] },
+              );
+              distanceKm[i][j] = celula.km;
+              durationMin[i][j] = celula.minutes;
             }
           }
         }
@@ -202,6 +254,8 @@ export class MapboxRoutingProvider implements RoutingProviderPort {
   private async fetchMatrix(
     points: LatLng[],
     perfil: RoutingProfileMapping,
+    rows: number,
+    cols: number,
     scope?: { sources: number[]; destinations: number[] },
   ): Promise<'no-route' | { distances: (number | null)[][]; durations: (number | null)[][] }> {
     const coords = points.map((p) => `${p.longitude},${p.latitude}`).join(';');
@@ -218,7 +272,12 @@ export class MapboxRoutingProvider implements RoutingProviderPort {
       `https://api.mapbox.com/directions-matrix/v1/mapbox/${perfil.profile}/${coords}?${params}`,
       { signal: AbortSignal.timeout(TIMEOUT_MS) },
     );
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    if (!res.ok) {
+      // O status entra na métrica; o corpo não é lido nem registado — pode
+      // repetir a URL, e a URL leva o token.
+      this.metrics.observeMatrixHttp(res.status);
+      throw new Error(`HTTP ${res.status}`);
+    }
 
     const body = (await res.json()) as MatrixResponse;
     // `NoRoute` é o provedor afirmando que **não existe rota** entre os pontos —
@@ -228,6 +287,15 @@ export class MapboxRoutingProvider implements RoutingProviderPort {
     if (body.code !== 'Ok' || !body.distances || !body.durations) {
       throw new Error(`resposta inválida (${body.code ?? 'sem code'})`);
     }
+
+    // A forma é verificada antes de qualquer leitura: uma linha curta lida com
+    // `?.[b] ?? null` virava célula proibida, e o plano saía a contornar ruas
+    // que existem (ADR-0126).
+    assertMatrixShape(body.distances, rows, cols, 'distância');
+    assertMatrixShape(body.durations, rows, cols, 'duração');
+    assertFiniteCells(body.distances, 'distância');
+    assertFiniteCells(body.durations, 'duração');
+
     return { distances: body.distances, durations: body.durations };
   }
 
@@ -237,7 +305,8 @@ export class MapboxRoutingProvider implements RoutingProviderPort {
    * Com `MAPS_REQUIRE_PROVIDER=true` ela vira erro: quem contratou ETA medido
    * prefere não receber rota a receber uma rota que parece medida e não é.
    */
-  private geometric(points: LatLng[], speedKmh: number, motivo: string): RouteMatrix {
+  private geometric(points: LatLng[], speedKmh: number, motivo: string, kind: string): RouteMatrix {
+    this.metrics.observeMatrixFallback(kind);
     if (this.requireProvider) {
       throw new Error(
         `Roteamento real indisponível e MAPS_REQUIRE_PROVIDER está ativo: ${motivo}.`,
@@ -251,8 +320,35 @@ export class MapboxRoutingProvider implements RoutingProviderPort {
   }
 }
 
-const toKm = (m: number | null): number => (m == null ? UNREACHABLE : m / 1000);
-const toMin = (s: number | null): number => (s == null ? UNREACHABLE : s / 60);
+/**
+ * Mensagem segura para log.
+ *
+ * A URL do Matrix carrega `access_token` **e** as coordenadas de todas as
+ * paradas — que são as moradas dos clientes. Alguns erros de rede trazem a URL
+ * na mensagem, e um `logger.warn(err.message)` publicaria as duas coisas.
+ * Aqui a mensagem é reduzida ao que ajuda a diagnosticar.
+ */
+function sanitize(err: unknown): string {
+  const bruto = err instanceof Error ? err.message : String(err);
+  if (/timeout|aborted|AbortError/i.test(bruto)) return `timeout de ${TIMEOUT_MS}ms`;
+  const http = /HTTP (\d{3})/.exec(bruto);
+  if (http) return `HTTP ${http[1]}`;
+  // Corta qualquer coisa que se pareça com URL ou par de coordenadas.
+  return bruto
+    .replace(/https?:\/\/\S+/g, '[url]')
+    .replace(/-?\d{1,3}\.\d{3,},-?\d{1,3}\.\d{3,}/g, '[coord]')
+    .slice(0, 200);
+}
+
+/** Categoria da falha, para a métrica. Fechada de propósito: sem cardinalidade. */
+function kindOf(err: unknown): string {
+  const bruto = err instanceof Error ? err.message : String(err);
+  if (/timeout|aborted|AbortError/i.test(bruto)) return 'timeout';
+  if (/HTTP \d{3}/.test(bruto)) return 'http-error';
+  if (/matriz de/.test(bruto)) return 'invalid-matrix';
+  if (/resposta inválida/.test(bruto)) return 'invalid-response';
+  return 'error';
+}
 
 const emptyMatrix = (n: number): number[][] =>
   Array.from({ length: n }, () => new Array<number>(n).fill(UNREACHABLE));
