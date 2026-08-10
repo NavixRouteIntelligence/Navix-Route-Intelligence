@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/session/session_cubit.dart';
 import '../../core/session/session_state.dart';
+import '../../features/kaizen/presentation/kaizen_daily_page.dart';
 import '../../features/auth/presentation/invite_page.dart';
 import '../../features/auth/presentation/login_page.dart';
 import '../../features/auth/presentation/register_page.dart';
@@ -37,6 +38,11 @@ abstract final class Routes {
   /// Aceite de convite (ADR-0085). Público: o convidado ainda não tem conta.
   static const invite = '/convite';
   static const driver = '/driver';
+
+  /// Alvo do *deep link* do lembrete (ADR-0124). Rota própria, e não um
+  /// argumento de `/driver`: um lembrete tem de abrir **no** resumo, não na
+  /// rota com o resumo algures abaixo.
+  static const kaizen = '/driver/kaizen';
   static const dashboard = '/dashboard';
 }
 
@@ -82,6 +88,7 @@ GoRouter createRouter(SessionCubit session) {
         builder: (_, state) => InvitePage(token: state.pathParameters['token']),
       ),
       GoRoute(path: Routes.driver, builder: (_, __) => const DriverShell()),
+      GoRoute(path: Routes.kaizen, builder: (_, __) => const KaizenDailyPage()),
       GoRoute(path: Routes.dashboard, builder: (_, __) => const CompanyShell()),
     ],
   );

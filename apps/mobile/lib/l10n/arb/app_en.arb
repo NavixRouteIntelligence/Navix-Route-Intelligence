@@ -654,5 +654,7 @@
     }
   },
   "kaizenGreetingAfternoon": "Good afternoon",
-  "kaizenGreetingEvening": "Good evening"
+  "kaizenGreetingEvening": "Good evening",
+  "kaizenReminderTitle": "Yesterday's summary is ready",
+  "kaizenReminderBody": "Tap to see how your last working day went."
 }
