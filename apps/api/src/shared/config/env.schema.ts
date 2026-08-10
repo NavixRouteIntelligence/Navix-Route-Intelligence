@@ -160,6 +160,10 @@ export const envSchema = z.object({
   // que é o público desta frente e o recorte do piloto.
   // `all`: qualquer motorista, incluindo os de frota.
   KAIZEN_ROLLOUT: z.enum(['off', 'autonomous', 'all']).default('off'),
+  // Percentagem da amostra dentro do alcance escolhido (ADR-0124). 100 = todos.
+  // A amostragem é por **hash do utilizador**, não por sorteio: quem entra
+  // continua dentro, e subir a percentagem só acrescenta pessoas.
+  KAIZEN_ROLLOUT_PERCENT: z.coerce.number().int().min(0).max(100).default(100),
 
   // Zonas de risco (ADR-0024): JSON de [{latitude,longitude,radiusKm,penalty}].
   // Default vazio → sem efeito (no-op). Parseado/validado em AppConfigService.

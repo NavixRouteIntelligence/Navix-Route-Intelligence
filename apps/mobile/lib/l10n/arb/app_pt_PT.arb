@@ -377,5 +377,7 @@
   "kaizenSemanticsSummary": "Resumo de {day}. {body}",
   "kaizenSemanticsTrend": "{metric}: {trend}.",
   "kaizenGreetingAfternoon": "Boa tarde",
-  "kaizenGreetingEvening": "Boa noite"
+  "kaizenGreetingEvening": "Boa noite",
+  "kaizenReminderTitle": "O resumo de ontem está pronto",
+  "kaizenReminderBody": "Toque para ver como correu o seu último dia de trabalho."
 }

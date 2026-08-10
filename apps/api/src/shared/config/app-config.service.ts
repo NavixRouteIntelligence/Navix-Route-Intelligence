@@ -227,6 +227,11 @@ export class AppConfigService {
     return this.get('KAIZEN_ROLLOUT');
   }
 
+  /** Percentagem da amostra dentro do alcance (ADR-0124). */
+  get kaizenRolloutPercent(): number {
+    return this.get('KAIZEN_ROLLOUT_PERCENT');
+  }
+
   get optimizer() {
     return {
       autoReoptimize: this.get('OPTIMIZER_AUTO_REOPTIMIZE'),

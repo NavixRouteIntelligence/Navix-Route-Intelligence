@@ -8,14 +8,18 @@ import type { TenantAccountTypeReaderPort } from '../../../shared/tenancy/tenant
 
 import { KaizenEnabledGuard } from './kaizen-enabled.guard';
 
-function contexto(user?: { tenantId: string }): ExecutionContext {
+function contexto(user?: { tenantId: string; id?: string }): ExecutionContext {
   return {
-    switchToHttp: () => ({ getRequest: () => ({ user }) }),
+    switchToHttp: () => ({ getRequest: () => ({ user: user && { id: 'u1', ...user } }) }),
   } as unknown as ExecutionContext;
 }
 
-function guard(rollout: 'off' | 'autonomous' | 'all', conta: 'driver' | 'company' = 'driver') {
-  const config = { kaizenRollout: rollout } as AppConfigService;
+function guard(
+  rollout: 'off' | 'autonomous' | 'all',
+  conta: 'driver' | 'company' = 'driver',
+  percent = 100,
+) {
+  const config = { kaizenRollout: rollout, kaizenRolloutPercent: percent } as AppConfigService;
   const contas: TenantAccountTypeReaderPort = { findAccountType: async () => conta };
   return new KaizenEnabledGuard(config, contas);
 }
@@ -109,5 +113,29 @@ describe('o interruptor é local ao Kaizen', () => {
     percorrer(raiz);
 
     expect(escritas).toEqual([]);
+  });
+});
+
+// T7.9 / ADR-0124: a amostra é o último filtro — primeiro quem pode, depois
+// quantos por agora.
+describe('amostragem por percentagem', () => {
+  it('0% fecha mesmo dentro do alcance', async () => {
+    await expect(
+      guard('all', 'driver', 0).canActivate(contexto({ tenantId: 't1' })),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('100% deixa passar', async () => {
+    await expect(
+      guard('all', 'driver', 100).canActivate(contexto({ tenantId: 't1' })),
+    ).resolves.toBe(true);
+  });
+
+  // Invertida a ordem, uma conta fora do público entraria na amostra e ocuparia
+  // um lugar que não lhe pertence.
+  it('conta de empresa é recusada antes da amostra', async () => {
+    await expect(
+      guard('autonomous', 'company', 100).canActivate(contexto({ tenantId: 't1' })),
+    ).rejects.toBeInstanceOf(NotFoundException);
   });
 });
