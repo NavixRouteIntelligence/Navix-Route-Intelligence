@@ -1,7 +1,11 @@
 # Mapa da rota — wireframe e estados (MVP)
 
-> **Estado: proposto, a aguardar aprovação.** Nada disto está implementado.
+> **Estado: aprovado (2026-08-09).** Ainda não implementado — é a base da T8.2.
 > A decisão técnica que o sustenta é a ADR-0125 em [decisions.md](../decisions.md).
+>
+> A regra da §7 («o mapa não desenha percurso que não conhece») já vale no
+> produto existente: a linha reta do mapa da rota no web foi removida, e um
+> teste guarda-a em todos os componentes de mapa.
 
 O mapa entra na **Minha Rota**, entre o resumo e a lista de paradas. Não é uma
 tela nova: quem abre a app quer a rota, e um separador só para o mapa faria a
