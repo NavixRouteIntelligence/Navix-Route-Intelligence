@@ -52,10 +52,16 @@ export interface RoutingProviderPort {
    * sem ele, uma bicicleta recebia distâncias de carro, por autoestradas onde
    * não pode circular. Ausente mantém o comportamento legado (`driving`).
    */
+  /**
+   * `departureAt` decide se vale pedir a variante com trânsito (ADR-0126).
+   * Ausente é tratado como «não parte agora»: assumir o contrário faria toda
+   * rota sem horário receber o trânsito do momento do cálculo.
+   */
   matrix(
     points: LatLng[],
     speedKmh: number,
     vehicleType?: VehicleType | null,
+    departureAt?: Date | null,
   ): Promise<RouteMatrix>;
 }
 

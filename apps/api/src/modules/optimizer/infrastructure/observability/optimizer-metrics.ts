@@ -17,6 +17,11 @@ export class OptimizerMetrics {
   private readonly planWrite: Counter<'outcome'>;
   private readonly queueJobFailure: Counter<'queue' | 'outcome'>;
   private readonly queueError: Counter<'queue' | 'kind'>;
+  private readonly matrix: Counter<'outcome' | 'profile'>;
+  private readonly matrixLatency: Histogram<'outcome'>;
+  private readonly matrixFallback: Counter<'kind'>;
+  private readonly matrixHttp: Counter<'status'>;
+  private readonly matrixCoordsExceeded: Counter<string>;
   private readonly reoptimizeTrigger: Histogram<string>;
   private readonly reoptimizeSkipped: Counter<'reason'>;
 
@@ -77,6 +82,38 @@ export class OptimizerMetrics {
       labelNames: ['queue', 'kind'] as const,
       registers,
     });
+    // Matriz do provedor externo (ADR-0126). Rótulos fechados: `outcome` e
+    // `profile` têm poucos valores, e o status HTTP é um código, não uma URL.
+    this.matrix = new Counter({
+      name: 'optimizer_matrix_requests_total',
+      help: 'Matrizes pedidas ao provedor, por desfecho e perfil.',
+      labelNames: ['outcome', 'profile'] as const,
+      registers,
+    });
+    this.matrixLatency = new Histogram({
+      name: 'optimizer_matrix_duration_seconds',
+      help: 'Tempo até a matriz ficar pronta (ou falhar).',
+      labelNames: ['outcome'] as const,
+      buckets: [0.1, 0.25, 0.5, 1, 2, 4, 8],
+      registers,
+    });
+    this.matrixFallback = new Counter({
+      name: 'optimizer_matrix_fallback_total',
+      help: 'Quedas para a matriz geométrica, por causa.',
+      labelNames: ['kind'] as const,
+      registers,
+    });
+    this.matrixHttp = new Counter({
+      name: 'optimizer_matrix_http_errors_total',
+      help: 'Respostas HTTP não-OK do provedor, por status.',
+      labelNames: ['status'] as const,
+      registers,
+    });
+    this.matrixCoordsExceeded = new Counter({
+      name: 'optimizer_matrix_coords_exceeded_total',
+      help: 'Matrizes acima do teto de ladrilhamento, que caem em geometria.',
+      registers,
+    });
     // SLA da reotimização dinâmica (ADR-0083): do evento de domínio até o job
     // enfileirado — inclui o debounce, que é o maior componente controlável.
     this.reoptimizeTrigger = new Histogram({
@@ -115,6 +152,26 @@ export class OptimizerMetrics {
   /** Falha de job na fila (ADR-0114). `exhausted`: acabaram as tentativas. */
   observeQueueJobFailure(queue: string, outcome: 'retrying' | 'exhausted'): void {
     this.queueJobFailure.inc({ queue, outcome });
+  }
+
+  /** Desfecho e latência de uma matriz pedida ao provedor (ADR-0126). */
+  observeMatrix(outcome: string, profile: string, seconds: number): void {
+    this.matrix.inc({ outcome, profile });
+    this.matrixLatency.observe({ outcome }, seconds);
+  }
+
+  /** Queda para geometria, com a causa categorizada. */
+  observeMatrixFallback(kind: string): void {
+    this.matrixFallback.inc({ kind });
+  }
+
+  observeMatrixHttp(status: number): void {
+    this.matrixHttp.inc({ status: String(status) });
+  }
+
+  /** Acima do teto de ladrilhamento — o número de pontos não vira rótulo. */
+  observeMatrixCoordsExceeded(_points: number): void {
+    this.matrixCoordsExceeded.inc();
   }
 
   /** Erro de infraestrutura da fila — conexão, não trabalho (ADR-0114). */

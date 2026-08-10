@@ -224,7 +224,7 @@ export interface RouteSavings {
 export type RoutingSourceView = 'provider' | 'geometric';
 
 /** Perfis de deslocamento do provedor de rotas (ADR-0108). */
-export type RoutingProfileView = 'driving' | 'cycling' | 'walking';
+export type RoutingProfileView = 'driving' | 'driving-traffic' | 'cycling' | 'walking';
 
 /**
  * Perfil usado e o quanto ele representa o veículo (ADR-0108).

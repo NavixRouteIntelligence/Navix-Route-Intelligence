@@ -114,6 +114,9 @@ export class RouteSolver {
       // O perfil do provedor sai do tipo do veículo (ADR-0108): sem isto, uma
       // bicicleta recebia distâncias de carro, por vias onde não circula.
       profile.type,
+      // A partida decide se vale pedir trânsito em tempo real (ADR-0126) — ele
+      // só é preciso para quem sai agora.
+      input.departureAt,
     );
 
     // Trechos sem rota viram exclusão explícita, não custo zero (ADR-0106).
