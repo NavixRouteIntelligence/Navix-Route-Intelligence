@@ -126,6 +126,7 @@ Este arquivo mantém os **Architecture Decision Records**. Toda decisão técnic
 | ADR-0122 | Fecho do dia, fuso declarado e lembrete desligado por omissão | Aceito | ✅ Cadeia perfil→tenant→UTC com a origem na resposta; «ontem» por dia civil e não por 24 h (testado no DST); janela de 3 h antes de o dia fechar; folga recua ao último dia trabalhado sem gerar alerta; cache offline; lembrete `NULL` por omissão | 2026-08-09 |
 | ADR-0123 | Kaizen: interruptor local, métricas sem PII e reconciliação com a fonte | Aceito | ✅ `KAIZEN_ROLLOUT` desligado por omissão respondendo **404**; o guarda vive só no controlador do Kaizen e um teste guarda esse limite; métricas com rótulos fechados; dataset sintético de seis casos reconciliado contra a projeção real | 2026-08-09 |
 | ADR-0124 | Amostra determinística, revisão de segurança executável e o lembrete possível | Aceito | ✅ Rollout por hash do utilizador (monótono ao subir); 10 testes que são a revisão de segurança desta frente, verificados a morder; deep link e conteúdo da notificação **sem número nenhum** — a entrega nativa continua bloqueada por falta de `android/` e `ios/` na main | 2026-08-09 |
+| ADR-0125 | Mapa da rota: MVP de leitura, traçado real só na fase 2 | Aceito | ✅ Definição (T8.1) aprovada, sem código. Achado: o mapa **do web já desenha uma linha reta** entre paradas como se fosse percurso — viola o critério e é anterior a esta frente. MVP sem traçado; Directions fica para a fase 2, com o custo mapeado | 2026-08-09 |
 
 ---
 
@@ -909,6 +910,48 @@ Sem ranking, sem velocidade, sem entregas/hora, sem meta de volume, sem culpa, s
 
 ---
 
+## ADR-0125 — Mapa da rota: MVP de leitura, traçado real só na fase 2
+
+- **Status:** Aceito · **Data:** 2026-08-09 · **Aprovada em:** 2026-08-09
+- **Status da implementação:** ✅ **Definição (T8.1) aprovada, sem código.** A decisão e o wireframe em [modules/mapa-rota-wireframe.md](modules/mapa-rota-wireframe.md) estão aceites e são a base da T8.2. Preços do Mapbox consultados em 2026-08-09.
+
+### O achado da investigação
+
+O app **não tem mapa nenhum** — nem dependência de mapas no `pubspec.yaml`. Mas o **web tem três** (`route-map`, `track-map`, `fleet-map`), e o da rota desenha isto:
+
+```ts
+geometry: { type: 'LineString', coordinates: coords }  // coords = as paradas
+```
+
+Uma linha reta ligando as paradas, com 4 px e a cor primária, sob um mapa de ruas. Não há rótulo a dizer que é uma ligação e não um percurso — e a leitura natural de uma linha grossa sobre estradas é «é por aqui que se vai». **Isto viola o critério de aceite desta tarefa e é anterior a ela.** Fica registado aqui porque a regra que se decide agora tem de valer para o que já existe, não só para o que se vai construir.
+
+### Escopo
+
+**MVP:** visão geral da rota com paradas numeradas, posição atual, estados e próxima parada. **Sem traçado**: as paradas são pontos, e entre pontos não se desenha nada. Uma rota lida como sequência de números não promete caminho nenhum; uma linha promete.
+
+**Fase 2:** traçado real pelas ruas, via Directions API, com a geometria devolvida pelo provedor. Só então aparece linha — e só a que é percurso.
+
+**Fora, e permanece fora:** navegação curva a curva. Ela continua no Google/Apple Maps, pelo mesmo botão «Navegar» que já existe (`url_route_navigation_launcher`). Replicá-la significaria assumir responsabilidade por instruções em movimento, que é um produto diferente e um risco diferente.
+
+### Custos e limites (Mapbox, consultado em 2026-08-09)
+
+| Serviço | Grátis até | Primeiro escalão pago |
+| --- | --- | --- |
+| Maps SDK (móvel) | 25 000 MAU | US$ 4,00 / 1 000 MAU |
+| GL JS (web) | 50 000 carregamentos/mês | US$ 5,00 / 1 000 |
+| Directions | 100 000 pedidos/mês | US$ 2,00 / 1 000 |
+| Matrix | 100 000 elementos/mês | US$ 2,00 / 1 000 |
+
+O que estes números dizem sobre a decisão: o **MVP é praticamente gratuito** — o custo é por utilizador ativo, não por abertura, e 25 000 motoristas ativos é muito acima do horizonte do piloto. Já a fase 2 muda a natureza da conta: Directions cobra **por pedido**, e uma rota reotimizada várias vezes por dia multiplica. É por isso que o traçado é fase 2 e não MVP — não por dificuldade técnica, mas porque introduz um custo variável que precisa de cache e de política própria, e a ADR-0107 já mostrou como uma chave de cache mal versionada envenena resultados.
+
+Nota sobre o que já se gasta: o Matrix é consumido pelo otimizador a cada otimização, com ladrilhamento acima de 25 pontos (ADR-0107) — o teto de 100 000 **elementos** é por par de pontos, não por chamada, e uma rota de 30 paradas consome 900 elementos. É a linha que primeiro se aproxima do limite, e não tem nada a ver com o mapa.
+
+- **Decisão:** O mapa fica **na Minha Rota**, entre o resumo e a lista, recolhido a 180 dp e expansível por toque explícito — altura suficiente para situar e insuficiente para tentar navegar, o que é intencional. Cinco estados de parada, distintos por **forma e símbolo** e não só por cor: próxima (anel), pendente, concluída (vazada, com ✓ no lugar do número, porque a sequência dela deixou de importar), falhada (vazada, cor de **aviso** e nunca vermelho de erro — não foi a pessoa que falhou) e sem coordenadas, que **não é desenhada** e é contada acima do mapa. A posição do motorista é um triângulo orientado, nunca um número: não é uma parada. O mapa é **leitura**: não reordena, não muda estado de entrega, não abre POD e não dispara otimização — tudo isso continua onde já está. E não consulta nada sozinho: a posição vem do fluxo de rastreio existente, as paradas mudam quando a rota muda.
+- **Alternativas consideradas:** Separador próprio para o mapa (obrigaria a escolher entre ver onde é e ver o que fazer, e o motorista quer as duas ao mesmo tempo); desenhar a linha reta no MVP com um rótulo a explicar que não é o percurso (é a solução que o web já tem sem o rótulo, e um rótulo não vence uma linha grossa sobre estradas — quem olha de relance vê o traçado); ir direto ao Directions no MVP (adia a entrega e traz custo variável antes de haver utilizadores); navegação curva a curva própria (produto e risco diferentes); inventar posição para paradas sem coordenadas (põe um ponto onde não há entrega — a mesma classe de defeito que a ADR-0106 fechou no otimizador); permitir arrastar marcadores para reordenar (transformaria o mapa em escrita e duplicaria a reorganização que já existe, com duas fontes de verdade para a ordem).
+- **Consequências:** O MVP é entregável sem custo variável e sem prometer o que não sabe. A fase 2 fica com uma decisão só — cache e política de Directions — em vez de a arrastar junto com o resto. **Resolvido depois de escrita esta ADR:** o `route-map.tsx` do web desenhava uma linha reta como percurso; a linha foi removida e um teste passou a guardar a regra em **todos** os componentes de mapa. A auditoria que esta ADR deixara pendente também foi feita: `track-map` e `fleet-map` usam apenas marcadores, sem geometria — a violação estava só no mapa da rota. O critério «nenhuma linha reta é apresentada como percurso real» passa a valer no produto existente, e não apenas no que se vai construir. **Fica aberto:** a política de cache do Directions para a fase 2, que é a decisão que sobra quando o traçado real entrar.
+
+---
+
 ---
 
 ## Template
@@ -1049,3 +1092,4 @@ Sem ranking, sem velocidade, sem entregas/hora, sem meta de volume, sem culpa, s
 | 2026-08-09 | 6.54 | Produto/Arquitetura | ADR-0122 (T7.8): fuso por cadeia **declarada** (perfil→tenant→UTC, com a origem na resposta) e «ontem» calculado por dia civil, não por 24 h — o erro que só aparece nos dois dias de mudança de horário, agora testado nas duas transições de 2026. O dia fecha 3 h depois da meia-noite local, e `settled: false` diz «ainda pode mudar». Folga recua ao último dia trabalhado, com a data e sem alerta. Cache offline seguro, servido só em falta de rede. Lembrete `NULL` por omissão, guardado como hora local. **Notificação e deep link ficam por fazer** — dependem de dependência e configuração nativa novas |
 | 2026-08-09 | 6.55 | Produto/Arquitetura | ADR-0123 (T7.9): `KAIZEN_ROLLOUT` desligado por omissão, aplicado como guarda de rota e respondendo **404** e não 403 — «não é para si» convida a insistir. Que desligar seja seguro é **teste**, não afirmação: um garante que o guarda não sai do controlador do Kaizen, outro varre o módulo por escritas em `deliveries`/`route_plans`/`users`/`drivers` e exige zero. Métricas com rótulos fechados, sem PII, sendo a **idade da projeção** a que mais importa. Dataset sintético de seis casos reconciliado contra a projeção real |
 | 2026-08-09 | 6.56 | Produto/Arquitetura | ADR-0124: fecha as três lacunas declaradas na ADR-0123. Rollout por **hash do utilizador** (não sorteio: instabilidade lê-se como defeito) e monótono ao subir — quem viu ontem não perde hoje. Revisão de segurança **executável**, guardando o que um scanner genérico não conhece, e verificada a falhar quando a invariante quebra. Do lembrete entram as partes que são decisão — quando disparar e o que pode dizer, sem número nenhum, porque ecrã bloqueado é ecrã público. A entrega nativa continua bloqueada: `android/` e `ios/` não existem na `main` |
+| 2026-08-09 | 6.57 | Produto/Arquitetura | ADR-0125 (T8.1): definição do mapa da rota, sem código, **aprovada em 2026-08-09**. **Achado:** o `route-map.tsx` do web já desenha uma linha reta entre paradas como se fosse percurso — viola o critério desta tarefa e era anterior a ela (removida na PR #141, com teste a guardar a regra em todos os mapas). O MVP não desenha traçado nenhum: paradas numeradas, posição atual e cinco estados distintos por forma e símbolo, não só por cor. Traçado real fica para a fase 2 (Directions), porque cobra **por pedido** e precisa de política de cache própria — não por dificuldade técnica. Navegação curva a curva permanece no Google/Apple Maps. Preços do Mapbox consultados e mapeados |
