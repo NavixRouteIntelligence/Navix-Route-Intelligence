@@ -222,6 +222,11 @@ export class AppConfigService {
     };
   }
 
+  /** Alcance do Kaizen (ADR-0123). `off` mantém a funcionalidade invisível. */
+  get kaizenRollout(): 'off' | 'autonomous' | 'all' {
+    return this.get('KAIZEN_ROLLOUT');
+  }
+
   get optimizer() {
     return {
       autoReoptimize: this.get('OPTIMIZER_AUTO_REOPTIMIZE'),

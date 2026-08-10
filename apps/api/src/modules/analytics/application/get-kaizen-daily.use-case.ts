@@ -92,6 +92,10 @@ export class GetKaizenDailyUseCase {
       ...(foto.recommendation ? { recommendation: foto.recommendation } : {}),
       confidence,
       reasons,
+      projectedAt: foto.projectedAt,
+      timeZone: foto.timeZone,
+      timeZoneSource: foto.timeZoneSource,
+      settled: foto.settled,
     };
   }
 

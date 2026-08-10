@@ -29,7 +29,9 @@ import { CurrentUser } from '../../../shared/interface/current-user.decorator';
 import { JwtAuthGuard } from '../../../shared/security/jwt-auth.guard';
 import { Roles } from '../../../shared/security/roles.decorator';
 import { RolesGuard } from '../../../shared/security/roles.guard';
+import { KaizenMetrics } from '../infrastructure/observability/kaizen-metrics';
 import { GetKaizenDailyUseCase } from '../application/get-kaizen-daily.use-case';
+import { KaizenEnabledGuard } from './kaizen-enabled.guard';
 import {
   GetKaizenHistoryUseCase,
   GetKaizenPreferencesUseCase,
@@ -49,7 +51,9 @@ import { KaizenFeedbackDto, KaizenPreferencesDto } from './dto/kaizen-feedback.d
 @ApiTags('kaizen')
 @ApiBearerAuth()
 @Controller({ path: 'me/kaizen', version: '1' })
-@UseGuards(JwtAuthGuard, RolesGuard)
+// O interruptor é um guarda de rota (ADR-0123): desligado, estes endpoints
+// respondem 404 e nada mais no sistema muda.
+@UseGuards(JwtAuthGuard, RolesGuard, KaizenEnabledGuard)
 export class KaizenController {
   constructor(
     private readonly daily: GetKaizenDailyUseCase,
@@ -58,6 +62,7 @@ export class KaizenController {
     private readonly preferencias: SetKaizenPreferencesUseCase,
     private readonly lerPreferencias: GetKaizenPreferencesUseCase,
     @Inject(AUDIT_LOG) private readonly audit: AuditLogPort,
+    private readonly metrics: KaizenMetrics,
   ) {}
 
   /**
@@ -88,6 +93,19 @@ export class KaizenController {
       res.status(304);
       return undefined;
     }
+
+    // Métrica técnica, sem PII: categorias fechadas e a idade da projeção, que
+    // é a pergunta operacional — o endpoint responder depressa com o dia de
+    // anteontem é a falha desta frente, não ele cair (ADR-0123).
+    this.metrics.observeServed(
+      view.status,
+      view.confidence,
+      view.projectedAt ? (Date.now() - Date.parse(view.projectedAt)) / 1000 : null,
+    );
+    this.metrics.observeRule(
+      view.recommendation?.code ?? 'none.suppressed',
+      view.recommendation ? 'no' : 'yes',
+    );
 
     // Auditoria mínima: quem leu o quê, sem copiar métrica nenhuma para o log.
     // O resumo é sobre a pessoa; duplicá-lo no registo de auditoria espalharia
@@ -124,6 +142,8 @@ export class KaizenController {
       verdict: dto.verdict,
       reason: dto.reason ?? null,
     });
+
+    this.metrics.observeFeedback(dto.verdict, dto.reason ?? null);
 
     // Auditável, e sem conteúdo: fica o rasto de que houve resposta, nunca uma
     // cópia da opinião fora da tabela que a guarda com finalidade declarada.
