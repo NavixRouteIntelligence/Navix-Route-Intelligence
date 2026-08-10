@@ -4,13 +4,25 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import type { RouteStopView } from '@navix/contracts';
 import { MapPin } from 'lucide-react';
 import { useTheme } from 'next-themes';
-import Map, { Layer, Marker, NavigationControl, Source } from 'react-map-gl';
+import Map, { Marker, NavigationControl } from 'react-map-gl';
 
 import { Alert } from '@/components/ui/alert';
 
 const TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
-const ROUTE_COLOR = 'hsl(250, 84%, 60%)';
 
+/**
+ * Mapa da rota: **paradas numeradas, sem traçado** (ADR-0125).
+ *
+ * Até aqui este componente desenhava um `LineString` ligando as paradas em
+ * linha reta, com 4 px e a cor primária, sobre um mapa de ruas. Nada dizia que
+ * não era o percurso — e a leitura natural de uma linha grossa sobre estradas é
+ * «é por aqui que se vai». Não é: é a ordem de visita, e o caminho real
+ * contorna quarteirões, sentidos únicos e rios.
+ *
+ * A ordem já está nos números dos marcadores, que a prometem sem a inventar. O
+ * traçado real entra quando houver geometria da Directions API (fase 2) — aí a
+ * linha volta, e será a que corresponde ao percurso.
+ */
 export function RouteMap({ stops }: { stops: RouteStopView[] }) {
   const { resolvedTheme } = useTheme();
 
@@ -33,12 +45,6 @@ export function RouteMap({ stops }: { stops: RouteStopView[] }) {
         fitBoundsOptions: { padding: 56 },
       };
 
-  const line = {
-    type: 'Feature' as const,
-    geometry: { type: 'LineString' as const, coordinates: coords },
-    properties: {},
-  };
-
   return (
     <div className="h-[420px] overflow-hidden rounded-lg border border-border">
       <Map
@@ -52,14 +58,6 @@ export function RouteMap({ stops }: { stops: RouteStopView[] }) {
         style={{ width: '100%', height: '100%' }}
       >
         <NavigationControl position="top-right" showCompass={false} />
-        <Source id="route" type="geojson" data={line}>
-          <Layer
-            id="route-line"
-            type="line"
-            paint={{ 'line-color': ROUTE_COLOR, 'line-width': 4, 'line-opacity': 0.85 }}
-            layout={{ 'line-cap': 'round', 'line-join': 'round' }}
-          />
-        </Source>
         {stops.map((s) => (
           <Marker key={s.sequence} longitude={s.longitude} latitude={s.latitude} anchor="center">
             <span className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-primary text-xs font-bold text-primary-foreground shadow-elevated">
