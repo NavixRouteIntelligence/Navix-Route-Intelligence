@@ -15,6 +15,8 @@ export interface DeliveryStopDto {
   longitude: number;
   priority: DeliveryPriority;
   timeWindow: TimeWindow | null;
+  /** Estado atual. É o que distingue parada feita de parada por fazer. */
+  status: DeliveryStatus;
   /**
    * Texto do endereço (rua, complemento, cidade) — **dado**, não classificação.
    * Deixa o Optimizer classificar o tipo de destino sem inverter a dependência
@@ -266,6 +268,7 @@ export class DeliveryLookupService implements DeliveryLookupPort {
       latitude: address.latitude,
       longitude: address.longitude,
       priority: s.priority,
+      status: s.status,
       timeWindow: {
         start: s.timeWindow.start.toISOString(),
         end: s.timeWindow.end.toISOString(),

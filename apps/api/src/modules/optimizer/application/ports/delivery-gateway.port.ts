@@ -21,11 +21,37 @@ export interface OptimizerDeliveryStop {
 }
 
 /**
+ * Parada como a tela da rota precisa dela: endereço, estado e localização.
+ *
+ * Separada de [OptimizerDeliveryStop] porque serve outra pergunta. O motor
+ * precisa de coordenadas e demanda; a tela precisa de morada e estado — e
+ * `latitude`/`longitude` aqui são **nulos quando a entrega não tem localização
+ * utilizável**, em vez de zero, que apontaria para o golfo da Guiné.
+ */
+export interface RouteViewDeliveryStop {
+  id: string;
+  addressText: string | null;
+  status: string;
+  priority: DeliveryPriority;
+  timeWindow: TimeWindow | null;
+  latitude: number | null;
+  longitude: number | null;
+}
+
+/**
  * Porta anti-corrupção do Optimizer para o contexto Delivery. O adaptador na
  * infraestrutura delega para a API pública do Delivery (DeliveryLookup).
  */
 export interface DeliveryGatewayPort {
   getStops(tenantId: string, ids: string[]): Promise<OptimizerDeliveryStop[]>;
+  /**
+   * As entregas **exatamente destes ids** (ADR-0127), para a vista da rota.
+   *
+   * Por ids, e nunca por página: o app juntava o plano a uma página de 100
+   * entregas ordenadas por criação, e uma parada fora dessa página perdia
+   * morada e estado sem nada a assinalar.
+   */
+  getRouteStops(tenantId: string, ids: string[]): Promise<RouteViewDeliveryStop[]>;
   /**
    * A quem pertence cada entrega pedida (ADR-0099). Só as visíveis no tenant —
    * a diferença entre o pedido e o devolvido é significado do chamador.

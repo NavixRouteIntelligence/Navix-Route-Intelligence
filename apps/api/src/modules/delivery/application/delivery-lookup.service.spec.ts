@@ -54,6 +54,7 @@ describe('DeliveryLookupService.getStops', () => {
       latitude: -23.5,
       longitude: -46.6,
       priority: 'normal',
+      status: 'pending',
       timeWindow: { start: '2026-07-06T09:00:00.000Z', end: '2026-07-06T12:00:00.000Z' },
       // Demanda e veículo atribuído viajam com a parada (ADR-0109); `null` é o
       // estado normal enquanto a importação não os traz.

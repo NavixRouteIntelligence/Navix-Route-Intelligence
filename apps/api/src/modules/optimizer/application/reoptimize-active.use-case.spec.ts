@@ -18,6 +18,7 @@ const stop = (id: string): OptimizerDeliveryStop => ({
 function build(active: OptimizerDeliveryStop[], allowed = true) {
   const gateway: DeliveryGatewayPort = {
     getStops: async () => [],
+    getRouteStops: async () => [],
     getOwnership: async () => [],
     listActiveStops: jest.fn().mockResolvedValue(active),
   };

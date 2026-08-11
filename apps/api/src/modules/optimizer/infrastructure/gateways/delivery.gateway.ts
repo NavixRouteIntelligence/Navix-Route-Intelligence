@@ -10,6 +10,7 @@ import { classifyDestination } from '../../domain/destination-type';
 import type {
   DeliveryGatewayPort,
   OptimizerDeliveryStop,
+  RouteViewDeliveryStop,
 } from '../../application/ports/delivery-gateway.port';
 
 /**
@@ -24,6 +25,20 @@ export class DeliveryGateway implements DeliveryGatewayPort {
     return (await this.lookup.getStops(tenantId, ids)).map(toStop);
   }
 
+  async getRouteStops(tenantId: string, ids: string[]): Promise<RouteViewDeliveryStop[]> {
+    const found = await this.lookup.getStops(tenantId, ids);
+    return found.map((s) => ({
+      id: s.id,
+      addressText: s.addressText?.trim() || null,
+      status: s.status,
+      priority: s.priority,
+      timeWindow: s.timeWindow,
+      // Coordenada inválida vira ausência declarada, não um ponto no oceano.
+      latitude: isValidLat(s.latitude) && isValidLng(s.longitude) ? s.latitude : null,
+      longitude: isValidLat(s.latitude) && isValidLng(s.longitude) ? s.longitude : null,
+    }));
+  }
+
   getOwnership(tenantId: string, ids: string[]): Promise<DeliveryOwnership[]> {
     return this.lookup.getOwnership(tenantId, ids);
   }
@@ -32,6 +47,11 @@ export class DeliveryGateway implements DeliveryGatewayPort {
     return (await this.lookup.listActive(tenantId)).map(toStop);
   }
 }
+
+const isValidLat = (v: number | null | undefined): v is number =>
+  typeof v === 'number' && Number.isFinite(v) && v >= -90 && v <= 90;
+const isValidLng = (v: number | null | undefined): v is number =>
+  typeof v === 'number' && Number.isFinite(v) && v >= -180 && v <= 180;
 
 function toStop(s: DeliveryStopDto): OptimizerDeliveryStop {
   // Classificação automática do destino a partir do endereço (ADR-0064). Fica no

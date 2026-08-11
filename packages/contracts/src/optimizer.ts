@@ -480,3 +480,52 @@ export interface FleetDistribution {
   /** Entregas ativas ainda sem motorista — o que uma distribuição repartiria. */
   unassigned: number;
 }
+
+/**
+ * Parada da rota vigente, já enriquecida pelo servidor (ADR-0127).
+ *
+ * `latitude`/`longitude` são `null` quando a entrega não tem localização
+ * utilizável — nunca zero, que apontaria para o golfo da Guiné.
+ */
+export interface CurrentRouteStopView {
+  sequence: number;
+  deliveryId: string;
+  addressText: string | null;
+  status: string;
+  priority: DeliveryPriority;
+  timeWindow: TimeWindow | null;
+  latitude: number | null;
+  longitude: number | null;
+  /** `false` quando a parada não pode ser desenhada no mapa (ADR-0125). */
+  hasLocation: boolean;
+  etaMinutes: number;
+  waitMinutes?: number;
+  /** `null` quando a parada não tem janela — distinto de `false`. */
+  timeWindowRespected?: boolean | null;
+}
+
+/** Progresso derivado no servidor — o app não soma nada. */
+export interface CurrentRouteProgressView {
+  total: number;
+  completed: number;
+  failed: number;
+  pending: number;
+  /** Próxima parada por fazer, na ordem do plano. `null` quando não há. */
+  nextDeliveryId: string | null;
+  /** Paradas sem localização utilizável, contadas para a tela avisar. */
+  withoutLocation: number;
+}
+
+/** Rota vigente do próprio motorista, numa leitura só (ADR-0127). */
+export interface CurrentRouteView {
+  planId: string;
+  operationalDay: string;
+  status: RoutePlanStatus;
+  departureAt: string;
+  metrics: RouteMetrics;
+  savings: RouteSavings;
+  params: RoutePlanParams;
+  stops: CurrentRouteStopView[];
+  progress: CurrentRouteProgressView;
+  unassignedStops?: UnassignedStopView[];
+}

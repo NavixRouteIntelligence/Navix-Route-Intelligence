@@ -229,6 +229,7 @@ export function montarOtimizador(opts: CenarioOpcoes = {}) {
             vehicleId: e.vehicleId ?? null,
           };
         }),
+    getRouteStops: async () => [],
     getOwnership: async () => [],
     listActiveStops: async () => [],
   };

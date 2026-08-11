@@ -12,6 +12,7 @@ function gateway(donos: { id: string; driverId: string | null }[] = []): Deliver
   return {
     getStops: jest.fn(),
     listActiveStops: jest.fn(),
+    getRouteStops: async () => [],
     getOwnership: jest.fn().mockResolvedValue(donos),
   };
 }

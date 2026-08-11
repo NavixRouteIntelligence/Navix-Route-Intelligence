@@ -20,6 +20,7 @@ import type {
   OptimizationJob,
   OptimizationJobAccepted,
   ResourceResponse,
+  CurrentRouteView,
   RoutePlan as RoutePlanView,
 } from '@navix/contracts';
 
@@ -33,6 +34,7 @@ import { DistributeDeliveriesUseCase } from '../application/distribute-deliverie
 import { GetFleetDistributionUseCase } from '../application/get-fleet-distribution.use-case';
 import { EnqueueOptimizationUseCase } from '../application/enqueue-optimization.use-case';
 import { GetActiveRoutePlanUseCase } from '../application/get-active-route-plan.use-case';
+import { GetCurrentRouteUseCase } from '../application/get-current-route.use-case';
 import { GetOptimizationJobUseCase } from '../application/get-optimization-job.use-case';
 import { GetRoutePlanUseCase } from '../application/get-route-plan.use-case';
 import { ListRoutePlansUseCase } from '../application/list-route-plans.use-case';
@@ -54,6 +56,7 @@ export class OptimizerController {
   constructor(
     private readonly enqueue: EnqueueOptimizationUseCase,
     private readonly activePlan: GetActiveRoutePlanUseCase,
+    private readonly currentRoute: GetCurrentRouteUseCase,
     @Inject(DRIVER_ROSTER_LINK) private readonly roster: DriverRosterLinkPort,
     private readonly getJob: GetOptimizationJobUseCase,
     private readonly getPlan: GetRoutePlanUseCase,
@@ -120,6 +123,21 @@ export class OptimizerController {
    * duplicada no app e no web — e numa frota devolvia a rota de outra pessoa.
    * Não há parâmetro de motorista: quem pergunta é quem recebe.
    */
+  @Get('mine/current')
+  @Roles('driver')
+  @ApiOperation({
+    summary: 'Rota vigente do motorista, já com morada, estado e progresso',
+  })
+  async mineCurrent(
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<ResourceResponse<CurrentRouteView | null>> {
+    // Uma leitura só. O app juntava o plano a uma página de 100 entregas
+    // ordenadas por criação: uma parada fora dessa página perdia morada e
+    // estado, e o progresso saía de dois instantes diferentes (ADR-0127).
+    const data = await this.currentRoute.execute(user.tenantId, user.id);
+    return { data };
+  }
+
   @Get('mine/active')
   @Roles('driver')
   @ApiOperation({ summary: 'Rota vigente do motorista autenticado no dia operacional' })
