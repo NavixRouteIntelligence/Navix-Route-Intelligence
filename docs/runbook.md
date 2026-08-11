@@ -253,3 +253,71 @@ O Render **não** tem rotação automática (diferente do AWS Secrets Manager). 
 - Hospedada **fora** da infra da Navix — continua no ar mesmo se o Render cair.
 
 **Melhoria futura (opcional):** apontar um subdomínio `status.navix.*` para a página via **CNAME** (UptimeRobot → Status Page → Custom domain) — o que clientes B2B esperam ver.
+
+
+## Mapbox — tokens, escopos e rotação (ADR-0128)
+
+### Três tokens, um por superfície
+
+| Superfície | Variável | Tipo | Escopos |
+| --- | --- | --- | --- |
+| Backend | `MAPBOX_TOKEN` | **secreto** (`sk.`) | `directions:read`, `matrix:read` |
+| Web | `NEXT_PUBLIC_MAPBOX_TOKEN` | público (`pk.`) | `styles:read`, `styles:tiles`, `fonts:read` |
+| Telemóvel | `MAPBOX_PUBLIC_TOKEN` | público (`pk.`) | `styles:read`, `styles:tiles`, `fonts:read` |
+
+O token do telemóvel vai **dentro do binário** e qualquer pessoa com o `.ipa`
+o extrai em minutos. Isso não é uma falha se for o token certo — o que não pode
+acontecer é reutilizar ali o do backend: Directions e Matrix custam por pedido,
+e um token com esse escopo numa app é uma fatura aberta.
+
+Um token por ambiente, também: `dev`, `staging` e `production` têm os seus, e
+o build passa o correspondente. Sem valor por omissão — um build sem
+`--dart-define` fica sem mapa, em vez de desenhar mapas na conta de outro
+ambiente.
+
+### Rotação
+
+Fazer **por superfície**; é essa a razão de serem separados.
+
+1. Criar o novo token no [Mapbox Account](https://account.mapbox.com/access-tokens/)
+   com os escopos da tabela acima — nunca mais do que isso.
+2. Publicar o novo valor onde ele vive:
+   - backend e web: segredo do ambiente (`gh secret set …`), seguido de deploy;
+   - telemóvel: variável do pipeline de build, seguida de **nova versão na
+     loja**. É a diferença que importa: rodar o token do telemóvel só chega a
+     quem atualizar a app.
+3. Confirmar que o novo está a ser usado (o ecrã de diagnóstico mostra
+   `MAPBOX_ENV`), e só então **revogar o antigo**.
+4. Para o telemóvel, manter o antigo válido durante pelo menos um ciclo de
+   atualização. Revogá-lo no mesmo dia deixa sem mapa toda a gente que ainda
+   não atualizou — e o mapa é justamente o que não se pode partir por
+   manutenção.
+
+### Se um token vazar
+
+Revogar imediatamente **só o da superfície afetada**. Um `pk.` público com os
+escopos da tabela permite consumir a quota de estilos; um `sk.` permite gastar
+Directions e Matrix, e esse é o que dói. Confirmar em Account → Statistics se
+houve pico antes de revogar, para saber o que se está a cortar.
+
+### Atribuição e telemetria
+
+O SDK desenha o *wordmark* da Mapbox e o botão ⓘ sobre o mapa, e **não podem
+ser escondidos**. Além da licença, o menu do ⓘ é o único caminho para o
+*opt-out* de telemetria («Telemetry Settings»): escondê-lo por estética
+removeria a escolha a quem já é localizado durante a jornada.
+
+### O que falta configurar nas plataformas
+
+`apps/mobile/android/` e `apps/mobile/ios/` **não existem na `main`** — estão
+numa branch paralela. Quando chegarem, o SDK precisa de:
+
+- **iOS** — `MAPBOX_DOWNLOADS_TOKEN` (token `sk.` com `DOWNLOADS:READ`) num
+  `~/.netrc` da máquina de build, **nunca** no repositório; e a plataforma
+  mínima no `Podfile`.
+- **Android** — o mesmo token de downloads em `~/.gradle/gradle.properties` da
+  máquina de build, e o repositório Maven da Mapbox no `settings.gradle`.
+
+O token de *downloads* é de build, não de execução: não entra no binário e não
+tem nada a ver com o `pk.` que a app usa. Confundi-los é o erro comum, e é o
+que põe um `sk.` dentro de uma app.
