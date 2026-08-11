@@ -61,7 +61,9 @@ describe('DeliveryLookupService.getStops', () => {
       weightKg: null,
       volumeM3: null,
       vehicleId: null,
-      addressText: 'Rua A São Paulo',
+      // O número da porta entrou na composição (ADR-0130): sem ele a linha
+      // que o motorista lê não identifica uma porta.
+      addressText: 'Rua A, 10 — São Paulo — SP',
     });
   });
 });

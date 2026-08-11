@@ -20,6 +20,7 @@ import '../data/my_route_repository.dart';
 import '../domain/my_route.dart';
 import 'destination_labels.dart';
 import 'my_route_cubit.dart';
+import 'route_map_section.dart';
 
 /// **Minha Rota** (ADR-0076): resumo e sequência operacional do motorista.
 ///
@@ -417,6 +418,13 @@ class _Content extends StatelessWidget {
         children: [
           _RouteHero(route: route),
           const SizedBox(height: 12),
+          // O mapa vem **depois** do cartão principal: a primeira leitura
+          // continua a ser «para onde agora», e o mapa responde à seguinte —
+          // «onde é isso em relação ao resto do dia». Vai dentro da lista, e
+          // não sobreposto, para não tapar o «Registrar entrega» nem o botão
+          // de voz, que flutuam por cima de tudo (ADR-0130).
+          RouteMapSection(route: route),
+          const SizedBox(height: 12),
           // Rota parcial (ADR-0110): acima de tudo, antes de o motorista sair.
           if (route.isPartial) ...[
             _PartialRouteWarning(unassigned: route.unassigned),
@@ -682,11 +690,18 @@ class _RouteHero extends StatelessWidget {
                               size: 20,
                             ),
                             const SizedBox(width: 10),
-                            Text(
-                              l10n.routeAllDeliveriesDone,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
+                            // `Expanded` e não `Text` solto: sem ele a frase
+                            // transborda 54px num telemóvel de 390 — e este é
+                            // o ramo do dia terminado, que é exatamente quando
+                            // ninguém está a olhar para o layout. O ramo nunca
+                            // tinha sido exercitado por teste nenhum.
+                            Expanded(
+                              child: Text(
+                                l10n.routeAllDeliveriesDone,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
                             ),
                           ],

@@ -29,6 +29,7 @@ class RouteStopsMap extends StatefulWidget {
     super.key,
     required this.stops,
     this.driverPosition,
+    this.onStopTap,
     this.isLoading = false,
     this.config,
     this.isSdkReady,
@@ -52,6 +53,10 @@ class RouteStopsMap extends StatefulWidget {
 
   /// Onde o motorista está agora, se se souber.
   final DriverPosition? driverPosition;
+
+  /// Chamado com o `deliveryId` da parada tocada. O widget não sabe o que
+  /// mostrar a seguir — quem o embute é que decide.
+  final ValueChanged<String>? onStopTap;
 
   /// A rota ainda está a ser carregada.
   final bool isLoading;
@@ -95,6 +100,9 @@ class _RouteStopsMapState extends State<RouteStopsMap> {
 
   /// A câmara só se enquadra sozinha uma vez.
   bool _fitted = false;
+
+  /// Subscrição dos toques nos pinos, cancelada ao sair.
+  Cancelable? _tapSubscription;
 
   /// Estilo e escala com que os pinos atuais foram pintados. Se o tema ou o
   /// Dynamic Type mudarem, os bitmaps ficam desatualizados e têm de ser
@@ -205,9 +213,31 @@ class _RouteStopsMapState extends State<RouteStopsMap> {
 
   Future<void> _onMapCreated(MapboxMap map) async {
     _map = map;
-    _manager = await map.annotations.createPointAnnotationManager();
+    final manager = await map.annotations.createPointAnnotationManager();
+    _manager = manager;
     if (!mounted) return;
+    _tapSubscription = manager.tapEvents(onTap: _onAnnotationTap);
     await _sync();
+  }
+
+  /// O SDK devolve a anotação tocada, com a identidade **dele**. Traduzimos
+  /// para a nossa procurando no mesmo mapa que usámos para a criar — o id do
+  /// Mapbox não significa nada fora do mapa.
+  void _onAnnotationTap(PointAnnotation annotation) {
+    final callback = widget.onStopTap;
+    if (callback == null) return;
+    for (final entry in _drawn.entries) {
+      if (entry.value.id == annotation.id) {
+        callback(entry.key);
+        return;
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _tapSubscription?.cancel();
+    super.dispose();
   }
 
   /// Aplica ao mapa só o que mudou.

@@ -70,6 +70,8 @@ class RouteStopInfo extends Equatable {
     required this.addressLine,
     required this.cityLine,
     required this.etaMinutes,
+    this.status = 'pending',
+    this.priority = 'normal',
     this.latitude,
     this.longitude,
   });
@@ -79,8 +81,23 @@ class RouteStopInfo extends Equatable {
   final String addressLine;
   final String cityLine;
   final double etaMinutes;
+
+  /// Estado da entrega, no vocabulário do backend (`pending`, `in_transit`,
+  /// `delivered`, `failed`, …). String crua e não `enum`, pela mesma razão de
+  /// [DestinationType]: um estado novo no backend não pode rebentar a tela do
+  /// motorista — cai no rótulo genérico.
+  final String status;
+
+  /// Prioridade da entrega (`low`, `normal`, `high`, `urgent`).
+  final String priority;
+
   final double? latitude;
   final double? longitude;
+
+  /// A entrega já não está por fazer — entregue ou falhada.
+  bool get isDone => status == 'delivered' || status == 'failed';
+
+  bool get hasFailed => status == 'failed';
 
   bool get hasNavigableCoordinates =>
       latitude?.isFinite == true &&
@@ -97,6 +114,8 @@ class RouteStopInfo extends Equatable {
         addressLine,
         cityLine,
         etaMinutes,
+        status,
+        priority,
         latitude,
         longitude,
       ];

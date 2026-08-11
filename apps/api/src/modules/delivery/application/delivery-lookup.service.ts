@@ -260,9 +260,20 @@ export class DeliveryLookupService implements DeliveryLookupPort {
   private toDto(d: Delivery): DeliveryStopDto {
     const s = d.snapshot();
     const address = s.address.snapshot();
-    const addressText = [address.street, address.complement, address.city]
-      .filter((p): p is string => !!p && p.length > 0)
-      .join(' ');
+    // O **número da porta** faltava aqui. É obrigatório no domínio, mas caía
+    // fora desta composição — e é o campo mais operacional de uma morada: numa
+    // rua com 400 metros, «Rua Alfa, Lisboa» não é uma entrega, é uma procura.
+    // Passou a notar-se quando a app começou a mostrar esta linha ao motorista
+    // (ADR-0130); antes ela só alimentava a classificação de destino, que não
+    // olha para dígitos.
+    const junta = (partes: (string | null | undefined)[], separador: string) =>
+      partes.filter((p): p is string => !!p && p.length > 0).join(separador);
+
+    const rua = junta([address.street, address.number], ', ');
+    const addressText = junta(
+      [junta([rua, address.complement], ' — '), address.city, address.state],
+      ' — ',
+    );
     return {
       id: s.id,
       latitude: address.latitude,
