@@ -17,7 +17,12 @@ lib/l10n/gen/
 
 # Plataformas geradas por `flutter create .` (recriáveis localmente)
 android/
-ios/
+# O iOS é ignorado com `ios/*` e não `ios/`: o git não desce a um diretório
+# excluído, e sem descer não há como abrir exceções lá dentro. A regra é
+# versionar só o que foi editado à mão e não se regenera — hoje, o `Podfile`,
+# que precisa de `platform :ios, '14.0'` para o Mapbox instalar (ADR-0128).
+ios/*
+!ios/Podfile
 web/
 macos/
 linux/

@@ -253,3 +253,87 @@ O Render **não** tem rotação automática (diferente do AWS Secrets Manager). 
 - Hospedada **fora** da infra da Navix — continua no ar mesmo se o Render cair.
 
 **Melhoria futura (opcional):** apontar um subdomínio `status.navix.*` para a página via **CNAME** (UptimeRobot → Status Page → Custom domain) — o que clientes B2B esperam ver.
+
+
+## Mapbox — tokens, escopos e rotação (ADR-0128)
+
+### Três tokens, um por superfície
+
+| Superfície | Variável | Tipo | Escopos |
+| --- | --- | --- | --- |
+| Backend | `MAPBOX_TOKEN` | **secreto** (`sk.`) | `directions:read`, `matrix:read` |
+| Web | `NEXT_PUBLIC_MAPBOX_TOKEN` | público (`pk.`) | `styles:read`, `styles:tiles`, `fonts:read` |
+| Telemóvel | `MAPBOX_PUBLIC_TOKEN` | público (`pk.`) | `styles:read`, `styles:tiles`, `fonts:read` |
+
+O token do telemóvel vai **dentro do binário** e qualquer pessoa com o `.ipa`
+o extrai em minutos. Isso não é uma falha se for o token certo — o que não pode
+acontecer é reutilizar ali o do backend: Directions e Matrix custam por pedido,
+e um token com esse escopo numa app é uma fatura aberta.
+
+Um token por ambiente, também: `dev`, `staging` e `production` têm os seus, e
+o build passa o correspondente. Sem valor por omissão — um build sem
+`--dart-define` fica sem mapa, em vez de desenhar mapas na conta de outro
+ambiente.
+
+### Rotação
+
+Fazer **por superfície**; é essa a razão de serem separados.
+
+1. Criar o novo token no [Mapbox Account](https://account.mapbox.com/access-tokens/)
+   com os escopos da tabela acima — nunca mais do que isso.
+2. Publicar o novo valor onde ele vive:
+   - backend e web: segredo do ambiente (`gh secret set …`), seguido de deploy;
+   - telemóvel: variável do pipeline de build, seguida de **nova versão na
+     loja**. É a diferença que importa: rodar o token do telemóvel só chega a
+     quem atualizar a app.
+3. Confirmar que o novo está a ser usado (o ecrã de diagnóstico mostra
+   `MAPBOX_ENV`), e só então **revogar o antigo**.
+4. Para o telemóvel, manter o antigo válido durante pelo menos um ciclo de
+   atualização. Revogá-lo no mesmo dia deixa sem mapa toda a gente que ainda
+   não atualizou — e o mapa é justamente o que não se pode partir por
+   manutenção.
+
+### Se um token vazar
+
+Revogar imediatamente **só o da superfície afetada**. Um `pk.` público com os
+escopos da tabela permite consumir a quota de estilos; um `sk.` permite gastar
+Directions e Matrix, e esse é o que dói. Confirmar em Account → Statistics se
+houve pico antes de revogar, para saber o que se está a cortar.
+
+### Atribuição e telemetria
+
+O SDK desenha o *wordmark* da Mapbox e o botão ⓘ sobre o mapa, e **não podem
+ser escondidos**. Além da licença, o menu do ⓘ é o único caminho para o
+*opt-out* de telemetria («Telemetry Settings»): escondê-lo por estética
+removeria a escolha a quem já é localizado durante a jornada.
+
+### Configuração nativa
+
+`apps/mobile/android/` e `apps/mobile/ios/` **não estão em falta** — estão
+ignorados de propósito no `apps/mobile/.gitignore`, porque são recriáveis com
+`flutter create .`. A regra do repositório é versionar só o que foi editado à
+mão e **não** se consegue regenerar; o precedente é a configuração do OAuth
+(`Info.plist`, `Runner.entitlements`, os `.xcconfig`), cada ficheiro na
+*whitelist* por sua linha. O Mapbox segue a mesma regra e acrescenta um:
+`ios/Podfile`.
+
+**iOS — chão de plataforma 14.0.** O `mapbox_maps_flutter` declara
+`s.platform = :ios, '14.0'` no seu podspec, e o `Podfile` gerado traz a linha
+`platform` comentada, o que deixa o CocoaPods no default do Flutter (13.0). O
+`pod install` falha aí — não compila com o chão errado, recusa-se a instalar.
+Por isso o `Podfile` passa a ser versionado com `platform :ios, '14.0'`: sem
+isso, quem clonar o repositório e correr `flutter create .` recebe outra vez o
+13.0 e o mesmo erro.
+
+**Android — nada a fazer.** O plugin declara o repositório Maven da Mapbox no
+seu próprio `build.gradle`, e o `minSdkVersion 21` que exige está abaixo do
+`flutter.minSdkVersion` = 24 desta versão do Flutter. O `settings.gradle.kts`
+da app não precisa de alteração nenhuma.
+
+**Não há token de downloads.** Desde a versão 2.4.0 do plugin (Maps SDK 11.8.0)
+a Mapbox deixou de exigir o token secreto para instalar os SDKs: o repositório
+de *releases* é anónimo e o CocoaPods puxa o `MapboxMaps` do trunk público. Não
+é preciso `~/.netrc`, nem `SDK_REGISTRY_TOKEN` no `~/.gradle/gradle.properties`,
+nem gerar qualquer `sk.` para construir a app. Se alguma documentação exterior
+mandar criar um, é de v10 e está desatualizada — e criar um `sk.` que não é
+preciso é só mais um segredo para vazar.
