@@ -307,17 +307,33 @@ ser escondidos**. Além da licença, o menu do ⓘ é o único caminho para o
 *opt-out* de telemetria («Telemetry Settings»): escondê-lo por estética
 removeria a escolha a quem já é localizado durante a jornada.
 
-### O que falta configurar nas plataformas
+### Configuração nativa
 
-`apps/mobile/android/` e `apps/mobile/ios/` **não existem na `main`** — estão
-numa branch paralela. Quando chegarem, o SDK precisa de:
+`apps/mobile/android/` e `apps/mobile/ios/` **não estão em falta** — estão
+ignorados de propósito no `apps/mobile/.gitignore`, porque são recriáveis com
+`flutter create .`. A regra do repositório é versionar só o que foi editado à
+mão e **não** se consegue regenerar; o precedente é a configuração do OAuth
+(`Info.plist`, `Runner.entitlements`, os `.xcconfig`), cada ficheiro na
+*whitelist* por sua linha. O Mapbox segue a mesma regra e acrescenta um:
+`ios/Podfile`.
 
-- **iOS** — `MAPBOX_DOWNLOADS_TOKEN` (token `sk.` com `DOWNLOADS:READ`) num
-  `~/.netrc` da máquina de build, **nunca** no repositório; e a plataforma
-  mínima no `Podfile`.
-- **Android** — o mesmo token de downloads em `~/.gradle/gradle.properties` da
-  máquina de build, e o repositório Maven da Mapbox no `settings.gradle`.
+**iOS — chão de plataforma 14.0.** O `mapbox_maps_flutter` declara
+`s.platform = :ios, '14.0'` no seu podspec, e o `Podfile` gerado traz a linha
+`platform` comentada, o que deixa o CocoaPods no default do Flutter (13.0). O
+`pod install` falha aí — não compila com o chão errado, recusa-se a instalar.
+Por isso o `Podfile` passa a ser versionado com `platform :ios, '14.0'`: sem
+isso, quem clonar o repositório e correr `flutter create .` recebe outra vez o
+13.0 e o mesmo erro.
 
-O token de *downloads* é de build, não de execução: não entra no binário e não
-tem nada a ver com o `pk.` que a app usa. Confundi-los é o erro comum, e é o
-que põe um `sk.` dentro de uma app.
+**Android — nada a fazer.** O plugin declara o repositório Maven da Mapbox no
+seu próprio `build.gradle`, e o `minSdkVersion 21` que exige está abaixo do
+`flutter.minSdkVersion` = 24 desta versão do Flutter. O `settings.gradle.kts`
+da app não precisa de alteração nenhuma.
+
+**Não há token de downloads.** Desde a versão 2.4.0 do plugin (Maps SDK 11.8.0)
+a Mapbox deixou de exigir o token secreto para instalar os SDKs: o repositório
+de *releases* é anónimo e o CocoaPods puxa o `MapboxMaps` do trunk público. Não
+é preciso `~/.netrc`, nem `SDK_REGISTRY_TOKEN` no `~/.gradle/gradle.properties`,
+nem gerar qualquer `sk.` para construir a app. Se alguma documentação exterior
+mandar criar um, é de v10 e está desatualizada — e criar um `sk.` que não é
+preciso é só mais um segredo para vazar.
