@@ -54,6 +54,7 @@ function build(
         volumeM3: null,
         vehicleId: null,
       })),
+    getRouteStops: async () => [],
     getOwnership: async () => [],
     listActiveStops: async () => [],
   };
@@ -670,6 +671,7 @@ describe('OptimizeRouteUseCase — demanda real das entregas', () => {
     itens: { id: string; weightKg: number | null; volumeM3: number | null; vehicleId?: string }[],
   ): DeliveryGatewayPort {
     return {
+      getRouteStops: async () => [],
       getOwnership: async () => [],
       listActiveStops: async () => [],
       getStops: async (_t, ids) =>

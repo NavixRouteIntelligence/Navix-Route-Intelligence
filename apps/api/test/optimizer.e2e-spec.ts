@@ -45,6 +45,7 @@ import { OptimizerMetrics } from '../src/modules/optimizer/infrastructure/observ
 import { ManualStrategy } from '../src/modules/optimizer/infrastructure/strategies/manual.strategy';
 import { NearestNeighbor2OptStrategy } from '../src/modules/optimizer/infrastructure/strategies/nearest-neighbor-2opt.strategy';
 import { OrOpt2OptStrategy } from '../src/modules/optimizer/infrastructure/strategies/or-opt-2opt.strategy';
+import { GetCurrentRouteUseCase } from '../src/modules/optimizer/application/get-current-route.use-case';
 import { GetActiveRoutePlanUseCase } from '../src/modules/optimizer/application/get-active-route-plan.use-case';
 import { DRIVER_ROSTER_LINK } from '../src/modules/optimizer/application/ports/driver-roster-link.port';
 import { OptimizerController } from '../src/modules/optimizer/interface/optimizer.controller';
@@ -234,6 +235,7 @@ describe('Optimizer (e2e, assíncrono)', () => {
         ListRoutePlansUseCase,
         ReoptimizeActiveUseCase,
         GetActiveRoutePlanUseCase,
+        GetCurrentRouteUseCase,
         // Ficha do motorista (ADR-0098). Fixa: o e2e do otimizador não exercita
         // o Fleet, só precisa que a tradução exista e seja determinística.
         {
@@ -334,6 +336,7 @@ describe('Optimizer (e2e, assíncrono)', () => {
                 vehicleId: null,
               })),
             // Só o que o tenant enxerga: id de fora simplesmente não volta.
+            getRouteStops: async () => [],
             getOwnership: async (_tenantId: string, ids: string[]) =>
               ids.filter((id) => id in DONOS).map((id) => ({ id, driverId: DONOS[id] })),
           },

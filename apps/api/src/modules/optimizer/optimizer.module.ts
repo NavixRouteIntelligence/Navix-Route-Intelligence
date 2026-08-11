@@ -7,6 +7,7 @@ import { FleetModule } from '../fleet/fleet.module';
 import { IntelligenceModule } from '../intelligence/intelligence.module';
 import { EnqueueOptimizationUseCase } from './application/enqueue-optimization.use-case';
 import { GetActiveRoutePlanUseCase } from './application/get-active-route-plan.use-case';
+import { GetCurrentRouteUseCase } from './application/get-current-route.use-case';
 import { GetOptimizationJobUseCase } from './application/get-optimization-job.use-case';
 import { GetRoutePlanUseCase } from './application/get-route-plan.use-case';
 import { ListRoutePlansUseCase } from './application/list-route-plans.use-case';
@@ -83,6 +84,7 @@ import { OptimizerController } from './interface/optimizer.controller';
     OptimizeRouteUseCase,
     EnqueueOptimizationUseCase,
     GetActiveRoutePlanUseCase,
+    GetCurrentRouteUseCase,
     ProcessOptimizationJobUseCase,
     GetOptimizationJobUseCase,
     GetRoutePlanUseCase,
