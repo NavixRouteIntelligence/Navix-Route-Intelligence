@@ -77,9 +77,19 @@ class MyRouteCubit extends Cubit<MyRouteState> {
   Future<bool> navigateToNext() async {
     final next = state.route.next;
     if (next == null) return false;
+    return navigateToStop(next.id);
+  }
+
+  /// Abre a navegação de **uma parada qualquer**, pela mesma porta.
+  ///
+  /// O mapa deixa tocar em qualquer pino, e não só na próxima. Reutiliza o
+  /// mesmo `RouteNavigationLauncher` e marca a mesma pendência de regresso —
+  /// se fosse um caminho novo, voltar da navegação a partir do mapa não
+  /// recarregaria a rota, e o motorista veria o estado de antes de conduzir.
+  Future<bool> navigateToStop(String deliveryId) async {
     RouteStopInfo? stop;
     for (final candidate in state.route.stops) {
-      if (candidate.deliveryId == next.id) {
+      if (candidate.deliveryId == deliveryId) {
         stop = candidate;
         break;
       }

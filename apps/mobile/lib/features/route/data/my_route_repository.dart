@@ -72,40 +72,32 @@ class MyRouteRepository {
 
   Future<MyRoute> load() async {
     try {
-      // A rota vigente vem do backend já resolvida para este motorista e para o
-      // dia operacional (ADR-0098). Antes daqui saía `/route-plans?pageSize=1`,
-      // que é o plano mais recente do **tenant**: numa frota, todo motorista
-      // via a rota do último que otimizou. As entregas dão o endereço de cada
-      // parada (o plano guarda só coordenadas e a sequência).
-      final active = _map(
-        await _dio.get<dynamic>('/route-plans/mine/active'),
-      );
-      final deliveries = _map(
-        await _dio.get<dynamic>(
-          '/deliveries',
-          queryParameters: {'pageSize': 100, 'sort': 'createdAt'},
-        ),
+      // Uma leitura só (ADR-0127). Antes daqui saíam duas chamadas — o plano
+      // mais `/deliveries?pageSize=100&sort=createdAt` — que o app cruzava em
+      // memória. Uma parada fora dessa página perdia morada e estado, a
+      // ordenação era do tenant e não da rota, e o progresso vinha de dois
+      // instantes diferentes. Este endpoint devolve as paradas com morada,
+      // estado, prioridade e o `nextDeliveryId` já derivados no servidor.
+      final current = _map(
+        await _dio.get<dynamic>('/route-plans/mine/current'),
       );
 
-      final items = _items(deliveries);
       // `data: null` é a resposta normal de quem ainda não tem rota do dia.
-      final data = active['data'];
+      final data = current['data'];
       final plan = data is Map<String, dynamic> ? data : null;
 
       if (plan == null) {
         // Sem plano: distinguir "poucas entregas" de "a IA ainda não preparou"
         // muda a mensagem que o motorista vê — e nenhuma das duas é erro dele.
-        return items.length >= _minStops
-            ? const MyRoute.preparing()
-            : const MyRoute.empty();
+        // Só aqui vale a pena contar entregas; no caminho normal ninguém conta.
+        return await _withoutPlan();
       }
 
-      final byId = {for (final d in items) (d['id'] as String? ?? ''): d};
       final planStops = (plan['stops'] as List?)
               ?.whereType<Map<String, dynamic>>()
               .toList() ??
           const [];
-      final stops = planStops.map((s) => _stop(s, byId)).toList();
+      final stops = planStops.map(_stop).toList();
       final distanceKm = _nested(plan, ['metrics', 'totalDistanceKm']) ?? 0;
       final timeMinutes = _nested(plan, ['metrics', 'totalTimeMinutes']) ?? 0;
       final savedKm = _nested(plan, ['savings', 'distanceKm']) ?? 0;
@@ -125,11 +117,15 @@ class MyRouteRepository {
       return MyRoute(
         status: MyRouteStatus.ready,
         unassigned: unassigned,
-        totalStops: planStops.length,
-        completedStops: stops.where((stop) {
-          final status = byId[stop.deliveryId]?['status'] as String?;
-          return status == 'delivered' || status == 'failed';
-        }).length,
+        // O progresso vem derivado do servidor. Recontá-lo aqui daria dois
+        // números que discordam quando a resposta é de um instante e a
+        // contagem de outro — e o motorista veria «3 de 8» ao lado de uma
+        // barra noutro sítio.
+        totalStops:
+            (_nested(plan, ['progress', 'total']) ?? planStops.length).toInt(),
+        completedStops: ((_nested(plan, ['progress', 'completed']) ?? 0) +
+                (_nested(plan, ['progress', 'failed']) ?? 0))
+            .toInt(),
         distanceKm: distanceKm,
         timeMinutes: timeMinutes,
         savedKm: savedKm,
@@ -150,52 +146,70 @@ class MyRouteRepository {
                 .toList() ??
             const [],
         stops: stops,
-        next: _nextDelivery(stops, byId),
+        next: _nextDelivery(stops, plan),
       );
     } on DioException catch (e) {
       throw mapDioException(e);
     }
   }
 
-  /// A primeira parada da rota cuja entrega ainda não foi concluída — o alvo do
-  /// "Registrar entrega". Percorre em ordem de sequência (as paradas já vêm
-  /// ordenadas do plano).
-  NextDelivery? _nextDelivery(
-    List<RouteStopInfo> stops,
-    Map<String, Map<String, dynamic>> byId,
-  ) {
-    for (final s in stops) {
-      final status = byId[s.deliveryId]?['status'] as String?;
-      if (status != 'delivered' && status != 'failed') {
-        final label = s.addressLine.isEmpty ? s.cityLine : s.addressLine;
-        return NextDelivery(id: s.deliveryId, label: label);
-      }
-    }
-    return null;
+  /// Sem plano do dia: distinguir «poucas entregas» de «a IA ainda não
+  /// preparou». É a única situação que ainda precisa de contar entregas.
+  Future<MyRoute> _withoutPlan() async {
+    final deliveries = _map(
+      await _dio.get<dynamic>(
+        '/deliveries',
+        queryParameters: {'pageSize': _minStops, 'sort': 'createdAt'},
+      ),
+    );
+    return _items(deliveries).length >= _minStops
+        ? const MyRoute.preparing()
+        : const MyRoute.empty();
   }
 
-  RouteStopInfo _stop(
-    Map<String, dynamic> stop,
-    Map<String, Map<String, dynamic>> byId,
+  /// A próxima parada por fazer, **como o servidor a decidiu**.
+  ///
+  /// O app já não a procura. Duas derivações da mesma coisa — uma no servidor
+  /// para o progresso, outra aqui para o botão — divergem no dia em que as
+  /// regras mudarem de um lado só, e o motorista veria o cartão a apontar para
+  /// uma parada e o mapa a destacar outra. Há uma fonte, e é esta.
+  NextDelivery? _nextDelivery(
+    List<RouteStopInfo> stops,
+    Map<String, dynamic> plan,
   ) {
-    final id = stop['deliveryId'] as String? ?? '';
-    final delivery = byId[id];
-    final address = delivery?['address'];
-    final a =
-        address is Map<String, dynamic> ? address : const <String, dynamic>{};
-    final street = (a['street'] as String?) ?? '';
-    final number = (a['number'] as String?) ?? '';
-    final city = (a['city'] as String?) ?? '';
-    final state = (a['state'] as String?) ?? '';
+    final progress = plan['progress'];
+    final id = progress is Map<String, dynamic>
+        ? progress['nextDeliveryId'] as String?
+        : null;
+    if (id == null || id.isEmpty) return null;
+
+    for (final s in stops) {
+      if (s.deliveryId != id) continue;
+      final label = s.addressLine.isEmpty ? s.cityLine : s.addressLine;
+      return NextDelivery(id: id, label: label);
+    }
+    // O servidor aponta para uma parada que não veio na lista. Não inventamos
+    // outra: um rótulo vazio é honesto, apontar para a parada errada não é.
+    return NextDelivery(id: id, label: '');
+  }
+
+  RouteStopInfo _stop(Map<String, dynamic> stop) {
+    // A morada vem resolvida do servidor num campo só. `hasLocation: false`
+    // significa parada sem localização utilizável — e a coordenada é ignorada
+    // nesse caso, para não desenhar um pino num sítio em que ninguém está.
+    final address = (stop['addressText'] as String?) ?? '';
+    final hasLocation = stop['hasLocation'] as bool? ?? true;
 
     return RouteStopInfo(
       sequence: (stop['sequence'] as num?)?.toInt() ?? 0,
-      deliveryId: id,
-      addressLine: [street, number].where((p) => p.isNotEmpty).join(', '),
-      cityLine: [city, state].where((p) => p.isNotEmpty).join(' — '),
+      deliveryId: stop['deliveryId'] as String? ?? '',
+      addressLine: address,
+      cityLine: '',
       etaMinutes: (stop['etaMinutes'] as num?)?.toDouble() ?? 0,
-      latitude: (stop['latitude'] as num?)?.toDouble(),
-      longitude: (stop['longitude'] as num?)?.toDouble(),
+      status: (stop['status'] as String?) ?? 'pending',
+      priority: (stop['priority'] as String?) ?? 'normal',
+      latitude: hasLocation ? (stop['latitude'] as num?)?.toDouble() : null,
+      longitude: hasLocation ? (stop['longitude'] as num?)?.toDouble() : null,
     );
   }
 

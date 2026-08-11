@@ -16,6 +16,7 @@ import 'package:navix_mobile/features/pod/presentation/pod_sync_cubit.dart';
 import 'package:navix_mobile/features/route/data/my_route_repository.dart';
 import 'package:navix_mobile/features/route/domain/route_navigation.dart';
 import 'package:navix_mobile/features/route/presentation/my_route_cubit.dart';
+import 'package:navix_mobile/core/maps/route_stops_map.dart';
 import 'package:navix_mobile/features/route/presentation/my_route_page.dart';
 import 'package:navix_mobile/l10n/gen/app_localizations.dart';
 
@@ -59,11 +60,18 @@ class _FakeApi extends Interceptor {
               'createdAt': '2026-07-23T09:00:00.000Z',
               'metrics': {'totalDistanceKm': 10, 'totalTimeMinutes': 60},
               'savings': {'distanceKm': 2, 'distancePct': 17},
+              // Forma de `/route-plans/mine/current` (ADR-0127): morada,
+              // estado e prioridade vêm na parada, e o progresso vem
+              // derivado do servidor.
               'stops': [
                 {
                   'sequence': 1,
                   'deliveryId': 'd1',
                   'etaMinutes': 20,
+                  'addressText': 'Rua Alfa, 10',
+                  'status': 'delivered',
+                  'priority': 'normal',
+                  'hasLocation': true,
                   'latitude': 38.7223,
                   'longitude': -9.1393,
                 },
@@ -71,10 +79,22 @@ class _FakeApi extends Interceptor {
                   'sequence': 2,
                   'deliveryId': 'd2',
                   'etaMinutes': 45,
+                  'addressText': 'Rua Beta, 20',
+                  'status': 'pending',
+                  'priority': 'high',
+                  'hasLocation': true,
                   'latitude': 41.1579,
                   'longitude': -8.6291,
                 },
               ],
+              'progress': {
+                'total': 2,
+                'completed': 1,
+                'failed': 0,
+                'pending': 1,
+                'nextDeliveryId': 'd2',
+                'withoutLocation': 0,
+              },
               'groups': [
                 {
                   'type': 'commerce',
@@ -199,16 +219,73 @@ void main() {
     expect(await scrollToLastStop(tester), findsOneWidget);
   });
 
+  testWidgets('o mapa entra depois do cartão principal', (tester) async {
+    await pumpPhone(tester);
+
+    // «Para onde agora» continua a ser a primeira leitura; o mapa responde à
+    // pergunta seguinte.
+    final cartao = tester.getTopLeft(find.text('Rua Beta, 20')).dy;
+    final mapa = tester.getTopLeft(find.text('Route map')).dy;
+
+    expect(mapa, greaterThan(cartao));
+  });
+
+  testWidgets('o mapa não cobre o Registrar entrega nem o botão de voz', (
+    tester,
+  ) async {
+    await pumpPhone(tester);
+
+    // Critério de aceite, verificado por geometria e não por inspeção: o mapa
+    // vive dentro da lista, e os dois controlos flutuam por fora dela.
+    final mapa = tester.getRect(find.byType(RouteStopsMap));
+    final registar = tester.getRect(find.byType(FilledButton).last);
+    final voz = tester.getRect(find.byType(FloatingActionButton));
+
+    expect(mapa.overlaps(registar), isFalse);
+    expect(mapa.overlaps(voz), isFalse);
+  });
+
+  testWidgets('sem chave do mapa a tela continua inteira', (tester) async {
+    // Nos testes não há `--dart-define` de token, então este é o caminho real
+    // de um build sem mapa — e é o critério «fluxos de erro continuam
+    // utilizáveis com mapa indisponível».
+    await pumpPhone(tester);
+
+    expect(find.text('Map unavailable'), findsOneWidget);
+    // E o resto da tela não foi afetado.
+    expect(find.text('Rua Beta, 20'), findsOneWidget);
+    expect(find.byType(FloatingActionButton), findsOneWidget);
+    final registar = tester.widget<FilledButton>(
+      find.byType(FilledButton).last,
+    );
+    expect(registar.onPressed, isNotNull);
+  });
+
+  testWidgets('a próxima parada aparece no cartão principal', (tester) async {
+    await pumpPhone(tester);
+
+    // Sem rolar: o cartão principal é a primeira leitura da tela.
+    expect(find.text('Rua Beta, 20'), findsOneWidget);
+  });
+
   testWidgets('mostra as paradas na ordem da rota e com a sua categoria', (
     tester,
   ) async {
     await pumpPhone(tester);
-    await scrollToLastStop(tester);
+    await tester.scrollUntilVisible(
+      find.text('Rua Alfa, 10'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
 
+    // As duas paradas são vizinhas na sequência, logo cabem no mesmo ecrã.
+    // O cartão principal já não — desde que o mapa entrou na lista (ADR-0130),
+    // ele e a sequência estão a mais de um ecrã de distância, e por isso a
+    // presença da próxima parada no cartão é afirmada no teste acima.
     expect(find.text('Rua Alfa, 10'), findsOneWidget);
-    // A próxima parada também aparece no painel de progresso.
-    expect(find.text('Rua Beta, 20'), findsNWidgets(2));
-    // Uma vez no resumo e uma vez em cada parada.
+    expect(find.text('Rua Beta, 20'), findsOneWidget);
+    // Uma vez no resumo por tipo de destino e uma vez em cada parada.
     expect(find.text('Commerce'), findsNWidgets(3));
   });
 

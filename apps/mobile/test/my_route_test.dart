@@ -25,7 +25,7 @@ class _FakeApi extends Interceptor {
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
     paths?.add(options.path);
-    // `/route-plans/mine/active` devolve **um** plano (ou null), não uma lista
+    // `/route-plans/mine/current` devolve **um** plano (ou null), não uma lista
     // — a rota vigente já vem resolvida para o motorista (ADR-0098).
     final body = options.path.contains('route-plans')
         ? {'data': comoLista ? plans : (plans.isEmpty ? null : plans.first)}
@@ -119,7 +119,7 @@ void main() {
 
     await repo(deliveries: [delivery('d1', 'Rua A')], paths: paths).load();
 
-    expect(paths, contains('/route-plans/mine/active'));
+    expect(paths, contains('/route-plans/mine/current'));
     expect(paths.any((p) => p.startsWith('/route-plans?')), isFalse);
   });
 
@@ -157,7 +157,7 @@ void main() {
     await repo(deliveries: [delivery('d1', 'Rua A')], paths: paths).load();
 
     final rota = paths.firstWhere((p) => p.contains('route-plans'));
-    expect(rota, '/route-plans/mine/active');
+    expect(rota, '/route-plans/mine/current');
     expect(rota, isNot(contains('driver')));
     expect(rota, isNot(contains('?')));
   });
@@ -221,11 +221,18 @@ void main() {
               'timePct': 20.8,
             },
             'params': {'vehicleType': 'van'},
+            // Forma de `/route-plans/mine/current` (ADR-0127): a morada, o
+            // estado e a prioridade vêm **na parada**, e o progresso vem
+            // derivado do servidor.
             'stops': [
               {
                 'sequence': 1,
                 'deliveryId': 'd1',
                 'etaMinutes': 12,
+                'addressText': 'Rua A, 10 — Lisboa — LX',
+                'status': 'delivered',
+                'priority': 'normal',
+                'hasLocation': true,
                 'latitude': 38.7223,
                 'longitude': -9.1393,
               },
@@ -233,10 +240,22 @@ void main() {
                 'sequence': 2,
                 'deliveryId': 'd2',
                 'etaMinutes': 40,
+                'addressText': 'Rua B, 20 — Lisboa — LX',
+                'status': 'pending',
+                'priority': 'urgent',
+                'hasLocation': true,
                 'latitude': 38.7369,
                 'longitude': -9.1427,
               },
             ],
+            'progress': {
+              'total': 2,
+              'completed': 1,
+              'failed': 0,
+              'pending': 1,
+              'nextDeliveryId': 'd2',
+              'withoutLocation': 0,
+            },
             'groups': [
               {
                 'type': 'commerce',
@@ -279,10 +298,20 @@ void main() {
       expect(route.fuelSavedLiters, closeTo(0.352, 0.0001));
       expect(route.updatedAt, isNotNull);
       expect(route.groups.map((g) => g.type), ['commerce', 'residence']);
-      expect(route.stops.first.addressLine, 'Rua A, 10');
-      expect(route.stops.first.cityLine, 'Lisboa — LX');
+      // A morada chega numa linha só, composta no servidor. O `cityLine`
+      // deixou de ser preenchido pelo app — ele já não cruza entregas para
+      // montar endereços (ADR-0130).
+      expect(route.stops.first.addressLine, 'Rua A, 10 — Lisboa — LX');
+      expect(route.stops.first.cityLine, isEmpty);
       expect(route.stops.first.hasNavigableCoordinates, isTrue);
       expect(route.stops.first.latitude, 38.7223);
+      // Estado e prioridade por parada, que o mapa e a folha de detalhe usam.
+      expect(route.stops.first.status, 'delivered');
+      expect(route.stops.first.isDone, isTrue);
+      expect(route.stops.last.priority, 'urgent');
+      // A próxima parada é a que o **servidor** apontou, não uma que o app
+      // recalculou.
+      expect(route.next?.id, 'd2');
     },
   );
 

@@ -656,5 +656,54 @@
   "kaizenGreetingAfternoon": "Good afternoon",
   "kaizenGreetingEvening": "Good evening",
   "kaizenReminderTitle": "Yesterday's summary is ready",
-  "kaizenReminderBody": "Tap to see how your last working day went."
+  "kaizenReminderBody": "Tap to see how your last working day went.",
+  "routeMapTitle": "Route map",
+  "routeMapExpand": "Expand map",
+  "routeMapClose": "Close map",
+  "routeMapRecenter": "Fit route",
+  "routeMapZoomIn": "Zoom in",
+  "routeMapZoomOut": "Zoom out",
+  "routeMapUnavailableTitle": "Map unavailable",
+  "routeMapMissingToken": "This app build has no map key. The route is still available in the list.",
+  "routeMapSdkUnavailable": "The map did not start on this device. The route is still available in the list.",
+  "routeMapEmptyTitle": "Nothing to show on the map",
+  "routeMapEmptyDesc": "No stop on this route has a locatable address.",
+  "routeMapWithoutLocation": "{count, plural, =1{1 stop has no location and is not on the map} other{{count} stops have no location and are not on the map}}",
+  "routeStopSheetTitle": "Stop {sequence}",
+  "routeStopEta": "{minutes} min",
+  "routeStopEtaLabel": "Estimated time",
+  "routeStopPriorityLabel": "Priority",
+  "routeStopStatusLabel": "Status",
+  "routeStopPriorityLow": "Low",
+  "routeStopPriorityNormal": "Normal",
+  "routeStopPriorityHigh": "High",
+  "routeStopPriorityUrgent": "Urgent",
+  "routeStopStatusPending": "Pending",
+  "routeStopStatusInTransit": "In transit",
+  "routeStopStatusDelivered": "Delivered",
+  "routeStopStatusFailed": "Failed",
+  "routeStopStatusNext": "Next stop",
+  "routeStopNoAddress": "Address not available",
+  "routeStopNavigateUnavailable": "This stop has no location to navigate to.",
+  "@routeMapWithoutLocation": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@routeStopSheetTitle": {
+    "placeholders": {
+      "sequence": {
+        "type": "int"
+      }
+    }
+  },
+  "@routeStopEta": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  }
 }
