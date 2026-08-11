@@ -18,6 +18,7 @@ import { StrategyRegistry } from '../src/modules/optimizer/application/strategy-
 import { AppConfigService } from '../src/shared/config/app-config.service';
 import { TENANT_TIME_ZONE_READER } from '../src/shared/tenancy/tenant-time-zone.port';
 import { DELIVERY_GATEWAY } from '../src/modules/optimizer/application/ports/delivery-gateway.port';
+import { ROUTE_GEOMETRY_PROVIDER } from '../src/modules/optimizer/domain/ports/route-geometry.port';
 import { VEHICLE_CAPACITY } from '../src/modules/optimizer/application/ports/vehicle-capacity.port';
 import { SERVICE_TIME_HISTORY } from '../src/modules/optimizer/application/ports/service-time-history.port';
 import { DISTANCE_PROVIDER } from '../src/modules/optimizer/domain/ports/distance-provider.port';
@@ -311,6 +312,12 @@ describe('Optimizer (e2e, assíncrono)', () => {
         // capacidade pelo `vehicle` do request, então nenhuma entrega resolve
         // veículo aqui.
         { provide: VEHICLE_CAPACITY, useValue: { capacityOf: async () => null } },
+        {
+          // Sem traçado: é o caminho normal de um ambiente sem Mapbox, e o que
+          // o e2e afirma é que a rota carrega à mesma (ADR-0131).
+          provide: ROUTE_GEOMETRY_PROVIDER,
+          useValue: { geometry: async () => null },
+        },
         {
           provide: DELIVERY_GATEWAY,
           useValue: {
