@@ -256,6 +256,19 @@ void main() {
               'nextDeliveryId': 'd2',
               'withoutLocation': 0,
             },
+            // Traçado real (ADR-0131), quando o servidor o conseguiu.
+            'geometry': {
+              'coordinates': [
+                [-9.1393, 38.7223],
+                [-9.1421, 38.724],
+              ],
+              'provenance': {
+                'source': 'directions',
+                'profile': 'driving',
+                'coveredStops': 2,
+                'totalStops': 2,
+              },
+            },
             'groups': [
               {
                 'type': 'commerce',
@@ -312,6 +325,9 @@ void main() {
       // A próxima parada é a que o **servidor** apontou, não uma que o app
       // recalculou.
       expect(route.next?.id, 'd2');
+      // O traçado vem junto e não é parcial.
+      expect(route.line?.coordinates, hasLength(2));
+      expect(route.line?.isPartial, isFalse);
     },
   );
 
@@ -349,6 +365,57 @@ void main() {
     final stops = route.stopsOf(route.groups.first);
 
     expect(stops.map((s) => s.sequence), [1, 3]);
+  });
+
+  test('rota sem traçado carrega na mesma', () async {
+    // O critério de aceite: geometria indisponível nunca impede carregar a
+    // rota. Os planos das outras fixtures não trazem `geometry` — este teste
+    // afirma que essa ausência é normal, e não um erro por tratar.
+    final route = await repo(
+      plans: [
+        {
+          'id': 'p1',
+          'metrics': {'totalDistanceKm': 1, 'totalTimeMinutes': 1},
+          'savings': {'distanceKm': 0, 'distancePct': 0},
+          'stops': [
+            {'sequence': 1, 'deliveryId': 'd1', 'etaMinutes': 10},
+            {'sequence': 2, 'deliveryId': 'd2', 'etaMinutes': 20},
+          ],
+        },
+      ],
+      deliveries: [delivery('d1', 'Rua A'), delivery('d2', 'Rua B')],
+    ).load();
+
+    expect(route.status, MyRouteStatus.ready);
+    expect(route.stops, hasLength(2));
+    expect(route.line, isNull);
+  });
+
+  test('traçado corrompido não contamina a rota', () async {
+    // Uma coordenada fora do planeta faria a câmara enquadrar meio globo.
+    final route = await repo(
+      plans: [
+        {
+          'id': 'p1',
+          'metrics': {'totalDistanceKm': 1, 'totalTimeMinutes': 1},
+          'savings': {'distanceKm': 0, 'distancePct': 0},
+          'stops': [
+            {'sequence': 1, 'deliveryId': 'd1', 'etaMinutes': 10},
+            {'sequence': 2, 'deliveryId': 'd2', 'etaMinutes': 20},
+          ],
+          'geometry': {
+            'coordinates': [
+              [-9.13, 38.72],
+              [-9.14, 999.0],
+            ],
+          },
+        },
+      ],
+      deliveries: [delivery('d1', 'Rua A'), delivery('d2', 'Rua B')],
+    ).load();
+
+    expect(route.status, MyRouteStatus.ready);
+    expect(route.line, isNull);
   });
 
   group('reorganize', () {

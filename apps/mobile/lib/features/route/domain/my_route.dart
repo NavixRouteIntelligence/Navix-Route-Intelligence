@@ -151,6 +151,74 @@ class UnassignedStop extends Equatable {
   List<Object?> get props => [deliveryId, reason];
 }
 
+/// O traçado real da rota, quando o servidor o conseguiu obter (ADR-0131).
+///
+/// **Ausente não é erro.** Sem traçado o mapa mostra os pontos, que continuam
+/// verdadeiros. Não existe uma versão «aproximada» desta linha: uma reta entre
+/// paragens atravessa quarteirões e rios e sugere uma distância que não é a que
+/// se conduz (ADR-0125).
+class RouteLine extends Equatable {
+  const RouteLine({
+    required this.coordinates,
+    required this.profile,
+    required this.coveredStops,
+    required this.totalStops,
+  });
+
+  /// Vértices da linha, no formato do GeoJSON: **longitude primeiro**.
+  final List<List<double>> coordinates;
+
+  final String profile;
+
+  /// Paragens por onde a linha passa, contra o total do plano.
+  final int coveredStops;
+  final int totalStops;
+
+  /// A linha salta paragens — as que não têm localização utilizável. É o que a
+  /// tela tem de dizer: sem o aviso, ela parece o percurso completo.
+  bool get isPartial => coveredStops < totalStops;
+
+  /// Lê o traçado da resposta, ou devolve `null`.
+  ///
+  /// Recusa em vez de aparar: uma coordenada inválida no meio da lista faria a
+  /// linha saltar para o oceano e a câmara enquadrar meio globo. Uma linha que
+  /// não se consegue ler por inteiro não é meia linha — é nenhuma.
+  static RouteLine? fromJson(Object? raw) {
+    if (raw is! Map<String, dynamic>) return null;
+
+    final pontos = raw['coordinates'];
+    if (pontos is! List) return null;
+
+    final coordenadas = <List<double>>[];
+    for (final ponto in pontos) {
+      if (ponto is! List || ponto.length < 2) return null;
+      final lng = (ponto[0] as num?)?.toDouble();
+      final lat = (ponto[1] as num?)?.toDouble();
+      if (lng == null || lat == null) return null;
+      if (!lng.isFinite || !lat.isFinite) return null;
+      if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+      coordenadas.add([lng, lat]);
+    }
+    // Um ponto só não é uma linha.
+    if (coordenadas.length < 2) return null;
+
+    final proveniencia = raw['provenance'];
+    final p = proveniencia is Map<String, dynamic>
+        ? proveniencia
+        : const <String, dynamic>{};
+
+    return RouteLine(
+      coordinates: coordenadas,
+      profile: (p['profile'] as String?) ?? 'driving',
+      coveredStops: (p['coveredStops'] as num?)?.toInt() ?? coordenadas.length,
+      totalStops: (p['totalStops'] as num?)?.toInt() ?? coordenadas.length,
+    );
+  }
+
+  @override
+  List<Object?> get props => [coordinates, profile, coveredStops, totalStops];
+}
+
 /// A rota preparada pela IA, como o motorista a vê.
 class MyRoute extends Equatable {
   const MyRoute({
@@ -171,6 +239,7 @@ class MyRoute extends Equatable {
     this.stops = const [],
     this.next,
     this.unassigned = const [],
+    this.line,
   });
 
   const MyRoute.empty() : this(status: MyRouteStatus.empty);
@@ -210,6 +279,9 @@ class MyRoute extends Equatable {
 
   /// Próxima entrega pendente; null quando a rota terminou.
   final NextDelivery? next;
+
+  /// Traçado real, ou `null` quando não se conseguiu (ADR-0131).
+  final RouteLine? line;
 
   bool get isReady => status == MyRouteStatus.ready;
   int get remainingStops {
@@ -261,5 +333,6 @@ class MyRoute extends Equatable {
         stops,
         next,
         unassigned,
+        line,
       ];
 }

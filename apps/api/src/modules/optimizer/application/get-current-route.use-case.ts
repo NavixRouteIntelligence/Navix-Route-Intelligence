@@ -3,8 +3,13 @@ import type {
   CurrentRouteProgressView,
   CurrentRouteStopView,
   CurrentRouteView,
+  RouteGeometryView,
 } from '@navix/contracts';
 
+import {
+  ROUTE_GEOMETRY_PROVIDER,
+  type RouteGeometryProviderPort,
+} from '../domain/ports/route-geometry.port';
 import { DELIVERY_GATEWAY, type DeliveryGatewayPort } from './ports/delivery-gateway.port';
 import { GetActiveRoutePlanUseCase } from './get-active-route-plan.use-case';
 
@@ -34,6 +39,7 @@ export class GetCurrentRouteUseCase {
   constructor(
     private readonly active: GetActiveRoutePlanUseCase,
     @Inject(DELIVERY_GATEWAY) private readonly deliveries: DeliveryGatewayPort,
+    @Inject(ROUTE_GEOMETRY_PROVIDER) private readonly geometry: RouteGeometryProviderPort,
   ) {}
 
   /**
@@ -81,13 +87,61 @@ export class GetCurrentRouteUseCase {
       operationalDay: plano.operationalDay,
       status: plano.status,
       departureAt: plano.departureAt,
+      // As métricas são as do **plano**, e continuam a ser. O traçado é
+      // desenho: a distância que ele percorre não volta para aqui, senão o
+      // número que o motorista lê passaria a depender de uma chamada que pode
+      // falhar — e mudaria consoante o traçado tivesse vindo ou não.
       metrics: plano.metrics,
       savings: plano.savings,
       params: plano.params,
       stops,
       progress: progressoDe(stops),
       ...(plano.unassignedStops ? { unassignedStops: plano.unassignedStops } : {}),
+      geometry: await this.tracado(stops, plano.params?.vehicleType ?? null),
     };
+  }
+
+  /**
+   * O traçado da rota, ou `null`.
+   *
+   * Corre **depois** de a ordem estar decidida e nunca a influencia: recebe a
+   * sequência do plano tal como ela é e devolve uma linha. Nada do que sai
+   * daqui volta para o otimizador nem para as métricas.
+   *
+   * Qualquer falha vira `null` e não sobe: a rota carrega na mesma. Uma linha
+   * indisponível não pode impedir alguém de ver as suas entregas.
+   */
+  private async tracado(
+    stops: readonly CurrentRouteStopView[],
+    vehicleType: CurrentRouteView['params']['vehicleType'] | null,
+  ): Promise<RouteGeometryView | null> {
+    // Paradas sem localização não entram na linha — não há por onde a passar.
+    // Elas continuam na lista e na numeração; é a linha que as salta, e é por
+    // isso que a proveniência conta as duas coisas.
+    const comLocal = stops.filter((s) => s.hasLocation);
+    if (comLocal.length < 2) return null;
+
+    try {
+      const linha = await this.geometry.geometry(
+        comLocal.map((s) => ({ latitude: s.latitude!, longitude: s.longitude! })),
+        vehicleType ?? null,
+      );
+      if (!linha) return null;
+
+      return {
+        coordinates: linha.coordinates,
+        provenance: {
+          source: 'directions',
+          profile: linha.profile,
+          coveredStops: linha.coveredStops,
+          totalStops: stops.length,
+        },
+      };
+    } catch {
+      // O provedor já devolve `null` em falha; isto é a rede para o caso de um
+      // adaptador futuro lançar. A rota vale mais do que a linha.
+      return null;
+    }
   }
 }
 

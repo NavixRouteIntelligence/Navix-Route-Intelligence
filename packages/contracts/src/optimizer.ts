@@ -516,6 +516,37 @@ export interface CurrentRouteProgressView {
   withoutLocation: number;
 }
 
+/**
+ * O traçado real da rota, quando se conseguiu obter (ADR-0131).
+ *
+ * **Ausente não é erro.** Sem traçado o mapa mostra os pontos, que continuam
+ * verdadeiros; não existe uma versão «aproximada» desta linha, porque uma reta
+ * entre paradas atravessa quarteirões e rios e sugere uma distância que não é a
+ * que se conduz (ADR-0125).
+ */
+export interface RouteGeometryView {
+  /** Vértices da linha, no formato do GeoJSON: **longitude primeiro**. */
+  coordinates: [number, number][];
+  provenance: RouteGeometryProvenance;
+}
+
+/** De onde a linha veio e o que ela cobre. */
+export interface RouteGeometryProvenance {
+  /** Hoje só há uma origem possível; o campo existe para não haver duas em silêncio. */
+  source: 'directions';
+  /** Perfil de deslocamento pedido ao provedor. */
+  profile: string;
+  /**
+   * Paradas por onde a linha passa, contra o total do plano.
+   *
+   * Diferem quando alguma parada não tem localização utilizável: a linha liga
+   * as que têm e **salta** as outras. É por isso que a tela precisa de dizer
+   * que o traçado é parcial — sem esse aviso ele parece o percurso completo.
+   */
+  coveredStops: number;
+  totalStops: number;
+}
+
 /** Rota vigente do próprio motorista, numa leitura só (ADR-0127). */
 export interface CurrentRouteView {
   planId: string;
@@ -528,4 +559,6 @@ export interface CurrentRouteView {
   stops: CurrentRouteStopView[];
   progress: CurrentRouteProgressView;
   unassignedStops?: UnassignedStopView[];
+  /** `null` quando não se conseguiu o traçado real — ver [RouteGeometryView]. */
+  geometry?: RouteGeometryView | null;
 }

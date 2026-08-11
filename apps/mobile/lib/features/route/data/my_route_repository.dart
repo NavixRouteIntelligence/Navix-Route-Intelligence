@@ -147,6 +147,9 @@ class MyRouteRepository {
             const [],
         stops: stops,
         next: _nextDelivery(stops, plan),
+        // O traçado é desenho: se vier corrompido, a rota carrega à mesma sem
+        // linha (ADR-0131).
+        line: RouteLine.fromJson(plan['geometry']),
       );
     } on DioException catch (e) {
       throw mapDioException(e);

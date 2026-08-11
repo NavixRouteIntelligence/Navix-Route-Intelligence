@@ -705,5 +705,14 @@
         "type": "int"
       }
     }
+  },
+  "routeMapPartialLine": "The line skips {count, plural, =1{1 stop without a location} other{{count} stops without a location}}.",
+  "routeMapNoLine": "Route outline unavailable. The stops and their order are correct.",
+  "@routeMapPartialLine": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   }
 }
