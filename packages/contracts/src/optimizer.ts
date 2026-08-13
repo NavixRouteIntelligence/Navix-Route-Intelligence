@@ -582,4 +582,16 @@ export interface CurrentRouteView {
   unassignedStops?: UnassignedStopView[];
   /** `null` quando não se conseguiu o traçado real — ver [RouteGeometryView]. */
   geometry?: RouteGeometryView | null;
+  /**
+   * O mapa está ligado para este motorista (ADR-0134).
+   *
+   * `false` devolve a tela à lista, que nunca deixou de funcionar — e o
+   * servidor nem chega a pedir o traçado, porque quem está fora do piloto não
+   * deve gerar custo de Directions.
+   *
+   * Opcional para não partir clientes anteriores a esta ADR: `undefined` ali
+   * significa «a app não sabe do piloto», e essa app desenha o mapa como
+   * sempre desenhou.
+   */
+  mapEnabled?: boolean;
 }

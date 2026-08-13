@@ -192,6 +192,12 @@ export const envSchema = z.object({
   // estiver disponível (ADR-0107). Desligado por padrão: ligá-lo troca
   // disponibilidade por exatidão, e isso é decisão de quem opera.
   MAPS_REQUIRE_PROVIDER: z.enum(['true', 'false']).default('false'),
+  // Percentagem de motoristas com o mapa ligado (ADR-0134). **Zero por
+  // omissão**: o mapa custa por pedido (Directions) e por utilizador ativo
+  // (SDK), e uma funcionalidade paga não se liga sozinha ao instalar uma
+  // versão. Subir é gradual; descer é o rollback, e devolve toda a gente à
+  // lista, que nunca deixou de funcionar.
+  MAPS_ROLLOUT_PERCENT: z.coerce.number().int().min(0).max(100).default(0),
   // Pórticos de portagem declarados pelo operador (ADR-0111), em JSON:
   // [{"latitude":38.69,"longitude":-9.18,"radiusKm":1.5,"cost":2.15}]
   // Vazio: o componente de portagem não entra no custo, e o plano declara.

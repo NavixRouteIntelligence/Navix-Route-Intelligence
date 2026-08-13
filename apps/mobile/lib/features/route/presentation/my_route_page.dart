@@ -418,13 +418,24 @@ class _Content extends StatelessWidget {
         children: [
           _RouteHero(route: route),
           const SizedBox(height: 12),
+          // Rota vinda do cache (ADR-0134): dizê-lo é o que separa «offline» de
+          // «desatualizado sem avisar». Uma entrega registada noutro aparelho
+          // não está aqui, e o motorista tem de o saber antes de confiar.
+          if (route.fromCache) ...[
+            _OfflineNotice(),
+            const SizedBox(height: 12),
+          ],
           // O mapa vem **depois** do cartão principal: a primeira leitura
           // continua a ser «para onde agora», e o mapa responde à seguinte —
           // «onde é isso em relação ao resto do dia». Vai dentro da lista, e
           // não sobreposto, para não tapar o «Registrar entrega» nem o botão
           // de voz, que flutuam por cima de tudo (ADR-0130).
-          RouteMapSection(route: route),
-          const SizedBox(height: 12),
+          // Fora do piloto, a tela volta à lista — que nunca deixou de
+          // funcionar. É esse o rollback (ADR-0134).
+          if (route.mapEnabled) ...[
+            RouteMapSection(route: route),
+            const SizedBox(height: 12),
+          ],
           // Rota parcial (ADR-0110): acima de tudo, antes de o motorista sair.
           if (route.isPartial) ...[
             _PartialRouteWarning(unassigned: route.unassigned),
@@ -1185,6 +1196,39 @@ class _StopTile extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Aviso de rota guardada. `status` e não `alert`: é informação a considerar,
+/// não emergência — a rota continua correta, só não é deste instante.
+class _OfflineNotice extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    final l10n = AppLocalizations.of(context);
+    return Semantics(
+      liveRegion: true,
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: t.warning.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: t.warning.withValues(alpha: 0.4)),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.cloud_off_outlined, size: 18, color: t.warning),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                l10n.routeOfflineNotice,
+                style: const TextStyle(fontSize: 13),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -12,7 +12,7 @@ import {
   TENANT_ACCOUNT_TYPE_READER,
   type TenantAccountTypeReaderPort,
 } from '../../../shared/tenancy/tenant-account-type.port';
-import { isInRollout } from '../domain/kaizen-rollout';
+import { isInRollout } from '../../../shared/rollout/rollout';
 
 /**
  * Interruptor do Kaizen (ADR-0123).

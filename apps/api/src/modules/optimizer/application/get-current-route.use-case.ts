@@ -10,6 +10,8 @@ import {
   ROUTE_GEOMETRY_PROVIDER,
   type RouteGeometryProviderPort,
 } from '../domain/ports/route-geometry.port';
+import { AppConfigService } from '../../../shared/config/app-config.service';
+import { isInRollout } from '../../../shared/rollout/rollout';
 import { DELIVERY_GATEWAY, type DeliveryGatewayPort } from './ports/delivery-gateway.port';
 import { GetActiveRoutePlanUseCase } from './get-active-route-plan.use-case';
 
@@ -40,6 +42,7 @@ export class GetCurrentRouteUseCase {
     private readonly active: GetActiveRoutePlanUseCase,
     @Inject(DELIVERY_GATEWAY) private readonly deliveries: DeliveryGatewayPort,
     @Inject(ROUTE_GEOMETRY_PROVIDER) private readonly geometry: RouteGeometryProviderPort,
+    private readonly config: AppConfigService,
   ) {}
 
   /**
@@ -53,6 +56,13 @@ export class GetCurrentRouteUseCase {
   ): Promise<CurrentRouteView | null> {
     const plano = await this.active.execute(tenantId, userId, at);
     if (!plano) return null;
+
+    // O piloto do mapa decide-se **antes** de se pedir o traçado: quem está
+    // fora não deve gerar uma chamada paga à Directions (ADR-0134). O sujeito
+    // é o login, o mesmo do resumo diário — a mesma pessoa cai no mesmo balde
+    // nas duas funcionalidades, o que torna um piloto discutível antes de
+    // existir.
+    const mapEnabled = isInRollout(userId, this.config.maps.rolloutPercent);
 
     const ids = plano.stops.map((s) => s.deliveryId);
     const entregas = await this.deliveries.getRouteStops(tenantId, ids);
@@ -97,11 +107,14 @@ export class GetCurrentRouteUseCase {
       stops,
       progress: progressoDe(stops),
       ...(plano.unassignedStops ? { unassignedStops: plano.unassignedStops } : {}),
-      geometry: await this.tracado(
-        stops,
-        plano.params?.vehicleType ?? null,
-        plano.params?.origin ?? null,
-      ),
+      mapEnabled,
+      geometry: mapEnabled
+        ? await this.tracado(
+            stops,
+            plano.params?.vehicleType ?? null,
+            plano.params?.origin ?? null,
+          )
+        : null,
     };
   }
 

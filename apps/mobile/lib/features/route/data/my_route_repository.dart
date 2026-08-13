@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 
 import '../../../core/error/failure.dart';
 import '../../../core/network/dio_failure_mapper.dart';
 import '../domain/my_route.dart';
+import 'route_cache.dart';
 
 /// Como o motorista pediu para reorganizar a rota (ADR-0078).
 enum ReorganizeMode {
@@ -17,9 +20,11 @@ enum ReorganizeMode {
 /// mais um botão obrigatório (ADR-0074): acontece sozinha na importação. O
 /// "Reorganizar" é a ação secundária — a IA segue como padrão (ADR-0078).
 class MyRouteRepository {
-  MyRouteRepository(this._dio);
+  MyRouteRepository(this._dio, [RouteCache? cache])
+      : _cache = cache ?? RouteCache();
 
   final Dio _dio;
+  final RouteCache _cache;
 
   /// Mínimo de paradas para existir rota (espelha o backend).
   static const _minStops = 2;
@@ -86,74 +91,109 @@ class MyRouteRepository {
       final data = current['data'];
       final plan = data is Map<String, dynamic> ? data : null;
 
+      // Guarda o instantâneo para o dia em que não houver rede (ADR-0134). Só
+      // se guarda uma rota que existe: gravar o `null` de quem ainda não tem
+      // plano apagaria a rota de ontem sem nada em troca.
+      //
+      // **Sem `await`**: o cache é um extra, e a rota já está em memória. Pôr
+      // uma escrita cifrada em disco no caminho crítico faria a tela esperar
+      // por I/O para desenhar o que já tem — e uma escrita lenta passaria a
+      // parecer uma rota lenta.
+      if (plan != null) unawaited(_cache.save(plan));
+
       if (plan == null) {
-        // Sem plano: distinguir "poucas entregas" de "a IA ainda não preparou"
-        // muda a mensagem que o motorista vê — e nenhuma das duas é erro dele.
-        // Só aqui vale a pena contar entregas; no caminho normal ninguém conta.
         return await _withoutPlan();
       }
 
-      final planStops = (plan['stops'] as List?)
-              ?.whereType<Map<String, dynamic>>()
-              .toList() ??
-          const [];
-      final stops = planStops.map(_stop).toList();
-      final distanceKm = _nested(plan, ['metrics', 'totalDistanceKm']) ?? 0;
-      final timeMinutes = _nested(plan, ['metrics', 'totalTimeMinutes']) ?? 0;
-      final savedKm = _nested(plan, ['savings', 'distanceKm']) ?? 0;
-      final savedMinutes = _nested(plan, ['savings', 'timeMinutes']) ?? 0;
-      final params = plan['params'];
-      final vehicleType = params is Map<String, dynamic>
-          ? params['vehicleType'] as String?
-          : null;
-
-      // Entregas fora da rota (ADR-0110): o motorista vê o aviso antes de sair.
-      final unassigned = (plan['unassignedStops'] as List?)
-              ?.whereType<Map<String, dynamic>>()
-              .map(UnassignedStop.fromJson)
-              .toList() ??
-          const <UnassignedStop>[];
-
-      return MyRoute(
-        status: MyRouteStatus.ready,
-        unassigned: unassigned,
-        // O progresso vem derivado do servidor. Recontá-lo aqui daria dois
-        // números que discordam quando a resposta é de um instante e a
-        // contagem de outro — e o motorista veria «3 de 8» ao lado de uma
-        // barra noutro sítio.
-        totalStops:
-            (_nested(plan, ['progress', 'total']) ?? planStops.length).toInt(),
-        completedStops: ((_nested(plan, ['progress', 'completed']) ?? 0) +
-                (_nested(plan, ['progress', 'failed']) ?? 0))
-            .toInt(),
-        distanceKm: distanceKm,
-        timeMinutes: timeMinutes,
-        savedKm: savedKm,
-        savedPct: _nested(plan, ['savings', 'distancePct']) ?? 0,
-        savedMinutes: savedMinutes,
-        savedTimePct: _nested(plan, ['savings', 'timePct']) ?? 0,
-        baselineDistanceKm: _nested(plan, ['baseline', 'totalDistanceKm']) ??
-            distanceKm + savedKm,
-        baselineTimeMinutes: _nested(plan, ['baseline', 'totalTimeMinutes']) ??
-            timeMinutes + savedMinutes,
-        vehicleType: vehicleType,
-        updatedAt: DateTime.tryParse(
-          plan['createdAt'] as String? ?? '',
-        )?.toLocal(),
-        groups: (plan['groups'] as List?)
-                ?.whereType<Map<String, dynamic>>()
-                .map(RouteGroup.fromJson)
-                .toList() ??
-            const [],
-        stops: stops,
-        next: _nextDelivery(stops, plan),
-        // O traçado é desenho: se vier corrompido, a rota carrega à mesma sem
-        // linha (ADR-0131).
-        line: RouteLine.fromJson(plan['geometry']),
-      );
+      return _fromPlan(plan);
     } on DioException catch (e) {
+      // Sem rede, a rota guardada é melhor do que uma tela de erro: as
+      // paragens e a ordem continuam a ser as que a IA preparou. O que se
+      // perde é a atualidade — e é por isso que a tela o diz.
+      final guardada = await _cachedRoute();
+      if (guardada != null) return guardada;
       throw mapDioException(e);
     }
+  }
+
+  /// A última rota lida, marcada como vinda do cache.
+  Future<MyRoute?> _cachedRoute() async {
+    final plan = await _cache.read();
+    if (plan == null) return null;
+    try {
+      return _fromPlan(plan, fromCache: true);
+    } catch (_) {
+      // Um instantâneo de uma versão antiga pode já não se ler. Descartá-lo é
+      // melhor do que deixar a app rebentar a abrir.
+      return null;
+    }
+  }
+
+  /// Traduz o plano da resposta numa rota.
+  ///
+  /// Extraído de [load] porque a mesma tradução serve dois caminhos: a resposta
+  /// do servidor e o instantâneo guardado. Duas cópias divergiriam, e a que
+  /// divergisse seria a do offline — a que ninguém olha até fazer falta.
+  MyRoute _fromPlan(Map<String, dynamic> plan, {bool fromCache = false}) {
+    final planStops =
+        (plan['stops'] as List?)?.whereType<Map<String, dynamic>>().toList() ??
+            const [];
+    final stops = planStops.map(_stop).toList();
+    final distanceKm = _nested(plan, ['metrics', 'totalDistanceKm']) ?? 0;
+    final timeMinutes = _nested(plan, ['metrics', 'totalTimeMinutes']) ?? 0;
+    final savedKm = _nested(plan, ['savings', 'distanceKm']) ?? 0;
+    final savedMinutes = _nested(plan, ['savings', 'timeMinutes']) ?? 0;
+    final params = plan['params'];
+    final vehicleType = params is Map<String, dynamic>
+        ? params['vehicleType'] as String?
+        : null;
+
+    // Entregas fora da rota (ADR-0110): o motorista vê o aviso antes de sair.
+    final unassigned = (plan['unassignedStops'] as List?)
+            ?.whereType<Map<String, dynamic>>()
+            .map(UnassignedStop.fromJson)
+            .toList() ??
+        const <UnassignedStop>[];
+
+    return MyRoute(
+      status: MyRouteStatus.ready,
+      fromCache: fromCache,
+      mapEnabled: plan['mapEnabled'] as bool? ?? true,
+      unassigned: unassigned,
+      // O progresso vem derivado do servidor. Recontá-lo aqui daria dois
+      // números que discordam quando a resposta é de um instante e a
+      // contagem de outro — e o motorista veria «3 de 8» ao lado de uma
+      // barra noutro sítio.
+      totalStops:
+          (_nested(plan, ['progress', 'total']) ?? planStops.length).toInt(),
+      completedStops: ((_nested(plan, ['progress', 'completed']) ?? 0) +
+              (_nested(plan, ['progress', 'failed']) ?? 0))
+          .toInt(),
+      distanceKm: distanceKm,
+      timeMinutes: timeMinutes,
+      savedKm: savedKm,
+      savedPct: _nested(plan, ['savings', 'distancePct']) ?? 0,
+      savedMinutes: savedMinutes,
+      savedTimePct: _nested(plan, ['savings', 'timePct']) ?? 0,
+      baselineDistanceKm: _nested(plan, ['baseline', 'totalDistanceKm']) ??
+          distanceKm + savedKm,
+      baselineTimeMinutes: _nested(plan, ['baseline', 'totalTimeMinutes']) ??
+          timeMinutes + savedMinutes,
+      vehicleType: vehicleType,
+      updatedAt: DateTime.tryParse(
+        plan['createdAt'] as String? ?? '',
+      )?.toLocal(),
+      groups: (plan['groups'] as List?)
+              ?.whereType<Map<String, dynamic>>()
+              .map(RouteGroup.fromJson)
+              .toList() ??
+          const [],
+      stops: stops,
+      next: _nextDelivery(stops, plan),
+      // O traçado é desenho: se vier corrompido, a rota carrega à mesma sem
+      // linha (ADR-0131).
+      line: RouteLine.fromJson(plan['geometry']),
+    );
   }
 
   /// Sem plano do dia: distinguir «poucas entregas» de «a IA ainda não

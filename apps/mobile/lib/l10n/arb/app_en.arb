@@ -714,5 +714,6 @@
         "type": "int"
       }
     }
-  }
+  },
+  "routeOfflineNotice": "Showing the last route saved on this device. Register deliveries when you are back online."
 }

@@ -8,6 +8,7 @@ import type {
   RouteGeometryProviderPort,
 } from '../../domain/ports/route-geometry.port';
 import { resolveRoutingProfile } from '../../domain/routing-profile';
+import type { OptimizerMetrics } from '../observability/optimizer-metrics';
 
 /**
  * Doze horas, contra os cinco minutos da matriz.
@@ -33,6 +34,13 @@ export class CachedRouteGeometryProvider implements RouteGeometryProviderPort {
     private readonly cache: CachePort,
     private readonly delegate: RouteGeometryProviderPort,
     private readonly namespace: string,
+    /**
+     * Opcional para não obrigar os testes do cache a montar métricas. Sem ela
+     * o comportamento é idêntico — o que se perde é saber **quanto** o cache
+     * está a poupar, que é a diferença entre uma conta previsível e uma
+     * surpresa na fatura (ADR-0134).
+     */
+    private readonly metrics?: OptimizerMetrics,
   ) {}
 
   async geometry(
@@ -50,7 +58,11 @@ export class CachedRouteGeometryProvider implements RouteGeometryProviderPort {
     // de mostrar a linha.
     try {
       const cached = await this.cache.get<RouteGeometry>(key);
-      if (cached) return cached;
+      if (cached) {
+        this.metrics?.observeGeometryCache('hit');
+        return cached;
+      }
+      this.metrics?.observeGeometryCache('miss');
     } catch {
       // Segue para o provedor.
     }

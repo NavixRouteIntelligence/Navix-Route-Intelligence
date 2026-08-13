@@ -1,7 +1,12 @@
 import { createHash } from 'node:crypto';
 
 /**
- * Amostragem determinística do rollout (ADR-0124).
+ * Amostragem determinística de rollout (ADR-0124, generalizada na ADR-0134).
+ *
+ * Nasceu para o resumo diário e serve agora também o mapa. Está em `shared/`
+ * porque a regra não é do Kaizen — é sobre **como se liga uma funcionalidade a
+ * uma fração das pessoas** —, e uma segunda cópia dela seria a que diverge no
+ * dia em que uma das duas for corrigida.
  *
  * ## Por que hash, e não sorteio
  *

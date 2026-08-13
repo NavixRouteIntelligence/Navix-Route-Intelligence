@@ -1,5 +1,6 @@
 import type { RoutePlan as RoutePlanView } from '@navix/contracts';
 
+import type { AppConfigService } from '../../../shared/config/app-config.service';
 import type { RouteGeometryProviderPort } from '../domain/ports/route-geometry.port';
 import type { DeliveryGatewayPort, RouteViewDeliveryStop } from './ports/delivery-gateway.port';
 import type { GetActiveRoutePlanUseCase } from './get-active-route-plan.use-case';
@@ -42,6 +43,7 @@ function build(
   planoView: RoutePlanView | null,
   entregas: RouteViewDeliveryStop[],
   geometria: RouteGeometryProviderPort = semTracado,
+  rolloutPercent = 100,
 ) {
   const active = {
     execute: jest.fn().mockResolvedValue(planoView),
@@ -57,7 +59,9 @@ function build(
     }),
   } as unknown as DeliveryGatewayPort;
   return {
-    uc: new GetCurrentRouteUseCase(active, gateway, geometria),
+    uc: new GetCurrentRouteUseCase(active, gateway, geometria, {
+      maps: { rolloutPercent },
+    } as AppConfigService),
     active,
     pedidos,
   };
@@ -306,6 +310,108 @@ describe('GetCurrentRouteUseCase', () => {
       expect(com!.metrics).toEqual(sem!.metrics);
       expect(com!.savings).toEqual(sem!.savings);
       expect(com!.progress).toEqual(sem!.progress);
+    });
+  });
+
+  describe('piloto do mapa (ADR-0134)', () => {
+    const comTracado: RouteGeometryProviderPort = {
+      geometry: async (points) => ({
+        coordinates: [
+          [-9.1, 38.7],
+          [-9.11, 38.71],
+        ],
+        profile: 'driving',
+        coveredStops: points.length,
+      }),
+    };
+
+    it('com o piloto fechado, o mapa vem desligado', async () => {
+      const { uc } = build(plano(['d1', 'd2']), [entrega('d1'), entrega('d2')], comTracado, 0);
+
+      const vista = await uc.execute(TENANT, LOGIN);
+
+      expect(vista!.mapEnabled).toBe(false);
+    });
+
+    it('com o piloto fechado, não se pede traçado nenhum', async () => {
+      // Quem está fora do piloto não pode gerar uma chamada paga à Directions.
+      let pedidos = 0;
+      const espia: RouteGeometryProviderPort = {
+        geometry: async (points) => {
+          pedidos += 1;
+          return comTracado.geometry(points);
+        },
+      };
+      const { uc } = build(plano(['d1', 'd2']), [entrega('d1'), entrega('d2')], espia, 0);
+
+      const vista = await uc.execute(TENANT, LOGIN);
+
+      expect(pedidos).toBe(0);
+      expect(vista!.geometry).toBeNull();
+    });
+
+    it('com o piloto aberto, o mapa e o traçado vêm', async () => {
+      const { uc } = build(plano(['d1', 'd2']), [entrega('d1'), entrega('d2')], comTracado, 100);
+
+      const vista = await uc.execute(TENANT, LOGIN);
+
+      expect(vista!.mapEnabled).toBe(true);
+      expect(vista!.geometry).not.toBeNull();
+    });
+
+    it('o piloto não altera a rota em si', async () => {
+      // O rollback é a garantia inteira desta ADR: com o mapa desligado, a
+      // tela volta à lista e **nada** do resto muda.
+      const { uc: dentro } = build(
+        plano(['d1', 'd2']),
+        [entrega('d1'), entrega('d2')],
+        comTracado,
+        100,
+      );
+      const { uc: fora } = build(
+        plano(['d1', 'd2']),
+        [entrega('d1'), entrega('d2')],
+        comTracado,
+        0,
+      );
+
+      const a = await dentro.execute(TENANT, LOGIN);
+      const b = await fora.execute(TENANT, LOGIN);
+
+      expect(b!.stops).toEqual(a!.stops);
+      expect(b!.progress).toEqual(a!.progress);
+      expect(b!.metrics).toEqual(a!.metrics);
+    });
+  });
+
+  describe('isolamento entre tenants', () => {
+    it('o tenant de quem pergunta é o que chega ao plano e às entregas', async () => {
+      // Critério de aceite: zero vazamento entre tenants. Não há parâmetro de
+      // tenant na rota — ele vem do token —, e este teste guarda que ele
+      // atravessa o caso de uso sem ser trocado por outro pelo caminho.
+      const { uc, active, pedidos } = build(plano(['d1']), [entrega('d1')]);
+
+      await uc.execute('tenant-A', LOGIN);
+
+      expect(active.execute).toHaveBeenCalledWith('tenant-A', LOGIN, expect.anything());
+      expect(pedidos).toHaveLength(1);
+    });
+
+    it('sem plano do tenant, não se procuram entregas de ninguém', async () => {
+      // Um tenant sem rota do dia não pode disparar uma leitura de entregas —
+      // é por aí que uma consulta mal filtrada devolveria as de outro.
+      const { uc, pedidos } = build(null, [entrega('d1')]);
+
+      expect(await uc.execute('tenant-B', LOGIN)).toBeNull();
+      expect(pedidos).toHaveLength(0);
+    });
+
+    it('só se pedem as entregas que o plano refere', async () => {
+      const { uc, pedidos } = build(plano(['d1', 'd2']), [entrega('d1'), entrega('d2')]);
+
+      await uc.execute(TENANT, LOGIN);
+
+      expect(pedidos[0]).toEqual(['d1', 'd2']);
     });
   });
 

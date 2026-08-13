@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import { isInRollout, rolloutBucket } from './kaizen-rollout';
+import { isInRollout, rolloutBucket } from './rollout';
 
 const AMOSTRA = Array.from({ length: 3000 }, () => randomUUID());
 

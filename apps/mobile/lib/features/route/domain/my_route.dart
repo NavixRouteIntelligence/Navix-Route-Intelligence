@@ -240,6 +240,8 @@ class MyRoute extends Equatable {
     this.next,
     this.unassigned = const [],
     this.line,
+    this.fromCache = false,
+    this.mapEnabled = true,
   });
 
   const MyRoute.empty() : this(status: MyRouteStatus.empty);
@@ -282,6 +284,20 @@ class MyRoute extends Equatable {
 
   /// Traçado real, ou `null` quando não se conseguiu (ADR-0131).
   final RouteLine? line;
+
+  /// Esta rota veio do instantâneo guardado, e não do servidor (ADR-0134).
+  ///
+  /// A tela tem de o dizer: as paragens e a ordem continuam a ser as que a IA
+  /// preparou, mas uma entrega registada por outro caminho não está aqui. Uma
+  /// rota desatualizada apresentada como atual é pior do que uma tela de erro.
+  final bool fromCache;
+
+  /// O mapa está ligado para este motorista (ADR-0134).
+  ///
+  /// `true` por omissão, e de propósito: uma resposta anterior ao piloto não
+  /// traz o campo, e nessa altura o mapa já aparecia. Desligar por omissão
+  /// faria uma app nova esconder o mapa contra um servidor antigo.
+  final bool mapEnabled;
 
   bool get isReady => status == MyRouteStatus.ready;
   int get remainingStops {
@@ -334,5 +350,7 @@ class MyRoute extends Equatable {
         next,
         unassigned,
         line,
+        fromCache,
+        mapEnabled,
       ];
 }

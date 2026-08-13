@@ -269,6 +269,12 @@ export class AppConfigService {
        * decisão de quem opera — não um default que a gente escolhe por ele.
        */
       requireProvider: this.get('MAPS_REQUIRE_PROVIDER') === 'true',
+      /**
+       * Fração de motoristas com o mapa ligado (ADR-0134). Zero por omissão:
+       * o mapa custa por pedido e por utilizador ativo, e ninguém deve
+       * descobrir isso pela fatura.
+       */
+      rolloutPercent: this.get('MAPS_ROLLOUT_PERCENT'),
     };
   }
 }
