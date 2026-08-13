@@ -1,5 +1,6 @@
 import type { RoutePlan as RoutePlanView } from '@navix/contracts';
 
+import type { RouteGeometryProviderPort } from '../domain/ports/route-geometry.port';
 import type { DeliveryGatewayPort, RouteViewDeliveryStop } from './ports/delivery-gateway.port';
 import type { GetActiveRoutePlanUseCase } from './get-active-route-plan.use-case';
 import { GetCurrentRouteUseCase } from './get-current-route.use-case';
@@ -37,7 +38,11 @@ function entrega(id: string, over: Partial<RouteViewDeliveryStop> = {}): RouteVi
   };
 }
 
-function build(planoView: RoutePlanView | null, entregas: RouteViewDeliveryStop[]) {
+function build(
+  planoView: RoutePlanView | null,
+  entregas: RouteViewDeliveryStop[],
+  geometria: RouteGeometryProviderPort = semTracado,
+) {
   const active = {
     execute: jest.fn().mockResolvedValue(planoView),
   } as unknown as jest.Mocked<GetActiveRoutePlanUseCase>;
@@ -51,8 +56,15 @@ function build(planoView: RoutePlanView | null, entregas: RouteViewDeliveryStop[
       return entregas.filter((e) => ids.includes(e.id));
     }),
   } as unknown as DeliveryGatewayPort;
-  return { uc: new GetCurrentRouteUseCase(active, gateway), active, pedidos };
+  return {
+    uc: new GetCurrentRouteUseCase(active, gateway, geometria),
+    active,
+    pedidos,
+  };
 }
+
+/** O caminho por omissão dos testes antigos: sem traçado, tudo o resto igual. */
+const semTracado: RouteGeometryProviderPort = { geometry: async () => null };
 
 describe('GetCurrentRouteUseCase', () => {
   it('sem rota do dia, devolve nulo', async () => {
@@ -175,6 +187,128 @@ describe('GetCurrentRouteUseCase', () => {
   });
 
   // Não há parâmetro de motorista: quem pergunta é quem recebe (ADR-0099).
+  describe('traçado real (ADR-0131)', () => {
+    const comTracado: RouteGeometryProviderPort = {
+      geometry: async (points) => ({
+        coordinates: [
+          [-9.1, 38.7],
+          [-9.11, 38.71],
+        ],
+        profile: 'driving',
+        coveredStops: points.length,
+      }),
+    };
+
+    it('o traçado vai na rota, com a proveniência', async () => {
+      const { uc } = build(plano(['d1', 'd2']), [entrega('d1'), entrega('d2')], comTracado);
+
+      const vista = await uc.execute(TENANT, LOGIN);
+
+      expect(vista!.geometry!.coordinates).toHaveLength(2);
+      expect(vista!.geometry!.provenance).toEqual({
+        source: 'directions',
+        profile: 'driving',
+        coveredStops: 2,
+        totalStops: 2,
+      });
+    });
+
+    it('recebe as paradas na ordem do plano', async () => {
+      // O traçado é da **sequência decidida**. Recebê-la noutra ordem
+      // desenharia um percurso que ninguém vai fazer.
+      const recebidos: number[][] = [];
+      const espia: RouteGeometryProviderPort = {
+        geometry: async (points) => {
+          recebidos.push(points.map((p) => p.longitude));
+          return null;
+        },
+      };
+      const { uc } = build(
+        plano(['d1', 'd2', 'd3']),
+        [
+          entrega('d1', { longitude: -9.1 }),
+          entrega('d2', { longitude: -9.2 }),
+          entrega('d3', { longitude: -9.3 }),
+        ],
+        espia,
+      );
+
+      await uc.execute(TENANT, LOGIN);
+
+      expect(recebidos[0]).toEqual([-9.1, -9.2, -9.3]);
+    });
+
+    it('sem traçado, a rota carrega à mesma', async () => {
+      // O critério de aceite: geometria indisponível nunca impede carregar.
+      const { uc } = build(plano(['d1', 'd2']), [entrega('d1'), entrega('d2')], semTracado);
+
+      const vista = await uc.execute(TENANT, LOGIN);
+
+      expect(vista!.geometry).toBeNull();
+      expect(vista!.stops).toHaveLength(2);
+      expect(vista!.progress.total).toBe(2);
+    });
+
+    it('um provedor que estoura não derruba a rota', async () => {
+      const explode: RouteGeometryProviderPort = {
+        geometry: async () => {
+          throw new Error('provedor fora');
+        },
+      };
+      const { uc } = build(plano(['d1', 'd2']), [entrega('d1'), entrega('d2')], explode);
+
+      const vista = await uc.execute(TENANT, LOGIN);
+
+      expect(vista!.geometry).toBeNull();
+      expect(vista!.stops).toHaveLength(2);
+    });
+
+    it('paradas sem localização são saltadas, e a proveniência di-lo', async () => {
+      // A linha liga as que têm coordenada e salta as outras: não é o percurso
+      // completo, e a tela precisa de o poder dizer.
+      const { uc } = build(
+        plano(['d1', 'd2', 'd3']),
+        [entrega('d1'), entrega('d2', { latitude: null, longitude: null }), entrega('d3')],
+        comTracado,
+      );
+
+      const vista = await uc.execute(TENANT, LOGIN);
+
+      expect(vista!.geometry!.provenance.coveredStops).toBe(2);
+      expect(vista!.geometry!.provenance.totalStops).toBe(3);
+    });
+
+    it('menos de duas paradas localizáveis não tem traçado', async () => {
+      const { uc } = build(
+        plano(['d1', 'd2']),
+        [entrega('d1'), entrega('d2', { latitude: null, longitude: null })],
+        comTracado,
+      );
+
+      expect((await uc.execute(TENANT, LOGIN))!.geometry).toBeNull();
+    });
+
+    it('o traçado não mexe nas métricas do plano', async () => {
+      // O entregável mais importante: nada do que sai do traçado volta para a
+      // otimização. Se a distância da linha entrasse aqui, o número que o
+      // motorista lê passaria a depender de uma chamada que pode falhar — e
+      // mudaria consoante o traçado tivesse vindo ou não.
+      const { uc } = build(plano(['d1', 'd2']), [entrega('d1'), entrega('d2')], comTracado);
+      const { uc: semLinha } = build(
+        plano(['d1', 'd2']),
+        [entrega('d1'), entrega('d2')],
+        semTracado,
+      );
+
+      const com = await uc.execute(TENANT, LOGIN);
+      const sem = await semLinha.execute(TENANT, LOGIN);
+
+      expect(com!.metrics).toEqual(sem!.metrics);
+      expect(com!.savings).toEqual(sem!.savings);
+      expect(com!.progress).toEqual(sem!.progress);
+    });
+  });
+
   it('o sujeito vem do login autenticado', async () => {
     const { uc, active } = build(plano(['a']), [entrega('a')]);
 

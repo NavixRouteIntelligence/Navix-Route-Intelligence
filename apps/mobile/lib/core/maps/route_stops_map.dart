@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
@@ -29,6 +30,7 @@ class RouteStopsMap extends StatefulWidget {
     super.key,
     required this.stops,
     this.driverPosition,
+    this.line,
     this.onStopTap,
     this.isLoading = false,
     this.config,
@@ -53,6 +55,13 @@ class RouteStopsMap extends StatefulWidget {
 
   /// Onde o motorista está agora, se se souber.
   final DriverPosition? driverPosition;
+
+  /// O traçado real, no formato do GeoJSON (**longitude primeiro**).
+  ///
+  /// `null` desenha apenas os pontos. Não há aqui um caminho que ligue os pinos
+  /// por retas: uma reta entre paragens atravessa quarteirões e sugere uma
+  /// distância que não é a que se conduz (ADR-0125).
+  final List<List<double>>? line;
 
   /// Chamado com o `deliveryId` da parada tocada. O widget não sabe o que
   /// mostrar a seguir — quem o embute é que decide.
@@ -80,6 +89,10 @@ class RouteStopsMap extends StatefulWidget {
   State<RouteStopsMap> createState() => _RouteStopsMapState();
 }
 
+/// Identificadores da fonte e da camada do traçado no estilo do mapa.
+const _lineSourceId = 'navix-route-line';
+const _lineLayerId = 'navix-route-line-layer';
+
 class _RouteStopsMapState extends State<RouteStopsMap> {
   MapboxMap? _map;
   PointAnnotationManager? _manager;
@@ -104,6 +117,13 @@ class _RouteStopsMapState extends State<RouteStopsMap> {
   /// Subscrição dos toques nos pinos, cancelada ao sair.
   Cancelable? _tapSubscription;
 
+  /// O traçado que está desenhado agora. Sem isto, cada reconstrução do widget
+  /// reescreveria a mesma linha no estilo.
+  List<List<double>>? _drawnLine;
+
+  /// O estilo já tem a fonte e a camada da linha.
+  bool _lineReady = false;
+
   /// Estilo e escala com que os pinos atuais foram pintados. Se o tema ou o
   /// Dynamic Type mudarem, os bitmaps ficam desatualizados e têm de ser
   /// repintados — um pino desenhado para o tema claro fica ilegível no escuro.
@@ -120,6 +140,7 @@ class _RouteStopsMapState extends State<RouteStopsMap> {
   @override
   void didUpdateWidget(covariant RouteStopsMap oldWidget) {
     super.didUpdateWidget(oldWidget);
+    unawaited(_syncLine());
     unawaited(_sync());
   }
 
@@ -176,7 +197,7 @@ class _RouteStopsMapState extends State<RouteStopsMap> {
             key: const ValueKey('route-stops-map'),
             styleUri: dark ? MapboxStyles.DARK : MapboxStyles.LIGHT,
             onMapCreated: _onMapCreated,
-            onStyleLoadedListener: (_) => unawaited(_sync()),
+            onStyleLoadedListener: (_) => unawaited(_onStyleLoaded(_map!)),
           ),
         ),
         // Controlos em cima à direita, e não em baixo: em baixo vivem o
@@ -213,11 +234,80 @@ class _RouteStopsMapState extends State<RouteStopsMap> {
 
   Future<void> _onMapCreated(MapboxMap map) async {
     _map = map;
-    final manager = await map.annotations.createPointAnnotationManager();
-    _manager = manager;
-    if (!mounted) return;
-    _tapSubscription = manager.tapEvents(onTap: _onAnnotationTap);
+  }
+
+  /// O estilo carregou: é aqui que a linha e os pinos entram, **por esta
+  /// ordem**.
+  ///
+  /// A ordem é o que põe o traçado por baixo dos marcadores: o Mapbox empilha
+  /// as camadas por ordem de adição, e o gestor de anotações cria a sua própria
+  /// camada quando é construído. Criá-lo antes da linha desenharia a linha por
+  /// cima dos pinos — e um traçado sobre o número da paragem tapa exatamente o
+  /// que se precisa de ler.
+  ///
+  /// Um estilo pode recarregar (troca de tema, por exemplo), e então tudo isto
+  /// volta a correr sobre um estilo limpo.
+  Future<void> _onStyleLoaded(MapboxMap map) async {
+    _lineReady = false;
+    _drawnLine = null;
+    await _syncLine();
+
+    if (_manager == null) {
+      final manager = await map.annotations.createPointAnnotationManager();
+      if (!mounted) return;
+      _manager = manager;
+      _tapSubscription = manager.tapEvents(onTap: _onAnnotationTap);
+    }
     await _sync();
+  }
+
+  /// Escreve o traçado no estilo, e só quando ele mudou.
+  Future<void> _syncLine() async {
+    final map = _map;
+    if (map == null || !mounted) return;
+
+    final linha = widget.line;
+    if (_listEquals(linha, _drawnLine) && _lineReady) return;
+
+    // A cor é lida **antes** de qualquer `await`: depois de um, este contexto
+    // pode já não estar montado.
+    final cor = Theme.of(context).colorScheme.primary.toARGB32();
+
+    final geojson = jsonEncode({
+      'type': 'Feature',
+      'properties': const <String, Object?>{},
+      'geometry': {
+        'type': 'LineString',
+        // Sem traçado a fonte fica com uma linha vazia em vez de ser removida:
+        // remover e recriar a camada fá-la-ia saltar para cima dos pinos na
+        // próxima vez, porque voltaria a ser a última a entrar no estilo.
+        'coordinates': linha ?? const <List<double>>[],
+      },
+    });
+
+    if (!_lineReady) {
+      await map.style
+          .addSource(GeoJsonSource(id: _lineSourceId, data: geojson));
+      await map.style.addLayer(
+        LineLayer(
+          id: _lineLayerId,
+          sourceId: _lineSourceId,
+          lineJoin: LineJoin.ROUND,
+          lineCap: LineCap.ROUND,
+          lineWidth: 5,
+          // Opaca a 85%: a linha tem de se ver sobre o mapa sem apagar os
+          // nomes das ruas por baixo dela, que é como o motorista confirma que
+          // o traçado passa onde ele pensa.
+          lineOpacity: 0.85,
+          lineColor: cor,
+        ),
+      );
+      _lineReady = true;
+    } else {
+      await map.style.setStyleSourceProperty(_lineSourceId, 'data', geojson);
+    }
+
+    _drawnLine = linha;
   }
 
   /// O SDK devolve a anotação tocada, com a identidade **dele**. Traduzimos
@@ -409,6 +499,21 @@ class _RouteStopsMapState extends State<RouteStopsMap> {
       CameraOptions(zoom: state.zoom + delta, center: state.center),
       MapAnimationOptions(duration: 250),
     );
+  }
+
+  /// Comparação por valor de duas linhas. `List` compara por identidade, e sem
+  /// isto uma lista igual reconstruída seria sempre «diferente».
+  bool _listEquals(List<List<double>>? a, List<List<double>>? b) {
+    if (identical(a, b)) return true;
+    if (a == null || b == null) return false;
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i].length != b[i].length) return false;
+      for (var j = 0; j < a[i].length; j++) {
+        if (a[i][j] != b[i][j]) return false;
+      }
+    }
+    return true;
   }
 
   Point _pointOf(double latitude, double longitude) =>

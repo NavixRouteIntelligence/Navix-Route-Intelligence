@@ -30,6 +30,7 @@ import { SERVICE_TIME_HISTORY } from './application/ports/service-time-history.p
 import { COST_AUGMENTATION } from './domain/ports/cost-augmentation.port';
 import { DISTANCE_PROVIDER } from './domain/ports/distance-provider.port';
 import { ROUTING_PROVIDER } from './domain/ports/routing-provider.port';
+import { ROUTE_GEOMETRY_PROVIDER } from './domain/ports/route-geometry.port';
 import { JOB_EVENTS } from './domain/ports/job-events.port';
 import { OPTIMIZATION_JOB_QUEUE } from './domain/ports/optimization-job-queue.port';
 import {
@@ -46,6 +47,8 @@ import { ConfigurableCostAugmentation } from './infrastructure/augmentation/conf
 import { HaversineDistanceProvider } from './infrastructure/distance/haversine-distance.provider';
 import { HaversineRoutingProvider } from './infrastructure/routing/haversine-routing.provider';
 import { MapboxRoutingProvider } from './infrastructure/routing/mapbox-routing.provider';
+import { MapboxDirectionsProvider } from './infrastructure/routing/mapbox-directions.provider';
+import { CachedRouteGeometryProvider } from './infrastructure/routing/cached-route-geometry.provider';
 import { CachedRoutingProvider } from './infrastructure/routing/cached-routing.provider';
 import { RealtimeJobEvents } from './infrastructure/events/realtime-job-events';
 import { DeliveryGateway } from './infrastructure/gateways/delivery.gateway';
@@ -115,6 +118,24 @@ import { OptimizerController } from './interface/optimizer.controller';
     { provide: DISTANCE_PROVIDER, useClass: HaversineDistanceProvider },
     HaversineRoutingProvider,
     MapboxRoutingProvider,
+    MapboxDirectionsProvider,
+    {
+      // Traçado real (ADR-0131). Port separado do da matriz de propósito: uma
+      // falha aqui deixa a rota sem linha, e **não** pode derrubar a
+      // otimização. Sem provedor Mapbox configurado não há traçado nenhum —
+      // não existe rede de proteção geométrica, porque a reta entre paradas é
+      // exatamente o que a ADR-0125 proibiu desenhar.
+      provide: ROUTE_GEOMETRY_PROVIDER,
+      inject: [AppConfigService, MapboxDirectionsProvider, CACHE],
+      useFactory: (
+        config: AppConfigService,
+        directions: MapboxDirectionsProvider,
+        cache: CachePort,
+      ) =>
+        config.maps.provider === 'mapbox'
+          ? new CachedRouteGeometryProvider(cache, directions, config.maps.provider)
+          : { geometry: async () => null },
+    },
     {
       // Provedor de roteamento por configuração (ADR-0027); mapbox degrada p/ Haversine.
       provide: ROUTING_PROVIDER,

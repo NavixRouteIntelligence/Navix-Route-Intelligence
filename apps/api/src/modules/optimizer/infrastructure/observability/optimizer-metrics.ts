@@ -22,6 +22,8 @@ export class OptimizerMetrics {
   private readonly matrixFallback: Counter<'kind'>;
   private readonly matrixHttp: Counter<'status'>;
   private readonly matrixCoordsExceeded: Counter<string>;
+  private readonly geometry: Counter<'outcome'>;
+  private readonly geometryHttp: Counter<'status'>;
   private readonly reoptimizeTrigger: Histogram<string>;
   private readonly reoptimizeSkipped: Counter<'reason'>;
 
@@ -114,6 +116,21 @@ export class OptimizerMetrics {
       help: 'Matrizes acima do teto de ladrilhamento, que caem em geometria.',
       registers,
     });
+    this.geometry = new Counter({
+      name: 'optimizer_route_geometry_total',
+      // Sem traçado a rota funciona à mesma, então isto não é um alarme — é o
+      // que distingue «ninguém pediu» de «pedimos e não veio», que de outra
+      // forma se parecem exatamente no ecrã do motorista.
+      help: 'Pedidos de traçado real, por desfecho.',
+      labelNames: ['outcome'] as const,
+      registers,
+    });
+    this.geometryHttp = new Counter({
+      name: 'optimizer_route_geometry_http_errors_total',
+      help: 'Respostas HTTP não-OK da Directions, por status.',
+      labelNames: ['status'] as const,
+      registers,
+    });
     // SLA da reotimização dinâmica (ADR-0083): do evento de domínio até o job
     // enfileirado — inclui o debounce, que é o maior componente controlável.
     this.reoptimizeTrigger = new Histogram({
@@ -161,6 +178,15 @@ export class OptimizerMetrics {
   }
 
   /** Queda para geometria, com a causa categorizada. */
+  /** `outcome` vem de um conjunto fechado: sem cardinalidade de cliente. */
+  observeGeometry(outcome: string): void {
+    this.geometry.inc({ outcome });
+  }
+
+  observeGeometryHttp(status: number): void {
+    this.geometryHttp.inc({ status: String(status) });
+  }
+
   observeMatrixFallback(kind: string): void {
     this.matrixFallback.inc({ kind });
   }

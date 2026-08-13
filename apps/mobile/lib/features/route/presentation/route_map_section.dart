@@ -30,7 +30,12 @@ class RouteMapSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final markers = markersFrom(route);
+    // As que o mapa **desenha**, e não todas. Com esta contagem a zero o mapa
+    // está no estado vazio e já se explica sozinho; um aviso a dizer que falta
+    // o traçado por cima disso seria um segundo texto a contradizer o primeiro.
+    final desenhaveis = markers.where((m) => m.isPlottable).length;
     final semLocalizacao = route.stops.where((s) => s.latitude == null).length;
+    final linha = route.line;
 
     return NavixCard(
       padding: EdgeInsets.zero,
@@ -69,16 +74,17 @@ class RouteMapSection extends StatelessWidget {
           // Contado a partir das paradas, e dito em vez de escondido: uma
           // parada que não aparece no mapa continua a existir na lista, e o
           // motorista tem de saber que o mapa não é a rota toda.
-          if (semLocalizacao > 0 && markers.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-              child: Semantics(
-                liveRegion: true,
-                child: Text(
-                  l10n.routeMapWithoutLocation(semLocalizacao),
-                  style: TextStyle(color: context.tokens.muted, fontSize: 12),
-                ),
-              ),
+          if (semLocalizacao > 0 && desenhaveis > 0)
+            _Nota(l10n.routeMapWithoutLocation(semLocalizacao)),
+          // O traçado é aproximado ou não existe — e isso diz-se. Uma linha que
+          // salta paragens parece o percurso completo, e a ausência de linha
+          // parece a app avariada. Nos dois casos as paragens e a ordem
+          // continuam certas, que é o que a nota afirma (ADR-0131).
+          if (desenhaveis > 0 && linha == null)
+            _Nota(l10n.routeMapNoLine)
+          else if (linha != null && linha.isPartial)
+            _Nota(
+              l10n.routeMapPartialLine(linha.totalStops - linha.coveredStops),
             ),
         ],
       ),
@@ -109,6 +115,7 @@ class _Map extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     return RouteStopsMap(
       stops: markersFrom(route),
+      line: route.line?.coordinates,
       onStopTap: (deliveryId) => _abrirDetalhe(context, deliveryId),
       emptyTitle: l10n.routeMapEmptyTitle,
       emptyDescription: l10n.routeMapEmptyDesc,
@@ -160,4 +167,26 @@ class _FullScreenMapPage extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Uma nota discreta por baixo do mapa.
+///
+/// `liveRegion` para que quem usa leitor de ecrã a ouça sem a procurar; é
+/// informação a considerar, não um erro a interromper.
+class _Nota extends StatelessWidget {
+  const _Nota(this.texto);
+
+  final String texto;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+        child: Semantics(
+          liveRegion: true,
+          child: Text(
+            texto,
+            style: TextStyle(color: context.tokens.muted, fontSize: 12),
+          ),
+        ),
+      );
 }
