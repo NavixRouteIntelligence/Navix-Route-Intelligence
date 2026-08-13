@@ -409,5 +409,6 @@
   "routeStopNoAddress": "Morada indisponível",
   "routeStopNavigateUnavailable": "Esta paragem não tem localização para navegar.",
   "routeMapPartialLine": "O traçado salta {count, plural, =1{1 paragem sem localização} other{{count} paragens sem localização}}.",
-  "routeMapNoLine": "Traçado indisponível. As paragens e a ordem delas estão certas."
+  "routeMapNoLine": "Traçado indisponível. As paragens e a ordem delas estão certas.",
+  "routeOfflineNotice": "A mostrar a última rota guardada neste dispositivo. Registe as entregas quando voltar a ter ligação."
 }

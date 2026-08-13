@@ -24,6 +24,7 @@ export class OptimizerMetrics {
   private readonly matrixCoordsExceeded: Counter<string>;
   private readonly geometry: Counter<'outcome'>;
   private readonly geometryHttp: Counter<'status'>;
+  private readonly geometryCache: Counter<'result'>;
   private readonly reoptimizeTrigger: Histogram<string>;
   private readonly reoptimizeSkipped: Counter<'reason'>;
 
@@ -131,6 +132,15 @@ export class OptimizerMetrics {
       labelNames: ['status'] as const,
       registers,
     });
+    this.geometryCache = new Counter({
+      name: 'optimizer_route_geometry_cache_total',
+      // A taxa de acerto é o que separa uma conta previsível de uma surpresa:
+      // cada falha é uma chamada paga à Directions, e uma queda súbita nela é
+      // o primeiro sinal de que alguma coisa mudou na chave do cache.
+      help: 'Leituras do cache de traçado, por resultado.',
+      labelNames: ['result'] as const,
+      registers,
+    });
     // SLA da reotimização dinâmica (ADR-0083): do evento de domínio até o job
     // enfileirado — inclui o debounce, que é o maior componente controlável.
     this.reoptimizeTrigger = new Histogram({
@@ -181,6 +191,10 @@ export class OptimizerMetrics {
   /** `outcome` vem de um conjunto fechado: sem cardinalidade de cliente. */
   observeGeometry(outcome: string): void {
     this.geometry.inc({ outcome });
+  }
+
+  observeGeometryCache(result: 'hit' | 'miss'): void {
+    this.geometryCache.inc({ result });
   }
 
   observeGeometryHttp(status: number): void {

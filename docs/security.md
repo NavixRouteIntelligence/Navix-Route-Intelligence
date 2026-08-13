@@ -135,6 +135,39 @@ Cada tenant possui uma **DEK** (Data Encryption Key) própria, protegida por uma
 - Residência de dados por região para clientes que exigirem (fase de escala global).
 - Registro de tratamento e trilhas de auditoria.
 
+### 9.1 Mapas: o que sai do dispositivo, e para onde (ADR-0134)
+
+A app usa o SDK da Mapbox para desenhar o mapa da rota. Isso tem três
+consequências que precisam de estar declaradas na política de privacidade,
+porque nenhuma delas é óbvia para quem instala a app:
+
+1. **Coordenadas das paragens saem para a Mapbox.** Para desenhar o traçado
+   real, o **servidor** — não o telemóvel — envia à Directions API a sequência
+   de coordenadas da rota. São moradas de clientes. O que **não** sai é o nome
+   do destinatário, o número da encomenda ou qualquer identificador nosso: o
+   pedido leva pares de coordenadas e mais nada.
+2. **A geocodificação envia a morada escrita.** Na importação, o texto da
+   morada vai à Mapbox para ser resolvido em coordenadas (ADR-0133). É o mesmo
+   dado que qualquer geocodificador precisa de receber, e é a razão de ele
+   nunca aparecer nos nossos registos.
+3. **O SDK tem telemetria própria, e o opt-out é do utilizador.** O SDK recolhe
+   dados de utilização do mapa por conta da Mapbox. Nós **não** desligamos essa
+   recolha por ele nem a podemos desligar por API: na v11 o interruptor vive no
+   menu do botão ⓘ, que por isso não pode ser escondido (ADR-0128). A app não
+   esconde a atribuição nem o ⓘ, e a política tem de dizer onde está a escolha
+   — para quem já é localizado durante a jornada, essa escolha é a única que
+   lhe pertence.
+
+**Faturação por utilizador ativo.** O SDK cobra por MAU. Isso significa que
+abrir o mapa é, para efeitos de contrato com a Mapbox, um evento contável por
+pessoa — mais uma razão para o mapa ser um piloto com percentagem, e não uma
+funcionalidade que se liga sozinha ao instalar a versão.
+
+**Instantâneo local da rota.** A app guarda a última rota lida no armazenamento
+seguro do sistema, para a mostrar sem rede. São moradas de clientes, e por isso
+não vão para `SharedPreferences`; o instantâneo é apagado ao terminar sessão,
+porque o aparelho pode ser de outra pessoa amanhã.
+
 ## 10. Segurança no ciclo de desenvolvimento (SSDLC)
 
 > **Status:** 🟡 **Parcial (ampliado).** O CI (`.github/workflows/ci.yml`) roda: lint, typecheck, **testes unitários com cobertura obrigatória** (API + Web), **testes E2E** contra Postgres + Redis reais (com migrações e RLS forçada), **SCA** (`npm audit` — gate rígido em *critical* de produção + relatório completo), **secret scan** (gitleaks) e **build das imagens Docker**. Qualquer teste que falhe reprova a pipeline. **Ainda ⬜ roadmap:** SAST, DAST/pentest e escaneamento das imagens de container (ex.: Trivy). Branch protegida/sem push direto na main é política de processo (fora do repositório).

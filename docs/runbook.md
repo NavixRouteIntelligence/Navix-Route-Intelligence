@@ -337,3 +337,53 @@ de *releases* é anónimo e o CocoaPods puxa o `MapboxMaps` do trunk público. N
 nem gerar qualquer `sk.` para construir a app. Se alguma documentação exterior
 mandar criar um, é de v10 e está desatualizada — e criar um `sk.` que não é
 preciso é só mais um segredo para vazar.
+
+## Mapa — custos, alertas e piloto (ADR-0134)
+
+### O que se paga, e por que unidade
+
+Três contadores diferentes, e é fácil vigiar o errado:
+
+| Serviço | Unidade | Onde aparece |
+| --- | --- | --- |
+| SDK do telemóvel | **utilizador ativo mensal (MAU)** | Mapbox → Account → Statistics → Maps SDK |
+| Directions (traçado) | **por pedido** | `optimizer_route_geometry_total` |
+| Matrix (otimização) | **por elemento** (n × n) | `optimizer_matrix_*` |
+| Geocoding (importação) | **por pedido** | `import_geocoding_total` |
+
+O MAU é o único que **não** temos como medir daqui: ele conta no lado da Mapbox
+e só se vê na conta deles. Os outros três têm métrica nossa, e é por elas que se
+percebe um pico antes da fatura.
+
+### Alertas a ligar antes de produção
+
+Nenhum destes é opcional se o piloto passar de zero:
+
+1. **Orçamento da conta Mapbox.** Mapbox → Account → Billing → *usage alerts*,
+   com limite mensal e aviso a 50% e 80%. É o único alerta que apanha o MAU.
+2. **Directions por hora.** `rate(optimizer_route_geometry_total[1h])` acima do
+   esperado para o número de motoristas no piloto. Cada rota aberta são até 15
+   pedidos; uma subida súbita costuma ser cache que deixou de acertar.
+3. **Taxa de acerto do cache.** `optimizer_route_geometry_cache_total{result="hit"}`
+   sobre o total. Uma queda abrupta é o sinal mais barato de que alguma coisa
+   mudou na chave — e antecede a subida da fatura.
+4. **Degradações.** `optimizer_matrix_fallback_total` e
+   `optimizer_route_geometry_total{outcome!="ok"}`. Não custam dinheiro; custam
+   qualidade, e passam despercebidas porque a app continua a funcionar.
+5. **Geocodificação para revisão.** `import_geocoding_total{outcome="needs-review"}`
+   em proporção do total. Uma subida indica moradas piores a entrar — ou um
+   país mal configurado num tenant.
+
+### Ligar e desligar o mapa
+
+`MAPS_ROLLOUT_PERCENT` (0–100), por ambiente. **Zero por omissão.**
+
+- Subir é gradual: 0 → 5 → 25 → 100. A amostra é por hash do id do utilizador,
+  então subir **só acrescenta** pessoas — quem já via o mapa não o perde.
+- Descer é o rollback, e é imediato: a tela volta à lista, que nunca deixou de
+  funcionar. Não é preciso publicar versão nenhuma na loja.
+- Com a percentagem a zero, o servidor **nem chega a pedir** o traçado à
+  Directions: o custo cai junto com a funcionalidade.
+
+Não há flag no telemóvel. Uma flag local exigiria uma versão na loja para
+mudar de ideias — que é o oposto de um rollback.

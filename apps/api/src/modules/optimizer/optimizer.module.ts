@@ -126,14 +126,15 @@ import { OptimizerController } from './interface/optimizer.controller';
       // não existe rede de proteção geométrica, porque a reta entre paradas é
       // exatamente o que a ADR-0125 proibiu desenhar.
       provide: ROUTE_GEOMETRY_PROVIDER,
-      inject: [AppConfigService, MapboxDirectionsProvider, CACHE],
+      inject: [AppConfigService, MapboxDirectionsProvider, CACHE, OptimizerMetrics],
       useFactory: (
         config: AppConfigService,
         directions: MapboxDirectionsProvider,
         cache: CachePort,
+        metrics: OptimizerMetrics,
       ) =>
         config.maps.provider === 'mapbox'
-          ? new CachedRouteGeometryProvider(cache, directions, config.maps.provider)
+          ? new CachedRouteGeometryProvider(cache, directions, config.maps.provider, metrics)
           : { geometry: async () => null },
     },
     {
