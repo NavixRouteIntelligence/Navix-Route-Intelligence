@@ -6,7 +6,16 @@ import type { DeliveryPriority } from './delivery';
 
 export type ImportFileType = 'csv' | 'xlsx' | 'pdf';
 export type ImportBatchStatus = 'preview' | 'imported' | 'failed';
-export type ImportRowStatus = 'valid' | 'invalid' | 'duplicate';
+/**
+ * Situação de uma linha do preview.
+ *
+ * `review` (ADR-0133) é a linha cuja morada o geocodificador resolveu com
+ * dúvida — confiança fraca, coordenada aproximada, ou um resultado que nem é
+ * morada. Não é `invalid`: a entrega existe e é importável **depois** de
+ * alguém confirmar. E não é `valid`: `importableRows` só aceita `valid`, e é
+ * isso que impede o centro de uma freguesia de virar parada em silêncio.
+ */
+export type ImportRowStatus = 'valid' | 'invalid' | 'duplicate' | 'review';
 
 /**
  * Conectores de importação — a fonte plugável de onde as entregas chegam.
@@ -90,6 +99,14 @@ export interface ImportSummary {
   valid: number;
   invalid: number;
   duplicates: number;
+  /**
+   * Linhas à espera de confirmação da morada (ADR-0133).
+   *
+   * Opcional para não partir a leitura de lotes gravados antes desta ADR: eles
+   * não têm o campo, e `undefined` ali significa «nenhuma», que é a verdade —
+   * naquele tempo nenhuma linha era marcada para revisão.
+   */
+  review?: number;
   estimatedSavingsKm: number;
   estimatedSavingsPct: number;
 }

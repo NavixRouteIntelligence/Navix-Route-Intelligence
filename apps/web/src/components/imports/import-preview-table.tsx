@@ -15,6 +15,7 @@ const FILTERS: { key: Filter; label: string }[] = [
   { key: 'all', label: 'Todas' },
   { key: 'valid', label: 'Válidas' },
   { key: 'invalid', label: 'Inválidas' },
+  { key: 'review', label: 'A confirmar' },
   { key: 'duplicate', label: 'Duplicadas' },
 ];
 
@@ -23,7 +24,13 @@ export function ImportPreviewTable({ rows }: { rows: ImportRowView[] }) {
   const [filter, setFilter] = useState<Filter>('all');
 
   const counts = useMemo(() => {
-    const c: Record<Filter, number> = { all: rows.length, valid: 0, invalid: 0, duplicate: 0 };
+    const c: Record<Filter, number> = {
+      all: rows.length,
+      valid: 0,
+      invalid: 0,
+      duplicate: 0,
+      review: 0,
+    };
     for (const r of rows) c[r.status] += 1;
     return c;
   }, [rows]);
