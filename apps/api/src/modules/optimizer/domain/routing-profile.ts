@@ -42,6 +42,21 @@ export interface RoutingProfileMapping {
   fidelity: ProfileFidelity;
   /** O que o perfil escolhido não representa. Vazio quando é exato. */
   caveat?: string;
+  /**
+   * A rota partia agora e o trânsito em tempo real **era aplicável**, mas não
+   * coube (ADR-0132).
+   *
+   * Só existe neste caso. Uma bicicleta não «perdeu» o trânsito — ela nunca o
+   * teve; uma rota de amanhã também não. Aqui alguém ia sair agora, num carro,
+   * e recebeu velocidades típicas da via em vez do trânsito do momento, porque
+   * o `driving-traffic` aceita 10 coordenadas e a rota tinha mais.
+   *
+   * Registá-lo é o que impede que um ETA sem trânsito seja lido como ETA com
+   * trânsito: o perfil gravado já era honesto sobre **o quê**, mas calava-se
+   * sobre o **porquê**, e quem lê o plano não tinha como distinguir «não quis»
+   * de «não coube».
+   */
+  trafficDenied?: 'too-many-points';
 }
 
 const MAPPING: Record<VehicleType, RoutingProfileMapping> = {

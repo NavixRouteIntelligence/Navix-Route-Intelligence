@@ -50,6 +50,22 @@ export interface ProfileChoice {
 }
 
 /**
+ * Coordenadas por bloco no ladrilhamento.
+ *
+ * **Metade** do limite do perfil, porque cada requisição carrega dois blocos —
+ * as origens e os destinos — concatenados. Sair daqui com uma constante era o
+ * que havia antes: `12` cabe nos 25 do `driving` e **não** cabe nos 10 do
+ * `driving-traffic`. Hoje o `driving-traffic` nunca ladrilha, porque só é
+ * escolhido quando cabe numa requisição só — mas isso é uma coincidência entre
+ * duas regras distantes, e no dia em que uma delas mudasse a outra passaria a
+ * emitir requisições com 24 coordenadas contra um limite de 10, recebendo 422
+ * em toda a matriz.
+ */
+export function blockSizeFor(profile: RoutingProfile): number {
+  return Math.floor(MAX_COORDS_BY_PROFILE[profile] / 2);
+}
+
+/**
  * Escolhe o perfil da matriz.
  *
  * `departureAt` ausente significa **não se sabe quando parte** — e não se sabe

@@ -397,6 +397,9 @@ export class OptimizeRouteUseCase {
         averageSpeedKmh: speed,
         serviceTimeMinutes: service,
         hasOrigin,
+        // A origem não é paragem e por isso não está em `stops`; sem a guardar
+        // aqui, o traçado não tem por onde começar (ADR-0132).
+        ...(command.origin ? { origin: command.origin } : {}),
         ...(profile.type ? { vehicleType: profile.type } : {}),
         ...(command.vehicle ? { avoidTolls: profile.avoidTolls } : {}),
         ...(command.economyMode ? { economyMode: command.economyMode } : {}),
