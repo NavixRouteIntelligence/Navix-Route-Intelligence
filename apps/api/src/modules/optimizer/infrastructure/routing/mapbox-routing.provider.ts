@@ -6,10 +6,11 @@ import type { VehicleType } from '@navix/contracts';
 import type { LatLng } from '../../../../shared/kernel/geo';
 import { UNREACHABLE } from '../../domain/reachability';
 import { assertFiniteCells, assertMatrixShape, normalizeCell } from '../../domain/matrix-integrity';
-import { MAX_COORDS_BY_PROFILE, chooseMatrixProfile } from '../../domain/matrix-profile';
+import { MAX_COORDS_BY_PROFILE, blockSizeFor, chooseMatrixProfile } from '../../domain/matrix-profile';
 import { resolveRoutingProfile, type RoutingProfileMapping } from '../../domain/routing-profile';
 import type { RouteMatrix, RoutingProviderPort } from '../../domain/ports/routing-provider.port';
 import { OptimizerMetrics } from '../observability/optimizer-metrics';
+import { withRetry } from './http-retry';
 import { haversineMatrix } from './haversine-routing.provider';
 
 /**
@@ -20,14 +21,15 @@ const maxCoordsFor = (perfil: RoutingProfileMapping): number =>
   MAX_COORDS_BY_PROFILE[perfil.profile];
 
 /**
- * Coordenadas por bloco no ladrilhamento (ADR-0107).
+ * Orçamento de requisições por matriz (ADR-0132).
  *
- * Cada requisição carrega **dois** blocos — as origens e os destinos —, então
- * `2 × 12 = 24` cabe no limite de 25 com uma folga. Blocos maiores reduziriam o
- * número de requisições, mas não cabem; menores multiplicariam as chamadas sem
- * ganho.
+ * `MAX_TILED_COORDS` já limita indiretamente — 100 pontos são 81 ladrilhos —,
+ * mas indiretamente é o problema: o número de chamadas é `⌈n/bloco⌉²`, e o
+ * bloco depende do perfil. Com um bloco de 5, os mesmos 100 pontos seriam 400
+ * chamadas. Este teto é sobre o que se paga, e não sobre o que se pede.
  */
-const BLOCK = 12;
+const MAX_REQUESTS_PER_MATRIX = 100;
+
 
 /**
  * Teto do ladrilhamento. Acima disto o número de requisições cresce ao
@@ -58,10 +60,10 @@ function allUnreachable(n: number): RouteMatrix {
 }
 
 /** Índices em blocos de no máximo [BLOCK] posições. */
-function blocksOf(n: number): number[][] {
+function blocksOf(n: number, block: number): number[][] {
   const blocks: number[][] = [];
-  for (let start = 0; start < n; start += BLOCK) {
-    blocks.push(Array.from({ length: Math.min(BLOCK, n - start) }, (_, k) => start + k));
+  for (let start = 0; start < n; start += block) {
+    blocks.push(Array.from({ length: Math.min(block, n - start) }, (_, k) => start + k));
   }
   return blocks;
 }
@@ -132,7 +134,13 @@ export class MapboxRoutingProvider implements RoutingProviderPort {
       points: points.length,
       departureAt,
     });
-    const perfil: RoutingProfileMapping = { ...base, profile: escolha.profile };
+    const perfil: RoutingProfileMapping = {
+      ...base,
+      profile: escolha.profile,
+      // A recusa de trânsito viaja com o perfil até ao plano (ADR-0132): sem
+      // isto, «não coube» e «não quis» ficam iguais para quem lê o plano.
+      ...(escolha.reason === 'too-many-points' ? { trafficDenied: 'too-many-points' as const } : {}),
+    };
 
     if (!this.token || points.length < 2) {
       return this.geometric(points, speedKmh, 'sem token do provedor', 'no-token');
@@ -167,7 +175,9 @@ export class MapboxRoutingProvider implements RoutingProviderPort {
     perfil: RoutingProfileMapping,
     speedKmh: number,
   ): Promise<RouteMatrix> {
-    const body = await this.fetchMatrix(points, perfil, points.length, points.length);
+    const body = await withRetry(() =>
+      this.fetchMatrix(points, perfil, points.length, points.length),
+    );
     if (body === 'no-route') return { ...allUnreachable(points.length), profile: perfil };
 
     // Geometria de reserva para as células a que falta um dos dois números.
@@ -204,7 +214,13 @@ export class MapboxRoutingProvider implements RoutingProviderPort {
   ): Promise<RouteMatrix> {
     const n = points.length;
     const reserva = haversineMatrix(points, speedKmh);
-    const blocks = blocksOf(n);
+    // O bloco sai do limite do perfil, e não de uma constante: cada requisição
+    // leva dois blocos concatenados.
+    const blocks = blocksOf(n, blockSizeFor(perfil.profile));
+    const pedidos = blocks.length * blocks.length;
+    if (pedidos > MAX_REQUESTS_PER_MATRIX) {
+      throw new Error(`orçamento de requisições excedido (${pedidos})`);
+    }
     const distanceKm = emptyMatrix(n);
     const durationMin = emptyMatrix(n);
 
@@ -217,12 +233,14 @@ export class MapboxRoutingProvider implements RoutingProviderPort {
           ? destinos.map((_, k) => k)
           : destinos.map((_, k) => origens.length + k);
 
-        const body = await this.fetchMatrix(
-          coords.map((i) => points[i]),
-          perfil,
-          origens.length,
-          destinos.length,
-          { sources, destinations },
+        const body = await withRetry(() =>
+          this.fetchMatrix(
+            coords.map((i) => points[i]),
+            perfil,
+            origens.length,
+            destinos.length,
+            { sources, destinations },
+          ),
         );
         // `NoRoute` num ladrilho é afirmação sobre aquele retângulo: nenhum par
         // dali tem rota (ADR-0106). Não invalida os outros ladrilhos.
@@ -345,6 +363,7 @@ function kindOf(err: unknown): string {
   const bruto = err instanceof Error ? err.message : String(err);
   if (/timeout|aborted|AbortError/i.test(bruto)) return 'timeout';
   if (/HTTP \d{3}/.test(bruto)) return 'http-error';
+  if (/orçamento de requisições/.test(bruto)) return 'budget-exceeded';
   if (/matriz de/.test(bruto)) return 'invalid-matrix';
   if (/resposta inválida/.test(bruto)) return 'invalid-response';
   return 'error';

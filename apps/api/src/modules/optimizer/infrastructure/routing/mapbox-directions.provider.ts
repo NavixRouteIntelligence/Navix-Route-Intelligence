@@ -10,6 +10,7 @@ import type {
 } from '../../domain/ports/route-geometry.port';
 import { resolveRoutingProfile } from '../../domain/routing-profile';
 import { OptimizerMetrics } from '../observability/optimizer-metrics';
+import { withRetry } from './http-retry';
 
 /**
  * Máximo de coordenadas por pedido à Directions API.
@@ -100,7 +101,7 @@ export class MapboxDirectionsProvider implements RouteGeometryProviderPort {
       // por cada abertura da tela é a forma mais rápida de bater no limite de
       // pedidos por minuto da conta e passar a não ter traçado nenhum.
       for (const troço of troços) {
-        const linha = await this.fetchSegment(troço, perfil.profile);
+        const linha = await withRetry(() => this.fetchSegment(troço, perfil.profile));
         // Um troço em falta deixa um buraco no meio da rota. Colar o que sobra
         // desenharia um salto entre ruas distantes, que se lê como um percurso
         // que ninguém vai fazer.

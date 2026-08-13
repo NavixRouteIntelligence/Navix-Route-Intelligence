@@ -97,7 +97,11 @@ export class GetCurrentRouteUseCase {
       stops,
       progress: progressoDe(stops),
       ...(plano.unassignedStops ? { unassignedStops: plano.unassignedStops } : {}),
-      geometry: await this.tracado(stops, plano.params?.vehicleType ?? null),
+      geometry: await this.tracado(
+        stops,
+        plano.params?.vehicleType ?? null,
+        plano.params?.origin ?? null,
+      ),
     };
   }
 
@@ -114,6 +118,7 @@ export class GetCurrentRouteUseCase {
   private async tracado(
     stops: readonly CurrentRouteStopView[],
     vehicleType: CurrentRouteView['params']['vehicleType'] | null,
+    origin: CurrentRouteView['params']['origin'] | null,
   ): Promise<RouteGeometryView | null> {
     // Paradas sem localização não entram na linha — não há por onde a passar.
     // Elas continuam na lista e na numeração; é a linha que as salta, e é por
@@ -121,11 +126,17 @@ export class GetCurrentRouteUseCase {
     const comLocal = stops.filter((s) => s.hasLocation);
     if (comLocal.length < 2) return null;
 
+    // A origem **não** é uma parada e não está em `stops`, mas a rota começa
+    // lá: a distância acumulada da primeira entrega já conta a perna do
+    // depósito. Sem ela aqui, a linha desenhada cobria menos estrada do que o
+    // número ao lado dela (ADR-0132).
+    const pontos = [
+      ...(origin ? [{ latitude: origin.latitude, longitude: origin.longitude }] : []),
+      ...comLocal.map((s) => ({ latitude: s.latitude!, longitude: s.longitude! })),
+    ];
+
     try {
-      const linha = await this.geometry.geometry(
-        comLocal.map((s) => ({ latitude: s.latitude!, longitude: s.longitude! })),
-        vehicleType ?? null,
-      );
+      const linha = await this.geometry.geometry(pontos, vehicleType ?? null);
       if (!linha) return null;
 
       return {
@@ -133,7 +144,9 @@ export class GetCurrentRouteUseCase {
         provenance: {
           source: 'directions',
           profile: linha.profile,
-          coveredStops: linha.coveredStops,
+          // A origem entrou nos pontos do traçado mas **não** é uma paragem:
+          // contá-la aqui faria «10 de 10» numa rota de 9 entregas.
+          coveredStops: comLocal.length,
           totalStops: stops.length,
         },
       };

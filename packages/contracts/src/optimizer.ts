@@ -238,6 +238,16 @@ export interface RoutingProfileUsed {
   profile: RoutingProfileView;
   fidelity: 'exact' | 'approximate';
   caveat?: string;
+  /**
+   * A rota partia agora, o trânsito em tempo real era aplicável, e **não coube**
+   * no limite de coordenadas do perfil com trânsito (ADR-0132).
+   *
+   * Presente só nesse caso. Uma bicicleta não perdeu o trânsito — nunca o teve;
+   * uma rota de amanhã também não. Sem este campo, quem lê o plano não
+   * distingue «não quis trânsito» de «quis e não coube», e um ETA sobre
+   * velocidades típicas passa por ETA com trânsito.
+   */
+  trafficDenied?: 'too-many-points';
 }
 
 /**
@@ -282,6 +292,17 @@ export interface RoutePlanParams {
   averageSpeedKmh: number;
   serviceTimeMinutes: number;
   hasOrigin: boolean;
+  /**
+   * Coordenadas do ponto de partida, quando [hasOrigin] (ADR-0132).
+   *
+   * O plano guardava só o booleano, e a origem **não** é uma paragem: ela não
+   * entra em `stops`. Isso deixava o traçado a começar na primeira entrega,
+   * enquanto o `cumulativeDistance` dela já contava a perna do depósito — a
+   * linha desenhada cobria menos estrada do que o número ao lado dela.
+   *
+   * Ausente em planos anteriores a esta ADR, e em planos sem origem.
+   */
+  origin?: OriginInput;
   /** Tipo de veículo considerado (ADR-0022). Presente quando informado. */
   vehicleType?: VehicleType;
   /** Preferência de evitar pedágios (ADR-0022). Presente quando informada. */

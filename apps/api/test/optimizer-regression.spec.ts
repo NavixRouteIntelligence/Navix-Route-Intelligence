@@ -434,6 +434,72 @@ describe('Regressão do otimizador', () => {
       expect(PONTOS).toHaveLength(4);
     });
   });
+  // ADR-0132: rotas grandes atravessam o ladrilhamento da matriz. O que não
+  // pode mudar é o plano que sai dele.
+  describe('rotas grandes', () => {
+    it('uma parada só não é rota, e recusa-se em vez de fingir', async () => {
+      // Regra anterior a esta ADR, incluída aqui porque a T8.8 pede o tamanho 1
+      // na suíte: o motor **recusa**, e não devolve um plano de uma parada.
+      const { uc } = montarOtimizador({
+        routing: new RecordedRoutingProvider((p) => matrizDaLinha(p)),
+      });
+
+      await expect(uc.execute(comandoDoMotorista({ stops: paradas(1) }))).rejects.toThrow(
+        /ao menos 2 paradas/,
+      );
+    });
+
+    it.each([2, 10, 25, 26, 50, 100])(
+      'com %i paradas, sequência, ETA e distância acumulada saem coerentes',
+      async (n) => {
+        const stops = paradas(n);
+        const { uc, gravados } = montarOtimizador({
+          routing: new RecordedRoutingProvider((p) => matrizDaLinha(p)),
+        });
+
+        await uc.execute(comandoDoMotorista({ stops }));
+
+        const plano = gravados[0]?.snapshot();
+        const sequencias = plano!.stops.map((s) => s.sequence);
+        // A sequência é 1..n, sem saltos nem repetições: um ladrilho perdido
+        // faria uma parada cair fora e a numeração passaria a mentir sobre
+        // quantas entregas há.
+        expect(sequencias).toEqual(Array.from({ length: n }, (_, i) => i + 1));
+
+        let distanciaAnterior = -1;
+        let etaAnterior = -1;
+        for (const parada of plano!.stops) {
+          // A distância acumulada nunca decresce — decrescer significaria que
+          // uma perna foi contada com sinal trocado ou que a ordem se perdeu.
+          expect(parada.cumulativeDistanceKm).toBeGreaterThanOrEqual(distanciaAnterior);
+          expect(parada.etaMinutes).toBeGreaterThanOrEqual(etaAnterior);
+          expect(Number.isFinite(parada.cumulativeDistanceKm)).toBe(true);
+          expect(Number.isFinite(parada.etaMinutes)).toBe(true);
+          distanciaAnterior = parada.cumulativeDistanceKm;
+          etaAnterior = parada.etaMinutes;
+        }
+
+        // A última acumulada é a distância total do plano: são a mesma coisa
+        // vista de dois sítios, e discordarem seria o defeito.
+        expect(plano!.metrics.totalDistanceKm).toBeCloseTo(distanciaAnterior, 6);
+      },
+    );
+
+    it('nenhuma parada se perde entre 26 e 100', async () => {
+      for (const n of [26, 50, 100]) {
+        const stops = paradas(n);
+        const { uc, gravados } = montarOtimizador({
+          routing: new RecordedRoutingProvider((p) => matrizDaLinha(p)),
+        });
+
+        await uc.execute(comandoDoMotorista({ stops }));
+
+        const ids = gravados[0].snapshot().stops.map((s) => s.deliveryId);
+        expect(new Set(ids).size).toBe(n);
+        expect(new Set(ids)).toEqual(new Set(stops.map((s) => s.id)));
+      }
+    });
+  });
 });
 
 /** Rota já gravada do motorista, para os cenários de substituição. */
