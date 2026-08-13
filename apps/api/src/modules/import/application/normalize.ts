@@ -11,8 +11,20 @@ export function normalizePriority(raw?: string): DeliveryPriority {
   return 'normal';
 }
 
-/** Monta o endereço estruturado a partir da geocodificação ou do texto bruto. */
-export function resolveAddress(addressText: string, geocode: GeocodeResult | null): ResolvedAddress {
+/**
+ * Monta o endereço estruturado a partir da geocodificação ou do texto bruto.
+ *
+ * [fallbackCountry] é o país do tenant, usado só quando **não houve**
+ * geocodificação — o caso de uma linha que trouxe as suas próprias
+ * coordenadas. Antes ficava `'BR'` fixo aqui, e um tenant português que
+ * importasse com latitude e longitude no ficheiro via todas as entregas
+ * carimbadas com o país errado (ADR-0133).
+ */
+export function resolveAddress(
+  addressText: string,
+  geocode: GeocodeResult | null,
+  fallbackCountry?: string,
+): ResolvedAddress {
   return {
     street: geocode?.street || addressText || '—',
     number: geocode?.number || 'S/N',
@@ -20,6 +32,6 @@ export function resolveAddress(addressText: string, geocode: GeocodeResult | nul
     city: geocode?.city || '—',
     state: geocode?.state || '—',
     postalCode: geocode?.postalCode || '00000',
-    country: geocode?.country || 'BR',
+    country: geocode?.country || fallbackCountry?.toUpperCase() || 'BR',
   };
 }

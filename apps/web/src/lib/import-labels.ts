@@ -11,6 +11,10 @@ export const ROW_STATUS: Record<ImportRowStatus, { label: string; tone: Tone }> 
   valid: { label: 'Válida', tone: 'success' },
   invalid: { label: 'Inválida', tone: 'danger' },
   duplicate: { label: 'Duplicada', tone: 'warning' },
+  // `warning` e não `danger`: a entrega existe e é importável — falta alguém
+  // confirmar a morada (ADR-0133). Pintá-la de vermelho ao lado das inválidas
+  // faria descartar linhas que só precisam de um olhar.
+  review: { label: 'A confirmar', tone: 'warning' },
 };
 
 export const BATCH_STATUS: Record<ImportBatchStatus, { label: string; tone: Tone }> = {

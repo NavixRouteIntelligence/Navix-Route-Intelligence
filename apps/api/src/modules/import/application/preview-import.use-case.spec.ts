@@ -8,7 +8,7 @@ import type { ImportBatchRepositoryPort } from '../domain/ports/import-batch-rep
 import type { RouteEstimatorPort } from '../domain/ports/route-estimator.port';
 import { PreviewImportUseCase } from './preview-import.use-case';
 
-function buildUseCase(parsedRows: ParsedRow[]) {
+function buildUseCase(parsedRows: ParsedRow[], zone = 'America/Sao_Paulo') {
   const connector = {
     descriptor: {
       id: 'csv',
@@ -26,11 +26,36 @@ function buildUseCase(parsedRows: ParsedRow[]) {
     available: () => [connector],
     byKind: () => [connector.descriptor],
   };
+  const paises: (string | undefined)[] = [];
   const geocoder: GeocoderPort = {
-    geocode: async (text: string) =>
-      text.includes('sem-geo')
-        ? null
-        : { latitude: -23.5, longitude: -46.6, city: 'SP', state: 'SP', country: 'BR' },
+    geocode: async (text: string, options) => {
+      paises.push(options?.country);
+      if (text.includes('sem-geo')) return null;
+      if (text.includes('duvidoso')) {
+        return {
+          latitude: -23.5,
+          longitude: -46.6,
+          city: 'SP',
+          confidence: 'medium' as const,
+          accuracy: 'interpolated' as const,
+          needsReview: true,
+          reviewReason: 'A morada foi encontrada com baixa confiança; confirme antes de importar.',
+        };
+      }
+      return {
+            latitude: -23.5,
+            longitude: -46.6,
+            city: 'SP',
+            state: 'SP',
+            country: 'BR',
+            // Uma morada resolvida com confiança: é o caminho normal, e o que
+            // os cenários deste ficheiro exercitam.
+            confidence: 'exact' as const,
+            accuracy: 'rooftop' as const,
+            needsReview: false,
+            reviewReason: null,
+          };
+    },
   };
   const classifier: AddressClassifierPort = { classify: () => 'residence' };
   const estimator: RouteEstimatorPort = {
@@ -45,8 +70,19 @@ function buildUseCase(parsedRows: ParsedRow[]) {
   };
   const audit: AuditLogPort = { record: async () => undefined };
 
-  const uc = new PreviewImportUseCase(registry, geocoder, classifier, estimator, repo, audit);
-  return { uc, saved };
+  // Fuso do tenant: decide o país enviado ao geocodificador (ADR-0133).
+  const zones = { findTimeZone: async () => zone };
+
+  const uc = new PreviewImportUseCase(
+    registry,
+    geocoder,
+    classifier,
+    estimator,
+    repo,
+    audit,
+    zones,
+  );
+  return { uc, saved, paises };
 }
 
 const row = (over: Partial<ParsedRow> = {}): ParsedRow => ({
@@ -97,6 +133,65 @@ describe('PreviewImportUseCase', () => {
     expect(res.rows[0].geocoded).toBe(true);
     expect(res.batch.summary.estimatedSavingsKm).toBe(10);
     expect(res.batch.summary.estimatedSavingsPct).toBe(25);
+  });
+
+  it('morada duvidosa vai para revisão em vez de virar parada', async () => {
+    // Critério de aceite: resultado de baixa confiança não vira parada
+    // silenciosamente. `importableRows` só aceita `valid`, então esta linha
+    // não chega a `confirm-import`.
+    const { uc } = buildUseCase([row({ addressText: 'Rua duvidoso, 100' })]);
+
+    const res = await uc.execute({ ...cmd });
+
+    expect(res.rows[0].status).toBe('review');
+    expect(res.rows[0].errors[0]).toMatch(/confirme antes de importar/i);
+    expect(res.batch.summary.review).toBe(1);
+    // E não é contada como inválida: a entrega existe, falta confirmar a morada.
+    expect(res.batch.summary.invalid).toBe(0);
+  });
+
+  it('a revisão não se confunde com o endereço que não existe', async () => {
+    const { uc } = buildUseCase([
+      row({ addressText: 'Rua sem-geo' }),
+      row({ addressText: 'Rua duvidoso, 100', orderNumber: 'B' }),
+    ]);
+
+    const res = await uc.execute({ ...cmd });
+
+    expect(res.rows[0].status).toBe('invalid');
+    expect(res.rows[1].status).toBe('review');
+  });
+
+  it('os totais do sumário continuam a fechar com as linhas', async () => {
+    const { uc } = buildUseCase([
+      row({ addressText: 'Rua A, 1', orderNumber: 'A' }),
+      row({ addressText: 'Rua duvidoso, 2', orderNumber: 'B' }),
+      row({ addressText: 'Rua sem-geo', orderNumber: 'C' }),
+      row({ addressText: 'Rua A, 1', orderNumber: 'A' }),
+    ]);
+
+    const { summary } = (await uc.execute({ ...cmd })).batch;
+
+    expect(
+      summary.valid + summary.invalid + summary.duplicates + (summary.review ?? 0),
+    ).toBe(summary.total);
+  });
+
+  it('o país enviado ao geocodificador vem do fuso do tenant', async () => {
+    const { uc, paises } = buildUseCase([row({ addressText: 'Rua A, 1' })], 'Europe/Lisbon');
+
+    await uc.execute({ ...cmd });
+
+    expect(paises[0]).toBe('pt');
+  });
+
+  it('tenant sem fuso configurado não recebe país nenhum', async () => {
+    // Um palpite resolveria a morada portuguesa no Brasil.
+    const { uc, paises } = buildUseCase([row({ addressText: 'Rua A, 1' })], 'UTC');
+
+    await uc.execute({ ...cmd });
+
+    expect(paises[0]).toBeUndefined();
   });
 
   it('respeita lat/lng já presentes sem chamar geocoder', async () => {

@@ -31,6 +31,7 @@ import { PlannedConnector } from './infrastructure/connectors/planned/planned.co
 import { DeliveryCreatorGateway } from './infrastructure/gateways/delivery-creator.gateway';
 import { RouteEstimatorGateway } from './infrastructure/gateways/route-estimator.gateway';
 import { MapboxGeocoder } from './infrastructure/geocoding/mapbox-geocoder';
+import { GeocodingMetrics } from './infrastructure/geocoding/geocoding-metrics';
 import { CsvParser } from './infrastructure/parsing/csv.parser';
 import { PdfParser } from './infrastructure/parsing/pdf.parser';
 import { XlsxParser } from './infrastructure/parsing/xlsx.parser';
@@ -72,6 +73,7 @@ import { ImportController } from './interface/import.controller';
       inject: [CsvParser, XlsxParser, PdfParser],
     },
     { provide: CONNECTOR_REGISTRY, useClass: ConnectorRegistry },
+    GeocodingMetrics,
     { provide: GEOCODER, useClass: MapboxGeocoder },
     { provide: ADDRESS_CLASSIFIER, useClass: HeuristicAddressClassifier },
     { provide: DELIVERY_CREATOR, useClass: DeliveryCreatorGateway },
