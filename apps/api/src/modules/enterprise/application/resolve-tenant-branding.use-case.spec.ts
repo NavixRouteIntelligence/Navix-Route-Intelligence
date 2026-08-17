@@ -53,4 +53,15 @@ describe('ResolveTenantBrandingUseCase', () => {
     const { service } = build();
     await expect(service.execute('app.navix.pt')).resolves.toBeNull();
   });
+
+  it.each(['localhost:3000', 'localhost', '127.0.0.1', '', 'http://acme.navix.pt'])(
+    'host sem marca possível (%s) cai no tema padrão em vez de erro',
+    async (host) => {
+      const { service, repo } = build();
+
+      await expect(service.execute(host)).resolves.toBeNull();
+      expect(repo.findByVerifiedDomain).not.toHaveBeenCalled();
+      expect(repo.findBySlug).not.toHaveBeenCalled();
+    },
+  );
 });

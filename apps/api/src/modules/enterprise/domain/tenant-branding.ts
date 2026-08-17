@@ -28,13 +28,26 @@ export interface TenantBrandingRecord {
   updatedAt: Date | null;
 }
 
-export function normalizeHost(value: string): string {
+/**
+ * Normaliza um host (minúsculo, sem ponto final, sem porta) ou devolve `null`
+ * se ele não for um hostname público válido.
+ *
+ * Existe separado de `normalizeHost` porque os dois chamadores querem coisas
+ * opostas. Resolver a marca de um host que não é público — `localhost`, um IP,
+ * o que um proxy mal configurado mandar — é uma **resposta vazia legítima**:
+ * aquele host simplesmente não tem marca. Já cadastrar um domínio próprio é
+ * entrada de administrador e precisa recusar.
+ */
+export function tryNormalizeHost(value: string): string | null {
   const raw = value.trim().toLowerCase().replace(/\.$/, '');
-  if (!raw || raw.includes('://') || raw.includes('/') || raw.includes('@')) {
-    throw new ValidationError('Host inválido.');
-  }
+  if (!raw || raw.includes('://') || raw.includes('/') || raw.includes('@')) return null;
   const hostname = raw.includes(':') ? raw.slice(0, raw.lastIndexOf(':')) : raw;
-  if (!HOSTNAME.test(hostname)) throw new ValidationError('Host inválido.');
+  return HOSTNAME.test(hostname) ? hostname : null;
+}
+
+export function normalizeHost(value: string): string {
+  const hostname = tryNormalizeHost(value);
+  if (!hostname) throw new ValidationError('Host inválido.');
   return hostname;
 }
 

@@ -4,6 +4,7 @@ import {
   applyBrandingPatch,
   tenantSlugFromHost,
   toTenantBrandingAdmin,
+  tryNormalizeHost,
   validateCustomDomain,
   type TenantBrandingRecord,
 } from './tenant-branding';
@@ -31,6 +32,22 @@ describe('tenant branding domain', () => {
 
   it('não permite reivindicar o domínio da própria plataforma', () => {
     expect(() => validateCustomDomain('cliente.navix.pt', 'navix.pt')).toThrow(ValidationError);
+  });
+
+  it('tryNormalizeHost descarta host não público sem lançar, e tira a porta', () => {
+    expect(tryNormalizeHost('App.Navix.PT.')).toBe('app.navix.pt');
+    expect(tryNormalizeHost('acme.navix.pt:3000')).toBe('acme.navix.pt');
+    for (const host of ['localhost', 'localhost:3000', '127.0.0.1', '[::1]:3000', '']) {
+      expect(tryNormalizeHost(host)).toBeNull();
+    }
+  });
+
+  it('cadastro de domínio próprio continua recusando host não público', () => {
+    // O afrouxamento vale só para resolver a marca. Aceitar rótulo único aqui
+    // deixaria um tenant reivindicar `localhost` ou um nome de intranet.
+    for (const host of ['localhost', 'localhost:3000', '127.0.0.1']) {
+      expect(() => validateCustomDomain(host, 'navix.pt')).toThrow(ValidationError);
+    }
   });
 
   it('normaliza marca e cria desafio ao trocar o domínio', () => {

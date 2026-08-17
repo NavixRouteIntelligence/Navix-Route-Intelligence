@@ -6,7 +6,7 @@ import {
   TENANT_BRANDING_REPOSITORY,
   type TenantBrandingRepositoryPort,
 } from '../domain/ports/tenant-branding-repository.port';
-import { normalizeHost, tenantSlugFromHost, toTenantBranding } from '../domain/tenant-branding';
+import { tenantSlugFromHost, toTenantBranding, tryNormalizeHost } from '../domain/tenant-branding';
 
 @Injectable()
 export class ResolveTenantBrandingUseCase {
@@ -17,7 +17,11 @@ export class ResolveTenantBrandingUseCase {
   ) {}
 
   async execute(host: string): Promise<TenantBranding | null> {
-    const normalized = normalizeHost(host);
+    // Host sem marca possível (`localhost`, IP, host de proxy) é ausência de
+    // marca, não erro do cliente: cair no tema padrão em vez de devolver 400.
+    const normalized = tryNormalizeHost(host);
+    if (!normalized) return null;
+
     const custom = await this.branding.findByVerifiedDomain(normalized);
     if (custom) return toTenantBranding(custom);
 
